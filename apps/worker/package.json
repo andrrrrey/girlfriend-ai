@@ -1,0 +1,18 @@
+{
+  "name": "worker",
+  "private": true,
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts",
+    "start:prod": "node dist/index.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.12.0",
+    "ioredis": "^5.4.1",
+    "@repo/config": "workspace:*",
+    "@repo/logger": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.2.0",
+    "typescript": "^5.5.4"
+  }
+}
