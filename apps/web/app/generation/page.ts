@@ -71,6 +71,7 @@ const HTML = `<style>:root {
         .nav-btn {
             background: var(--card-bg); border: 1px solid var(--tag-border); color: white;
             padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
+            text-decoration: none; display: inline-block;
             transition: all 0.2s ease;
         }
         .nav-btn:hover { border-color: var(--active-violet); }
@@ -240,7 +241,7 @@ const HTML = `<style>:root {
 
     <main class="content">
         <header class="top-nav">
-            <button class="nav-btn">&#128100; &#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100;</button>
+            <a href="/profile" class="nav-btn">&#128100; &#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100;</a>
             <button class="nav-btn">&#127760; &#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</button>
         </header>
 
