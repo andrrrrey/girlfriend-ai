@@ -71,9 +71,10 @@ const HTML = `<style>:root {
         .content { flex-grow: 1; overflow-y: auto; padding: 20px 40px; }
 
         .top-nav { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 25px; }
-        .nav-btn { 
-            background: var(--card-bg); border: 1px solid var(--tag-border); color: white; 
+        .nav-btn {
+            background: var(--card-bg); border: 1px solid var(--tag-border); color: white;
             padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
+            text-decoration: none; display: inline-block;
             transition: all 0.2s ease;
         }
         .nav-btn:hover { border-color: var(--active-violet); }
@@ -217,9 +218,9 @@ const HTML = `<style>:root {
             <span>Leonardo.Ai</span>
         </div>
         <nav>
-            <a href="#" class="menu-item active">🏠 Главная</a>
+            <a href="/" class="menu-item active">🏠 Главная</a>
             <a href="#" class="menu-item">📱 Шортсы</a>
-            <a href="#" class="menu-item">📸 Фото/видео</a>
+            <a href="/generation" class="menu-item">📸 Фото/видео</a>
             <a href="#" class="menu-item">👤 Мой AI</a>
             <a href="#" class="menu-item">🖼️ Галерея</a>
             <a href="#" class="menu-item">✨ Персонаж</a>
@@ -233,7 +234,7 @@ const HTML = `<style>:root {
 
     <main class="content">
         <header class="top-nav">
-            <button class="nav-btn">👤 Профиль</button>
+            <a href="/profile" class="nav-btn">👤 Профиль</a>
             <button class="nav-btn">🌐 Русский</button>
         </header>
 
