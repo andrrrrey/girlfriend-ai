@@ -2,7 +2,7 @@
   "name": "worker",
   "private": true,
   "scripts": {
-    "build": "tsup src/index.ts --format cjs --dts",
+    "build": "tsup src/index.ts --format cjs",
     "start:prod": "node dist/index.js"
   },
   "dependencies": {

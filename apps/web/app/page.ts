@@ -217,9 +217,9 @@ const HTML = `<style>:root {
             <span>Leonardo.Ai</span>
         </div>
         <nav>
-            <a href="#" class="menu-item active">🏠 Главная</a>
+            <a href="/" class="menu-item active">🏠 Главная</a>
             <a href="#" class="menu-item">📱 Шортсы</a>
-            <a href="#" class="menu-item">📸 Фото/видео</a>
+            <a href="/generation" class="menu-item">📸 Фото/видео</a>
             <a href="#" class="menu-item">👤 Мой AI</a>
             <a href="#" class="menu-item">🖼️ Галерея</a>
             <a href="#" class="menu-item">✨ Персонаж</a>
