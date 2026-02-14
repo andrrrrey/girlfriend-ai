@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "tsup src/index.ts --format cjs --dts",
+    "dev": "tsx watch src/index.ts",
     "start:prod": "node dist/index.js"
   },
   "dependencies": {
@@ -13,6 +14,7 @@
   },
   "devDependencies": {
     "tsup": "^8.2.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }
 }
