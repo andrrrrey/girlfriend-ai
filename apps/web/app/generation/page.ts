@@ -231,7 +231,7 @@ const HTML = `<style>:root {
             <a href="#" class="menu-item">&#128100; &#1052;&#1086;&#1081; AI</a>
             <a href="#" class="menu-item">&#128444;&#65039; &#1043;&#1072;&#1083;&#1077;&#1088;&#1077;&#1103;</a>
             <a href="#" class="menu-item">&#10024; &#1055;&#1077;&#1088;&#1089;&#1086;&#1085;&#1072;&#1078;</a>
-            <a href="#" class="menu-item">&#128172; &#1063;&#1072;&#1090;</a>
+            <a href="/chat" class="menu-item">&#128172; &#1063;&#1072;&#1090;</a>
         </nav>
         <div style="margin-top: auto;">
             <button class="btn-footer">&#128081; &#1055;&#1088;&#1077;&#1084;&#1080;&#1091;&#1084;</button>
