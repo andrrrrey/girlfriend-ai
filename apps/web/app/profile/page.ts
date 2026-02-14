@@ -160,7 +160,7 @@ const HTML = `<style>:root {
             <a href="#" class="menu-item">\u{1F464} \u041C\u043E\u0439 AI</a>
             <a href="#" class="menu-item">\u{1F5BC}\uFE0F \u0413\u0430\u043B\u0435\u0440\u0435\u044F</a>
             <a href="#" class="menu-item">\u2728 \u041F\u0435\u0440\u0441\u043E\u043D\u0430\u0436</a>
-            <a href="#" class="menu-item active">\u{1F4AC} \u0427\u0430\u0442</a>
+            <a href="/chat" class="menu-item">\u{1F4AC} \u0427\u0430\u0442</a>
         </nav>
         <div style="margin-top: auto;">
             <button class="btn-footer">\u{1F451} \u041F\u0440\u0435\u043C\u0438\u0443\u043C</button>

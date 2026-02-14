@@ -224,7 +224,7 @@ const HTML = `<style>:root {
             <a href="#" class="menu-item">👤 Мой AI</a>
             <a href="#" class="menu-item">🖼️ Галерея</a>
             <a href="#" class="menu-item">✨ Персонаж</a>
-            <a href="#" class="menu-item">💬 Чат</a>
+            <a href="/chat" class="menu-item">💬 Чат</a>
         </nav>
         <div style="margin-top: auto;">
             <button class="btn-footer">👑 Премиум</button>
