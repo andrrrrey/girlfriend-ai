@@ -84,6 +84,8 @@ const HTML = `<style>:root {
         .tab-content.active { display: block; }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .btn-danger { background: var(--coral); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+        .btn-logout { background: transparent; color: var(--text-dim); border: 1px solid var(--tag-border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s ease; }
+        .btn-logout:hover { border-color: var(--active-violet); color: white; }
         /* Form Elements */
         .form-group { margin-bottom: 20px; }
         .label { display: block; color: var(--text-dim); font-size: 12px; margin-bottom: 8px; }
@@ -199,7 +201,10 @@ const HTML = `<style>:root {
             <div id="account" class="tab-content active">
                 <div class="section-header">
                     <h2>\u0410\u043A\u043A\u0430\u0443\u043D\u0442</h2>
-                    <button class="btn-danger">\u{1F5D1}\uFE0F \u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0430\u043A\u043A\u0430\u0443\u043D\u0442</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-logout" onclick="handleLogout()">\u{1F6AA} \u0412\u044B\u0439\u0442\u0438</button>
+                        <button class="btn-danger">\u{1F5D1}\uFE0F \u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0430\u043A\u043A\u0430\u0443\u043D\u0442</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <span class="label">\u041D\u0438\u043A\u043D\u0435\u0439\u043C</span>
@@ -298,6 +303,11 @@ const HTML = `<style>:root {
             </div>
         </div>
     </main></div><script>
+        function handleLogout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            window.location.href = '/login';
+        }
         function openTab(tabId, element) {
             var contents = document.querySelectorAll('.tab-content');
             contents.forEach(function(content) { content.classList.remove('active'); });
