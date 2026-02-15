@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
@@ -37,6 +38,10 @@ async function bootstrap() {
   });
 
   app.enableCors({ origin: true, credentials: true });
+
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
 
   await app.listen(env.API_PORT, "0.0.0.0");
   logger.info({ port: env.API_PORT }, "api_started");

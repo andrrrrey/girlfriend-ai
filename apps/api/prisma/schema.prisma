@@ -8,12 +8,47 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         String   @default("user")
-  lang         String   @default("en")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  nickname     String?
+  avatarUrl    String?   @map("avatar_url")
+  role         String    @default("user")
+  subscription String    @default("free")
+  lang         String    @default("en")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  sessions    Session[]
+  socialLinks SocialLink[]
 
   @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  userAgent    String?  @map("user_agent")
+  ip           String?
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model SocialLink {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  provider String
+  url      String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("social_links")
 }
