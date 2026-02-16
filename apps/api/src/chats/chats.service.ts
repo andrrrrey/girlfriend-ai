@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 
 @Injectable()
@@ -134,7 +135,7 @@ export class ChatsService {
     metadata?: Record<string, unknown>,
   ) {
     const message = await this.prisma.message.create({
-      data: { chatSessionId, role, content, metadata },
+      data: { chatSessionId, role, content, metadata: metadata as Prisma.InputJsonValue },
     });
 
     await this.prisma.chatSession.update({

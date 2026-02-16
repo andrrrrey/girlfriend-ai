@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 
 @Injectable()
@@ -66,7 +67,7 @@ export class AdminService {
       data: {
         name: data.name,
         systemPrompt: data.systemPrompt,
-        personality: data.personality ?? {},
+        personality: (data.personality ?? {}) as Prisma.InputJsonValue,
         avatarUrl: data.avatarUrl,
         voiceId: data.voiceId,
         tags: data.tags ?? [],
@@ -88,7 +89,11 @@ export class AdminService {
     },
   ) {
     await this.getCharacter(id);
-    return this.prisma.character.update({ where: { id }, data });
+    const updateData: Prisma.CharacterUpdateInput = { ...data };
+    if (data.personality !== undefined) {
+      updateData.personality = data.personality as Prisma.InputJsonValue;
+    }
+    return this.prisma.character.update({ where: { id }, data: updateData });
   }
 
   async deleteCharacter(id: string) {
