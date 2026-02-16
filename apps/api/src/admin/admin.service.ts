@@ -89,10 +89,13 @@ export class AdminService {
     },
   ) {
     await this.getCharacter(id);
-    const updateData: Prisma.CharacterUpdateInput = { ...data };
-    if (data.personality !== undefined) {
-      updateData.personality = data.personality as Prisma.InputJsonValue;
-    }
+    const { personality, ...rest } = data;
+    const updateData: Prisma.CharacterUpdateInput = {
+      ...rest,
+      ...(personality !== undefined
+        ? { personality: personality as Prisma.InputJsonValue }
+        : {}),
+    };
     return this.prisma.character.update({ where: { id }, data: updateData });
   }
 
