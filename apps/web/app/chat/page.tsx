@@ -63,13 +63,13 @@ export default function ChatPage() {
     }
   }, [messages, streamContent]);
 
-  if (loading) return <div style={s.page}><p style={{ color: "#aaa", padding: 40 }}>Loading...</p></div>;
+  if (loading) return <div style={s.page}><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
   if (!user) {
     return (
       <div style={s.page}>
         <div style={{ padding: 40 }}>
-          <p style={{ color: "#aaa", marginBottom: 16 }}>Please log in to use the chat.</p>
-          <a href="/login" style={s.link}>Login</a>
+          <p style={{ color: "#aaa", marginBottom: 16 }}>Войдите, чтобы использовать чат.</p>
+          <a href="/login" style={s.link}>Войти</a>
         </div>
       </div>
     );
@@ -198,23 +198,31 @@ export default function ChatPage() {
           <span>Leonardo.Ai</span>
         </div>
         <nav>
-          <a href="/" style={s.menuItem}>Home</a>
-          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>Chat</a>
-          {user.role === "admin" && <a href="/admin" style={s.menuItem}>Admin</a>}
-          <a href="/profile" style={s.menuItem}>Profile</a>
+          <a href="/" style={s.menuItem}>🏠 Главная</a>
+          <a href="#" style={s.menuItem}>📱 Шортсы</a>
+          <a href="/generation" style={s.menuItem}>📸 Фото/видео</a>
+          <a href="#" style={s.menuItem}>👤 Мой AI</a>
+          <a href="#" style={s.menuItem}>🖼️ Галерея</a>
+          <a href="#" style={s.menuItem}>✨ Персонаж</a>
+          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>💬 Чат</a>
+          {user.role === "admin" && <a href="/admin" style={s.menuItem}>⚙️ Админ</a>}
         </nav>
+        <div style={s.sidebarFooter}>
+          <button style={s.btnFooter}>👑 Премиум</button>
+          <button style={s.btnFooter}>📘 Гайд</button>
+        </div>
       </aside>
 
       {/* Chat List */}
       <section style={s.chatListPanel}>
         <div style={s.chatListHeader}>
-          <h2 style={s.chatTitle}>Chats</h2>
+          <h2 style={s.chatTitle}>Чаты</h2>
           <button onClick={() => setShowNewChat(true)} style={s.newChatBtn}>+</button>
         </div>
 
         {showNewChat && (
           <div style={s.newChatModal}>
-            <h3 style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>Choose a character:</h3>
+            <h3 style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>Выберите персонажа:</h3>
             {charList.map((c) => (
               <div
                 key={c.id}
@@ -231,7 +239,7 @@ export default function ChatPage() {
               </div>
             ))}
             <button onClick={() => setShowNewChat(false)} style={s.cancelBtn}>
-              Cancel
+              Отмена
             </button>
           </div>
         )}
@@ -249,10 +257,10 @@ export default function ChatPage() {
               <div style={s.chatAvatar} />
               <div style={s.chatInfo}>
                 <div style={s.chatItemName}>
-                  {c.character?.name || "Unknown"}
+                  {c.character?.name || "Неизвестный"}
                 </div>
                 <div style={s.chatItemPreview}>
-                  {c.lastMessage?.content?.slice(0, 40) || c.title || "New chat"}
+                  {c.lastMessage?.content?.slice(0, 40) || c.title || "Новый чат"}
                 </div>
               </div>
               <button
@@ -261,7 +269,7 @@ export default function ChatPage() {
                   handleDeleteChat(c.id);
                 }}
                 style={s.deleteChatBtn}
-                title="Delete chat"
+                title="Удалить чат"
               >
                 x
               </button>
@@ -277,7 +285,7 @@ export default function ChatPage() {
             <div style={s.messagesHeader}>
               <div style={s.chatAvatar} />
               <span style={{ fontWeight: "bold", color: "#fff" }}>
-                {activeChatData?.character?.name || "Chat"}
+                {activeChatData?.character?.name || "Чат"}
               </span>
             </div>
 
@@ -303,18 +311,18 @@ export default function ChatPage() {
                         onClick={() => handleRegenerate(msg.id)}
                         style={s.msgAction}
                         disabled={streaming}
-                        title="Regenerate"
+                        title="Перегенерировать"
                       >
-                        Regen
+                        Повтор
                       </button>
                     )}
                     {!msg.id.startsWith("temp-") && (
                       <button
                         onClick={() => handleDeleteMessage(msg.id)}
                         style={s.msgAction}
-                        title="Delete"
+                        title="Удалить"
                       >
-                        Del
+                        Удал.
                       </button>
                     )}
                   </div>
@@ -324,7 +332,7 @@ export default function ChatPage() {
               {streaming && streamContent && (
                 <div style={{ ...s.bubble, ...s.bubbleAi }}>
                   <div>{streamContent}</div>
-                  <span style={s.msgDate}>typing...</span>
+                  <span style={s.msgDate}>печатает...</span>
                 </div>
               )}
             </div>
@@ -332,7 +340,7 @@ export default function ChatPage() {
             <div style={s.inputContainer}>
               {streaming ? (
                 <button onClick={handleAbort} style={s.abortBtn}>
-                  Stop
+                  Стоп
                 </button>
               ) : null}
               <input
@@ -340,7 +348,7 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 style={s.chatInput}
-                placeholder="Type a message..."
+                placeholder="Введите сообщение..."
                 disabled={streaming}
               />
               <button
@@ -348,15 +356,15 @@ export default function ChatPage() {
                 disabled={streaming || !input.trim()}
                 style={s.sendBtn}
               >
-                Send
+                Отправить
               </button>
             </div>
           </>
         ) : (
           <div style={s.emptyState}>
-            <h2 style={{ color: "#fff", marginBottom: 12 }}>Select a chat or start a new one</h2>
+            <h2 style={{ color: "#fff", marginBottom: 12 }}>Выберите чат или создайте новый</h2>
             <p style={{ color: "#888" }}>
-              Click + to create a new chat with an AI character.
+              Нажмите + чтобы начать новый чат с AI-персонажем.
             </p>
           </div>
         )}
@@ -383,7 +391,7 @@ const s: Record<string, React.CSSProperties> = {
 
   // Sidebar
   sidebar: {
-    width: 200,
+    width: 250,
     background: "#120a1d",
     borderRight: "1px solid #3d2b55",
     padding: "20px 15px",
@@ -406,15 +414,31 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 6,
   },
   menuItem: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
     padding: "10px 15px",
     color: "#a0a0a0",
     textDecoration: "none",
     borderRadius: 8,
-    fontSize: 13,
+    fontSize: 14,
     marginBottom: 4,
   },
   menuActive: { background: "#6c5ce7", color: "#fff" },
+  sidebarFooter: { marginTop: "auto" },
+  btnFooter: {
+    display: "block",
+    width: "100%",
+    padding: 10,
+    marginTop: 8,
+    border: "1px solid #3d2b55",
+    background: "transparent",
+    color: "#fff",
+    borderRadius: 8,
+    cursor: "pointer",
+    textAlign: "left" as const,
+    fontSize: 13,
+  },
 
   // Chat List
   chatListPanel: {

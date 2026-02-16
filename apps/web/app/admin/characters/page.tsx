@@ -19,14 +19,14 @@ export default function AdminCharactersPage() {
     if (!loading && user?.role === "admin") loadChars();
   }, [loading, user]);
 
-  if (loading) return <div style={styles.page}><p style={{ color: "#aaa" }}>Loading...</p></div>;
+  if (loading) return <div style={styles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
   if (!user || user.role !== "admin") {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
-          <h1 style={styles.title}>Access Denied</h1>
-          <p style={{ color: "#aaa" }}>Admin access required.</p>
-          <a href="/" style={styles.link}>Back to Home</a>
+          <h1 style={styles.title}>Доступ запрещён</h1>
+          <p style={{ color: "#aaa" }}>Требуются права администратора.</p>
+          <a href="/" style={styles.link}>На главную</a>
         </div>
       </div>
     );
@@ -52,7 +52,7 @@ export default function AdminCharactersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this character?")) return;
+    if (!confirm("Удалить этого персонажа?")) return;
     try {
       await admin.deleteCharacter(id);
       loadChars();
@@ -65,43 +65,43 @@ export default function AdminCharactersPage() {
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.nav}>
-          <a href="/" style={styles.link}>Home</a>
+          <a href="/" style={styles.link}>Главная</a>
           <span style={styles.navSep}>/</span>
-          <span style={{ color: "#fff" }}>Admin</span>
+          <span style={{ color: "#fff" }}>Админ</span>
         </div>
 
         <div style={styles.tabs}>
-          <a href="/admin" style={styles.tab}>Settings</a>
-          <a href="/admin/characters" style={{ ...styles.tab, ...styles.tabActive }}>Characters</a>
+          <a href="/admin" style={styles.tab}>Настройки</a>
+          <a href="/admin/characters" style={{ ...styles.tab, ...styles.tabActive }}>Персонажи</a>
         </div>
 
         {editing ? (
           <div style={styles.card}>
-            <h2 style={styles.title}>{editing.id ? "Edit Character" : "New Character"}</h2>
+            <h2 style={styles.title}>{editing.id ? "Редактирование персонажа" : "Новый персонаж"}</h2>
             {error && <div style={styles.error}>{error}</div>}
 
             <div style={styles.field}>
-              <label style={styles.label}>Name</label>
+              <label style={styles.label}>Имя</label>
               <input
                 value={editing.name || ""}
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                 style={styles.input}
-                placeholder="Character name"
+                placeholder="Имя персонажа"
               />
             </div>
 
             <div style={styles.field}>
-              <label style={styles.label}>System Prompt</label>
+              <label style={styles.label}>Системный промпт</label>
               <textarea
                 value={editing.systemPrompt || ""}
                 onChange={(e) => setEditing({ ...editing, systemPrompt: e.target.value })}
                 style={{ ...styles.input, height: 150, resize: "vertical" as const }}
-                placeholder="You are..."
+                placeholder="Ты..."
               />
             </div>
 
             <div style={styles.field}>
-              <label style={styles.label}>Tags (comma-separated)</label>
+              <label style={styles.label}>Теги (через запятую)</label>
               <input
                 value={(editing.tags || []).join(", ")}
                 onChange={(e) =>
@@ -111,13 +111,13 @@ export default function AdminCharactersPage() {
                   })
                 }
                 style={styles.input}
-                placeholder="romantic, caring"
+                placeholder="романтичный, заботливый"
               />
             </div>
 
             <div style={styles.row}>
               <div style={{ flex: 1 }}>
-                <label style={styles.label}>Avatar URL</label>
+                <label style={styles.label}>URL аватара</label>
                 <input
                   value={editing.avatarUrl || ""}
                   onChange={(e) => setEditing({ ...editing, avatarUrl: e.target.value })}
@@ -126,7 +126,7 @@ export default function AdminCharactersPage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={styles.label}>Voice ID</label>
+                <label style={styles.label}>ID голоса</label>
                 <input
                   value={editing.voiceId || ""}
                   onChange={(e) => setEditing({ ...editing, voiceId: e.target.value })}
@@ -144,35 +144,35 @@ export default function AdminCharactersPage() {
                   onChange={(e) => setEditing({ ...editing, isPublic: e.target.checked })}
                   style={{ marginRight: 8 }}
                 />
-                Public (visible to all users)
+                Публичный (виден всем пользователям)
               </label>
             </div>
 
             <div style={styles.btnRow}>
               <button onClick={handleSave} disabled={saving} style={styles.button}>
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Сохранение..." : "Сохранить"}
               </button>
               <button onClick={() => setEditing(null)} style={styles.btnSecondary}>
-                Cancel
+                Отмена
               </button>
             </div>
           </div>
         ) : (
           <div style={styles.card}>
             <div style={styles.headerRow}>
-              <h2 style={styles.title}>Characters</h2>
+              <h2 style={styles.title}>Персонажи</h2>
               <button
                 onClick={() => setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true })}
                 style={styles.button}
               >
-                + New Character
+                + Новый персонаж
               </button>
             </div>
 
             {error && <div style={styles.error}>{error}</div>}
 
             {chars.length === 0 ? (
-              <p style={{ color: "#888" }}>No characters yet. Create one to get started.</p>
+              <p style={{ color: "#888" }}>Персонажей пока нет. Создайте первого.</p>
             ) : (
               <div>
                 {chars.map((c) => (
@@ -191,13 +191,13 @@ export default function AdminCharactersPage() {
                     </div>
                     <div style={styles.charActions}>
                       <button onClick={() => setEditing(c)} style={styles.btnSmall}>
-                        Edit
+                        Изменить
                       </button>
                       <button
                         onClick={() => handleDelete(c.id)}
                         style={{ ...styles.btnSmall, color: "#ff7675" }}
                       >
-                        Delete
+                        Удалить
                       </button>
                     </div>
                   </div>
