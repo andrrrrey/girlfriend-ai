@@ -5,11 +5,11 @@ import { useAuth } from "../../context/auth";
 import { admin, type AppSetting } from "../../lib/api";
 
 const SETTING_KEYS = [
-  { key: "OPENAI_API_KEY", label: "OpenAI API Key", type: "password" },
-  { key: "OPENAI_MODEL", label: "Model", type: "select", options: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"] },
-  { key: "OPENAI_TTS_MODEL", label: "TTS Model", type: "text" },
-  { key: "OPENAI_STT_MODEL", label: "STT Model", type: "text" },
-  { key: "OPENAI_TTS_VOICE", label: "TTS Voice", type: "select", options: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] },
+  { key: "OPENAI_API_KEY", label: "Ключ API OpenAI", type: "password" },
+  { key: "OPENAI_MODEL", label: "Модель", type: "select", options: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"] },
+  { key: "OPENAI_TTS_MODEL", label: "Модель TTS", type: "text" },
+  { key: "OPENAI_STT_MODEL", label: "Модель STT", type: "text" },
+  { key: "OPENAI_TTS_VOICE", label: "Голос TTS", type: "select", options: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] },
 ];
 
 export default function AdminSettingsPage() {
@@ -29,14 +29,14 @@ export default function AdminSettingsPage() {
     }
   }, [loading, user]);
 
-  if (loading) return <div style={styles.page}><p style={{ color: "#aaa" }}>Loading...</p></div>;
+  if (loading) return <div style={styles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
   if (!user || user.role !== "admin") {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
-          <h1 style={styles.title}>Access Denied</h1>
-          <p style={{ color: "#aaa" }}>Admin access required.</p>
-          <a href="/" style={styles.link}>Back to Home</a>
+          <h1 style={styles.title}>Доступ запрещён</h1>
+          <p style={{ color: "#aaa" }}>Требуются права администратора.</p>
+          <a href="/" style={styles.link}>На главную</a>
         </div>
       </div>
     );
@@ -61,22 +61,22 @@ export default function AdminSettingsPage() {
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.nav}>
-          <a href="/" style={styles.link}>Home</a>
+          <a href="/" style={styles.link}>Главная</a>
           <span style={styles.navSep}>/</span>
-          <span style={{ color: "#fff" }}>Admin</span>
+          <span style={{ color: "#fff" }}>Админ</span>
         </div>
 
         <div style={styles.tabs}>
-          <a href="/admin" style={{ ...styles.tab, ...styles.tabActive }}>Settings</a>
-          <a href="/admin/characters" style={styles.tab}>Characters</a>
+          <a href="/admin" style={{ ...styles.tab, ...styles.tabActive }}>Настройки</a>
+          <a href="/admin/characters" style={styles.tab}>Персонажи</a>
         </div>
 
         <div style={styles.card}>
-          <h1 style={styles.title}>AI Settings</h1>
-          <p style={styles.subtitle}>Configure OpenAI integration parameters</p>
+          <h1 style={styles.title}>Настройки AI</h1>
+          <p style={styles.subtitle}>Параметры интеграции с OpenAI</p>
 
           {error && <div style={styles.error}>{error}</div>}
-          {saved && <div style={styles.success}>Settings saved!</div>}
+          {saved && <div style={styles.success}>Настройки сохранены!</div>}
 
           {SETTING_KEYS.map(({ key, label, type, options }) => (
             <div key={key} style={styles.field}>
@@ -104,7 +104,7 @@ export default function AdminSettingsPage() {
           ))}
 
           <button onClick={handleSave} disabled={saving} style={styles.button}>
-            {saving ? "Saving..." : "Save Settings"}
+            {saving ? "Сохранение..." : "Сохранить настройки"}
           </button>
         </div>
       </div>
