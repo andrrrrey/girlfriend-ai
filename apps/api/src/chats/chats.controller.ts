@@ -188,13 +188,16 @@ export class ChatsController {
         file.originalname || "audio.webm",
       );
 
+      console.log("[voice] Sending STT request to AI service...");
       const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
         method: "POST",
         body: formData,
       });
+      console.log("[voice] STT response status:", sttRes.status);
 
       if (!sttRes.ok) {
         const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
+        console.error("[voice] STT failed:", err);
         res.status(sttRes.status || 502).json(err);
         return;
       }
@@ -270,6 +273,7 @@ export class ChatsController {
 
       res.end();
     } catch (err: any) {
+      console.error("[voice] Error:", err.message, err.cause || "");
       if (!res.headersSent) {
         res.status(500).json({ error: "Voice processing failed", details: err.message });
       } else {
