@@ -7,7 +7,7 @@
     "start:prod": "node dist/index.js"
   },
   "dependencies": {
-    "@fastify/multipart": "^9.4.0",
+    "@fastify/multipart": "^8.3.1",
     "@repo/config": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/types": "workspace:*",
