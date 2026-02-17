@@ -175,97 +175,107 @@ export class ChatsController {
       return;
     }
 
-    const chat = await this.chatsService.getChat(id, req.user.id);
-
-    // 1. Send audio to AI service for STT (Whisper)
-    const formData = new FormData();
-    formData.append(
-      "audio",
-      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }),
-      file.originalname || "audio.webm",
-    );
-
-    const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!sttRes.ok) {
-      const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
-      res.status(sttRes.status || 502).json(err);
-      return;
-    }
-
-    const { text: transcribedText } = (await sttRes.json()) as { text: string };
-
-    if (!transcribedText) {
-      res.status(400).json({ error: "Could not transcribe audio" });
-      return;
-    }
-
-    // 2. Save user voice message
-    await this.chatsService.saveMessage(id, "user", transcribedText, { type: "audio" });
-
-    // 3. Get history and stream AI response
-    const history = await this.chatsService.getMessageHistory(id);
-
-    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: history.map((m) => ({ role: m.role, content: m.content })),
-        characterId: chat.characterId,
-      }),
-    });
-
-    if (!aiRes.ok || !aiRes.body) {
-      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-      res.status(aiRes.status || 502).json(err);
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-
-    // Send transcribed text first so frontend can display it
-    res.write(`data: ${JSON.stringify({ transcription: transcribedText })}\n\n`);
-
-    const reader = aiRes.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = "";
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const chat = await this.chatsService.getChat(id, req.user.id);
 
-        const text = decoder.decode(value, { stream: true });
-        res.write(text);
+      // 1. Send audio to AI service for STT (Whisper)
+      // Copy buffer to avoid Node.js Buffer pool issues with Blob
+      const audioBuffer = Buffer.from(file.buffer);
+      const formData = new FormData();
+      formData.append(
+        "audio",
+        new Blob([audioBuffer], { type: file.mimetype }),
+        file.originalname || "audio.webm",
+      );
 
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.content) fullContent += parsed.content;
-            } catch {
-              // ignore
+      const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!sttRes.ok) {
+        const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
+        res.status(sttRes.status || 502).json(err);
+        return;
+      }
+
+      const { text: transcribedText } = (await sttRes.json()) as { text: string };
+
+      if (!transcribedText) {
+        res.status(400).json({ error: "Could not transcribe audio" });
+        return;
+      }
+
+      // 2. Save user voice message
+      await this.chatsService.saveMessage(id, "user", transcribedText, { type: "audio" });
+
+      // 3. Get history and stream AI response
+      const history = await this.chatsService.getMessageHistory(id);
+
+      const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: history.map((m) => ({ role: m.role, content: m.content })),
+          characterId: chat.characterId,
+        }),
+      });
+
+      if (!aiRes.ok || !aiRes.body) {
+        const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
+        res.status(aiRes.status || 502).json(err);
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders();
+
+      // Send transcribed text first so frontend can display it
+      res.write(`data: ${JSON.stringify({ transcription: transcribedText })}\n\n`);
+
+      const reader = aiRes.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const text = decoder.decode(value, { stream: true });
+          res.write(text);
+
+          const lines = text.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ") && line !== "data: [DONE]") {
+              try {
+                const parsed = JSON.parse(line.slice(6));
+                if (parsed.content) fullContent += parsed.content;
+              } catch {
+                // ignore
+              }
             }
           }
         }
+      } finally {
+        reader.releaseLock();
       }
-    } finally {
-      reader.releaseLock();
-    }
 
-    if (fullContent) {
-      await this.chatsService.saveMessage(id, "assistant", fullContent);
-    }
+      if (fullContent) {
+        await this.chatsService.saveMessage(id, "assistant", fullContent);
+      }
 
-    res.end();
+      res.end();
+    } catch (err: any) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Voice processing failed", details: err.message });
+      } else {
+        res.end();
+      }
+    }
   }
 
   // ─── TTS: generate speech for a message via ElevenLabs ────────
@@ -277,31 +287,37 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
-    const chat = await this.chatsService.getChat(chatId, req.user.id);
-    const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
+    try {
+      const chat = await this.chatsService.getChat(chatId, req.user.id);
+      const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
 
-    // Use character's voiceId if available
-    const voiceId = chat.character?.voiceId || undefined;
+      // Use character's voiceId if available
+      const voiceId = chat.character?.voiceId || undefined;
 
-    const ttsRes = await fetch(`${AI_BASE}/ai/tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: message.content,
-        voiceId,
-      }),
-    });
+      const ttsRes = await fetch(`${AI_BASE}/ai/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: message.content,
+          voiceId,
+        }),
+      });
 
-    if (!ttsRes.ok || !ttsRes.body) {
-      const err = await ttsRes.json().catch(() => ({ error: "TTS failed" }));
-      res.status(ttsRes.status || 502).json(err);
-      return;
+      if (!ttsRes.ok || !ttsRes.body) {
+        const err = await ttsRes.json().catch(() => ({ error: "TTS failed" }));
+        res.status(ttsRes.status || 502).json(err);
+        return;
+      }
+
+      const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Content-Length", audioBuffer.length);
+      res.send(audioBuffer);
+    } catch (err: any) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "TTS processing failed", details: err.message });
+      }
     }
-
-    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Content-Length", audioBuffer.length);
-    res.send(audioBuffer);
   }
 
   @Delete(":id/messages/:msgId")
