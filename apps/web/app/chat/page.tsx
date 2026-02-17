@@ -7,6 +7,8 @@ import {
   characters as charactersApi,
   streamMessage,
   streamRegenerate,
+  streamVoiceMessage,
+  fetchTTS,
   type ChatSession,
   type Message,
   type Character,
@@ -24,6 +26,18 @@ export default function ChatPage() {
   const [showNewChat, setShowNewChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Voice recording state
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // TTS playback state
+  const [playingTTSId, setPlayingTTSId] = useState<string | null>(null);
+  const [loadingTTSId, setLoadingTTSId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load chat list
   const loadChats = useCallback(async () => {
@@ -62,6 +76,19 @@ export default function ChatPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, streamContent]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
 
   if (loading) return <div style={s.page}><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
   if (!user) {
@@ -187,6 +214,166 @@ export default function ChatPage() {
     }
   };
 
+  // ─── Voice recording ──────────────────────────────────────────
+
+  const startRecording = async () => {
+    if (!activeChat || streaming || recording) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm",
+      });
+
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        handleVoiceSend(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch {
+      // Microphone access denied or unavailable
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = () => {
+        const stream = mediaRecorderRef.current?.stream;
+        stream?.getTracks().forEach((t) => t.stop());
+      };
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    }
+  };
+
+  const handleVoiceSend = (audioBlob: Blob) => {
+    if (!activeChat) return;
+
+    setStreaming(true);
+    setStreamContent("");
+
+    // Add optimistic user voice message (will be replaced after reload)
+    const userMsg: Message = {
+      id: `temp-voice-${Date.now()}`,
+      role: "user",
+      content: "...",
+      type: "audio",
+      mediaUrl: null,
+      metadata: null,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    abortRef.current = streamVoiceMessage(
+      activeChat,
+      audioBlob,
+      (transcription) => {
+        // Update the optimistic user message with transcription
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === userMsg.id ? { ...m, content: transcription } : m,
+          ),
+        );
+      },
+      (delta) => setStreamContent((prev) => prev + delta),
+      () => {
+        setStreaming(false);
+        loadMessages(activeChat);
+        loadChats();
+        setStreamContent("");
+      },
+      (err) => {
+        setStreaming(false);
+        setStreamContent(`[Error: ${err}]`);
+      },
+    );
+  };
+
+  // ─── TTS playback ──────────────────────────────────────────────
+
+  const handlePlayTTS = async (msgId: string) => {
+    if (!activeChat) return;
+
+    // If already playing this message, stop
+    if (playingTTSId === msgId) {
+      audioRef.current?.pause();
+      setPlayingTTSId(null);
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setLoadingTTSId(msgId);
+
+    try {
+      const audioBuffer = await fetchTTS(activeChat, msgId);
+      const blob = new Blob([audioBuffer], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.onended = () => {
+        setPlayingTTSId(null);
+        URL.revokeObjectURL(url);
+      };
+
+      audio.onerror = () => {
+        setPlayingTTSId(null);
+        URL.revokeObjectURL(url);
+      };
+
+      audioRef.current = audio;
+      setLoadingTTSId(null);
+      setPlayingTTSId(msgId);
+      audio.play();
+    } catch {
+      setLoadingTTSId(null);
+    }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
   const activeChatData = chatList.find((c) => c.id === activeChat);
 
   return (
@@ -198,18 +385,18 @@ export default function ChatPage() {
           <span>Leonardo.Ai</span>
         </div>
         <nav>
-          <a href="/" style={s.menuItem}>🏠 Главная</a>
-          <a href="#" style={s.menuItem}>📱 Шортсы</a>
-          <a href="/generation" style={s.menuItem}>📸 Фото/видео</a>
-          <a href="#" style={s.menuItem}>👤 Мой AI</a>
-          <a href="#" style={s.menuItem}>🖼️ Галерея</a>
-          <a href="#" style={s.menuItem}>✨ Персонаж</a>
-          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>💬 Чат</a>
-          {user.role === "admin" && <a href="/admin" style={s.menuItem}>⚙️ Админ</a>}
+          <a href="/" style={s.menuItem}>Главная</a>
+          <a href="#" style={s.menuItem}>Шортсы</a>
+          <a href="/generation" style={s.menuItem}>Фото/видео</a>
+          <a href="#" style={s.menuItem}>Мой AI</a>
+          <a href="#" style={s.menuItem}>Галерея</a>
+          <a href="#" style={s.menuItem}>Персонаж</a>
+          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>Чат</a>
+          {user.role === "admin" && <a href="/admin" style={s.menuItem}>Админ</a>}
         </nav>
         <div style={s.sidebarFooter}>
-          <button style={s.btnFooter}>👑 Премиум</button>
-          <button style={s.btnFooter}>📘 Гайд</button>
+          <button style={s.btnFooter}>Премиум</button>
+          <button style={s.btnFooter}>Гайд</button>
         </div>
       </aside>
 
@@ -298,6 +485,9 @@ export default function ChatPage() {
                     ...(msg.role === "user" ? s.bubbleUser : s.bubbleAi),
                   }}
                 >
+                  {msg.type === "audio" && msg.role === "user" && (
+                    <div style={s.voiceLabel}>Голосовое сообщение</div>
+                  )}
                   <div>{msg.content}</div>
                   <div style={s.msgMeta}>
                     <span style={s.msgDate}>
@@ -307,14 +497,28 @@ export default function ChatPage() {
                       })}
                     </span>
                     {msg.role === "assistant" && !msg.id.startsWith("temp-") && (
-                      <button
-                        onClick={() => handleRegenerate(msg.id)}
-                        style={s.msgAction}
-                        disabled={streaming}
-                        title="Перегенерировать"
-                      >
-                        Повтор
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handlePlayTTS(msg.id)}
+                          style={s.msgAction}
+                          disabled={loadingTTSId === msg.id}
+                          title={playingTTSId === msg.id ? "Остановить" : "Озвучить"}
+                        >
+                          {loadingTTSId === msg.id
+                            ? "..."
+                            : playingTTSId === msg.id
+                              ? "Стоп"
+                              : "Озвучить"}
+                        </button>
+                        <button
+                          onClick={() => handleRegenerate(msg.id)}
+                          style={s.msgAction}
+                          disabled={streaming}
+                          title="Перегенерировать"
+                        >
+                          Повтор
+                        </button>
+                      </>
                     )}
                     {!msg.id.startsWith("temp-") && (
                       <button
@@ -343,21 +547,47 @@ export default function ChatPage() {
                   Стоп
                 </button>
               ) : null}
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                style={s.chatInput}
-                placeholder="Введите сообщение..."
-                disabled={streaming}
-              />
-              <button
-                onClick={handleSend}
-                disabled={streaming || !input.trim()}
-                style={s.sendBtn}
-              >
-                Отправить
-              </button>
+
+              {recording ? (
+                <div style={s.recordingBar}>
+                  <div style={s.recordingDot} />
+                  <span style={s.recordingTime}>
+                    {formatRecordingTime(recordingTime)}
+                  </span>
+                  <button onClick={cancelRecording} style={s.recordCancelBtn} title="Отмена">
+                    Отмена
+                  </button>
+                  <button onClick={stopRecording} style={s.recordStopBtn} title="Отправить">
+                    Отправить
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={startRecording}
+                    disabled={streaming}
+                    style={s.micBtn}
+                    title="Голосовое сообщение"
+                  >
+                    Микрофон
+                  </button>
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    style={s.chatInput}
+                    placeholder="Введите сообщение..."
+                    disabled={streaming}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={streaming || !input.trim()}
+                    style={s.sendBtn}
+                  >
+                    Отправить
+                  </button>
+                </>
+              )}
             </div>
           </>
         ) : (
@@ -571,6 +801,12 @@ const s: Record<string, React.CSSProperties> = {
   },
   bubbleAi: { background: "#2d1b44", alignSelf: "flex-start" },
   bubbleUser: { background: "#4a3b61", alignSelf: "flex-end" },
+  voiceLabel: {
+    fontSize: 10,
+    color: "#a29bfe",
+    marginBottom: 4,
+    fontStyle: "italic" as const,
+  },
   msgMeta: {
     display: "flex",
     gap: 8,
@@ -622,6 +858,61 @@ const s: Record<string, React.CSSProperties> = {
     padding: "10px 16px",
     borderRadius: 10,
     fontSize: 13,
+    cursor: "pointer",
+  },
+
+  // Voice recording
+  micBtn: {
+    background: "transparent",
+    border: "1px solid #6c5ce7",
+    color: "#6c5ce7",
+    padding: "10px 14px",
+    borderRadius: 10,
+    fontSize: 13,
+    cursor: "pointer",
+    flexShrink: 0,
+  },
+  recordingBar: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,118,117,0.1)",
+    border: "1px solid #ff7675",
+    borderRadius: 10,
+    padding: "8px 14px",
+  },
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: "50%",
+    background: "#ff7675",
+    animation: "pulse 1s infinite",
+    flexShrink: 0,
+  },
+  recordingTime: {
+    color: "#ff7675",
+    fontSize: 14,
+    fontWeight: "bold" as const,
+    flex: 1,
+  },
+  recordCancelBtn: {
+    background: "transparent",
+    border: "1px solid #3d2b55",
+    color: "#aaa",
+    padding: "6px 14px",
+    borderRadius: 8,
+    fontSize: 12,
+    cursor: "pointer",
+  },
+  recordStopBtn: {
+    background: "#6c5ce7",
+    border: "none",
+    color: "#fff",
+    padding: "6px 14px",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: "bold" as const,
     cursor: "pointer",
   },
 

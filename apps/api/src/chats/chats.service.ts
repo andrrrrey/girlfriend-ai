@@ -73,7 +73,7 @@ export class ChatsService {
       where: { id: chatId, deletedAt: null },
       include: {
         character: {
-          select: { id: true, name: true, avatarUrl: true, systemPrompt: true },
+          select: { id: true, name: true, avatarUrl: true, systemPrompt: true, voiceId: true },
         },
       },
     });
@@ -132,10 +132,17 @@ export class ChatsService {
     chatSessionId: string,
     role: string,
     content: string,
-    metadata?: Record<string, unknown>,
+    opts?: { type?: string; mediaUrl?: string; metadata?: Record<string, unknown> },
   ) {
     const message = await this.prisma.message.create({
-      data: { chatSessionId, role, content, metadata: metadata as Prisma.InputJsonValue },
+      data: {
+        chatSessionId,
+        role,
+        content,
+        type: opts?.type || "text",
+        mediaUrl: opts?.mediaUrl,
+        metadata: opts?.metadata as Prisma.InputJsonValue,
+      },
     });
 
     await this.prisma.chatSession.update({
@@ -143,6 +150,15 @@ export class ChatsService {
       data: { lastMessageAt: new Date() },
     });
 
+    return message;
+  }
+
+  async getMessage(messageId: string, chatId: string, userId: string) {
+    await this.getChat(chatId, userId);
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, chatSessionId: chatId, deletedAt: null },
+    });
+    if (!message) throw new NotFoundException("Message not found");
     return message;
   }
 
