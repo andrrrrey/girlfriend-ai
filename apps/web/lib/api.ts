@@ -435,3 +435,92 @@ export function streamRegenerate(
 
   return controller;
 }
+
+// ─── Voice message helpers ──────────────────────────────────
+
+export function streamVoiceMessage(
+  chatId: string,
+  audioBlob: Blob,
+  onTranscription: (text: string) => void,
+  onDelta: (text: string) => void,
+  onDone: () => void,
+  onError: (err: string) => void,
+): AbortController {
+  const controller = new AbortController();
+  const tokens = getTokens();
+
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.webm");
+
+  fetch(`${API_BASE}/chats/${chatId}/voice`, {
+    method: "POST",
+    headers: {
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+    body: formData,
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({ error: "Voice request failed" }));
+        onError(err.error || res.statusText);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line === "data: [DONE]") {
+            onDone();
+            return;
+          }
+          if (line.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.transcription) onTranscription(parsed.transcription);
+              if (parsed.content) onDelta(parsed.content);
+              if (parsed.error) onError(parsed.error);
+              if (parsed.done) onDone();
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+      onDone();
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") {
+        onError(err.message);
+      }
+    });
+
+  return controller;
+}
+
+export async function fetchTTS(
+  chatId: string,
+  messageId: string,
+): Promise<ArrayBuffer> {
+  const tokens = getTokens();
+  const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}/tts`, {
+    method: "POST",
+    headers: {
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "TTS failed" }));
+    throw new Error(err.error || "TTS failed");
+  }
+
+  return res.arrayBuffer();
+}

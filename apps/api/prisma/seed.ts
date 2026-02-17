@@ -8,9 +8,10 @@ async function main() {
   const defaults: Record<string, string> = {
     OPENAI_API_KEY: "",
     OPENAI_MODEL: "gpt-4o",
-    OPENAI_TTS_MODEL: "tts-1",
     OPENAI_STT_MODEL: "whisper-1",
-    OPENAI_TTS_VOICE: "nova",
+    ELEVENLABS_API_KEY: "",
+    ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM",
+    ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
   };
 
   for (const [key, value] of Object.entries(defaults)) {

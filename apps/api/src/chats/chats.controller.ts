@@ -11,8 +11,11 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChatsService } from "./chats.service";
@@ -155,6 +158,150 @@ export class ChatsController {
     }
 
     res.end();
+  }
+
+  // ─── Voice message: upload audio → STT → AI response (streamed) ───
+
+  @Post(":id/voice")
+  @UseInterceptors(FileInterceptor("audio", { limits: { fileSize: 25 * 1024 * 1024 } }))
+  async sendVoiceMessage(
+    @Req() req: any,
+    @Res() res: Response,
+    @Param("id") id: string,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string; originalname: string },
+  ) {
+    if (!file) {
+      res.status(400).json({ error: "Audio file is required" });
+      return;
+    }
+
+    const chat = await this.chatsService.getChat(id, req.user.id);
+
+    // 1. Send audio to AI service for STT (Whisper)
+    const formData = new FormData();
+    formData.append(
+      "audio",
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }),
+      file.originalname || "audio.webm",
+    );
+
+    const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!sttRes.ok) {
+      const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
+      res.status(sttRes.status || 502).json(err);
+      return;
+    }
+
+    const { text: transcribedText } = (await sttRes.json()) as { text: string };
+
+    if (!transcribedText) {
+      res.status(400).json({ error: "Could not transcribe audio" });
+      return;
+    }
+
+    // 2. Save user voice message
+    await this.chatsService.saveMessage(id, "user", transcribedText, { type: "audio" });
+
+    // 3. Get history and stream AI response
+    const history = await this.chatsService.getMessageHistory(id);
+
+    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: history.map((m) => ({ role: m.role, content: m.content })),
+        characterId: chat.characterId,
+      }),
+    });
+
+    if (!aiRes.ok || !aiRes.body) {
+      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
+      res.status(aiRes.status || 502).json(err);
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    // Send transcribed text first so frontend can display it
+    res.write(`data: ${JSON.stringify({ transcription: transcribedText })}\n\n`);
+
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.content) fullContent += parsed.content;
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (fullContent) {
+      await this.chatsService.saveMessage(id, "assistant", fullContent);
+    }
+
+    res.end();
+  }
+
+  // ─── TTS: generate speech for a message via ElevenLabs ────────
+
+  @Post(":id/messages/:msgId/tts")
+  async messageTTS(
+    @Req() req: any,
+    @Res() res: Response,
+    @Param("id") chatId: string,
+    @Param("msgId") msgId: string,
+  ) {
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+    const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
+
+    // Use character's voiceId if available
+    const voiceId = chat.character?.voiceId || undefined;
+
+    const ttsRes = await fetch(`${AI_BASE}/ai/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: message.content,
+        voiceId,
+      }),
+    });
+
+    if (!ttsRes.ok || !ttsRes.body) {
+      const err = await ttsRes.json().catch(() => ({ error: "TTS failed" }));
+      res.status(ttsRes.status || 502).json(err);
+      return;
+    }
+
+    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Length", audioBuffer.length);
+    res.send(audioBuffer);
   }
 
   @Delete(":id/messages/:msgId")

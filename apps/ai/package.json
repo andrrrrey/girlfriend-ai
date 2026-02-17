@@ -7,11 +7,12 @@
     "start:prod": "node dist/index.js"
   },
   "dependencies": {
-    "fastify": "^4.28.1",
-    "openai": "^4.73.0",
+    "@fastify/multipart": "^9.4.0",
     "@repo/config": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@repo/types": "workspace:*"
+    "@repo/types": "workspace:*",
+    "fastify": "^4.28.1",
+    "openai": "^4.73.0"
   },
   "devDependencies": {
     "tsup": "^8.2.0",

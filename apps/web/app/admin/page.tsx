@@ -4,13 +4,29 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth";
 import { admin, type AppSetting } from "../../lib/api";
 
-const SETTING_KEYS = [
-  { key: "OPENAI_API_KEY", label: "Ключ API OpenAI", type: "password" },
-  { key: "OPENAI_MODEL", label: "Модель", type: "select", options: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"] },
-  { key: "OPENAI_TTS_MODEL", label: "Модель TTS", type: "text" },
-  { key: "OPENAI_STT_MODEL", label: "Модель STT", type: "text" },
-  { key: "OPENAI_TTS_VOICE", label: "Голос TTS", type: "select", options: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] },
+const SETTING_GROUPS = [
+  {
+    title: "OpenAI",
+    subtitle: "Параметры интеграции с OpenAI",
+    keys: [
+      { key: "OPENAI_API_KEY", label: "Ключ API OpenAI", type: "password" },
+      { key: "OPENAI_MODEL", label: "Модель чата", type: "select", options: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"] },
+      { key: "OPENAI_STT_MODEL", label: "Модель STT (Whisper)", type: "text" },
+    ],
+  },
+  {
+    title: "ElevenLabs",
+    subtitle: "Параметры генерации голоса (TTS)",
+    keys: [
+      { key: "ELEVENLABS_API_KEY", label: "Ключ API ElevenLabs", type: "password" },
+      { key: "ELEVENLABS_DEFAULT_VOICE_ID", label: "ID голоса по умолчанию", type: "text" },
+      { key: "ELEVENLABS_MODEL_ID", label: "Модель ElevenLabs", type: "select", options: ["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_turbo_v2", "eleven_monolingual_v1"] },
+    ],
+  },
 ];
+
+// Flat list for backward compat
+const SETTING_KEYS = SETTING_GROUPS.flatMap((g) => g.keys);
 
 export default function AdminSettingsPage() {
   const { user, loading } = useAuth();
@@ -71,42 +87,45 @@ export default function AdminSettingsPage() {
           <a href="/admin/characters" style={styles.tab}>Персонажи</a>
         </div>
 
-        <div style={styles.card}>
-          <h1 style={styles.title}>Настройки AI</h1>
-          <p style={styles.subtitle}>Параметры интеграции с OpenAI</p>
+        {error && <div style={{ ...styles.card, ...styles.error, marginBottom: 20 }}>{error}</div>}
+        {saved && <div style={{ ...styles.card, ...styles.success, marginBottom: 20 }}>Настройки сохранены!</div>}
 
-          {error && <div style={styles.error}>{error}</div>}
-          {saved && <div style={styles.success}>Настройки сохранены!</div>}
+        {SETTING_GROUPS.map((group) => (
+          <div key={group.title} style={{ ...styles.card, marginBottom: 20 }}>
+            <h2 style={styles.title}>{group.title}</h2>
+            <p style={styles.subtitle}>{group.subtitle}</p>
 
-          {SETTING_KEYS.map(({ key, label, type, options }) => (
-            <div key={key} style={styles.field}>
-              <label style={styles.label}>{label}</label>
-              {type === "select" ? (
-                <select
-                  value={settings[key] || ""}
-                  onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
-                  style={styles.input}
-                >
-                  {options!.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type={type}
-                  value={settings[key] || ""}
-                  onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
-                  style={styles.input}
-                  placeholder={key}
-                />
-              )}
-            </div>
-          ))}
+            {group.keys.map(({ key, label, type, options }) => (
+              <div key={key} style={styles.field}>
+                <label style={styles.label}>{label}</label>
+                {type === "select" ? (
+                  <select
+                    value={settings[key] || ""}
+                    onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+                    style={styles.input}
+                  >
+                    <option value="">-- выбрать --</option>
+                    {options!.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={type}
+                    value={settings[key] || ""}
+                    onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+                    style={styles.input}
+                    placeholder={key}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
 
-          <button onClick={handleSave} disabled={saving} style={styles.button}>
-            {saving ? "Сохранение..." : "Сохранить настройки"}
-          </button>
-        </div>
+        <button onClick={handleSave} disabled={saving} style={styles.button}>
+          {saving ? "Сохранение..." : "Сохранить настройки"}
+        </button>
       </div>
     </div>
   );
