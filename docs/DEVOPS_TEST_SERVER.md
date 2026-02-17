@@ -8,15 +8,15 @@
 - **Диск:** 40 GB SSD
 - **Сеть:** публичный IP или доступ через VPN
 
-## Необходимое ПО
+## Необходимое ПО на хосте
 
 | Компонент       | Версия   |
 |-----------------|----------|
 | Docker          | 24+      |
 | Docker Compose  | v2+      |
-| Node.js         | 20 LTS   |
-| pnpm            | 9.x      |
 | Git             | 2.x      |
+
+> Node.js, pnpm и остальные зависимости ставить на хост **не нужно** — всё собирается внутри Docker-контейнеров.
 
 ## Сервисы, которые поднимает docker-compose
 
@@ -99,8 +99,6 @@ git clone <repo-url> && cd girlfriend-ai
 cp env.example .env
 
 # 3. Поднять всё через Docker Compose
-pnpm dev
-# или напрямую:
 docker compose -f infra/compose/docker-compose.dev.yml up --build -d
 ```
 
