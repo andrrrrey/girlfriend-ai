@@ -464,7 +464,6 @@ export default function ProfilePage() {
           <a href="#" className="menu-item">🖼️ Галерея</a>
           <a href="#" className="menu-item">✨ Персонаж</a>
           <a href="/chat" className="menu-item">💬 Чат</a>
-          <a href="/profile" className="menu-item active">👤 Профиль</a>
         </nav>
         <div style={{ marginTop: "auto" }}>
           <button className="btn-footer">👑 Премиум</button>
