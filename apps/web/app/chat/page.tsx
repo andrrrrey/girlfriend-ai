@@ -392,7 +392,6 @@ export default function ChatPage() {
           <a href="#" style={s.menuItem}>Галерея</a>
           <a href="#" style={s.menuItem}>Персонаж</a>
           <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>Чат</a>
-          {user.role === "admin" && <a href="/admin" style={s.menuItem}>Админ</a>}
         </nav>
         <div style={s.sidebarFooter}>
           <button style={s.btnFooter}>Премиум</button>
