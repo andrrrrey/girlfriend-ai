@@ -1,27 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
-interface User {
-  email: string;
-  role: "user" | "admin";
-  name?: string;
-}
-
-function parseToken(token: string): User | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
-    return {
-      email: payload.email || "",
-      role: payload.role === "admin" ? "admin" : "user",
-      name: payload.name,
-    };
-  } catch {
-    return null;
-  }
-}
+import { useAuth } from "../../context/auth";
 
 const CSS = `
   :root {
@@ -117,7 +96,7 @@ const CSS = `
   }
   .profile-name { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
   .profile-email { font-size: 14px; opacity: 0.8; }
-  .profile-role {
+  .profile-badge {
     display: inline-block; background: rgba(255,255,255,0.2);
     border-radius: 12px; padding: 2px 10px; font-size: 12px; margin-top: 6px;
   }
@@ -158,7 +137,7 @@ function Sidebar() {
       <nav>
         <a href="/" className="menu-item">🏠 Главная</a>
         <a href="#" className="menu-item">📱 Шортсы</a>
-        <a href="#" className="menu-item">📸 Фото/видео</a>
+        <a href="/generation" className="menu-item">📸 Фото/видео</a>
         <a href="#" className="menu-item">👤 Мой AI</a>
         <a href="#" className="menu-item">🖼️ Галерея</a>
         <a href="#" className="menu-item">✨ Персонаж</a>
@@ -180,7 +159,8 @@ function UnauthenticatedView() {
       <div>
         <div className="unauth-title">Вы не вошли в профиль</div>
         <div className="unauth-subtitle">
-          Войдите в аккаунт или создайте новый, чтобы получить доступ к профилю и персональным настройкам.
+          Войдите в аккаунт или создайте новый, чтобы получить доступ к
+          профилю и персональным настройкам.
         </div>
       </div>
       <div className="unauth-actions">
@@ -191,9 +171,15 @@ function UnauthenticatedView() {
   );
 }
 
-function AuthenticatedView({ user, onLogout }: { user: User; onLogout: () => void }) {
+function AuthenticatedView({
+  user,
+  onLogout,
+}: {
+  user: import("../../lib/api").UserProfile;
+  onLogout: () => void;
+}) {
   const isAdmin = user.role === "admin";
-  const displayName = user.name || user.email.split("@")[0];
+  const displayName = user.nickname || user.email.split("@")[0];
 
   return (
     <>
@@ -204,11 +190,24 @@ function AuthenticatedView({ user, onLogout }: { user: User; onLogout: () => voi
       )}
 
       <div className="profile-header">
-        <div className="avatar">👤</div>
+        <div className="avatar">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatarUrl}
+              alt={displayName}
+              style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+            />
+          ) : (
+            "👤"
+          )}
+        </div>
         <div>
           <div className="profile-name">{displayName}</div>
           <div className="profile-email">{user.email}</div>
-          <span className="profile-role">{isAdmin ? "Администратор" : "Пользователь"}</span>
+          <span className="profile-badge">
+            {isAdmin ? "Администратор" : "Пользователь"}
+          </span>
         </div>
       </div>
 
@@ -219,12 +218,18 @@ function AuthenticatedView({ user, onLogout }: { user: User; onLogout: () => voi
           <span className="section-row-value">{user.email}</span>
         </div>
         <div className="section-row">
-          <span className="section-row-label">Имя</span>
+          <span className="section-row-label">Никнейм</span>
           <span className="section-row-value">{displayName}</span>
         </div>
         <div className="section-row">
           <span className="section-row-label">Роль</span>
-          <span className="section-row-value">{isAdmin ? "Администратор" : "Пользователь"}</span>
+          <span className="section-row-value">
+            {isAdmin ? "Администратор" : "Пользователь"}
+          </span>
+        </div>
+        <div className="section-row">
+          <span className="section-row-label">Язык</span>
+          <span className="section-row-value">{user.lang?.toUpperCase() || "RU"}</span>
         </div>
       </div>
 
@@ -232,52 +237,37 @@ function AuthenticatedView({ user, onLogout }: { user: User; onLogout: () => voi
         <div className="section-title">Подписка</div>
         <div className="section-row">
           <span className="section-row-label">Тариф</span>
-          <span className="section-row-value">Бесплатный</span>
+          <span className="section-row-value">
+            {user.subscription === "premium" ? "👑 Премиум" : "Бесплатный"}
+          </span>
         </div>
         <div className="section-row">
-          <span className="section-row-label">Сообщений осталось</span>
-          <span className="section-row-value">10 / 10</span>
-        </div>
-      </div>
-
-      <div className="section">
-        <div className="section-title">Настройки</div>
-        <div className="section-row">
-          <span className="section-row-label">Язык</span>
-          <span className="section-row-value">Русский</span>
-        </div>
-        <div className="section-row">
-          <span className="section-row-label">Уведомления</span>
-          <span className="section-row-value">Включены</span>
+          <span className="section-row-label">Дата регистрации</span>
+          <span className="section-row-value">
+            {new Date(user.createdAt).toLocaleDateString("ru-RU")}
+          </span>
         </div>
       </div>
 
       <div style={{ marginTop: "8px" }}>
-        <button className="btn-logout" onClick={onLogout}>Выйти из аккаунта</button>
+        <button className="btn-logout" onClick={onLogout}>
+          Выйти из аккаунта
+        </button>
       </div>
     </>
   );
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const { user, loading, logout } = useAuth();
 
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      setUser(parseToken(token));
-    }
-    setMounted(true);
-  }, []);
-
-  function handleLogout() {
-    localStorage.removeItem("auth_token");
-    setUser(null);
+  async function handleLogout() {
+    await logout();
+    window.location.href = "/login";
   }
 
-  // Avoid hydration mismatch — render nothing until client mounts
-  if (!mounted) return null;
+  // Show nothing during initial auth check to avoid flash
+  if (loading) return null;
 
   return (
     <>
@@ -286,7 +276,9 @@ export default function ProfilePage() {
         <Sidebar />
         <main className="content">
           <header className="top-nav">
-            <a href="/profile" className="nav-btn active">👤 Профиль</a>
+            <a href="/profile" className="nav-btn active">
+              👤 Профиль
+            </a>
             <button className="nav-btn">🌐 Русский</button>
           </header>
           {user ? (

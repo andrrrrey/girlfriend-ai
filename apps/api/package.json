@@ -3,26 +3,44 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "start:dev": "nest start --watch",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "npx --yes tsx@latest prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "npx --yes tsx@latest prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
     "@nestjs/core": "^10.4.0",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.4.0",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
     "@prisma/client": "^5.18.0",
     "@repo/config": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@repo/types": "workspace:*"
+    "@repo/types": "workspace:*",
+    "@types/multer": "^2.0.0",
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
+    "multer": "^2.0.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.2",
     "@nestjs/schematics": "^10.1.3",
     "@nestjs/testing": "^10.4.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.6",
+    "@types/passport-jwt": "^4.0.1",
     "prisma": "^5.18.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }
 }

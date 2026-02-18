@@ -7,13 +7,121 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Users & Auth ────────────────────────────────────────────
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         String   @default("user")
-  lang         String   @default("en")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  nickname     String?
+  avatarUrl    String?   @map("avatar_url")
+  role         String    @default("user")
+  subscription String    @default("free")
+  isDemo       Boolean   @default(false) @map("is_demo")
+  lang         String    @default("en")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  sessions     Session[]
+  socialLinks  SocialLink[]
+  chatSessions ChatSession[]
 
   @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  userAgent    String?  @map("user_agent")
+  ip           String?
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model SocialLink {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  provider String
+  url      String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("social_links")
+}
+
+// ─── Admin Settings (key-value store) ────────────────────────
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+// ─── Characters ──────────────────────────────────────────────
+
+model Character {
+  id           String    @id @default(uuid())
+  name         String
+  systemPrompt String    @map("system_prompt")
+  personality  Json      @default("{}")
+  avatarUrl    String?   @map("avatar_url")
+  voiceId      String?   @map("voice_id")
+  tags         String[]  @default([])
+  isPublic     Boolean   @default(true) @map("is_public")
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  chatSessions ChatSession[]
+
+  @@map("characters")
+}
+
+// ─── Chat ────────────────────────────────────────────────────
+
+model ChatSession {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  characterId   String    @map("character_id")
+  title         String?
+  lastMessageAt DateTime? @map("last_message_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id])
+  messages  Message[]
+
+  @@index([userId])
+  @@index([characterId])
+  @@map("chat_sessions")
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  chatSessionId String    @map("chat_session_id")
+  role          String    // user | assistant | system
+  content       String
+  type          String    @default("text") // text | audio | image
+  mediaUrl      String?   @map("media_url")
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId])
+  @@map("messages")
 }
