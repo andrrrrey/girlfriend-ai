@@ -378,6 +378,12 @@ export default function ChatPage() {
 
   return (
     <div style={s.root}>
+      <style>{`
+        .sidebar-menu-item { transition: all 0.2s ease; }
+        .sidebar-menu-item:hover { color: white !important; background-color: rgba(255,255,255,0.05) !important; transform: translateX(5px); }
+        .sidebar-btn-footer { transition: all 0.2s ease; }
+        .sidebar-btn-footer:hover { background-color: #3d2b55 !important; }
+      `}</style>
       {/* Sidebar */}
       <aside style={s.sidebar}>
         <div style={s.logo}>
@@ -385,17 +391,17 @@ export default function ChatPage() {
           <span>Leonardo.Ai</span>
         </div>
         <nav>
-          <a href="/" style={s.menuItem}>Главная</a>
-          <a href="#" style={s.menuItem}>Шортсы</a>
-          <a href="/generation" style={s.menuItem}>Фото/видео</a>
-          <a href="#" style={s.menuItem}>Мой AI</a>
-          <a href="#" style={s.menuItem}>Галерея</a>
-          <a href="#" style={s.menuItem}>Персонаж</a>
-          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>Чат</a>
+          <a href="/" style={s.menuItem} className="sidebar-menu-item">🏠 Главная</a>
+          <a href="#" style={s.menuItem} className="sidebar-menu-item">📱 Шортсы</a>
+          <a href="/generation" style={s.menuItem} className="sidebar-menu-item">📸 Фото/видео</a>
+          <a href="#" style={s.menuItem} className="sidebar-menu-item">👤 Мой AI</a>
+          <a href="#" style={s.menuItem} className="sidebar-menu-item">🖼️ Галерея</a>
+          <a href="#" style={s.menuItem} className="sidebar-menu-item">✨ Персонаж</a>
+          <a href="/chat" style={{ ...s.menuItem, ...s.menuActive }}>💬 Чат</a>
         </nav>
         <div style={s.sidebarFooter}>
-          <button style={s.btnFooter}>Премиум</button>
-          <button style={s.btnFooter}>Гайд</button>
+          <button style={s.btnFooter} className="sidebar-btn-footer">👑 Премиум</button>
+          <button style={s.btnFooter} className="sidebar-btn-footer">📘 Гайд</button>
         </div>
       </aside>
 
@@ -620,7 +626,7 @@ const s: Record<string, React.CSSProperties> = {
 
   // Sidebar
   sidebar: {
-    width: 250,
+    width: 200,
     background: "#120a1d",
     borderRight: "1px solid #3d2b55",
     padding: "20px 15px",

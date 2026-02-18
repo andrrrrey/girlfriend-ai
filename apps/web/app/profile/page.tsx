@@ -26,7 +26,7 @@ const CSS = `
     overflow: hidden;
   }
   .sidebar {
-    width: 250px;
+    width: 200px;
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--tag-border);
     display: flex;
