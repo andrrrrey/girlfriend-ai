@@ -23,11 +23,27 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  sessions     Session[]
-  socialLinks  SocialLink[]
-  chatSessions ChatSession[]
+  sessions      Session[]
+  socialLinks   SocialLink[]
+  chatSessions  ChatSession[]
+  usageCounters UsageCounter[]
 
   @@map("users")
+}
+
+// ─── Demo Limits ──────────────────────────────────────────────
+
+model UsageCounter {
+  id      String   @id @default(uuid())
+  userId  String   @map("user_id")
+  action  String   // chat_message | stt | tts | generation
+  count   Int      @default(0)
+  resetAt DateTime @map("reset_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, action])
+  @@map("usage_counters")
 }
 
 model Session {

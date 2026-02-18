@@ -206,4 +206,23 @@ export class ChatsService {
       data: { deletedAt: new Date() },
     });
   }
+
+  async updateMessageContent(messageId: string, chatId: string, userId: string, content: string) {
+    await this.getChat(chatId, userId);
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, chatSessionId: chatId, deletedAt: null },
+    });
+    if (!message) throw new NotFoundException("Message not found");
+
+    await this.prisma.message.update({
+      where: { id: messageId },
+      data: { content },
+    });
+
+    // Soft-delete all assistant messages after the edited one so AI can regenerate from new content
+    const after = await this.getMessagesAfter(chatId, messageId);
+    if (after.length > 0) {
+      await this.softDeleteMessages(after.map((m) => m.id));
+    }
+  }
 }

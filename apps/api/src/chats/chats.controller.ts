@@ -18,8 +18,10 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { DemoService } from "../demo/demo.service";
 import { ChatsService } from "./chats.service";
 import { CreateChatDto } from "./dto/create-chat.dto";
+import { EditMessageDto } from "./dto/edit-message.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
 import { loadEnv } from "@repo/config";
@@ -30,7 +32,10 @@ const AI_BASE = `http://localhost:${env.AI_PORT}`;
 @Controller("chats")
 @UseGuards(JwtAuthGuard)
 export class ChatsController {
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly demoService: DemoService,
+  ) {}
 
   @Post()
   async createChat(@Req() req: any, @Body() dto: CreateChatDto) {
@@ -92,6 +97,9 @@ export class ChatsController {
     @Param("id") id: string,
     @Body() dto: SendMessageDto,
   ) {
+    // Check demo limits (throws 429 if exceeded)
+    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+
     const chat = await this.chatsService.getChat(id, req.user.id);
 
     // Save user message
@@ -175,11 +183,13 @@ export class ChatsController {
       return;
     }
 
+    // STT/TTS blocked for free/demo users
+    this.demoService.checkVoiceAllowed(req.user.subscription);
+
     try {
       const chat = await this.chatsService.getChat(id, req.user.id);
 
       // 1. Send audio to AI service for STT (Whisper)
-      // Copy buffer to avoid Node.js Buffer pool issues with Blob
       const audioBuffer = Buffer.from(file.buffer);
       const formData = new FormData();
       formData.append(
@@ -188,16 +198,13 @@ export class ChatsController {
         file.originalname || "audio.webm",
       );
 
-      console.log("[voice] Sending STT request to AI service...");
       const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
         method: "POST",
         body: formData,
       });
-      console.log("[voice] STT response status:", sttRes.status);
 
       if (!sttRes.ok) {
         const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
-        console.error("[voice] STT failed:", err);
         res.status(sttRes.status || 502).json(err);
         return;
       }
@@ -273,7 +280,6 @@ export class ChatsController {
 
       res.end();
     } catch (err: any) {
-      console.error("[voice] Error:", err.message, err.cause || "");
       if (!res.headersSent) {
         res.status(500).json({ error: "Voice processing failed", details: err.message });
       } else {
@@ -291,11 +297,13 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
+    // TTS blocked for free/demo users
+    this.demoService.checkVoiceAllowed(req.user.subscription);
+
     try {
       const chat = await this.chatsService.getChat(chatId, req.user.id);
       const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
 
-      // Use character's voiceId if available
       const voiceId = chat.character?.voiceId || undefined;
 
       const ttsRes = await fetch(`${AI_BASE}/ai/tts`, {
@@ -334,6 +342,83 @@ export class ChatsController {
     await this.chatsService.deleteMessage(msgId, chatId, req.user.id);
   }
 
+  // ─── Edit message: update content + soft-delete subsequent messages + stream new AI response ───
+
+  @Patch(":id/messages/:msgId")
+  async editMessage(
+    @Req() req: any,
+    @Res() res: Response,
+    @Param("id") chatId: string,
+    @Param("msgId") msgId: string,
+    @Body() dto: EditMessageDto,
+  ) {
+    // Check demo limits (editing sends a new AI request)
+    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+
+    // Update message content and soft-delete messages after it
+    await this.chatsService.updateMessageContent(msgId, chatId, req.user.id, dto.content);
+
+    // Get updated history and stream new AI response
+    const history = await this.chatsService.getMessageHistory(chatId);
+
+    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: history.map((m) => ({ role: m.role, content: m.content })),
+        characterId: chat.characterId,
+      }),
+    });
+
+    if (!aiRes.ok || !aiRes.body) {
+      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
+      res.status(aiRes.status || 502).json(err);
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.content) fullContent += parsed.content;
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (fullContent) {
+      await this.chatsService.saveMessage(chatId, "assistant", fullContent);
+    }
+
+    res.end();
+  }
+
   @Post(":id/messages/:msgId/regenerate")
   async regenerateMessage(
     @Req() req: any,
@@ -341,6 +426,9 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
+    // Check demo limits (regenerating counts as a new message)
+    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+
     const chat = await this.chatsService.getChat(chatId, req.user.id);
 
     // Soft-delete the target message and everything after it
@@ -407,5 +495,4 @@ export class ChatsController {
 
     res.end();
   }
-
 }

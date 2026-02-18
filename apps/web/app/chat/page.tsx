@@ -8,14 +8,19 @@ import {
   streamMessage,
   streamRegenerate,
   streamVoiceMessage,
+  streamEditMessage,
   fetchTTS,
   type ChatSession,
   type Message,
   type Character,
 } from "../../lib/api";
 
+const DEMO_MESSAGE_LIMIT = 20;
+
 export default function ChatPage() {
   const { user, loading } = useAuth();
+  const isDemo = !user || user.subscription === "free";
+
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,6 +31,9 @@ export default function ChatPage() {
   const [showNewChat, setShowNewChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Demo banner state
+  const [demoBanner, setDemoBanner] = useState<string | null>(null);
 
   // Voice recording state
   const [recording, setRecording] = useState(false);
@@ -38,6 +46,10 @@ export default function ChatPage() {
   const [playingTTSId, setPlayingTTSId] = useState<string | null>(null);
   const [loadingTTSId, setLoadingTTSId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Edit message state
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   // Load chat list
   const loadChats = useCallback(async () => {
@@ -102,10 +114,21 @@ export default function ChatPage() {
     );
   }
 
+  const handleDemoError = (err: string, code?: number) => {
+    if (code === 429) {
+      setDemoBanner(`Достигнут дневной лимит ${DEMO_MESSAGE_LIMIT} сообщений. Оформите подписку для безлимитного общения.`);
+    } else if (code === 403) {
+      setDemoBanner("Голосовые функции доступны только по подписке.");
+    } else {
+      setStreamContent(`[Error: ${err}]`);
+    }
+  };
+
   const handleSend = () => {
     if (!input.trim() || !activeChat || streaming) return;
     const content = input.trim();
     setInput("");
+    setDemoBanner(null);
 
     // Optimistic: add user message
     const userMsg: Message = {
@@ -127,20 +150,22 @@ export default function ChatPage() {
       (delta) => setStreamContent((prev) => prev + delta),
       () => {
         setStreaming(false);
-        // Reload messages to get saved version with proper IDs
         loadMessages(activeChat);
         loadChats();
         setStreamContent("");
       },
-      (err) => {
+      (err, code) => {
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setStreaming(false);
-        setStreamContent(`[Error: ${err}]`);
+        setStreamContent("");
+        handleDemoError(err, code);
       },
     );
   };
 
   const handleRegenerate = (msgId: string) => {
     if (!activeChat || streaming) return;
+    setDemoBanner(null);
     setStreaming(true);
     setStreamContent("");
 
@@ -159,9 +184,60 @@ export default function ChatPage() {
         loadMessages(activeChat);
         setStreamContent("");
       },
-      (err) => {
+      (err, code) => {
         setStreaming(false);
-        setStreamContent(`[Error: ${err}]`);
+        setStreamContent("");
+        handleDemoError(err, code);
+      },
+    );
+  };
+
+  const handleStartEdit = (msg: Message) => {
+    setEditingMsgId(msg.id);
+    setEditContent(msg.content);
+    setDemoBanner(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMsgId(null);
+    setEditContent("");
+  };
+
+  const handleSubmitEdit = () => {
+    if (!editContent.trim() || !activeChat || !editingMsgId || streaming) return;
+    const content = editContent.trim();
+    setDemoBanner(null);
+
+    // Optimistically update the message in UI and remove all after it
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === editingMsgId);
+      if (idx < 0) return prev;
+      const updated = [...prev.slice(0, idx), { ...prev[idx], content }];
+      return updated;
+    });
+
+    setEditingMsgId(null);
+    setEditContent("");
+    setStreaming(true);
+    setStreamContent("");
+
+    abortRef.current = streamEditMessage(
+      activeChat,
+      editingMsgId,
+      content,
+      (delta) => setStreamContent((prev) => prev + delta),
+      () => {
+        setStreaming(false);
+        loadMessages(activeChat);
+        loadChats();
+        setStreamContent("");
+      },
+      (err, code) => {
+        setStreaming(false);
+        setStreamContent("");
+        handleDemoError(err, code);
+        // Reload to restore original message
+        if (activeChat) loadMessages(activeChat);
       },
     );
   };
@@ -218,6 +294,10 @@ export default function ChatPage() {
 
   const startRecording = async () => {
     if (!activeChat || streaming || recording) return;
+    if (isDemo) {
+      setDemoBanner("Голосовые функции доступны только по подписке.");
+      return;
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -286,7 +366,6 @@ export default function ChatPage() {
     setStreaming(true);
     setStreamContent("");
 
-    // Add optimistic user voice message (will be replaced after reload)
     const userMsg: Message = {
       id: `temp-voice-${Date.now()}`,
       role: "user",
@@ -302,7 +381,6 @@ export default function ChatPage() {
       activeChat,
       audioBlob,
       (transcription) => {
-        // Update the optimistic user message with transcription
         setMessages((prev) =>
           prev.map((m) =>
             m.id === userMsg.id ? { ...m, content: transcription } : m,
@@ -316,9 +394,11 @@ export default function ChatPage() {
         loadChats();
         setStreamContent("");
       },
-      (err) => {
+      (err, code) => {
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setStreaming(false);
-        setStreamContent(`[Error: ${err}]`);
+        setStreamContent("");
+        handleDemoError(err, code);
       },
     );
   };
@@ -328,14 +408,17 @@ export default function ChatPage() {
   const handlePlayTTS = async (msgId: string) => {
     if (!activeChat) return;
 
-    // If already playing this message, stop
+    if (isDemo) {
+      setDemoBanner("Озвучивание доступно только по подписке.");
+      return;
+    }
+
     if (playingTTSId === msgId) {
       audioRef.current?.pause();
       setPlayingTTSId(null);
       return;
     }
 
-    // Stop any currently playing audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -383,6 +466,7 @@ export default function ChatPage() {
         .sidebar-menu-item:hover { color: white !important; background-color: rgba(255,255,255,0.05) !important; transform: translateX(5px); }
         .sidebar-btn-footer { transition: all 0.2s ease; }
         .sidebar-btn-footer:hover { background-color: #3d2b55 !important; }
+        .msg-bubble:hover .msg-actions { opacity: 1 !important; }
       `}</style>
       {/* Sidebar */}
       <aside style={s.sidebar}>
@@ -479,7 +563,21 @@ export default function ChatPage() {
               <span style={{ fontWeight: "bold", color: "#fff" }}>
                 {activeChatData?.character?.name || "Чат"}
               </span>
+              {isDemo && (
+                <span style={s.demoBadge}>Free</span>
+              )}
             </div>
+
+            {/* Demo banner */}
+            {demoBanner && (
+              <div style={s.demoBanner}>
+                <span>{demoBanner}</span>
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                  <a href="/profile" style={s.demoBannerBtn}>Оформить подписку</a>
+                  <button onClick={() => setDemoBanner(null)} style={s.demoBannerClose}>Закрыть</button>
+                </div>
+              </div>
+            )}
 
             <div ref={scrollRef} style={s.messagesScroll}>
               {messages.map((msg) => (
@@ -489,51 +587,97 @@ export default function ChatPage() {
                     ...s.bubble,
                     ...(msg.role === "user" ? s.bubbleUser : s.bubbleAi),
                   }}
+                  className="msg-bubble"
                 >
                   {msg.type === "audio" && msg.role === "user" && (
                     <div style={s.voiceLabel}>Голосовое сообщение</div>
                   )}
-                  <div>{msg.content}</div>
-                  <div style={s.msgMeta}>
+
+                  {/* Inline edit mode for user messages */}
+                  {editingMsgId === msg.id ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        style={s.editTextarea}
+                        autoFocus
+                        rows={3}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSubmitEdit();
+                          }
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={handleSubmitEdit} style={s.editSaveBtn} disabled={streaming}>
+                          Сохранить
+                        </button>
+                        <button onClick={handleCancelEdit} style={s.editCancelBtn}>
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>{msg.content}</div>
+                  )}
+
+                  <div style={{ ...s.msgMeta, ...(editingMsgId === msg.id ? { display: "none" } : {}) }}>
                     <span style={s.msgDate}>
                       {new Date(msg.createdAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </span>
-                    {msg.role === "assistant" && !msg.id.startsWith("temp-") && (
-                      <>
+                    <div style={{ ...s.msgActions, opacity: 0 }} className="msg-actions">
+                      {msg.role === "user" && !msg.id.startsWith("temp-") && (
                         <button
-                          onClick={() => handlePlayTTS(msg.id)}
-                          style={s.msgAction}
-                          disabled={loadingTTSId === msg.id}
-                          title={playingTTSId === msg.id ? "Остановить" : "Озвучить"}
-                        >
-                          {loadingTTSId === msg.id
-                            ? "..."
-                            : playingTTSId === msg.id
-                              ? "Стоп"
-                              : "Озвучить"}
-                        </button>
-                        <button
-                          onClick={() => handleRegenerate(msg.id)}
+                          onClick={() => handleStartEdit(msg)}
                           style={s.msgAction}
                           disabled={streaming}
-                          title="Перегенерировать"
+                          title="Редактировать"
                         >
-                          Повтор
+                          ✏️
                         </button>
-                      </>
-                    )}
-                    {!msg.id.startsWith("temp-") && (
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        style={s.msgAction}
-                        title="Удалить"
-                      >
-                        Удал.
-                      </button>
-                    )}
+                      )}
+                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && (
+                        <>
+                          <button
+                            onClick={() => handlePlayTTS(msg.id)}
+                            style={{
+                              ...s.msgAction,
+                              ...(isDemo ? s.msgActionLocked : {}),
+                            }}
+                            disabled={loadingTTSId === msg.id}
+                            title={isDemo ? "Доступно по подписке" : (playingTTSId === msg.id ? "Остановить" : "Озвучить")}
+                          >
+                            {loadingTTSId === msg.id
+                              ? "..."
+                              : playingTTSId === msg.id
+                                ? "⏹"
+                                : isDemo ? "🔒" : "🔊"}
+                          </button>
+                          <button
+                            onClick={() => handleRegenerate(msg.id)}
+                            style={s.msgAction}
+                            disabled={streaming}
+                            title="Перегенерировать"
+                          >
+                            🔄
+                          </button>
+                        </>
+                      )}
+                      {!msg.id.startsWith("temp-") && (
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          style={s.msgAction}
+                          title="Удалить"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -571,10 +715,13 @@ export default function ChatPage() {
                   <button
                     onClick={startRecording}
                     disabled={streaming}
-                    style={s.micBtn}
-                    title="Голосовое сообщение"
+                    style={{
+                      ...s.micBtn,
+                      ...(isDemo ? s.micBtnLocked : {}),
+                    }}
+                    title={isDemo ? "Голосовые функции доступны по подписке" : "Голосовое сообщение"}
                   >
-                    Микрофон
+                    {isDemo ? "🔒" : "🎤"}
                   </button>
                   <input
                     value={input}
@@ -601,6 +748,12 @@ export default function ChatPage() {
             <p style={{ color: "#888" }}>
               Нажмите + чтобы начать новый чат с AI-персонажем.
             </p>
+            {isDemo && (
+              <p style={{ color: "#a29bfe", marginTop: 12, fontSize: 13 }}>
+                Бесплатный план: {DEMO_MESSAGE_LIMIT} сообщений/день, без голосовых функций.{" "}
+                <a href="/profile" style={{ color: "#6c5ce7" }}>Оформить подписку →</a>
+              </p>
+            )}
           </div>
         )}
       </section>
@@ -788,6 +941,44 @@ const s: Record<string, React.CSSProperties> = {
     padding: "15px 20px",
     borderBottom: "1px solid #3d2b55",
   },
+  demoBadge: {
+    marginLeft: "auto",
+    background: "rgba(108,92,231,0.2)",
+    border: "1px solid #6c5ce7",
+    color: "#a29bfe",
+    borderRadius: 12,
+    fontSize: 11,
+    padding: "2px 10px",
+  },
+  demoBanner: {
+    background: "rgba(108,92,231,0.15)",
+    border: "1px solid #6c5ce7",
+    borderRadius: 8,
+    padding: "12px 16px",
+    margin: "10px 20px 0",
+    fontSize: 13,
+    color: "#fff",
+  },
+  demoBannerBtn: {
+    background: "#6c5ce7",
+    border: "none",
+    color: "#fff",
+    padding: "6px 14px",
+    borderRadius: 6,
+    fontSize: 12,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-block",
+  },
+  demoBannerClose: {
+    background: "transparent",
+    border: "1px solid #3d2b55",
+    color: "#aaa",
+    padding: "6px 14px",
+    borderRadius: 6,
+    fontSize: 12,
+    cursor: "pointer",
+  },
   messagesScroll: {
     flex: 1,
     overflowY: "auto" as const,
@@ -803,6 +994,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 13,
     lineHeight: 1.5,
     wordBreak: "break-word" as const,
+    position: "relative" as const,
   },
   bubbleAi: { background: "#2d1b44", alignSelf: "flex-start" },
   bubbleUser: { background: "#4a3b61", alignSelf: "flex-end" },
@@ -814,18 +1006,61 @@ const s: Record<string, React.CSSProperties> = {
   },
   msgMeta: {
     display: "flex",
-    gap: 8,
+    gap: 6,
     alignItems: "center",
     marginTop: 4,
+  },
+  msgActions: {
+    display: "flex",
+    gap: 4,
+    alignItems: "center",
+    transition: "opacity 0.15s",
   },
   msgDate: { fontSize: 10, color: "#a0a0a0" },
   msgAction: {
     background: "transparent",
     border: "none",
     color: "#6c5ce7",
-    fontSize: 10,
+    fontSize: 12,
     cursor: "pointer",
-    padding: 0,
+    padding: "1px 3px",
+    opacity: 0.8,
+  },
+  msgActionLocked: {
+    color: "#555",
+    cursor: "default",
+  },
+
+  // Edit message
+  editTextarea: {
+    background: "rgba(0,0,0,0.3)",
+    border: "1px solid #6c5ce7",
+    borderRadius: 8,
+    color: "#fff",
+    fontSize: 13,
+    padding: "8px 10px",
+    resize: "none" as const,
+    outline: "none",
+    width: "100%",
+    lineHeight: 1.5,
+  },
+  editSaveBtn: {
+    background: "#6c5ce7",
+    border: "none",
+    color: "#fff",
+    padding: "5px 14px",
+    borderRadius: 6,
+    fontSize: 12,
+    cursor: "pointer",
+  },
+  editCancelBtn: {
+    background: "transparent",
+    border: "1px solid #3d2b55",
+    color: "#aaa",
+    padding: "5px 14px",
+    borderRadius: 6,
+    fontSize: 12,
+    cursor: "pointer",
   },
 
   // Input
@@ -877,6 +1112,11 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     flexShrink: 0,
   },
+  micBtnLocked: {
+    border: "1px solid #3d2b55",
+    color: "#555",
+    cursor: "default",
+  },
   recordingBar: {
     flex: 1,
     display: "flex",
@@ -892,7 +1132,6 @@ const s: Record<string, React.CSSProperties> = {
     height: 10,
     borderRadius: "50%",
     background: "#ff7675",
-    animation: "pulse 1s infinite",
     flexShrink: 0,
   },
   recordingTime: {

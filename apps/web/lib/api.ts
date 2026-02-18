@@ -303,6 +303,72 @@ export const chats = {
   },
 };
 
+// ─── SSE: edit message (updates content + streams new AI response) ───
+
+export function streamEditMessage(
+  chatId: string,
+  messageId: string,
+  content: string,
+  onDelta: (text: string) => void,
+  onDone: () => void,
+  onError: (err: string, code?: number) => void,
+): AbortController {
+  const controller = new AbortController();
+  const tokens = getTokens();
+
+  fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+    body: JSON.stringify({ content }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        onError(err.error || res.statusText, res.status);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line === "data: [DONE]") {
+            onDone();
+            return;
+          }
+          if (line.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.content) onDelta(parsed.content);
+              if (parsed.error) onError(parsed.error);
+              if (parsed.done) onDone();
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+      onDone();
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") {
+        onError(err.message);
+      }
+    });
+
+  return controller;
+}
+
 export const characters = {
   async listPublic(): Promise<Character[]> {
     return apiFetch<Character[]>("/characters");
@@ -316,7 +382,7 @@ export function streamMessage(
   content: string,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void,
+  onError: (err: string, code?: number) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -333,7 +399,7 @@ export function streamMessage(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        onError(err.error || res.statusText);
+        onError(err.error || res.statusText, res.status);
         return;
       }
 
@@ -379,7 +445,7 @@ export function streamRegenerate(
   messageId: string,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void,
+  onError: (err: string, code?: number) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -395,7 +461,7 @@ export function streamRegenerate(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        onError(err.error || res.statusText);
+        onError(err.error || res.statusText, res.status);
         return;
       }
 
@@ -444,7 +510,7 @@ export function streamVoiceMessage(
   onTranscription: (text: string) => void,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void,
+  onError: (err: string, code?: number) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -463,7 +529,7 @@ export function streamVoiceMessage(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Voice request failed" }));
-        onError(err.error || res.statusText);
+        onError(err.error || res.statusText, res.status);
         return;
       }
 
