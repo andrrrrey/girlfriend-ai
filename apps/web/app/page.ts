@@ -223,7 +223,7 @@ const HTML = `<style>:root {
             <a href="#" class="menu-item">👤 Мой AI</a>
             <a href="#" class="menu-item">🖼️ Галерея</a>
             <a href="#" class="menu-item">✨ Персонаж</a>
-            <a href="#" class="menu-item">💬 Чат</a>
+            <a href="/chat" class="menu-item">💬 Чат</a>
         </nav>
         <div style="margin-top: auto;">
             <button class="btn-footer">👑 Премиум</button>
@@ -233,7 +233,7 @@ const HTML = `<style>:root {
 
     <main class="content">
         <header class="top-nav">
-            <button class="nav-btn">👤 Профиль</button>
+            <a href="/profile" class="nav-btn">👤 Профиль</a>
             <button class="nav-btn">🌐 Русский</button>
         </header>
 
