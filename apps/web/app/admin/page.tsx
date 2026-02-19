@@ -85,6 +85,7 @@ export default function AdminSettingsPage() {
         <div style={styles.tabs}>
           <a href="/admin" style={{ ...styles.tab, ...styles.tabActive }}>Настройки</a>
           <a href="/admin/characters" style={styles.tab}>Персонажи</a>
+          <a href="/admin/users" style={styles.tab}>Пользователи</a>
         </div>
 
         {error && <div style={{ ...styles.card, ...styles.error, marginBottom: 20 }}>{error}</div>}

@@ -2,6 +2,19 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 
+const USER_SELECT = {
+  id: true,
+  email: true,
+  nickname: true,
+  avatarUrl: true,
+  role: true,
+  subscription: true,
+  isDemo: true,
+  lang: true,
+  createdAt: true,
+  usageCounters: true,
+} as const;
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -105,5 +118,58 @@ export class AdminService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  // ─── Users ─────────────────────────────────────────────────
+
+  async getUsers(params: { search?: string; limit?: number; offset?: number }) {
+    const { search, limit = 50, offset = 0 } = params;
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              { email: { contains: search, mode: "insensitive" } },
+              { nickname: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: USER_SELECT,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { users, total };
+  }
+
+  async getUser(id: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: USER_SELECT,
+    });
+    if (!user) throw new NotFoundException("User not found");
+    return user;
+  }
+
+  async updateUser(id: string, data: { subscription?: string; role?: string }) {
+    await this.getUser(id);
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: USER_SELECT,
+    });
+  }
+
+  async resetUserLimits(id: string) {
+    await this.getUser(id);
+    await this.prisma.usageCounter.deleteMany({ where: { userId: id } });
   }
 }

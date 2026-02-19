@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -17,6 +18,7 @@ import { AdminService } from "./admin.service";
 import { UpsertSettingsDto } from "./dto/upsert-settings.dto";
 import { CreateCharacterDto } from "./dto/create-character.dto";
 import { UpdateCharacterDto } from "./dto/update-character.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -65,5 +67,36 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCharacter(@Param("id") id: string) {
     await this.adminService.deleteCharacter(id);
+  }
+
+  // ─── Users ─────────────────────────────────────────────────
+
+  @Get("users")
+  async getUsers(
+    @Query("search") search?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    return this.adminService.getUsers({
+      search,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+  }
+
+  @Get("users/:id")
+  async getUser(@Param("id") id: string) {
+    return this.adminService.getUser(id);
+  }
+
+  @Patch("users/:id")
+  async updateUser(@Param("id") id: string, @Body() dto: UpdateUserDto) {
+    return this.adminService.updateUser(id, dto);
+  }
+
+  @Delete("users/:id/limits")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetUserLimits(@Param("id") id: string) {
+    await this.adminService.resetUserLimits(id);
   }
 }
