@@ -1,28 +1,68 @@
+/**
+ * @file apps/api/prisma/seed.ts
+ * @description Сид-скрипт для наполнения базы данных начальными данными.
+ *
+ * Запускается командой: `prisma db seed` (или `pnpm --filter api db:seed`)
+ * Настроен в apps/api/package.json → prisma.seed.
+ *
+ * Что создаётся (idempotent — безопасно запускать повторно):
+ *
+ * 1. AppSettings (настройки AI-сервисов):
+ *    - OPENAI_API_KEY, OPENAI_MODEL (gpt-4o), OPENAI_STT_MODEL (whisper-1)
+ *    - ELEVENLABS_API_KEY, ELEVENLABS_DEFAULT_VOICE_ID, ELEVENLABS_MODEL_ID
+ *    - Создаются только если не существуют (upsert без update — не перезаписывают существующие ключи)
+ *
+ * 2. Демо-персонажи (5 штук):
+ *    - Алиса — романтичная, 22 года
+ *    - Кира — спортивная и дерзкая, 24 года
+ *    - Юки — аниме-персонаж, 20 лет
+ *    - Марго — интеллектуальная и ироничная, 26 лет
+ *    - Сакура — гиперактивная геймерша, 19 лет
+ *    - Каждый: isPublic=true, systemPrompt на русском, personality как JSON, tags как массив
+ *    - Проверяется по имени (name + deletedAt IS NULL) — не создаётся повторно
+ *
+ * 3. Тестовый администратор:
+ *    - Email: admin@example.com, пароль: admin123 (bcrypt, 10 rounds)
+ *    - Role: "admin"
+ *    - Создаётся только если не существует
+ *
+ * ВАЖНО: Не запускать в production без смены дефолтного пароля admin123!
+ */
+
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
+/**
+ * Основная функция сидирования.
+ * Выполняется последовательно: настройки → персонажи → admin-пользователь.
+ */
 async function main() {
   // ── Default app settings ──
+  // Ключи AppSetting — читаются AI-сервисом через /internal/settings
+  // update: {} — намеренно пустой, чтобы не перезаписывать уже настроенные ключи
   const defaults: Record<string, string> = {
     OPENAI_API_KEY: "",
     OPENAI_MODEL: "gpt-4o",
     OPENAI_STT_MODEL: "whisper-1",
     ELEVENLABS_API_KEY: "",
-    ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM",
+    ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM", // Rachel — дефолтный голос ElevenLabs
     ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
   };
 
   for (const [key, value] of Object.entries(defaults)) {
     await prisma.appSetting.upsert({
       where: { key },
-      update: {},
+      update: {}, // Не перезаписываем — пользователь мог изменить через admin panel
       create: { key, value },
     });
   }
 
   // ── Demo characters ──
+  // 5 персонажей с разными личностями для демонстрации функционала.
+  // systemPrompt пишется на языке интерфейса (русский), но заканчивается
+  // "Отвечай на языке пользователя" — для мультиязычности.
   const characters = [
     {
       name: "Алиса",
@@ -82,6 +122,7 @@ async function main() {
   ];
 
   for (const char of characters) {
+    // Проверяем по имени + не удалён (deletedAt IS NULL) — идемпотентно
     const existing = await prisma.character.findFirst({
       where: { name: char.name, deletedAt: null },
     });
@@ -92,23 +133,24 @@ async function main() {
           systemPrompt: char.systemPrompt,
           personality: char.personality,
           tags: char.tags,
-          isPublic: true,
+          isPublic: true, // Видны всем пользователям без подписки
         },
       });
     }
   }
 
   // ── Test admin user ──
+  // ВАЖНО: admin123 — только для разработки/демо. Смените в production!
   const adminEmail = "admin@example.com";
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!existing) {
-    const passwordHash = await bcrypt.hash("admin123", 10);
+    const passwordHash = await bcrypt.hash("admin123", 10); // 10 rounds — стандарт bcrypt
     await prisma.user.create({
       data: {
         email: adminEmail,
         passwordHash,
         nickname: "Admin",
-        role: "admin",
+        role: "admin", // Даёт доступ к /admin/* endpoints
       },
     });
   }

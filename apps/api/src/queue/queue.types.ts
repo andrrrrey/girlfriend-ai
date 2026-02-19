@@ -1,45 +1,120 @@
-// Shared job type definitions used by both API (producer) and Worker (consumer)
+/**
+ * @file queue.types.ts
+ * @description Общие типы и константы BullMQ-очереди, используемые API (producer) и Worker (consumer).
+ *
+ * Этот файл является единым источником истины для названий очередей и заданий.
+ * Импортируется как в API (apps/api) для постановки заданий в очередь,
+ * так и в Worker (apps/worker) для обработки заданий.
+ *
+ * Архитектура очереди:
+ * - Одна очередь: QUEUE_NAME = "ai-jobs"
+ * - Три типа заданий: ai:chat, ai:stt, ai:tts
+ * - Producer: ChatsController (postановка задания при SSE-запросах)
+ * - Consumer: Worker (apps/worker/src/index.ts)
+ *
+ * Жизненный цикл задания:
+ * 1. API создаёт AiJob в БД (status: "pending")
+ * 2. API ставит задание в BullMQ
+ * 3. Worker получает задание, вызывает AI-сервис
+ * 4. Worker обновляет AiJob через internal API (status: "completed" | "failed")
+ */
 
+// Имя очереди BullMQ (используется для создания и чтения очереди в Redis)
 export const QUEUE_NAME = "ai-jobs";
 
+/**
+ * Названия заданий BullMQ.
+ * Используются при добавлении задания в очередь (.add(JOB_NAMES.CHAT, data))
+ * и при роутинге в worker (.process(JOB_NAMES.CHAT, handler)).
+ */
 export const JOB_NAMES = {
+  /** Задание на генерацию текстового ответа AI (OpenAI Chat Completions) */
   CHAT: "ai:chat",
+  /** Задание на Speech-to-Text (распознавание голоса через OpenAI Whisper) */
   STT: "ai:stt",
+  /** Задание на Text-to-Speech (синтез речи через ElevenLabs) */
   TTS: "ai:tts",
 } as const;
 
+/** Тип-объединение всех возможных названий заданий */
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
 
+// ─── Payload типы для каждого задания ──────────────────────────────────────
+
+/**
+ * Данные задания для генерации AI-ответа в чате (ai:chat).
+ * Worker вызывает AI-сервис и сохраняет ответ как Message в чате.
+ */
 export interface ChatJobData {
+  /** ID записи AiJob в PostgreSQL (для обновления статуса через internal API) */
   jobId: string;
+  /** ID пользователя (для логов и аудита) */
   userId: string;
+  /** ID сессии чата (для сохранения ответа) */
   chatSessionId: string;
+  /** ID персонажа (для загрузки systemPrompt) */
   characterId: string;
+  /**
+   * История сообщений для контекста LLM.
+   * Передаётся напрямую в OpenAI messages array.
+   */
   messages: { role: string; content: string }[];
 }
 
+/**
+ * Данные задания для распознавания речи (ai:stt).
+ * Worker отправляет аудио в AI-сервис (Whisper), получает транскрипцию
+ * и сохраняет её как Message в чате.
+ */
 export interface SttJobData {
+  /** ID записи AiJob (для обновления статуса) */
   jobId: string;
+  /** ID пользователя */
   userId: string;
+  /** ID сессии чата (куда сохранить транскрибированное сообщение) */
   chatSessionId: string;
+  /** Аудиофайл в формате base64 */
   audioBase64: string;
+  /** MIME-тип аудио (например "audio/webm", "audio/mp4") */
   mimeType: string;
+  /** Имя файла (для OpenAI API, определяет формат) */
   filename: string;
 }
 
+/**
+ * Данные задания для синтеза речи (ai:tts).
+ * Worker вызывает ElevenLabs API, сохраняет mp3 в S3 и обновляет Message.mediaUrl.
+ */
 export interface TtsJobData {
+  /** ID записи AiJob (для обновления статуса) */
   jobId: string;
+  /** ID пользователя */
   userId: string;
+  /** ID сообщения, для которого нужен голос (будет обновлён mediaUrl) */
   messageId: string;
+  /** Текст для синтеза речи */
   text: string;
+  /**
+   * ID голоса ElevenLabs (опционально).
+   * Берётся из Character.voiceId; если не задан — используется дефолтный голос.
+   */
   voiceId?: string;
 }
 
+/** Объединённый тип payload для всех заданий очереди */
 export type AiJobData = ChatJobData | SttJobData | TtsJobData;
 
+/**
+ * Результат выполнения задания, записываемый в AiJob.output.
+ * Возвращается worker-ом и сохраняется через internal API.
+ */
 export interface JobResult {
+  /** Успешно ли выполнено задание */
   ok: boolean;
+  /** Результат задания (транскрипция, mediaUrl и т.д.) */
   output?: Record<string, unknown>;
+  /** Количество использованных токенов (только для chat) */
   tokensUsed?: number;
+  /** Сообщение об ошибке при ok=false */
   error?: string;
 }

@@ -1,3 +1,17 @@
+/**
+ * @file auth.controller.ts
+ * @description HTTP-контроллер для эндпоинтов аутентификации.
+ *
+ * Маршруты (все публичные, не требуют JWT):
+ * - POST /auth/register — создание аккаунта → возвращает TokenPair
+ * - POST /auth/login    — вход по email/паролю → возвращает TokenPair
+ * - POST /auth/refresh  — обновление access-токена → возвращает TokenPair
+ * - POST /auth/logout   — выход (204 No Content)
+ *
+ * IP-адрес клиента извлекается из X-Forwarded-For (за прокси) или req.ip.
+ * Первый IP в X-Forwarded-For — реальный клиент (остальные могут быть прокси).
+ */
+
 import {
   Body,
   Controller,
@@ -13,28 +27,65 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { Request } from "express";
 
+/**
+ * Контроллер аутентификации.
+ * Все эндпоинты публичны (без @UseGuards) — аутентификация не требуется.
+ * Тег "auth" группирует эндпоинты в Swagger UI.
+ */
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * POST /auth/register
+   *
+   * Создаёт нового пользователя и сразу возвращает TokenPair.
+   * Статус 201 Created (по умолчанию для @Post).
+   *
+   * @body RegisterDto — { email, password (минимум 6 символов) }
+   * @returns TokenPair — { accessToken, refreshToken }
+   */
   @ApiOperation({ summary: "Register a new user" })
   @Post("register")
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto.email, dto.password);
   }
 
+  /**
+   * POST /auth/login
+   *
+   * Аутентификация по email/паролю.
+   * Возвращает 200 (не 201) — @HttpCode(OK).
+   *
+   * Извлекает User-Agent и IP для записи в Session (аудит активных сессий).
+   * IP берётся из X-Forwarded-For[0] (за reverse proxy) или req.ip.
+   *
+   * @body LoginDto — { email, password }
+   * @returns TokenPair — { accessToken, refreshToken }
+   */
   @ApiOperation({ summary: "Login with email and password" })
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const userAgent = req.headers["user-agent"];
+    // X-Forwarded-For содержит список IP через запятую (клиент, прокси1, прокси2...)
+    // Берём первый — это реальный IP клиента
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
       req.ip;
     return this.authService.login(dto.email, dto.password, userAgent, ip);
   }
 
+  /**
+   * POST /auth/refresh
+   *
+   * Обменивает действующий refresh-токен на новую пару токенов (Token Rotation).
+   * Статус 200 OK.
+   *
+   * @body RefreshDto — { refreshToken: UUID }
+   * @returns TokenPair — новая пара (старый refreshToken инвалидирован)
+   */
   @ApiOperation({ summary: "Refresh access token using refresh token" })
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
@@ -42,6 +93,14 @@ export class AuthController {
     return this.authService.refresh(dto.refreshToken);
   }
 
+  /**
+   * POST /auth/logout
+   *
+   * Инвалидирует refresh-токен (удаляет сессию из БД).
+   * Статус 204 No Content — тело ответа пустое.
+   *
+   * @body RefreshDto — { refreshToken: UUID }
+   */
   @ApiOperation({ summary: "Logout and invalidate refresh token" })
   @Post("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
