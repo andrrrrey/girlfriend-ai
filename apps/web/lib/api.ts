@@ -1,28 +1,80 @@
+/**
+ * @file apps/web/lib/api.ts
+ * @description Клиентская библиотека для взаимодействия с REST API бэкенда.
+ *
+ * Архитектура:
+ * - Все запросы идут через apiFetch — универсальную обёртку с автоматической инъекцией JWT
+ * - Токены хранятся в localStorage (accessToken + refreshToken)
+ * - Реализован прозрачный Refresh Token Rotation: при 401 автоматически обновляет токен и повторяет запрос
+ * - SSE-потоки (streamMessage, streamEditMessage, streamRegenerate, streamVoiceMessage) возвращают AbortController
+ *   для отмены запроса (например, при закрытии чата)
+ *
+ * Экспортируемые группы:
+ * - `auth` — регистрация, вход, выход, проверка авторизации
+ * - `users` — профиль, пароль, социальные ссылки
+ * - `admin` — управление настройками, персонажами, пользователями
+ * - `chats` — CRUD чатов и сообщений
+ * - `characters` — список публичных персонажей
+ * - Функции SSE: streamMessage, streamEditMessage, streamRegenerate, streamVoiceMessage, fetchTTS
+ *
+ * Конфигурация:
+ * - API_BASE: NEXT_PUBLIC_API_URL из env (по умолчанию http://localhost:8080)
+ */
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+/**
+ * Пара JWT-токенов, возвращаемая при входе/регистрации/обновлении.
+ * accessToken — короткоживущий JWT (7 дней).
+ * refreshToken — долгоживущий UUID (30 дней), хранится в БД.
+ */
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }
 
+/**
+ * Читает токены из localStorage.
+ * Возвращает null на сервере (SSR) или если токены не найдены.
+ *
+ * @returns {TokenPair | null} Токены или null
+ */
 function getTokens(): TokenPair | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") return null; // SSR guard
   const accessToken = localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
   if (!accessToken || !refreshToken) return null;
   return { accessToken, refreshToken };
 }
 
+/**
+ * Сохраняет оба токена в localStorage.
+ * Вызывается после login, register и successful token refresh.
+ *
+ * @param {TokenPair} tokens - Новая пара токенов
+ */
 function saveTokens(tokens: TokenPair) {
   localStorage.setItem("accessToken", tokens.accessToken);
   localStorage.setItem("refreshToken", tokens.refreshToken);
 }
 
+/**
+ * Удаляет оба токена из localStorage.
+ * Вызывается при logout и при неудачном обновлении токена.
+ */
 function clearTokens() {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
 }
 
+/**
+ * Пытается обновить accessToken через POST /auth/refresh.
+ *
+ * Реализует Refresh Token Rotation — сервер возвращает новую пару токенов.
+ * При любой ошибке (сеть, 401, истёкший refresh) — очищает токены.
+ *
+ * @returns {Promise<string | null>} Новый accessToken или null при неудаче
+ */
 async function refreshAccessToken(): Promise<string | null> {
   const tokens = getTokens();
   if (!tokens?.refreshToken) return null;
@@ -48,6 +100,21 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/**
+ * Универсальная обёртка для HTTP-запросов к API.
+ *
+ * Особенности:
+ * - Автоматически добавляет заголовок Authorization: Bearer <accessToken>
+ * - При HTTP 401 автоматически пробует обновить токен и повторяет запрос (один раз)
+ * - HTTP 204 (No Content) возвращает undefined без попытки парсить JSON
+ * - При ошибках бросает ApiError с HTTP-статусом и сообщением
+ *
+ * @template T - Тип возвращаемого значения
+ * @param {string} path - Путь запроса (например, "/users/me")
+ * @param {RequestInit} [options] - Стандартные fetch options (method, body, headers)
+ * @returns {Promise<T>} Распарсенный JSON-ответ
+ * @throws {ApiError} При любом non-ok HTTP статусе
+ */
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
@@ -64,7 +131,7 @@ export async function apiFetch<T = unknown>(
 
   let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
-  // If 401, try refreshing the token once
+  // If 401, try refreshing the token once — transparent token rotation
   if (res.status === 401 && tokens?.refreshToken) {
     const newAccessToken = await refreshAccessToken();
     if (newAccessToken) {
@@ -78,12 +145,17 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(res.status, body.message || res.statusText);
   }
 
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) return undefined as T; // No Content — нет тела ответа
   return res.json();
 }
 
+/**
+ * Ошибка API-запроса с HTTP-статусом.
+ * Используется в catch-блоках для определения типа ошибки (403, 429, etc.).
+ */
 export class ApiError extends Error {
   constructor(
+    /** HTTP-статус ответа (401, 403, 422, 429, 500...) */
     public status: number,
     message: string,
   ) {
@@ -92,7 +164,19 @@ export class ApiError extends Error {
   }
 }
 
+// ─── Auth API ─────────────────────────────────────────────────
+
+/**
+ * Методы авторизации.
+ * Все методы, возвращающие токены, автоматически сохраняют их в localStorage.
+ */
 export const auth = {
+  /**
+   * Регистрирует нового пользователя и сохраняет токены.
+   * @param {string} email - Email нового пользователя
+   * @param {string} password - Пароль (минимум 6 символов)
+   * @returns {Promise<TokenPair>} Пара токенов доступа
+   */
   async register(email: string, password: string): Promise<TokenPair> {
     const data = await apiFetch<TokenPair>("/auth/register", {
       method: "POST",
@@ -102,6 +186,12 @@ export const auth = {
     return data;
   },
 
+  /**
+   * Выполняет вход и сохраняет токены.
+   * @param {string} email - Email пользователя
+   * @param {string} password - Пароль
+   * @returns {Promise<TokenPair>} Пара токенов доступа
+   */
   async login(email: string, password: string): Promise<TokenPair> {
     const data = await apiFetch<TokenPair>("/auth/login", {
       method: "POST",
@@ -111,39 +201,61 @@ export const auth = {
     return data;
   },
 
+  /**
+   * Выполняет выход: инвалидирует refresh token на сервере и очищает localStorage.
+   * Ошибки сети при logout игнорируются — токены всё равно очищаются локально.
+   */
   async logout(): Promise<void> {
     const tokens = getTokens();
     if (tokens?.refreshToken) {
       await apiFetch("/auth/logout", {
         method: "POST",
         body: JSON.stringify({ refreshToken: tokens.refreshToken }),
-      }).catch(() => {});
+      }).catch(() => {}); // Игнорируем ошибки при logout
     }
     clearTokens();
   },
 
+  /**
+   * Проверяет наличие accessToken в localStorage (клиентская проверка).
+   * Не проверяет валидность токена на сервере — используется для быстрого UI-решения.
+   * @returns {boolean} true, если accessToken присутствует
+   */
   isAuthenticated(): boolean {
     return !!getTokens()?.accessToken;
   },
 };
 
+// ─── Users API ────────────────────────────────────────────────
+
+/**
+ * Профиль пользователя (возвращается GET /users/me).
+ */
 export interface UserProfile {
   id: string;
   email: string;
   nickname: string | null;
   avatarUrl: string | null;
-  role: string;
-  subscription: string;
-  lang: string;
-  createdAt: string;
+  role: string;           // "user" | "admin"
+  subscription: string;  // "free" | "premium" | ...
+  lang: string;          // "en" | "ru"
+  createdAt: string;     // ISO 8601
   socialLinks: { provider: string; url: string }[];
 }
 
+/**
+ * Методы управления профилем пользователя.
+ */
 export const users = {
+  /** Возвращает профиль текущего пользователя (GET /users/me). */
   async getProfile(): Promise<UserProfile> {
     return apiFetch<UserProfile>("/users/me");
   },
 
+  /**
+   * Обновляет профиль (PATCH /users/me). Все поля опциональны.
+   * @param data - Поля для обновления: nickname, avatarUrl, lang
+   */
   async updateProfile(
     data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang">>,
   ): Promise<UserProfile> {
@@ -153,6 +265,10 @@ export const users = {
     });
   },
 
+  /**
+   * Изменяет пароль (PATCH /users/me/password).
+   * Требует текущий пароль для подтверждения — защита от CSRF.
+   */
   async changePassword(
     currentPassword: string,
     newPassword: string,
@@ -163,6 +279,12 @@ export const users = {
     });
   },
 
+  /**
+   * Создаёт или обновляет социальную ссылку (PUT /users/me/social-links).
+   * Уникальность по паре (userId, provider).
+   * @param {string} provider - Провайдер: "vk" | "instagram" | "x"
+   * @param {string} url - URL профиля
+   */
   async upsertSocialLink(
     provider: string,
     url: string,
@@ -173,6 +295,11 @@ export const users = {
     });
   },
 
+  /**
+   * Удаляет социальную ссылку (DELETE /users/me/social-links/:provider).
+   * Идемпотентна — не ошибается если ссылки нет.
+   * @param {string} provider - Провайдер соцсети
+   */
   async deleteSocialLink(provider: string): Promise<void> {
     return apiFetch(`/users/me/social-links/${provider}`, {
       method: "DELETE",
@@ -182,12 +309,14 @@ export const users = {
 
 // ─── Admin API ───────────────────────────────────────────────
 
+/** Настройка приложения (ключ-значение, хранится в БД). */
 export interface AppSetting {
   key: string;
   value: string;
-  updatedAt: string;
+  updatedAt: string; // ISO 8601
 }
 
+/** Пользователь в admin-панели (расширенный профиль с usage-статистикой). */
 export interface AdminUser {
   id: string;
   email: string;
@@ -195,29 +324,39 @@ export interface AdminUser {
   avatarUrl: string | null;
   role: string;
   subscription: string;
-  isDemo: boolean;
+  isDemo: boolean;         // true если subscription === "free"
   lang: string;
   createdAt: string;
   usageCounters?: { action: string; count: number; resetAt: string }[];
 }
 
+/** Персонаж AI (используется и в admin-панели и в публичном каталоге). */
 export interface Character {
   id: string;
   name: string;
-  systemPrompt: string;
-  personality: Record<string, unknown>;
+  systemPrompt: string;                    // Системный промпт для LLM
+  personality: Record<string, unknown>;    // JSON: age, traits, hobbies
   avatarUrl: string | null;
-  voiceId: string | null;
+  voiceId: string | null;                  // ElevenLabs voice ID
   tags: string[];
-  isPublic: boolean;
+  isPublic: boolean;                       // Виден ли в публичном каталоге
   createdAt: string;
 }
 
+/**
+ * Методы admin-панели.
+ * Все запросы требуют роль "admin" (JWT + RolesGuard).
+ */
 export const admin = {
+  /** Получает все AppSettings (GET /admin/settings). */
   async getSettings(): Promise<AppSetting[]> {
     return apiFetch<AppSetting[]>("/admin/settings");
   },
 
+  /**
+   * Обновляет/создаёт настройки пачкой (PUT /admin/settings).
+   * @param {Record<string, string>} settings - Словарь key→value
+   */
   async upsertSettings(settings: Record<string, string>): Promise<AppSetting[]> {
     return apiFetch<AppSetting[]>("/admin/settings", {
       method: "PUT",
@@ -225,14 +364,17 @@ export const admin = {
     });
   },
 
+  /** Список всех персонажей (GET /admin/characters). */
   async getCharacters(): Promise<Character[]> {
     return apiFetch<Character[]>("/admin/characters");
   },
 
+  /** Один персонаж по ID (GET /admin/characters/:id). */
   async getCharacter(id: string): Promise<Character> {
     return apiFetch<Character>(`/admin/characters/${id}`);
   },
 
+  /** Создаёт персонажа (POST /admin/characters). */
   async createCharacter(data: Partial<Character>): Promise<Character> {
     return apiFetch<Character>("/admin/characters", {
       method: "POST",
@@ -240,6 +382,7 @@ export const admin = {
     });
   },
 
+  /** Обновляет персонажа (PATCH /admin/characters/:id). */
   async updateCharacter(id: string, data: Partial<Character>): Promise<Character> {
     return apiFetch<Character>(`/admin/characters/${id}`, {
       method: "PATCH",
@@ -247,10 +390,17 @@ export const admin = {
     });
   },
 
+  /** Мягко удаляет персонажа (DELETE /admin/characters/:id). */
   async deleteCharacter(id: string): Promise<void> {
     return apiFetch(`/admin/characters/${id}`, { method: "DELETE" });
   },
 
+  /**
+   * Список пользователей с фильтрацией и пагинацией (GET /admin/users).
+   * @param params.search - Поиск по email/nickname
+   * @param params.limit - Количество записей
+   * @param params.offset - Смещение (для offset-pagination)
+   */
   async getUsers(params?: {
     search?: string;
     limit?: number;
@@ -264,6 +414,12 @@ export const admin = {
     return apiFetch(`/admin/users${qs ? `?${qs}` : ""}`);
   },
 
+  /**
+   * Обновляет роль или подписку пользователя (PATCH /admin/users/:id).
+   * @param {string} id - UUID пользователя
+   * @param data.subscription - Новый тарифный план
+   * @param data.role - Новая роль ("user" | "admin")
+   */
   async updateUser(
     id: string,
     data: { subscription?: string; role?: string },
@@ -274,6 +430,10 @@ export const admin = {
     });
   },
 
+  /**
+   * Сбрасывает суточные лимиты пользователя (DELETE /admin/users/:id/limits).
+   * Удаляет все UsageCounter записи для данного пользователя.
+   */
   async resetUserLimits(id: string): Promise<void> {
     return apiFetch(`/admin/users/${id}/limits`, { method: "DELETE" });
   },
@@ -281,6 +441,10 @@ export const admin = {
 
 // ─── Chat API ────────────────────────────────────────────────
 
+/**
+ * Чат-сессия (список чатов пользователя).
+ * Включает последнее сообщение для превью в сайдбаре.
+ */
 export interface ChatSession {
   id: string;
   title: string | null;
@@ -290,6 +454,12 @@ export interface ChatSession {
   createdAt: string;
 }
 
+/**
+ * Сообщение в чате.
+ * role: "user" | "assistant" | "system"
+ * type: "text" | "voice" (для голосовых сообщений)
+ * mediaUrl: URL аудиофайла TTS (S3/MinIO) если есть
+ */
 export interface Message {
   id: string;
   role: string;
@@ -300,7 +470,16 @@ export interface Message {
   createdAt: string;
 }
 
+/**
+ * CRUD-методы для чатов и сообщений.
+ * Списки используют cursor-based pagination (nextCursor для подгрузки старых сообщений).
+ */
 export const chats = {
+  /**
+   * Создаёт новый чат с персонажем (POST /chats).
+   * @param {string} characterId - UUID персонажа
+   * @param {string} [title] - Название чата (опционально)
+   */
   async create(characterId: string, title?: string): Promise<ChatSession> {
     return apiFetch<ChatSession>("/chats", {
       method: "POST",
@@ -308,15 +487,22 @@ export const chats = {
     });
   },
 
+  /**
+   * Список чатов пользователя с cursor pagination (GET /chats).
+   * @param {string} [cursor] - ID последнего полученного чата (для следующей страницы)
+   * @returns items — чаты, nextCursor — курсор для следующей страницы (null если конец)
+   */
   async list(cursor?: string): Promise<{ items: ChatSession[]; nextCursor: string | null }> {
     const params = cursor ? `?cursor=${cursor}` : "";
     return apiFetch(`/chats${params}`);
   },
 
+  /** Данные одного чата (GET /chats/:id). Проверяет владельца (IDOR protection). */
   async get(id: string) {
     return apiFetch(`/chats/${id}`);
   },
 
+  /** Переименовывает чат (PATCH /chats/:id). */
   async update(id: string, title: string) {
     return apiFetch(`/chats/${id}`, {
       method: "PATCH",
@@ -324,10 +510,17 @@ export const chats = {
     });
   },
 
+  /** Мягко удаляет чат (DELETE /chats/:id). */
   async remove(id: string): Promise<void> {
     return apiFetch(`/chats/${id}`, { method: "DELETE" });
   },
 
+  /**
+   * Список сообщений с cursor pagination (GET /chats/:id/messages).
+   * Возвращает в хронологическом порядке (старые сначала).
+   * @param {string} chatId - ID чата
+   * @param {string} [cursor] - Курсор для подгрузки более старых сообщений
+   */
   async getMessages(
     chatId: string,
     cursor?: string,
@@ -336,6 +529,7 @@ export const chats = {
     return apiFetch(`/chats/${chatId}/messages${params}`);
   },
 
+  /** Мягко удаляет сообщение (DELETE /chats/:chatId/messages/:messageId). */
   async deleteMessage(chatId: string, messageId: string): Promise<void> {
     return apiFetch(`/chats/${chatId}/messages/${messageId}`, {
       method: "DELETE",
@@ -345,6 +539,23 @@ export const chats = {
 
 // ─── SSE: edit message (updates content + streams new AI response) ───
 
+/**
+ * Редактирует пользовательское сообщение и стримит новый AI-ответ (PATCH /chats/:chatId/messages/:messageId).
+ *
+ * SSE-формат ответа (построчно):
+ * - `data: {"content":"текст"}` — дельта AI-ответа
+ * - `data: {"error":"..."}` — ошибка
+ * - `data: {"done":true}` — завершение (альтернатива [DONE])
+ * - `data: [DONE]` — конец потока
+ *
+ * @param {string} chatId - ID чата
+ * @param {string} messageId - ID редактируемого сообщения
+ * @param {string} content - Новый текст сообщения
+ * @param {(text: string) => void} onDelta - Коллбэк для каждого чанка AI-ответа
+ * @param {() => void} onDone - Коллбэк при завершении стрима
+ * @param {(err: string, code?: number) => void} onError - Коллбэк при ошибке
+ * @returns {AbortController} Контроллер для отмены запроса (controller.abort())
+ */
 export function streamEditMessage(
   chatId: string,
   messageId: string,
@@ -393,7 +604,7 @@ export function streamEditMessage(
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
-              // ignore
+              // ignore malformed SSE lines
             }
           }
         }
@@ -409,6 +620,7 @@ export function streamEditMessage(
   return controller;
 }
 
+/** Список публичных персонажей (GET /characters, без авторизации). */
 export const characters = {
   async listPublic(): Promise<Character[]> {
     return apiFetch<Character[]>("/characters");
@@ -417,6 +629,19 @@ export const characters = {
 
 // ─── SSE streaming helper ────────────────────────────────────
 
+/**
+ * Отправляет текстовое сообщение и стримит AI-ответ (POST /chats/:chatId/messages).
+ *
+ * Поток содержит дельты AI-ответа в формате SSE.
+ * AbortController позволяет прервать стрим (например, при закрытии страницы).
+ *
+ * @param {string} chatId - ID чата
+ * @param {string} content - Текст сообщения пользователя
+ * @param {(text: string) => void} onDelta - Коллбэк для каждого чанка AI-ответа
+ * @param {() => void} onDone - Коллбэк при завершении стрима
+ * @param {(err: string, code?: number) => void} onError - Коллбэк при ошибке
+ * @returns {AbortController} Контроллер для отмены (controller.abort())
+ */
 export function streamMessage(
   chatId: string,
   content: string,
@@ -464,7 +689,7 @@ export function streamMessage(
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
-              // ignore
+              // ignore malformed SSE lines
             }
           }
         }
@@ -480,6 +705,19 @@ export function streamMessage(
   return controller;
 }
 
+/**
+ * Перегенерирует AI-ответ для существующего сообщения (POST /chats/:chatId/messages/:messageId/regenerate).
+ *
+ * Удаляет старые сообщения начиная с messageId и стримит новый AI-ответ.
+ * Используется кнопкой "Regenerate" в интерфейсе чата.
+ *
+ * @param {string} chatId - ID чата
+ * @param {string} messageId - ID AI-сообщения для перегенерации
+ * @param {(text: string) => void} onDelta - Коллбэк для каждого чанка
+ * @param {() => void} onDone - Коллбэк при завершении
+ * @param {(err: string, code?: number) => void} onError - Коллбэк при ошибке
+ * @returns {AbortController} Контроллер для отмены
+ */
 export function streamRegenerate(
   chatId: string,
   messageId: string,
@@ -526,7 +764,7 @@ export function streamRegenerate(
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
-              // ignore
+              // ignore malformed SSE lines
             }
           }
         }
@@ -544,6 +782,23 @@ export function streamRegenerate(
 
 // ─── Voice message helpers ──────────────────────────────────
 
+/**
+ * Отправляет голосовое сообщение и стримит AI-ответ (POST /chats/:chatId/voice).
+ *
+ * SSE-поток содержит два типа событий:
+ * - `{"transcription":"..."}` — транскрипция голоса (STT-результат, приходит первым)
+ * - `{"content":"..."}` — дельты AI-ответа (после транскрипции)
+ *
+ * Аудио отправляется как multipart/form-data (поле "audio", filename "recording.webm").
+ *
+ * @param {string} chatId - ID чата
+ * @param {Blob} audioBlob - Аудиофайл (WebM формат)
+ * @param {(text: string) => void} onTranscription - Коллбэк с текстом транскрипции
+ * @param {(text: string) => void} onDelta - Коллбэк для каждого чанка AI-ответа
+ * @param {() => void} onDone - Коллбэк при завершении
+ * @param {(err: string, code?: number) => void} onError - Коллбэк при ошибке
+ * @returns {AbortController} Контроллер для отмены
+ */
 export function streamVoiceMessage(
   chatId: string,
   audioBlob: Blob,
@@ -562,6 +817,7 @@ export function streamVoiceMessage(
     method: "POST",
     headers: {
       ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+      // Content-Type не устанавливаем — браузер сам добавит boundary для multipart
     },
     body: formData,
     signal: controller.signal,
@@ -595,7 +851,7 @@ export function streamVoiceMessage(
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
-              // ignore
+              // ignore malformed SSE lines
             }
           }
         }
@@ -611,6 +867,18 @@ export function streamVoiceMessage(
   return controller;
 }
 
+/**
+ * Запрашивает TTS для существующего сообщения (POST /chats/:chatId/messages/:messageId/tts).
+ *
+ * Возвращает ArrayBuffer с аудиоданными.
+ * Если TTS уже был сгенерирован (Message.mediaUrl exists) — API возвращает его сразу.
+ * Иначе — ставит задание в BullMQ и возвращает аудио после синтеза.
+ *
+ * @param {string} chatId - ID чата
+ * @param {string} messageId - ID сообщения
+ * @returns {Promise<ArrayBuffer>} Аудиоданные (MP3)
+ * @throws {Error} При ошибке TTS
+ */
 export async function fetchTTS(
   chatId: string,
   messageId: string,

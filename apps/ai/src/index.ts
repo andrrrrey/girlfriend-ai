@@ -1,3 +1,24 @@
+/**
+ * @file index.ts (ai service)
+ * @description Fastify HTTP-сервис для взаимодействия с AI-провайдерами.
+ *
+ * Сервис предоставляет три эндпоинта:
+ * 1. POST /ai/chat/completion — SSE-стриминг ответа OpenAI Chat Completions
+ * 2. POST /ai/stt             — Speech-to-Text через OpenAI Whisper (multipart upload)
+ * 3. POST /ai/tts             — Text-to-Speech через ElevenLabs API → S3/binary fallback
+ *
+ * Особенности:
+ * - Настройки (API keys, models) загружаются из БД через internal API (не из env)
+ *   → можно менять ключи без перезапуска сервисов
+ * - Rate limiting: 60 запросов/мин на IP (через @fastify/rate-limit)
+ * - Abort support: если клиент закрыл соединение — OpenAI запрос отменяется (AbortController)
+ * - TTS fallback: если S3 не настроен — отдаёт бинарный поток audio/mpeg напрямую
+ * - X-Request-ID: сквозная трассировка через все сервисы
+ *
+ * Сервис работает на порту AI_PORT (по умолчанию 8081).
+ * Доступен API-сервису и Worker-у внутри Docker-сети.
+ */
+
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
@@ -10,20 +31,28 @@ import { File } from "buffer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
+// Загружаем и валидируем переменные окружения
 const env = loadEnv();
 const logger = createLogger({ service: "ai", env: env.ENV, level: env.LOG_LEVEL });
 
+/** Базовый URL внутреннего API NestJS (используется для чтения настроек и персонажей) */
 const API_BASE = `http://localhost:${env.API_PORT}`;
 
+// Создаём Fastify-приложение (без встроенного логгера — используем Pino напрямую)
 const app = Fastify({ logger: false });
+
+// Плагин для обработки multipart/form-data (нужен для STT эндпоинта)
+// Лимит размера файла: 25 MB (максимум для Whisper API)
 app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
 
-// ─── Rate Limiting ────────────────────────────────────────────
-// 60 requests per minute per IP for all AI endpoints
+// ─── Rate Limiting ───────────────────────────────────────────────────────────
+// 60 запросов в минуту на IP для всех AI-эндпоинтов.
+// IP определяется из X-Forwarded-For (за прокси) или req.ip.
 app.register(rateLimit, {
   max: 60,
   timeWindow: "1 minute",
   keyGenerator: (req) => {
+    // X-Forwarded-For имеет приоритет — для работы за nginx/reverse proxy
     return (req.headers["x-forwarded-for"] as string) || req.ip;
   },
   errorResponseBuilder: (_req, context) => ({
@@ -33,14 +62,23 @@ app.register(rateLimit, {
   }),
 });
 
+// ─── X-Request-ID Middleware ─────────────────────────────────────────────────
+// Читает или генерирует Request-ID для каждого запроса.
+// Устанавливает его в req.requestId и в ответный заголовок.
 app.addHook("onRequest", async (req, reply) => {
   const requestId = getRequestId(req.raw, env.REQUEST_ID_HEADER);
   (req as any).requestId = requestId;
   reply.header(env.REQUEST_ID_HEADER, requestId);
 });
 
-// ─── S3 Client ────────────────────────────────────────────────
+// ─── S3 Client ───────────────────────────────────────────────────────────────
 
+/**
+ * Создаёт S3Client если заданы все необходимые переменные окружения.
+ * Возвращает null если S3 не настроен (TTS будет возвращать бинарный поток).
+ *
+ * forcePathStyle: true — обязательно для MinIO (используется path-style URL вместо subdomain).
+ */
 function createS3Client(): S3Client | null {
   if (!env.S3_ENDPOINT || !env.S3_ACCESS_KEY || !env.S3_SECRET_KEY) return null;
   return new S3Client({
@@ -50,10 +88,20 @@ function createS3Client(): S3Client | null {
       accessKeyId: env.S3_ACCESS_KEY,
       secretAccessKey: env.S3_SECRET_KEY,
     },
-    forcePathStyle: true, // required for MinIO
+    forcePathStyle: true, // Обязательно для MinIO — s3.endpoint/bucket/key вместо bucket.s3.endpoint
   });
 }
 
+/**
+ * Загружает файл в S3/MinIO и возвращает публичный URL.
+ *
+ * @param s3 — настроенный S3Client
+ * @param bucket — название бакета
+ * @param key — путь объекта в бакете (например "tts/uuid.mp3")
+ * @param body — бинарные данные файла
+ * @param contentType — MIME-тип (например "audio/mpeg")
+ * @returns публичный URL в формате {endpoint}/{bucket}/{key}
+ */
 async function uploadToS3(
   s3: S3Client,
   bucket: string,
@@ -69,39 +117,83 @@ async function uploadToS3(
       ContentType: contentType,
     }),
   );
-  // Return public URL (MinIO path-style)
+  // Формируем публичный URL (MinIO path-style: endpoint/bucket/key)
   const endpoint = env.S3_ENDPOINT!.replace(/\/$/, "");
   return `${endpoint}/${bucket}/${key}`;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Загружает все настройки приложения из NestJS internal API.
+ * Настройки хранятся в PostgreSQL (таблица AppSetting) и меняются без перезапуска.
+ *
+ * @returns Record<string, string> — карта настроек (OPENAI_API_KEY, ELEVENLABS_API_KEY и т.д.)
+ * @throws Error если internal API недоступен
+ */
 async function fetchSettings(): Promise<Record<string, string>> {
   const res = await fetch(`${API_BASE}/internal/settings`);
   if (!res.ok) throw new Error(`Failed to fetch settings: ${res.status}`);
   return res.json();
 }
 
+/**
+ * Загружает данные персонажа из NestJS internal API.
+ * Возвращает systemPrompt, personality, voiceId для использования в AI-запросах.
+ *
+ * @param id — UUID персонажа
+ * @returns данные персонажа или null если не найден
+ */
 async function fetchCharacter(id: string) {
   const res = await fetch(`${API_BASE}/internal/characters/${id}`);
   if (!res.ok) return null;
   return res.json();
 }
 
+/**
+ * Создаёт OpenAI клиент с заданным API ключом.
+ * Клиент создаётся per-request (не кешируется), т.к. ключ может меняться в БД.
+ */
 function createOpenAIClient(apiKey: string): OpenAI {
   return new OpenAI({ apiKey });
 }
 
-// ─── Routes ──────────────────────────────────────────────────
+// ─── Routes ──────────────────────────────────────────────────────────────────
 
+/**
+ * GET /health
+ * Health-check эндпоинт для Docker/k8s.
+ */
 app.get("/health", async (): Promise<HealthResponse> => ({ ok: true, service: "ai" }));
 
+/**
+ * Тело запроса для Chat Completions.
+ */
 interface ChatCompletionBody {
+  /** История сообщений для OpenAI Chat API */
   messages: { role: "user" | "assistant" | "system"; content: string }[];
+  /** ID персонажа для загрузки systemPrompt (опционально) */
   characterId?: string;
+  /** Явный системный промпт (альтернатива characterId) */
   systemPrompt?: string;
 }
 
+/**
+ * POST /ai/chat/completion
+ *
+ * Генерирует ответ AI в режиме SSE-стриминга (Server-Sent Events).
+ *
+ * Формат SSE-событий:
+ * - `data: {"content": "текст чанка"}\n\n` — стриминговый контент
+ * - `data: {"done": true, "finishReason": "stop", "usage": {...}}\n\n` — финальный чанк с метриками
+ * - `data: [DONE]\n\n` — конец стрима
+ * - `data: {"error": "текст"}\n\n` — ошибка в стриме
+ *
+ * Abort: если клиент разрывает соединение — OpenAI запрос отменяется через AbortController.
+ * Это предотвращает избыточные запросы к OpenAI при закрытии вкладки.
+ *
+ * Приоритет системного промпта: systemPrompt > character.systemPrompt.
+ */
 app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply) => {
   const { messages, characterId, systemPrompt } = req.body;
 
@@ -109,6 +201,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     return reply.status(400).send({ error: "messages array is required" });
   }
 
+  // Загружаем актуальные настройки из БД (OPENAI_API_KEY, OPENAI_MODEL)
   let settings: Record<string, string>;
   try {
     settings = await fetchSettings();
@@ -122,9 +215,9 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     return reply.status(503).send({ error: "OpenAI API key not configured" });
   }
 
-  const model = settings.OPENAI_MODEL || "gpt-4o";
+  const model = settings.OPENAI_MODEL || "gpt-4o"; // Дефолт если не задан в настройках
 
-  // Build system prompt from character or direct
+  // Формируем системный промпт: прямой > из персонажа > пустой
   let finalSystemPrompt = systemPrompt || "";
   if (characterId && !finalSystemPrompt) {
     try {
@@ -137,6 +230,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     }
   }
 
+  // Собираем массив messages для OpenAI: [system, ...history]
   const allMessages: OpenAI.ChatCompletionMessageParam[] = [];
   if (finalSystemPrompt) {
     allMessages.push({ role: "system", content: finalSystemPrompt });
@@ -147,9 +241,10 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
 
   const openai = createOpenAIClient(apiKey);
 
-  // Support abort via client disconnect
+  // AbortController для отмены OpenAI запроса при разрыве соединения клиентом
   const abortController = new AbortController();
   req.raw.on("close", () => {
+    // req.raw.complete = false означает что соединение закрыто ДО завершения ответа
     if (!req.raw.complete) {
       abortController.abort();
     }
@@ -161,27 +256,30 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
         model,
         messages: allMessages,
         stream: true,
-        stream_options: { include_usage: true },
+        stream_options: { include_usage: true }, // Запрашиваем токены в финальном чанке
       },
-      { signal: abortController.signal },
+      { signal: abortController.signal }, // Передаём сигнал отмены в OpenAI SDK
     );
 
+    // Устанавливаем заголовки SSE-стрима
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
+      "X-Accel-Buffering": "no", // Отключаем буферизацию в nginx для real-time доставки
     });
 
     let tokensUsed = 0;
 
+    // Читаем стриминговые чанки от OpenAI и пробрасываем клиенту
     for await (const chunk of stream) {
       const delta = chunk.choices?.[0]?.delta?.content;
       if (delta) {
+        // Текстовый контент — отправляем клиенту сразу
         reply.raw.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
       }
 
-      // Capture usage from final chunk
+      // Финальный чанк содержит статистику токенов (из stream_options: include_usage)
       if (chunk.usage) {
         tokensUsed = chunk.usage.total_tokens;
         reply.raw.write(
@@ -196,6 +294,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
           })}\n\n`,
         );
       } else {
+        // Если нет usage — проверяем finishReason для не-stop завершений
         const finishReason = chunk.choices?.[0]?.finish_reason;
         if (finishReason && finishReason !== "stop") {
           reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason })}\n\n`);
@@ -204,9 +303,10 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     }
 
     logger.info({ model, tokensUsed }, "chat_completion_done");
-    reply.raw.write("data: [DONE]\n\n");
+    reply.raw.write("data: [DONE]\n\n"); // SSE стандарт: конец стрима
     reply.raw.end();
   } catch (err: any) {
+    // Обрабатываем отмену (клиент закрыл соединение)
     if (err.name === "AbortError" || abortController.signal.aborted) {
       logger.info({ characterId }, "chat_completion_aborted");
       if (!reply.raw.headersSent) {
@@ -219,13 +319,24 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     if (!reply.raw.headersSent) {
       return reply.status(502).send({ error: "AI service error", details: err.message });
     }
+    // Если заголовки уже отправлены — передаём ошибку через SSE
     reply.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
     reply.raw.end();
   }
 });
 
-// ─── STT (Speech-to-Text via OpenAI Whisper) ─────────────────
+// ─── STT (Speech-to-Text via OpenAI Whisper) ─────────────────────────────────
 
+/**
+ * POST /ai/stt
+ *
+ * Распознаёт речь из аудиофайла (multipart/form-data, поле "audio").
+ *
+ * Поддерживаемые форматы: webm, mp4, mp3, wav, ogg (Whisper API).
+ * Максимальный размер файла: 25 MB (ограничение Whisper API).
+ *
+ * @returns { text: string } — транскрибированный текст
+ */
 app.post("/ai/stt", async (req, reply) => {
   const file = await req.file();
   if (!file) {
@@ -245,11 +356,13 @@ app.post("/ai/stt", async (req, reply) => {
     return reply.status(503).send({ error: "OpenAI API key not configured" });
   }
 
-  const model = settings.OPENAI_STT_MODEL || "whisper-1";
+  const model = settings.OPENAI_STT_MODEL || "whisper-1"; // Модель Whisper
   const openai = createOpenAIClient(apiKey);
 
   try {
     const buffer = await file.toBuffer();
+
+    // Создаём File объект (Web API File) — требуется OpenAI SDK
     const audioFile = new File([buffer], file.filename || "audio.webm", {
       type: file.mimetype || "audio/webm",
     });
@@ -257,23 +370,50 @@ app.post("/ai/stt", async (req, reply) => {
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model,
+      // response_format: "text" (по умолчанию JSON)
     });
 
     logger.info({ model, length: buffer.length }, "stt_done");
-    return { text: transcription.text };
+    return { text: transcription.text }; // Возвращаем транскрипцию
   } catch (err: any) {
     logger.error({ err }, "stt_error");
     return reply.status(502).send({ error: "STT failed", details: err.message });
   }
 });
 
-// ─── TTS (Text-to-Speech via ElevenLabs → S3) ────────────────
+// ─── TTS (Text-to-Speech via ElevenLabs → S3) ────────────────────────────────
 
+/**
+ * Тело запроса для TTS эндпоинта.
+ */
 interface TTSBody {
+  /** Текст для синтеза речи */
   text: string;
+  /**
+   * ID голоса ElevenLabs (опционально).
+   * Если не передан — используется ELEVENLABS_DEFAULT_VOICE_ID из настроек.
+   */
   voiceId?: string;
 }
 
+/**
+ * POST /ai/tts
+ *
+ * Синтезирует речь из текста через ElevenLabs API.
+ *
+ * Логика сохранения аудио:
+ * 1. Если S3 настроен (S3_ENDPOINT + credentials) → загружает mp3 в S3
+ *    и возвращает { url: "https://...", key: "tts/uuid.mp3" }
+ * 2. Если S3 не настроен или загрузка провалилась → возвращает бинарный
+ *    аудио-поток (Content-Type: audio/mpeg)
+ *
+ * Голос выбирается по приоритету:
+ * voiceId (из запроса) > ELEVENLABS_DEFAULT_VOICE_ID (из настроек БД) > hardcoded default
+ *
+ * Параметры ElevenLabs:
+ * - stability: 0.5 (баланс вариативности/стабильности голоса)
+ * - similarity_boost: 0.75 (насколько точно имитируется оригинальный голос)
+ */
 app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
   const { text, voiceId } = req.body;
 
@@ -294,24 +434,26 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
     return reply.status(503).send({ error: "ElevenLabs API key not configured" });
   }
 
+  // Выбираем голос: из запроса > из настроек БД > hardcoded дефолт (Rachel)
   const voice = voiceId || settings.ELEVENLABS_DEFAULT_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
   const modelId = settings.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2";
 
   try {
+    // Запрос к ElevenLabs REST API
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "xi-api-key": apiKey,
+          "xi-api-key": apiKey, // ElevenLabs API key header
         },
         body: JSON.stringify({
           text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
+            stability: 0.5,           // 0.0–1.0, выше = более стабильный/монотонный
+            similarity_boost: 0.75,   // 0.0–1.0, выше = ближе к оригинальному голосу
           },
         }),
       },
@@ -325,23 +467,23 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
 
-    // Try to upload to S3/MinIO and return URL
+    // Пробуем загрузить в S3 и вернуть URL
     const s3 = createS3Client();
     const bucket = env.S3_BUCKET || "media";
 
     if (s3) {
-      const key = `tts/${randomUUID()}.mp3`;
+      const key = `tts/${randomUUID()}.mp3`; // Уникальный путь для каждого аудио
       try {
         const url = await uploadToS3(s3, bucket, key, audioBuffer, "audio/mpeg");
         logger.info({ key, voice }, "tts_uploaded_to_s3");
-        return reply.send({ url, key });
+        return reply.send({ url, key }); // Клиент получает URL для медиаплеера
       } catch (s3Err: any) {
+        // S3 недоступен — падаем на бинарный ответ
         logger.warn({ err: s3Err }, "tts_s3_upload_failed_falling_back_to_binary");
-        // Fall back to binary response if S3 fails
       }
     }
 
-    // Fallback: return binary if S3 not configured or upload failed
+    // Fallback: возвращаем бинарный аудио-поток если S3 не настроен или упал
     reply.header("Content-Type", "audio/mpeg");
     reply.header("Content-Length", audioBuffer.length);
     return reply.send(audioBuffer);
@@ -351,11 +493,12 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
   }
 });
 
-// ─── Start ───────────────────────────────────────────────────
+// ─── Start Server ────────────────────────────────────────────────────────────
 
+// 0.0.0.0 — слушаем на всех интерфейсах (обязательно для Docker)
 app.listen({ port: env.AI_PORT, host: "0.0.0.0" })
   .then(() => logger.info({ port: env.AI_PORT }, "ai_started"))
   .catch((err) => {
     logger.error({ err }, "ai_failed_to_start");
-    process.exit(1);
+    process.exit(1); // Код 1 → Docker/k8s перезапустит контейнер
   });
