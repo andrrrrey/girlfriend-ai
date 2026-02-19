@@ -19,7 +19,6 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.4.0",
-    "@nestjs/schedule": "^4.1.0",
     "@prisma/client": "^5.18.0",
     "@repo/config": "workspace:*",
     "@repo/logger": "workspace:*",

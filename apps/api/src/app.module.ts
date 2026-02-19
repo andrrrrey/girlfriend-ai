@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { ScheduleModule } from "@nestjs/schedule";
 import { HealthController } from "./health.controller";
 import { PrismaService } from "./prisma.service";
 import { AuthModule } from "./auth/auth.module";
@@ -11,7 +10,6 @@ import { CleanupModule } from "./cleanup/cleanup.module";
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
     AdminModule,

@@ -1,20 +1,39 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 
 const INACTIVE_DAYS = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Injectable()
-export class CleanupService {
+export class CleanupService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CleanupService.name);
+  private timer: NodeJS.Timeout | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Runs every day at 03:00 UTC */
-  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  onModuleInit(): void {
+    this.scheduleNextRun();
+  }
+
+  onModuleDestroy(): void {
+    if (this.timer) clearTimeout(this.timer);
+  }
+
+  /** Schedule next run at 03:00 UTC */
+  private scheduleNextRun(): void {
+    const now = new Date();
+    const next3am = new Date(now);
+    next3am.setUTCHours(3, 0, 0, 0);
+    if (next3am <= now) next3am.setUTCDate(next3am.getUTCDate() + 1);
+
+    const delay = next3am.getTime() - now.getTime();
+    this.timer = setTimeout(() => {
+      this.cleanupInactiveChats().finally(() => this.scheduleNextRun());
+    }, delay);
+  }
+
   async cleanupInactiveChats(): Promise<void> {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - INACTIVE_DAYS);
+    const cutoff = new Date(Date.now() - INACTIVE_DAYS * MS_PER_DAY);
 
     const result = await this.prisma.chatSession.updateMany({
       where: {
