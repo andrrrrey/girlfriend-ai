@@ -11,12 +11,15 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UsersService } from "./users.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { UpsertSocialLinkDto } from "./dto/upsert-social-link.dto";
 
+@ApiTags("users")
+@ApiBearerAuth()
 @Controller("users")
 @UseGuards(JwtAuthGuard)
 export class UsersController {

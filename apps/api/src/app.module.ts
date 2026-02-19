@@ -7,9 +7,11 @@ import { AdminModule } from "./admin/admin.module";
 import { InternalModule } from "./internal/internal.module";
 import { ChatsModule } from "./chats/chats.module";
 import { CleanupModule } from "./cleanup/cleanup.module";
+import { QueueModule } from "./queue/queue.module";
 
 @Module({
   imports: [
+    QueueModule,
     AuthModule,
     UsersModule,
     AdminModule,

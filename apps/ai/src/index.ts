@@ -1,11 +1,14 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { getRequestId } from "@repo/logger";
 import type { HealthResponse } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "crypto";
 
 const env = loadEnv();
 const logger = createLogger({ service: "ai", env: env.ENV, level: env.LOG_LEVEL });
@@ -15,11 +18,61 @@ const API_BASE = `http://localhost:${env.API_PORT}`;
 const app = Fastify({ logger: false });
 app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
 
+// ─── Rate Limiting ────────────────────────────────────────────
+// 60 requests per minute per IP for all AI endpoints
+app.register(rateLimit, {
+  max: 60,
+  timeWindow: "1 minute",
+  keyGenerator: (req) => {
+    return (req.headers["x-forwarded-for"] as string) || req.ip;
+  },
+  errorResponseBuilder: (_req, context) => ({
+    error: "RATE_LIMIT_EXCEEDED",
+    message: `Слишком много запросов. Подождите ${context.after} перед следующим запросом.`,
+    retryAfter: context.after,
+  }),
+});
+
 app.addHook("onRequest", async (req, reply) => {
   const requestId = getRequestId(req.raw, env.REQUEST_ID_HEADER);
   (req as any).requestId = requestId;
   reply.header(env.REQUEST_ID_HEADER, requestId);
 });
+
+// ─── S3 Client ────────────────────────────────────────────────
+
+function createS3Client(): S3Client | null {
+  if (!env.S3_ENDPOINT || !env.S3_ACCESS_KEY || !env.S3_SECRET_KEY) return null;
+  return new S3Client({
+    endpoint: env.S3_ENDPOINT,
+    region: env.S3_REGION || "us-east-1",
+    credentials: {
+      accessKeyId: env.S3_ACCESS_KEY,
+      secretAccessKey: env.S3_SECRET_KEY,
+    },
+    forcePathStyle: true, // required for MinIO
+  });
+}
+
+async function uploadToS3(
+  s3: S3Client,
+  bucket: string,
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<string> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+  // Return public URL (MinIO path-style)
+  const endpoint = env.S3_ENDPOINT!.replace(/\/$/, "");
+  return `${endpoint}/${bucket}/${key}`;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -94,12 +147,24 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
 
   const openai = createOpenAIClient(apiKey);
 
+  // Support abort via client disconnect
+  const abortController = new AbortController();
+  req.raw.on("close", () => {
+    if (!req.raw.complete) {
+      abortController.abort();
+    }
+  });
+
   try {
-    const stream = await openai.chat.completions.create({
-      model,
-      messages: allMessages,
-      stream: true,
-    });
+    const stream = await openai.chat.completions.create(
+      {
+        model,
+        messages: allMessages,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { signal: abortController.signal },
+    );
 
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -108,21 +173,48 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       "X-Accel-Buffering": "no",
     });
 
+    let tokensUsed = 0;
+
     for await (const chunk of stream) {
       const delta = chunk.choices?.[0]?.delta?.content;
       if (delta) {
         reply.raw.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
       }
 
-      const finishReason = chunk.choices?.[0]?.finish_reason;
-      if (finishReason) {
-        reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason })}\n\n`);
+      // Capture usage from final chunk
+      if (chunk.usage) {
+        tokensUsed = chunk.usage.total_tokens;
+        reply.raw.write(
+          `data: ${JSON.stringify({
+            done: true,
+            finishReason: chunk.choices?.[0]?.finish_reason,
+            usage: {
+              promptTokens: chunk.usage.prompt_tokens,
+              completionTokens: chunk.usage.completion_tokens,
+              totalTokens: chunk.usage.total_tokens,
+            },
+          })}\n\n`,
+        );
+      } else {
+        const finishReason = chunk.choices?.[0]?.finish_reason;
+        if (finishReason && finishReason !== "stop") {
+          reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason })}\n\n`);
+        }
       }
     }
 
+    logger.info({ model, tokensUsed }, "chat_completion_done");
     reply.raw.write("data: [DONE]\n\n");
     reply.raw.end();
   } catch (err: any) {
+    if (err.name === "AbortError" || abortController.signal.aborted) {
+      logger.info({ characterId }, "chat_completion_aborted");
+      if (!reply.raw.headersSent) {
+        return reply.status(499).send({ error: "Request aborted by client" });
+      }
+      reply.raw.end();
+      return;
+    }
     logger.error({ err }, "openai_error");
     if (!reply.raw.headersSent) {
       return reply.status(502).send({ error: "AI service error", details: err.message });
@@ -167,6 +259,7 @@ app.post("/ai/stt", async (req, reply) => {
       model,
     });
 
+    logger.info({ model, length: buffer.length }, "stt_done");
     return { text: transcription.text };
   } catch (err: any) {
     logger.error({ err }, "stt_error");
@@ -174,7 +267,7 @@ app.post("/ai/stt", async (req, reply) => {
   }
 });
 
-// ─── TTS (Text-to-Speech via ElevenLabs) ─────────────────────
+// ─── TTS (Text-to-Speech via ElevenLabs → S3) ────────────────
 
 interface TTSBody {
   text: string;
@@ -232,6 +325,23 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
 
+    // Try to upload to S3/MinIO and return URL
+    const s3 = createS3Client();
+    const bucket = env.S3_BUCKET || "media";
+
+    if (s3) {
+      const key = `tts/${randomUUID()}.mp3`;
+      try {
+        const url = await uploadToS3(s3, bucket, key, audioBuffer, "audio/mpeg");
+        logger.info({ key, voice }, "tts_uploaded_to_s3");
+        return reply.send({ url, key });
+      } catch (s3Err: any) {
+        logger.warn({ err: s3Err }, "tts_s3_upload_failed_falling_back_to_binary");
+        // Fall back to binary response if S3 fails
+      }
+    }
+
+    // Fallback: return binary if S3 not configured or upload failed
     reply.header("Content-Type", "audio/mpeg");
     reply.header("Content-Length", audioBuffer.length);
     return reply.send(audioBuffer);
