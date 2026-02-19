@@ -225,4 +225,42 @@ export class ChatsService {
       await this.softDeleteMessages(after.map((m) => m.id));
     }
   }
+
+  // ─── AiJob tracking ────────────────────────────────────────
+
+  async createAiJob(userId: string, type: string, input?: Record<string, unknown>) {
+    return this.prisma.aiJob.create({
+      data: {
+        userId,
+        type,
+        status: "pending",
+        input: input as any,
+      },
+    });
+  }
+
+  async completeAiJob(jobId: string, tokensUsed?: number) {
+    await this.prisma.aiJob.update({
+      where: { id: jobId },
+      data: {
+        status: "completed",
+        tokensUsed,
+        completedAt: new Date(),
+      },
+    });
+  }
+
+  async logUsage(userId: string, action: string, tokensUsed?: number) {
+    await this.prisma.usageLog.create({
+      data: { userId, action, tokensUsed },
+    });
+  }
+
+  // ─── Message Copy Audit ─────────────────────────────────────
+
+  async recordCopy(messageId: string, userId: string) {
+    return this.prisma.messageCopyAudit.create({
+      data: { messageId, userId },
+    });
+  }
 }

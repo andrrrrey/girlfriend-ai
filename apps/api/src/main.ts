@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
@@ -43,8 +44,18 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
 
+  // Swagger setup (available at /api/docs)
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle("Girlfriend AI API")
+    .setDescription("REST API for the Girlfriend AI platform")
+    .setVersion("1.0")
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup("api/docs", app, document);
+
   await app.listen(env.API_PORT, "0.0.0.0");
-  logger.info({ port: env.API_PORT }, "api_started");
+  logger.info({ port: env.API_PORT, swagger: `http://localhost:${env.API_PORT}/api/docs` }, "api_started");
 }
 
 bootstrap().catch((err) => {

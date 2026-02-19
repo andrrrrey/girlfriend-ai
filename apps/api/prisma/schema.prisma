@@ -23,10 +23,13 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  sessions      Session[]
-  socialLinks   SocialLink[]
-  chatSessions  ChatSession[]
-  usageCounters UsageCounter[]
+  sessions         Session[]
+  socialLinks      SocialLink[]
+  chatSessions     ChatSession[]
+  usageCounters    UsageCounter[]
+  aiJobs           AiJob[]
+  usageLogs        UsageLog[]
+  messageCopyAudit MessageCopyAudit[]
 
   @@map("users")
 }
@@ -140,4 +143,56 @@ model Message {
 
   @@index([chatSessionId])
   @@map("messages")
+}
+
+// ─── AI Jobs ─────────────────────────────────────────────────
+
+model AiJob {
+  id          String    @id @default(uuid())
+  type        String    // chat | stt | tts
+  status      String    @default("pending") // pending | processing | completed | failed
+  input       Json?
+  output      Json?
+  userId      String    @map("user_id")
+  tokensUsed  Int?      @map("tokens_used")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("ai_jobs")
+}
+
+// ─── Usage Logs ──────────────────────────────────────────────
+
+model UsageLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String   // chat_message | stt | tts
+  tokensUsed Int?     @map("tokens_used")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("usage_logs")
+}
+
+// ─── Message Copy Audit ───────────────────────────────────────
+
+model MessageCopyAudit {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("message_copy_audits")
 }
