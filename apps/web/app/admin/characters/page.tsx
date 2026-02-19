@@ -73,6 +73,7 @@ export default function AdminCharactersPage() {
         <div style={styles.tabs}>
           <a href="/admin" style={styles.tab}>Настройки</a>
           <a href="/admin/characters" style={{ ...styles.tab, ...styles.tabActive }}>Персонажи</a>
+          <a href="/admin/users" style={styles.tab}>Пользователи</a>
         </div>
 
         {editing ? (

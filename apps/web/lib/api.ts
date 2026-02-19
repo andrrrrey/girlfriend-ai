@@ -188,6 +188,19 @@ export interface AppSetting {
   updatedAt: string;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  role: string;
+  subscription: string;
+  isDemo: boolean;
+  lang: string;
+  createdAt: string;
+  usageCounters?: { action: string; count: number; resetAt: string }[];
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -236,6 +249,33 @@ export const admin = {
 
   async deleteCharacter(id: string): Promise<void> {
     return apiFetch(`/admin/characters/${id}`, { method: "DELETE" });
+  },
+
+  async getUsers(params?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ users: AdminUser[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set("search", params.search);
+    if (params?.limit != null) query.set("limit", String(params.limit));
+    if (params?.offset != null) query.set("offset", String(params.offset));
+    const qs = query.toString();
+    return apiFetch(`/admin/users${qs ? `?${qs}` : ""}`);
+  },
+
+  async updateUser(
+    id: string,
+    data: { subscription?: string; role?: string },
+  ): Promise<AdminUser> {
+    return apiFetch(`/admin/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async resetUserLimits(id: string): Promise<void> {
+    return apiFetch(`/admin/users/${id}/limits`, { method: "DELETE" });
   },
 };
 
