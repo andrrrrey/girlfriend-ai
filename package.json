@@ -15,6 +15,7 @@
     "dev:infra": "docker compose -f infra/compose/docker-compose.infra.yml up -d",
     "dev:infra:down": "docker compose -f infra/compose/docker-compose.infra.yml down",
     "dev:setup": "pnpm install && pnpm -r --filter './packages/*' build && cd apps/api && npx prisma generate",
+    "migrate": "pnpm --filter migrator build && dotenv -e .env -- pnpm --filter migrator start:prod",
     "dev:local": "dotenv -e .env -- concurrently -n api,web,ai,worker -c blue,green,yellow,magenta \"pnpm --filter api dev\" \"pnpm --filter web dev\" \"pnpm --filter ai dev\" \"pnpm --filter worker dev\"",
     "lint": "echo \"TODO\"",
     "format": "echo \"TODO\""
