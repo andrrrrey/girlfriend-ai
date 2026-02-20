@@ -52,6 +52,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
@@ -663,6 +664,9 @@ export class ChatsController {
       res.setHeader("Content-Length", audioBuffer.length);
       res.send(audioBuffer);
     } catch (err: any) {
+      // Re-throw NestJS HTTP exceptions (404, 403, etc.) so they are handled
+      // by the global exception filter with the correct status code.
+      if (err instanceof HttpException) throw err;
       if (!res.headersSent) {
         res.status(500).json({ error: "TTS processing failed", details: err.message });
       }
