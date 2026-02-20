@@ -347,6 +347,10 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     }
     logger.error({ err }, "openai_error");
     if (!reply.raw.headersSent) {
+      // OpenAI rate limit / quota exceeded → 503 (service unavailable)
+      if (err.status === 429) {
+        return reply.status(503).send({ error: "AI service quota exceeded. Please try again later." });
+      }
       return reply.status(502).send({ error: "AI service error", details: err.message });
     }
     // Если заголовки уже отправлены — передаём ошибку через SSE
