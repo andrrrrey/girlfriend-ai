@@ -5,7 +5,7 @@ CREATE TABLE "ai_jobs" (
     "status"       TEXT NOT NULL DEFAULT 'pending',
     "input"        JSONB,
     "output"       JSONB,
-    "user_id"      TEXT NOT NULL,
+    "user_id"      UUID NOT NULL,
     "tokens_used"  INTEGER,
     "error"        TEXT,
     "created_at"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -17,7 +17,7 @@ CREATE TABLE "ai_jobs" (
 -- CreateTable: usage_logs
 CREATE TABLE "usage_logs" (
     "id"          TEXT NOT NULL,
-    "user_id"     TEXT NOT NULL,
+    "user_id"     UUID NOT NULL,
     "action"      TEXT NOT NULL,
     "tokens_used" INTEGER,
     "metadata"    JSONB,
@@ -30,7 +30,7 @@ CREATE TABLE "usage_logs" (
 CREATE TABLE "message_copy_audits" (
     "id"         TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
-    "user_id"    TEXT NOT NULL,
+    "user_id"    UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "message_copy_audits_pkey" PRIMARY KEY ("id")
