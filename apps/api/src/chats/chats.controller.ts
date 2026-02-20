@@ -649,11 +649,21 @@ export class ChatsController {
 
       const contentType = ttsRes.headers.get("content-type") || "";
 
-      // If AI service returned JSON with URL (S3 path)
+      // If AI service returned JSON with URL (internal S3/MinIO path) —
+      // the URL is reachable from the API container but NOT from the browser,
+      // so we fetch the audio here and proxy it as binary to the client.
       if (contentType.includes("application/json")) {
         const data = await ttsRes.json() as { url: string; key: string };
+        const audioRes = await fetch(data.url);
+        if (!audioRes.ok) {
+          res.status(502).json({ error: "Failed to fetch audio from storage" });
+          return;
+        }
+        const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
         await this.chatsService.logUsage(req.user.id, "tts");
-        res.json(data);
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.setHeader("Content-Length", audioBuffer.length);
+        res.status(200).send(audioBuffer);
         return;
       }
 
