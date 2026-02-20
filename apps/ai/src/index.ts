@@ -28,7 +28,7 @@ import { getRequestId } from "@repo/logger";
 import type { HealthResponse } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, CreateBucketCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 // Загружаем и валидируем переменные окружения
@@ -93,7 +93,36 @@ function createS3Client(): S3Client | null {
 }
 
 /**
+ * Создаёт S3-бакет если он не существует.
+ * Игнорирует ошибку BucketAlreadyOwnedByYou (бакет уже принадлежит нам).
+ *
+ * @param s3 — настроенный S3Client
+ * @param bucket — название бакета
+ */
+async function ensureBucketExists(s3: S3Client, bucket: string): Promise<void> {
+  try {
+    await s3.send(new HeadBucketCommand({ Bucket: bucket }));
+    // Бакет существует и доступен — ничего не делаем
+  } catch (err: any) {
+    const status = err?.$metadata?.httpStatusCode;
+    if (status === 404 || err.name === "NoSuchBucket" || err.name === "NotFound") {
+      // Бакет не существует — создаём его
+      await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+      logger.info({ bucket }, "s3_bucket_created");
+    } else if (status === 403) {
+      // Бакет существует но доступ запрещён — пробрасываем ошибку
+      throw err;
+    }
+    // Для остальных ошибок HeadBucket — пробрасываем
+    else {
+      throw err;
+    }
+  }
+}
+
+/**
  * Загружает файл в S3/MinIO и возвращает публичный URL.
+ * Перед загрузкой автоматически создаёт бакет если он не существует.
  *
  * @param s3 — настроенный S3Client
  * @param bucket — название бакета
@@ -109,6 +138,7 @@ async function uploadToS3(
   body: Buffer,
   contentType: string,
 ): Promise<string> {
+  await ensureBucketExists(s3, bucket);
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
