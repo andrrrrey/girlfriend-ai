@@ -26,6 +26,7 @@ import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { Client } from "pg";
 import { spawn } from "child_process";
+import { existsSync } from "fs";
 import path from "path";
 
 const env = loadEnv();
@@ -110,10 +111,19 @@ async function main() {
     await clearFailedMigrations(client);
 
     logger.info({}, "prisma_migrate_deploy_start");
-    // run prisma migrate deploy in apps/api (where prisma folder lives)
-    // Use absolute path to npx next to the current node binary to avoid PATH issues
-    const npx = path.join(path.dirname(process.execPath), "npx");
-    await run(npx, ["prisma", "migrate", "deploy"], process.cwd() + "/apps/api");
+    // __dirname = apps/migrator/dist  →  workspace root is 3 levels up
+    const workspaceRoot = path.resolve(__dirname, "../../..");
+    const apiDir = path.join(workspaceRoot, "apps", "api");
+
+    // Find prisma binary without relying on npx or PATH
+    const prismaCandidates = [
+      path.join(apiDir, "node_modules", ".bin", "prisma"),
+      path.join(workspaceRoot, "node_modules", ".bin", "prisma"),
+    ];
+    const prismaBin = prismaCandidates.find((p) => existsSync(p));
+    if (!prismaBin) throw new Error(`prisma binary not found. Tried:\n${prismaCandidates.join("\n")}`);
+
+    await run(prismaBin, ["migrate", "deploy"], apiDir);
     logger.info({}, "prisma_migrate_deploy_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
