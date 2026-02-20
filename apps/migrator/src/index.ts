@@ -26,6 +26,7 @@ import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { Client } from "pg";
 import { spawn } from "child_process";
+import path from "path";
 
 const env = loadEnv();
 const logger = createLogger({ service: "migrator", env: env.ENV, level: env.LOG_LEVEL });
@@ -110,7 +111,9 @@ async function main() {
 
     logger.info({}, "prisma_migrate_deploy_start");
     // run prisma migrate deploy in apps/api (where prisma folder lives)
-    await run("npx", ["prisma", "migrate", "deploy"], process.cwd() + "/apps/api");
+    // Use absolute path to npx next to the current node binary to avoid PATH issues
+    const npx = path.join(path.dirname(process.execPath), "npx");
+    await run(npx, ["prisma", "migrate", "deploy"], process.cwd() + "/apps/api");
     logger.info({}, "prisma_migrate_deploy_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
