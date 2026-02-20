@@ -119,8 +119,10 @@ export default function ChatPage() {
       setDemoBanner(`Достигнут дневной лимит ${DEMO_MESSAGE_LIMIT} сообщений. Оформите подписку для безлимитного общения.`);
     } else if (code === 403) {
       setDemoBanner("Голосовые функции доступны только по подписке.");
+    } else if (code === 503) {
+      setDemoBanner("AI-сервис временно недоступен. Попробуйте позже.");
     } else {
-      setStreamContent(`[Error: ${err}]`);
+      setDemoBanner(`Ошибка: ${err}`);
     }
   };
 
