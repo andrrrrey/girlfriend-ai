@@ -50,13 +50,49 @@ async function run(cmd: string, args: string[], cwd: string) {
 }
 
 /**
+ * Сбрасывает записи о незавершённых (failed) миграциях из таблицы _prisma_migrations,
+ * чтобы `prisma migrate deploy` мог их повторно применить после исправления SQL.
+ *
+ * Prisma фиксирует failed-миграцию в _prisma_migrations с finished_at = NULL.
+ * При следующем запуске deploy видит такую запись и отказывается продолжать,
+ * требуя ручного разрешения. Удаление записи позволяет миграции пройти заново.
+ *
+ * Ошибки (например, если таблица ещё не существует) логируются как warn и не прерывают запуск.
+ *
+ * @param client — активное pg.Client-соединение
+ */
+async function clearFailedMigrations(client: Client): Promise<void> {
+  try {
+    // Проверяем существование таблицы _prisma_migrations
+    const { rows } = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = '_prisma_migrations'
+       ) AS exists`,
+    );
+    if (!rows[0].exists) return; // первый запуск — таблица ещё не создана
+
+    // Удаляем записи миграций, которые начались но не завершились (failed)
+    const result = await client.query(
+      `DELETE FROM "_prisma_migrations" WHERE finished_at IS NULL`,
+    );
+    if (result.rowCount && result.rowCount > 0) {
+      logger.info({ count: result.rowCount }, "cleared_failed_migrations");
+    }
+  } catch (err) {
+    logger.warn({ err }, "clear_failed_migrations_error");
+  }
+}
+
+/**
  * Основная функция миграции.
  *
  * Алгоритм:
  * 1. Подключается к PostgreSQL напрямую через pg.Client
  * 2. Берёт advisory lock с ID 987654321 (предотвращает параллельные запуски)
- * 3. Запускает `npx prisma migrate deploy` в директории apps/api
- * 4. В блоке finally снимает advisory lock и закрывает соединение
+ * 3. Сбрасывает записи о failed-миграциях (чтобы исправленные версии прошли повторно)
+ * 4. Запускает `npx prisma migrate deploy` в директории apps/api
+ * 5. В блоке finally снимает advisory lock и закрывает соединение
  *
  * При ошибке на любом шаге — функция бросает исключение,
  * main().catch() логирует ошибку и завершает процесс с кодом 1.
@@ -69,6 +105,9 @@ async function main() {
   await client.query("SELECT pg_advisory_lock(987654321);");
 
   try {
+    // Сбрасываем failed-миграции перед деплоем (позволяет повторно применить исправленный SQL)
+    await clearFailedMigrations(client);
+
     logger.info({}, "prisma_migrate_deploy_start");
     // run prisma migrate deploy in apps/api (where prisma folder lives)
     await run("npx", ["prisma", "migrate", "deploy"], process.cwd() + "/apps/api");
