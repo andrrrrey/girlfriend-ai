@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web ./apps/web
-RUN pnpm install --frozen-lockfile --filter ./apps/web...
+RUN pnpm install --frozen-lockfile --filter "web..."
 RUN pnpm --filter "./apps/web..." build
 
 FROM node:20-bookworm-slim AS runner

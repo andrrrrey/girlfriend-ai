@@ -1,0 +1,35 @@
+include:
+  - project: "vflirt/platform/ci-templates"
+    file:
+      - "build/docker-build.yml"
+
+# ветки dev/staging/stage/release* (тег: branch-commitsha-pipelineid)
+build_branch:
+  extends: .build_image_branch
+  parallel:
+    matrix:
+      - SERVICE_NAME: "ai"
+        DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+      - SERVICE_NAME: "api"
+        DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+      - SERVICE_NAME: "migrator"
+        DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+      - SERVICE_NAME: "web"
+        DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+      - SERVICE_NAME: "worker"
+        DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
+
+# build_tag:
+#   extends: .build_image_tag
+#   parallel:
+#     matrix:
+#       - SERVICE_NAME: "ai"
+#         DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+#       - SERVICE_NAME: "api"
+#         DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+#       - SERVICE_NAME: "migrator"
+#         DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+#       - SERVICE_NAME: "web"
+#         DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+#       - SERVICE_NAME: "worker"
+#         DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
