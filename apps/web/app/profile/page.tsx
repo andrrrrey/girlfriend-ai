@@ -218,9 +218,9 @@ function SubscriptionTab({ user }: { user: UserProfile }) {
 }
 
 function AccountTab({ user }: { user: UserProfile }) {
-  const vkLink = user.socialLinks?.find((l) => l.type === "vk")?.url ?? "";
-  const igLink = user.socialLinks?.find((l) => l.type === "instagram")?.url ?? "";
-  const xLink = user.socialLinks?.find((l) => l.type === "twitter")?.url ?? "";
+  const vkLink = user.socialLinks?.find((l) => l.provider === "vk")?.url ?? "";
+  const igLink = user.socialLinks?.find((l) => l.provider === "instagram")?.url ?? "";
+  const xLink = user.socialLinks?.find((l) => l.provider === "twitter")?.url ?? "";
 
   return (
     <>
