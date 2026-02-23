@@ -19,6 +19,26 @@ build_branch:
       - SERVICE_NAME: "worker"
         DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
 
+deploy_staging:
+  extends: .deploy_staging
+  parallel:
+    matrix:
+      - SERVICE_NAME: "ai"
+      - SERVICE_NAME: "api"
+      - SERVICE_NAME: "migrator"
+      - SERVICE_NAME: "web"
+      - SERVICE_NAME: "worker"
+
+rollback_staging:
+  extends: .rollback_staging
+  parallel:
+    matrix:
+      - SERVICE_NAME: "ai"
+      - SERVICE_NAME: "api"
+      - SERVICE_NAME: "migrator"
+      - SERVICE_NAME: "web"
+      - SERVICE_NAME: "worker"
+
 # build_tag:
 #   extends: .build_image_tag
 #   parallel:
