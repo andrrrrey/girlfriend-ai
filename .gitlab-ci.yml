@@ -5,20 +5,32 @@ include:
       - "deploy/docker-deploy.yml"
 
 # ветки dev/staging/stage/release* (тег: branch-commitsha-pipelineid)
-build_branch:
+# build_branch for every service, deploy/rollback for all services in parallel
+build_branch_ai:
   extends: .build_image_branch
-  parallel:
-    matrix:
-      - SERVICE_NAME: "ai"
-        DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
-      - SERVICE_NAME: "api"
-        DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
-      - SERVICE_NAME: "migrator"
-        DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
-      - SERVICE_NAME: "web"
-        DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
-      - SERVICE_NAME: "worker"
-        DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
+  variables:
+    SERVICE_NAME: "ai"
+    DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+build_branch_api:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "api"
+    DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+build_branch_migrator:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "migrator"
+    DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+build_branch_web:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "web"
+    DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+build_branch_worker:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "worker"
+    DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
 
 deploy_staging:
   extends: .deploy_staging
@@ -29,6 +41,17 @@ deploy_staging:
       - SERVICE_NAME: "migrator"
       - SERVICE_NAME: "web"
       - SERVICE_NAME: "worker"
+  rules:
+    - if: '$SERVICE_NAME == "ai"'
+      needs: ["build_branch_ai"]
+    - if: '$SERVICE_NAME == "api"'
+      needs: ["build_branch_api"]
+    - if: '$SERVICE_NAME == "migrator"'
+      needs: ["build_branch_migrator"]
+    - if: '$SERVICE_NAME == "web"'
+      needs: ["build_branch_web"]
+    - if: '$SERVICE_NAME == "worker"'
+      needs: ["build_branch_worker"]
 
 rollback_staging:
   extends: .rollback_staging
@@ -39,6 +62,17 @@ rollback_staging:
       - SERVICE_NAME: "migrator"
       - SERVICE_NAME: "web"
       - SERVICE_NAME: "worker"
+  rules:
+    - if: '$SERVICE_NAME == "ai"'
+      needs: ["build_branch_ai"]
+    - if: '$SERVICE_NAME == "api"'
+      needs: ["build_branch_api"]
+    - if: '$SERVICE_NAME == "migrator"'
+      needs: ["build_branch_migrator"]
+    - if: '$SERVICE_NAME == "web"'
+      needs: ["build_branch_web"]
+    - if: '$SERVICE_NAME == "worker"'
+      needs: ["build_branch_worker"]
 
 # build_tag:
 #   extends: .build_image_tag
