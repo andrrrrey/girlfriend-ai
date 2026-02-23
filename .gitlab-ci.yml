@@ -2,6 +2,7 @@ include:
   - project: "vflirt/platform/ci-templates"
     file:
       - "build/docker-build.yml"
+      - "deploy/docker-deploy.yml"
 
 # ветки dev/staging/stage/release* (тег: branch-commitsha-pipelineid)
 build_branch:
