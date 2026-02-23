@@ -1,0 +1,127 @@
+# Staging / production deployment.
+# Uses pre-built images from the container registry — no source code needed on the host.
+#
+# Required variables (export on host or put in .env in this directory):
+#   REGISTRY_IMAGE   — e.g. registry.gitlab.com/vflirt/app/app
+#   IMAGE_TAG        — commit SHA or "latest"
+#   POSTGRES_PASSWORD, S3_ACCESS_KEY, S3_SECRET_KEY
+#   All other app env vars loaded from .env (see env.example at repo root)
+
+volumes:
+  postgres_data:
+  redis_data:
+  clickhouse_data:
+  minio_data:
+
+networks:
+  app:
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - app
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - app
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    restart: unless-stopped
+    networks:
+      - app
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    networks:
+      - app
+
+  migrator:
+    image: ${REGISTRY_IMAGE}/migrator:${IMAGE_TAG:-latest}
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - app
+
+  api:
+    image: ${REGISTRY_IMAGE}/api:${IMAGE_TAG:-latest}
+    env_file: .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  ai:
+    image: ${REGISTRY_IMAGE}/ai:${IMAGE_TAG:-latest}
+    env_file: .env
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  worker:
+    image: ${REGISTRY_IMAGE}/worker:${IMAGE_TAG:-latest}
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  web:
+    image: ${REGISTRY_IMAGE}/web:${IMAGE_TAG:-latest}
+    env_file: .env
+    environment:
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://api:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - app

@@ -1,0 +1,178 @@
+# GitLab CI/CD — build images and deploy to staging.
+#
+# Required CI/CD variables (Settings → CI/CD → Variables):
+#   STAGING_SSH_KEY       — SSH private key for the staging server (File type)
+#   STAGING_SSH_HOST      — staging server hostname or IP
+#   STAGING_SSH_USER      — SSH user on staging server
+#   STAGING_COMPOSE_DIR   — absolute path on server, e.g. /opt/app/staging
+#
+# Auto-provided by GitLab (no action needed):
+#   CI_REGISTRY, CI_REGISTRY_USER, CI_REGISTRY_PASSWORD, CI_REGISTRY_IMAGE
+
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# ---------------------------------------------------------------------------
+# Build template
+# ---------------------------------------------------------------------------
+.build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+# ---------------------------------------------------------------------------
+# Build jobs (parallel)
+# ---------------------------------------------------------------------------
+build:api:
+  extends: .build
+  script:
+    - |
+      docker build \
+        -f infra/docker/api.Dockerfile \
+        -t "$CI_REGISTRY_IMAGE/api:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/api:latest" \
+        .
+    - docker push "$CI_REGISTRY_IMAGE/api:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/api:latest"
+
+build:web:
+  extends: .build
+  script:
+    - |
+      docker build \
+        -f infra/docker/web.Dockerfile \
+        -t "$CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/web:latest" \
+        .
+    - docker push "$CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/web:latest"
+
+build:worker:
+  extends: .build
+  script:
+    - |
+      docker build \
+        -f infra/docker/worker.Dockerfile \
+        -t "$CI_REGISTRY_IMAGE/worker:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/worker:latest" \
+        .
+    - docker push "$CI_REGISTRY_IMAGE/worker:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/worker:latest"
+
+build:ai:
+  extends: .build
+  script:
+    - |
+      docker build \
+        -f infra/docker/ai.Dockerfile \
+        -t "$CI_REGISTRY_IMAGE/ai:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/ai:latest" \
+        .
+    - docker push "$CI_REGISTRY_IMAGE/ai:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/ai:latest"
+
+build:migrator:
+  extends: .build
+  script:
+    - |
+      docker build \
+        -f infra/docker/migrator.Dockerfile \
+        -t "$CI_REGISTRY_IMAGE/migrator:$CI_COMMIT_SHORT_SHA" \
+        -t "$CI_REGISTRY_IMAGE/migrator:latest" \
+        .
+    - docker push "$CI_REGISTRY_IMAGE/migrator:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/migrator:latest"
+
+# ---------------------------------------------------------------------------
+# Deploy template
+# ---------------------------------------------------------------------------
+.deploy_ssh:
+  stage: deploy
+  image: alpine:3.19
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$STAGING_SSH_HOST" >> ~/.ssh/known_hosts
+
+# ---------------------------------------------------------------------------
+# Deploy staging  (auto on every push to dev)
+# ---------------------------------------------------------------------------
+deploy:staging:
+  extends: .deploy_ssh
+  needs:
+    - build:api
+    - build:web
+    - build:worker
+    - build:ai
+    - build:migrator
+  script:
+    - |
+      # Copy the staging compose file to the server
+      scp infra/compose/docker-compose.staging.yml \
+        "$STAGING_SSH_USER@$STAGING_SSH_HOST:$STAGING_COMPOSE_DIR/docker-compose.staging.yml"
+    - |
+      ssh "$STAGING_SSH_USER@$STAGING_SSH_HOST" bash -s << EOF
+        set -e
+        cd "$STAGING_COMPOSE_DIR"
+
+        # Authenticate against GitLab registry on the host
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+        export REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
+        export IMAGE_TAG="$CI_COMMIT_SHORT_SHA"
+
+        # Pull new app images
+        docker compose -f docker-compose.staging.yml pull migrator api ai worker web
+
+        # Ensure infra services are running
+        docker compose -f docker-compose.staging.yml up -d postgres redis clickhouse minio
+
+        # Run migrations (waits for postgres healthcheck; exits 0 on success)
+        docker compose -f docker-compose.staging.yml run --rm migrator
+
+        # Restart app services with new images
+        docker compose -f docker-compose.staging.yml up -d --no-deps --force-recreate \
+          api ai worker web
+      EOF
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+# ---------------------------------------------------------------------------
+# Rollback staging  (manual — set ROLLBACK_TAG variable before triggering)
+# ---------------------------------------------------------------------------
+rollback:staging:
+  extends: .deploy_ssh
+  script:
+    - |
+      scp infra/compose/docker-compose.staging.yml \
+        "$STAGING_SSH_USER@$STAGING_SSH_HOST:$STAGING_COMPOSE_DIR/docker-compose.staging.yml"
+    - |
+      ssh "$STAGING_SSH_USER@$STAGING_SSH_HOST" bash -s << EOF
+        set -e
+        cd "$STAGING_COMPOSE_DIR"
+
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+        export REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
+        export IMAGE_TAG="${ROLLBACK_TAG:-latest}"
+
+        docker compose -f docker-compose.staging.yml pull migrator api ai worker web
+        docker compose -f docker-compose.staging.yml run --rm migrator
+        docker compose -f docker-compose.staging.yml up -d --no-deps --force-recreate \
+          api ai worker web
+      EOF
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+      when: manual
+  allow_failure: true
