@@ -1,0 +1,111 @@
+include:
+  - project: "vflirt/platform/ci-templates"
+    file:
+      - "build/docker-build.yml"
+      - "deploy/docker-deploy.yml"
+
+# ветки dev/staging/stage/release* (тег: branch-commitsha-pipelineid)
+# build_branch for every service, deploy/rollback for all services in parallel
+build_branch_ai:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "ai"
+    DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+build_branch_api:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "api"
+    DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+build_branch_migrator:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "migrator"
+    DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+build_branch_web:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "web"
+    DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+build_branch_worker:
+  extends: .build_image_branch
+  variables:
+    SERVICE_NAME: "worker"
+    DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
+
+
+deploy_staging_ai:
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "ai"
+  needs: ["build_branch_ai"]
+deploy_staging_api:
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "api"
+  needs: ["build_branch_api"]
+deploy_staging_migrator:
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "migrator"
+  needs: ["build_branch_migrator"]
+deploy_staging_web:
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "web"
+  needs: ["build_branch_web"]
+deploy_staging_worker:
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "worker"
+  needs: ["build_branch_worker"]
+
+rollback_staging_ai:
+  extends: .rollback_staging
+  variables:
+    SERVICE_NAME: "ai"
+  needs: ["deploy_staging_ai"]
+  when: manual
+  allow_failure: true
+rollback_staging_api:
+  extends: .rollback_staging
+  variables:
+    SERVICE_NAME: "api"
+  needs: ["deploy_staging_api"]
+  when: manual
+  allow_failure: true
+rollback_staging_migrator:
+  extends: .rollback_staging
+  variables:
+    SERVICE_NAME: "migrator"
+  needs: ["deploy_staging_migrator"]
+  when: manual
+  allow_failure: true
+rollback_staging_web:
+  extends: .rollback_staging
+  variables:
+    SERVICE_NAME: "web"
+  needs: ["deploy_staging_web"]
+  when: manual
+  allow_failure: true
+rollback_staging_worker:
+  extends: .rollback_staging
+  variables:
+    SERVICE_NAME: "worker"
+  needs: ["deploy_staging_worker"]
+  when: manual
+  allow_failure: true
+
+# build_tag:
+#   extends: .build_image_tag
+#   parallel:
+#     matrix:
+#       - SERVICE_NAME: "ai"
+#         DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+#       - SERVICE_NAME: "api"
+#         DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+#       - SERVICE_NAME: "migrator"
+#         DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+#       - SERVICE_NAME: "web"
+#         DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+#       - SERVICE_NAME: "worker"
+#         DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
