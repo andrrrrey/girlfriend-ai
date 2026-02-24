@@ -6,7 +6,8 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/migrator ./apps/migrator
 COPY apps/api ./apps/api
 COPY packages ./packages
-RUN pnpm install --frozen-lockfile --filter ./apps/migrator... --filter ./apps/api...
+RUN pnpm install --frozen-lockfile --filter ./apps/migrator... --filter ./apps/api... --filter "./packages/**"
+RUN pnpm --filter "./packages/**" --if-present run build
 RUN pnpm --filter ./apps/migrator... build
 RUN rm -rf apps/migrator/src packages/config/src packages/logger/src
 
@@ -18,3 +19,4 @@ COPY --from=builder /app/apps/migrator ./apps/migrator
 COPY --from=builder /app/apps/api ./apps/api
 COPY --from=builder /app/packages ./packages
 CMD ["node", "apps/migrator/dist/index.js"]
+ 
