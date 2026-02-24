@@ -3,6 +3,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web ./apps/web
 RUN pnpm install --frozen-lockfile --filter "web..."
