@@ -10,7 +10,7 @@ datasource db {
 // ─── Users & Auth ────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(uuid())
+  id           String    @id @default(uuid()) @db.Uuid
   email        String    @unique
   passwordHash String    @map("password_hash")
   nickname     String?
@@ -37,8 +37,8 @@ model User {
 // ─── Demo Limits ──────────────────────────────────────────────
 
 model UsageCounter {
-  id      String   @id @default(uuid())
-  userId  String   @map("user_id")
+  id      String   @id @default(uuid()) @db.Uuid
+  userId  String   @map("user_id") @db.Uuid
   action  String   // chat_message | stt | tts | generation
   count   Int      @default(0)
   resetAt DateTime @map("reset_at")
@@ -50,8 +50,8 @@ model UsageCounter {
 }
 
 model Session {
-  id           String   @id @default(uuid())
-  userId       String   @map("user_id")
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
   refreshToken String   @unique @map("refresh_token")
   userAgent    String?  @map("user_agent")
   ip           String?
@@ -65,8 +65,8 @@ model Session {
 }
 
 model SocialLink {
-  id       String @id @default(uuid())
-  userId   String @map("user_id")
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
   provider String
   url      String
 
@@ -89,7 +89,7 @@ model AppSetting {
 // ─── Characters ──────────────────────────────────────────────
 
 model Character {
-  id           String    @id @default(uuid())
+  id           String    @id @default(uuid()) @db.Uuid
   name         String
   systemPrompt String    @map("system_prompt")
   personality  Json      @default("{}")
@@ -110,9 +110,9 @@ model Character {
 // ─── Chat ────────────────────────────────────────────────────
 
 model ChatSession {
-  id            String    @id @default(uuid())
-  userId        String    @map("user_id")
-  characterId   String    @map("character_id")
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  characterId   String    @map("character_id") @db.Uuid
   title         String?
   lastMessageAt DateTime? @map("last_message_at")
   isActive      Boolean   @default(true) @map("is_active")
@@ -129,8 +129,8 @@ model ChatSession {
 }
 
 model Message {
-  id            String    @id @default(uuid())
-  chatSessionId String    @map("chat_session_id")
+  id            String    @id @default(uuid()) @db.Uuid
+  chatSessionId String    @map("chat_session_id") @db.Uuid
   role          String    // user | assistant | system
   content       String
   type          String    @default("text") // text | audio | image
@@ -148,12 +148,12 @@ model Message {
 // ─── AI Jobs ─────────────────────────────────────────────────
 
 model AiJob {
-  id          String    @id @default(uuid())
+  id          String    @id @default(uuid()) @db.Uuid
   type        String    // chat | stt | tts
   status      String    @default("pending") // pending | processing | completed | failed
   input       Json?
   output      Json?
-  userId      String    @map("user_id")
+  userId      String    @map("user_id") @db.Uuid
   tokensUsed  Int?      @map("tokens_used")
   error       String?
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -169,8 +169,8 @@ model AiJob {
 // ─── Usage Logs ──────────────────────────────────────────────
 
 model UsageLog {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
   action     String   // chat_message | stt | tts
   tokensUsed Int?     @map("tokens_used")
   metadata   Json?
@@ -186,9 +186,9 @@ model UsageLog {
 // ─── Message Copy Audit ───────────────────────────────────────
 
 model MessageCopyAudit {
-  id        String   @id @default(uuid())
-  messageId String   @map("message_id")
-  userId    String   @map("user_id")
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
