@@ -21,7 +21,7 @@
  * - API_BASE: NEXT_PUBLIC_API_URL из env (по умолчанию http://localhost:8080)
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_BASE = "/api-proxy";
 
 /**
  * Пара JWT-токенов, возвращаемая при входе/регистрации/обновлении.

@@ -87,10 +87,8 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.sky-moon.xyz}
     environment:
-      API_PUBLIC_URL: http://api:8080/health
+      API_INTERNAL_URL: http://api:8080
     ports:
       - "3000:3000"
     depends_on:
