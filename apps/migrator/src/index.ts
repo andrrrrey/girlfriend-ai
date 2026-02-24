@@ -116,7 +116,9 @@ async function main() {
     const apiDir = path.join(workspaceRoot, "apps", "api");
 
     // Find prisma binary without relying on npx or PATH
+    const migratorDir = path.join(workspaceRoot, "apps", "migrator");
     const prismaCandidates = [
+      path.join(migratorDir, "node_modules", ".bin", "prisma"),
       path.join(apiDir, "node_modules", ".bin", "prisma"),
       path.join(workspaceRoot, "node_modules", ".bin", "prisma"),
     ];
