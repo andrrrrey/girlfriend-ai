@@ -29,8 +29,12 @@ const EnvSchema = z.object({
 
   /** Порт Next.js фронтенда */
   WEB_PORT: z.coerce.number().default(3000),
+  /** Хост NestJS API (для межсервисного взаимодействия; в Docker = имя сервиса "api") */
+  API_HOST: z.string().default("localhost"),
   /** Порт NestJS API (основной REST API) */
   API_PORT: z.coerce.number().default(8080),
+  /** Хост Fastify AI-сервиса (для межсервисного взаимодействия; в Docker = имя сервиса "ai") */
+  AI_HOST: z.string().default("localhost"),
   /** Порт Fastify AI-сервиса (OpenAI, ElevenLabs) */
   AI_PORT: z.coerce.number().default(8081),
 

@@ -36,7 +36,7 @@ const env = loadEnv();
 const logger = createLogger({ service: "ai", env: env.ENV, level: env.LOG_LEVEL });
 
 /** Базовый URL внутреннего API NestJS (используется для чтения настроек и персонажей) */
-const API_BASE = `http://localhost:${env.API_PORT}`;
+const API_BASE = `http://${env.API_HOST}:${env.API_PORT}`;
 
 // Создаём Fastify-приложение (без встроенного логгера — используем Pino напрямую)
 const app = Fastify({ logger: false });
