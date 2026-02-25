@@ -14,6 +14,10 @@ RUN pnpm --filter "api" run build
 # соберёт /out с node_modules только для api
 RUN pnpm --filter "api" --prod deploy /out
 
+# prisma generate не запускается при --prod deploy (prisma — devDependency).
+# Запускаем в контексте /out через бинарник из builder-стейджа.
+RUN cd /out && /app/node_modules/.bin/prisma generate
+
 FROM node:20-bookworm-slim AS runner
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
