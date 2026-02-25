@@ -14,6 +14,14 @@ RUN pnpm --filter "api" run build
 # соберёт /out с node_modules только для api
 RUN pnpm --filter "api" --prod deploy /out
 
+# pnpm --prod deploy запускает postinstall (prisma generate) в контексте workspace
+# (/app/apps/api), поэтому сгенерированный .prisma/client попадает в /app/node_modules,
+# а не в /out/node_modules. Копируем сгенерированные файлы в production-деплой.
+RUN pkg=$(ls /app/node_modules/.pnpm | grep -m1 '^@prisma+client@') && \
+    cp -rL \
+        "/app/node_modules/.pnpm/${pkg}/node_modules/.prisma" \
+        "/out/node_modules/.pnpm/${pkg}/node_modules/"
+
 FROM node:20-bookworm-slim AS runner
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
