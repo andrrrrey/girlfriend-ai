@@ -86,7 +86,7 @@ const env = loadEnv();
  *   POST /ai/stt             — Speech-to-Text через Whisper
  *   POST /ai/tts             — Text-to-Speech через ElevenLabs
  */
-const AI_BASE = `http://localhost:${env.AI_PORT}`;
+const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
 
 /**
  * Извлекает количество использованных токенов из одной SSE-строки.

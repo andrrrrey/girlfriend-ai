@@ -137,6 +137,7 @@ services:
     environment:
       - WATCHPACK_POLLING=true
       - NEXT_TELEMETRY_DISABLED=1
+      - API_INTERNAL_URL=http://api:8080
     ports:
       - "3000:3000"
     command: ["pnpm", "--filter", "web", "dev"]
