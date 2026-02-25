@@ -22,8 +22,6 @@ import { Queue } from "bullmq";
 import { loadEnv } from "@repo/config";
 import { QUEUE_NAME } from "./queue.types";
 
-const env = loadEnv();
-
 /**
  * Парсит Redis URL в объект подключения для BullMQ.
  *
@@ -50,15 +48,6 @@ function parseRedisUrl(url: string): Record<string, unknown> {
 }
 
 /**
- * Singleton-экземпляр BullMQ Queue.
- * Создаётся один раз при загрузке модуля.
- * Используется для постановки заданий: aiQueue.add(JOB_NAMES.CHAT, data)
- */
-export const aiQueue = new Queue(QUEUE_NAME, {
-  connection: parseRedisUrl(env.REDIS_URL) as any,
-});
-
-/**
  * Injection token для BullMQ Queue.
  * Используется для DI: @Inject(AI_QUEUE) private queue: Queue
  */
@@ -69,13 +58,22 @@ export const AI_QUEUE = Symbol("AI_QUEUE");
  *
  * @Global() — автоматически доступен во всём приложении.
  * Экспортирует AI_QUEUE token для инъекции в любой сервис/контроллер.
+ *
+ * useFactory — создаёт Queue внутри NestJS DI, а не на верхнем уровне модуля.
+ * Это гарантирует, что ошибки (неверный REDIS_URL, недоступный Redis и т.д.)
+ * попадают в bootstrap().catch() а не глушатся process.exit(1).
  */
 @Global()
 @Module({
   providers: [
     {
       provide: AI_QUEUE,
-      useValue: aiQueue,
+      useFactory: () => {
+        const env = loadEnv();
+        return new Queue(QUEUE_NAME, {
+          connection: parseRedisUrl(env.REDIS_URL) as any,
+        });
+      },
     },
   ],
   exports: [AI_QUEUE],

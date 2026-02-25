@@ -32,6 +32,8 @@ async function bootstrap() {
     bufferLogs: true,
     // logger: false — отключает встроенный NestJS-логгер (используем Pino напрямую)
     logger: false,
+    // abortOnError: false — пробрасывает ошибки инициализации в .catch() вместо тихого process.exit(1)
+    abortOnError: false,
   });
 
   // ─── Middleware: X-Request-ID + HTTP access log ─────────────────────────────
