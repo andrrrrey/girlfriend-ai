@@ -28,6 +28,7 @@ import { Client } from "pg";
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import path from "path";
+import * as bcrypt from "bcrypt";
 
 const env = loadEnv();
 const logger = createLogger({ service: "migrator", env: env.ENV, level: env.LOG_LEVEL });
@@ -87,6 +88,58 @@ async function clearFailedMigrations(client: Client): Promise<void> {
 }
 
 /**
+ * Засевает базу данных начальными данными (идемпотентно).
+ *
+ * Создаёт:
+ * - Дефолтные настройки AI-сервисов (app_settings) — не перезаписывает существующие
+ * - Пользователя-администратора admin@example.com / admin123
+ *
+ * Использует прямое pg-соединение, без Prisma-клиента, чтобы не тащить
+ * дополнительные зависимости в образ мигратора.
+ *
+ * @param client — активное pg.Client-соединение
+ */
+async function seedDatabase(client: Client): Promise<void> {
+  // ── App settings ──
+  const defaults: Record<string, string> = {
+    OPENAI_API_KEY: "",
+    OPENAI_MODEL: "gpt-4o",
+    OPENAI_STT_MODEL: "whisper-1",
+    ELEVENLABS_API_KEY: "",
+    ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM",
+    ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
+  };
+
+  for (const [key, value] of Object.entries(defaults)) {
+    await client.query(
+      `INSERT INTO "app_settings" (key, value, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO NOTHING`,
+      [key, value],
+    );
+  }
+
+  // ── Admin user ──
+  const adminEmail = "admin@example.com";
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM "users" WHERE email = $1 LIMIT 1`,
+    [adminEmail],
+  );
+
+  if (rows.length === 0) {
+    const passwordHash = await bcrypt.hash("admin123", 10);
+    await client.query(
+      `INSERT INTO "users" (email, password_hash, nickname, role, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+      [adminEmail, passwordHash, "Admin", "admin"],
+    );
+    logger.info({ email: adminEmail }, "admin_user_seeded");
+  } else {
+    logger.info({ email: adminEmail }, "admin_user_exists");
+  }
+}
+
+/**
  * Основная функция миграции.
  *
  * Алгоритм:
@@ -127,6 +180,10 @@ async function main() {
 
     await run(prismaBin, ["migrate", "deploy"], apiDir);
     logger.info({}, "prisma_migrate_deploy_done");
+
+    logger.info({}, "seed_start");
+    await seedDatabase(client);
+    logger.info({}, "seed_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
     await client.query("SELECT pg_advisory_unlock(987654321);");
