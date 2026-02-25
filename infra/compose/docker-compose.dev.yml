@@ -44,6 +44,7 @@ services:
       context: ../..
       dockerfile: infra/docker/migrator.Dockerfile
     env_file: ../../env.example
+    restart: "no"
     depends_on:
       postgres:
         condition: service_healthy
