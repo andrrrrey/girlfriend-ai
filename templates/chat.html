@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat — lovecast.AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #090909;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-feature-settings: 'lnum', 'pnum';
+    }
+
+    /* ─── Layout ─────────────────────────────────── */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── Sidebar ────────────────────────────────── */
+    .sidebar {
+      width: 196px;
+      flex-shrink: 0;
+      background: #090909;
+      border-right: 1px solid #313131;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding-left: 12px;
+    }
+    .logo-wrap {
+      position: relative;
+      width: 137.336px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .logo-wrap img {
+      position: absolute;
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: 100%;
+    }
+    .logo-part1 { position: absolute; top: 7.95%; left: 0.31%; right: 84.29%; bottom: 8.33%; }
+    .logo-part2 { position: absolute; top: 60.42%; left: 3.13%; right: 91.84%; bottom: 8.15%; }
+    .logo-part3 { position: absolute; top: 46.79%; left: 0.94%; right: 94.02%; bottom: 21.79%; }
+    .logo-title { position: absolute; top: 27.02%; left: 20.87%; right: 0; bottom: 27.02%; }
+
+    .sidebar-separator {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    .nav-section { display: flex; flex-direction: column; gap: 4px; }
+    .nav-title {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #969696;
+      padding: 0 12px;
+      line-height: 1.2;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #969696;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      background: #090909;
+      width: 172px;
+    }
+    .nav-link:hover { background: #1a1a1a; }
+    .nav-link.active {
+      background: #121212;
+      border: 1px solid #313131;
+      color: #fff;
+    }
+    .nav-link .icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-link .label { flex: 1; }
+    .figma-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .figma-icon .vi {
+      position: absolute;
+    }
+    .figma-icon .vi img {
+      position: absolute;
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-badge {
+      background: #20271f;
+      color: #c1f0aa;
+      font-size: 8px;
+      font-weight: 500;
+      padding: 4px;
+      border-radius: 54px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 13px;
+    }
+    .nav-badge .badge-dot {
+      width: 5px;
+      height: 5px;
+    }
+    .nav-badge .badge-dot img {
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-link.premium {
+      background: #1a1316;
+      border: 0.8px solid rgba(228,0,120,0.2);
+      border-radius: 4px;
+      color: #f95bad;
+    }
+
+    .nav-link.logout { color: #e36466; }
+
+    .nav-chevron { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .settings-nav { flex: 1; }
+
+    .sidebar-bottom-text {
+      font-size: 7px;
+      font-weight: 500;
+      color: #848484;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 12px;
+      line-height: 1.2;
+    }
+
+    /* ─── Main area ──────────────────────────────── */
+    .main {
+      margin-left: 196px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Top Navbar ─────────────────────────────── */
+    .topnav {
+      background: #090909;
+      border-bottom: 1px solid #313131;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      padding: 12px 36px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .search-box {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 220px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      color: #848484;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      cursor: text;
+      flex-shrink: 0;
+    }
+    .search-box img { width: 16px; height: 16px; flex-shrink: 0; }
+    .search-box span { flex: 1; line-height: 1.2; }
+
+    .topnav-links {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 36px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .topnav-links a {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .topnav-buttons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border: none;
+      border-radius: 4px;
+      height: 30px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-secondary {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      height: 30px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    .green-dot-wrap {
+      width: 6px;
+      height: 6px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: visible;
+    }
+    .green-dot-wrap img {
+      position: absolute;
+      inset: -100%;
+      display: block;
+      max-width: none;
+      width: 300%;
+      height: 300%;
+    }
+
+    /* ─── Content area ───────────────────────────── */
+    .content {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ─── Chats Panel ────────────────────────────── */
+    .chats-panel {
+      width: 256px;
+      flex-shrink: 0;
+      background: #121212;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      height: calc(100vh - 46px);
+    }
+    .chats-panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chats-search {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 220px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      color: #848484;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .chats-search .search-icon { width: 16px; height: 16px; flex-shrink: 0; overflow: hidden; position: relative; }
+    .chats-search span { flex: 1; }
+
+    .chats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 6px;
+      border-radius: 8px;
+      background: #252525;
+      width: 216px;
+      cursor: pointer;
+    }
+    .chat-item.active {
+      background: #474747;
+      border: 0.8px solid #969696;
+    }
+    .chat-item-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .chat-item-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .chat-item-avatar .notif-badge {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #20271f;
+      color: #c1f0aa;
+      font-size: 8px;
+      font-weight: 500;
+      padding: 4px;
+      border-radius: 54px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 13px;
+      z-index: 2;
+    }
+    .chat-item-message {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      justify-content: center;
+      min-width: 0;
+      align-self: stretch;
+    }
+    .chat-item-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-item-preview {
+      font-size: 10px;
+      font-weight: 500;
+      color: #848484;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-item-dots {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      cursor: pointer;
+    }
+    .dots-icon {
+      width: 12px;
+      height: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .dots-icon span {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #fff;
+      border-radius: 50%;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .dots-icon span:nth-child(1) { left: 1px; }
+    .dots-icon span:nth-child(2) { left: 5px; }
+    .dots-icon span:nth-child(3) { left: 9px; }
+
+    /* ─── Chat Main Area ─────────────────────────── */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      max-width: 696px;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 0 0 0;
+      width: 100%;
+    }
+    .chat-header-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      border: 1px solid #313131;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .chat-header-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .chat-header-name {
+      flex: 1;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .chat-header-buttons {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .chat-btn {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      height: 30px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .chat-btn-icon {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    /* Messages area */
+    .chat-messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      overflow-y: auto;
+      gap: 0;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .message.from-ai {
+      align-items: flex-start;
+      max-width: 330px;
+      min-width: 221px;
+    }
+    .message.from-me {
+      align-items: flex-end;
+      align-self: flex-end;
+      max-width: 330px;
+      min-width: 109px;
+    }
+    .message.from-ai-image {
+      align-items: flex-start;
+      width: 244px;
+    }
+
+    .message-bubble {
+      padding: 10px 12px;
+      border-radius: 8px 8px 8px 1px;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .message.from-ai .message-bubble,
+    .message.from-ai-image .message-bubble {
+      background: #1e1e1e;
+      border-radius: 8px 8px 8px 1px;
+    }
+    .message.from-me .message-bubble {
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border-radius: 8px 8px 1px 8px;
+      text-align: right;
+    }
+
+    .message-image-card {
+      width: 220px;
+      height: 300px;
+      border-radius: 8px;
+      border: 1px solid #5b5b5b;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 8px;
+      margin-top: 10px;
+    }
+    .message-image-card .card-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    .message-image-card .card-bg img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .message-image-card .card-bg-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8));
+    }
+    .card-top-content {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+    }
+    .card-tag {
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      border-radius: 4px;
+      padding: 3px 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 8px;
+      font-weight: 500;
+      align-self: flex-start;
+    }
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-end;
+      flex: 1;
+    }
+    .card-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      width: 100%;
+    }
+    .action-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .action-btn .action-icon {
+      width: 12px;
+      height: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .message-time {
+      flex: 1;
+      text-align: right;
+      font-size: 10px;
+      font-weight: 500;
+      color: #848484;
+      line-height: 1.3;
+    }
+
+    /* ─── Suggest Reply ──────────────────────────── */
+    .suggest-reply-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      justify-content: center;
+      padding-bottom: 4px;
+    }
+    .suggest-label {
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border-radius: 54px;
+      padding: 5px 6px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 8px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .suggest-reply-content {
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      border-radius: 8px;
+      padding: 6px 6px 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      flex: 1;
+      overflow: hidden;
+    }
+    .suggest-reply-text {
+      flex: 1;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .suggest-reply-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ─── Chat Input ─────────────────────────────── */
+    .chat-input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 0 24px 0;
+      border-top: 1px solid #313131;
+      background: #090909;
+      position: relative;
+    }
+    .ask-btn {
+      background: #1e1e1e;
+      border-radius: 4px;
+      height: 32px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: none;
+      font-family: 'Syne', sans-serif;
+    }
+    .ask-btn-text {
+      font-size: 10px;
+      font-weight: 500;
+      color: #969696;
+    }
+    .ask-btn-chevron {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .ask-btn-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .chat-text-input {
+      background: #1e1e1e;
+      border: 1px solid #313131;
+      border-radius: 6px;
+      height: 32px;
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      line-height: 1.2;
+      outline: none;
+    }
+    .chat-text-input::placeholder {
+      color: #848484;
+    }
+    .input-icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: 1px solid #313131;
+      background: #121212;
+    }
+    .input-icon-btn.send {
+      background: #121212;
+      border: 1px solid #313131;
+    }
+
+    /* ─── Right Info Panel ────────────────────────── */
+    .right-panel {
+      width: 256px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px;
+      overflow-y: auto;
+      height: calc(100vh - 46px);
+    }
+
+    .profile-gallery {
+      width: 100%;
+      height: 300px;
+      border-radius: 8px;
+      border: 1px solid #252525;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 8px;
+    }
+    .profile-gallery .gallery-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    .profile-gallery .gallery-bg img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .profile-gallery .gallery-bg-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8));
+    }
+    .profile-gallery .small-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid #313131;
+      position: relative;
+      overflow: visible;
+      z-index: 2;
+    }
+    .profile-gallery .small-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .profile-gallery .small-avatar .link-badge {
+      position: absolute;
+      right: -3.5px;
+      bottom: -3.5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 34px;
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .profile-gallery .small-avatar .link-badge img {
+      width: 8px;
+      height: 8px;
+    }
+    .profile-slider {
+      display: flex;
+      gap: 2px;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+      margin-top: 8px;
+    }
+    .slider-bar {
+      flex: 1;
+      height: 2px;
+      position: relative;
+    }
+    .slider-bar.active .slider-bar-inner {
+      background: #f95bad;
+      box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6);
+      border-radius: 1px;
+      position: absolute;
+      inset: 0;
+    }
+    .slider-bar.inactive {
+      opacity: 0.7;
+    }
+    .slider-bar.inactive .slider-bar-inner {
+      background: #46383e;
+      border-radius: 1px;
+      position: absolute;
+      inset: 0;
+    }
+
+    .profile-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+    .profile-btn-secondary {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      height: 30px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+    }
+    .profile-btn-primary {
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border: none;
+      border-radius: 4px;
+      height: 30px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .profile-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .profile-name {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .profile-bio {
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .profile-separator {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .about-me {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .about-me-title {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .info-card {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      height: 28px;
+    }
+    .info-card-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 30px;
+      background: #313131;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      padding: 6px;
+    }
+    .info-card-icon .figma-icon {
+      width: 16px;
+      height: 16px;
+    }
+    .info-card-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .info-card-label {
+      font-size: 7px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #848484;
+      line-height: 1.2;
+    }
+    .info-card-value {
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.3;
+      color: #fff;
+    }
+
+    /* Chat center wrapper */
+    .chat-center {
+      flex: 1;
+      display: flex;
+      min-width: 0;
+      padding: 0 18px;
+    }
+    .chat-center-inner {
+      width: 100%;
+      max-width: 696px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 46px);
+    }
+
+    /* Hamburger icon */
+    .hamburger-icon {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon span {
+      display: block;
+      width: 14px;
+      height: 1.5px;
+      background: #fff;
+      border-radius: 1px;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ─── Sidebar (from index0.html, Chat is active) ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-wrap">
+        <div class="logo-part1"><img src="http://localhost:3845/assets/4324af60bd5838bbeb3c32e99e14bc8d894f20e0.svg" alt="" /></div>
+        <div class="logo-part2"><img src="http://localhost:3845/assets/b563d66a439cdeab3fb4943eff30c4c3b14cd589.svg" alt="" /></div>
+        <div class="logo-part3"><img src="http://localhost:3845/assets/b563d66a439cdeab3fb4943eff30c4c3b14cd589.svg" alt="" /></div>
+        <div class="logo-title"><img src="http://localhost:3845/assets/b26dec13b831377550a10af107006da1cf10544b.svg" alt="" /></div>
+      </div>
+    </div>
+
+    <div class="sidebar-separator"></div>
+
+    <!-- Main nav -->
+    <nav class="nav-section">
+      <div class="nav-title">Main</div>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:66.67%;left:41.67%;right:41.66%;bottom:33.33%;"><img src="http://localhost:3845/assets/00ce9200ae0e0d43ab49f6e39042263cd93f76d1.svg" alt="" style="inset:-0.5px -18.75%;width:calc(100% + 37.5%);height:calc(100% + 1px);" /></div>
+          <div class="vi" style="top:12.8%;left:8.33%;right:8.34%;bottom:66.67%;"><img src="http://localhost:3845/assets/63f7eb240f0729d19b6c42bb79dbcc26aac8ca8b.svg" alt="" style="inset:-15.22% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 30.44%);" /></div>
+          <div class="vi" style="top:45.83%;left:16.67%;right:16.66%;bottom:12.5%;"><img src="http://localhost:3845/assets/db287ef9443069dde69fbf84c4c40a9b867e77c1.svg" alt="" style="inset:-7.5% -4.69%;width:calc(100% + 9.38%);height:calc(100% + 15%);" /></div>
+        </div>
+        <span class="label">Home</span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:29.38%;left:29.38%;right:29.38%;bottom:29.38%;"><img src="http://localhost:3845/assets/0e3f985525fbbc3eeb8c1713a08518581986fa3b.svg" alt="" style="inset:-7.58%;width:calc(100% + 15.16%);height:calc(100% + 15.16%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/717c200aae4e6f28932bc2d7611108c81b715ea3.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Shorts</span>
+      </a>
+      <a class="nav-link active">
+        <div class="figma-icon">
+          <div class="vi" style="top:47.92%;left:68.75%;right:27.08%;bottom:47.92%;"><img src="http://localhost:3845/assets/681f0e0c62c3637f99c40525d031fcf22ce678d8.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:47.92%;left:47.92%;right:47.91%;bottom:47.92%;"><img src="http://localhost:3845/assets/681f0e0c62c3637f99c40525d031fcf22ce678d8.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:47.92%;left:27.08%;right:68.75%;bottom:47.92%;"><img src="http://localhost:3845/assets/0595a28a6b9b355b8465313df312e4b1b5a80872.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/b78b09c6cfd126c9eb58cde62cf51a46a1cf1ea9.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Chat</span>
+        <span class="nav-badge">3 <span class="badge-dot" style="width:5px;height:5px;position:relative;"><img src="http://localhost:3845/assets/dada33e5a2709393004f19970e3edadf7f02c7ff.svg" alt="" style="position:absolute;inset:-120%;width:340%;height:340%;display:block;max-width:none;" /></span></span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:29.17%;left:29.17%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/0b65e99d1791cd379cd1c2920e960b764296c01c.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+          <div class="vi" style="top:16.67%;left:16.67%;right:25%;bottom:25%;"><img src="http://localhost:3845/assets/647cbc22e663f933601938ae55aea1d012c4d6f0.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+          <div class="vi" style="top:62.5%;left:29.17%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/80a003509ebe72b068ec5432abe75c0f2f0343c0.svg" alt="" style="inset:-25% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 50%);" /></div>
+          <div class="vi" style="top:41.67%;left:62.5%;right:25%;bottom:45.83%;"><img src="http://localhost:3845/assets/0cf6253ee13b2290c2e3471b16fdef1e1f51ec8b.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+        </div>
+        <span class="label">Gallery</span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:12.5%;left:8.33%;right:8.34%;bottom:12.5%;"><img src="http://localhost:3845/assets/d19a82ae6484698943b19132a135d37d38956d24.svg" alt="" style="inset:-4.17% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 8.34%);" /></div>
+          <div class="vi" style="top:37.5%;left:33.33%;right:33.34%;bottom:29.17%;"><img src="http://localhost:3845/assets/7e052be7e17c24a6659568ad6d99eadc7cf5a329.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+        </div>
+        <span class="label">Generate Content</span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:29.17%;left:70.83%;right:4.17%;bottom:45.83%;"><img src="http://localhost:3845/assets/817b6da1bb9d84b2a9e58fb5fd7357a42f72573c.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:50%;left:4.17%;right:37.5%;bottom:16.67%;"><img src="http://localhost:3845/assets/ae40a27807484ef5f6072b1ecf6895792df207dd.svg" alt="" style="inset:-9.37% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 18.74%);" /></div>
+          <div class="vi" style="top:16.67%;left:16.67%;right:50%;bottom:50%;"><img src="http://localhost:3845/assets/ac7e5406bbc69924e4543d14256213c39e58e1fc.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+        </div>
+        <span class="label">Create Character</span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:12.5%;left:8.33%;right:8.34%;bottom:12.5%;"><img src="http://localhost:3845/assets/73c077160f57d53f52d0bdc3a7f38f652fa1e2b4.svg" alt="" style="inset:-4.17% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 8.34%);" /></div>
+        </div>
+        <span class="label">My AI</span>
+      </a>
+      <a class="nav-link premium">
+        <img class="icon" src="http://localhost:3845/assets/ecda1cb5e0d2bcd6e589ee48e0745891e21c4311.svg" alt="" />
+        <span class="label">Become Premium</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-separator"></div>
+
+    <!-- Settings nav -->
+    <nav class="nav-section settings-nav">
+      <div class="nav-title">Settings</div>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/35c2d550729147f7b5b9ff1fe84e1c9ce255bb43.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+          <div class="vi" style="top:64.58%;left:17.8%;right:17.79%;bottom:23.56%;"><img src="http://localhost:3845/assets/ba810d43de8e63402912f003a55a32c54920d430.svg" alt="" style="inset:-26.36% -4.85%;width:calc(100% + 9.7%);height:calc(100% + 52.72%);" /></div>
+          <div class="vi" style="top:25%;left:37.5%;right:37.5%;bottom:50%;"><img src="http://localhost:3845/assets/cfeca3e384f8734f4583d5ad5cf056ec90a4ac42.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+        </div>
+        <span class="label">Creator account</span>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:37.5%;left:37.5%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/073cb9f1e11431823182dbffee338c363b43bdf3.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/2418d0e179c6a7dc5cfb70d65cd62c6caf37ec7e.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Settings</span>
+        <svg class="chevron-down-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </nav>
+
+    <!-- Bottom links -->
+    <nav class="nav-section">
+      <a class="nav-link">
+        <img class="icon" src="http://localhost:3845/assets/8ae469fff107c192a29b4759817450ef81546340.png" alt="" />
+        <span class="label">English</span>
+        <svg class="chevron-down-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="nav-link">
+        <div class="figma-icon">
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/0f47804f77e143fc6963ab556afbbd2728b809ff.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+          <div class="vi" style="top:26.56%;left:37.5%;right:39.58%;bottom:41.67%;"><img src="http://localhost:3845/assets/7d603f60b9cd08d55aab6f85549010da00775f9c.svg" alt="" style="inset:-9.84% -13.64%;width:calc(100% + 27.28%);height:calc(100% + 19.68%);" /></div>
+          <div class="vi" style="top:75%;left:49.96%;right:50%;bottom:24.96%;"><img src="http://localhost:3845/assets/ba22947984a8f2ccd2643f0f3ef6bbed6aec2b93.svg" alt="" style="inset:-0.5px;width:calc(100% + 1px);height:calc(100% + 1px);" /></div>
+        </div>
+        <span class="label">Help center</span>
+      </a>
+      <a class="nav-link logout">
+        <div class="figma-icon">
+          <div class="vi" style="top:37.5%;left:50%;right:20.83%;bottom:37.5%;"><img src="http://localhost:3845/assets/438f9790609b6f21c3f47b837fa8b2d5eacac111.svg" alt="" style="inset:-12.5% -10.71%;width:calc(100% + 21.42%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:12.5%;left:20.83%;right:20.84%;bottom:12.5%;"><img src="http://localhost:3845/assets/9ac73ff23c13404f1096b6dc046d3ef579f6cce4.svg" alt="" style="inset:-4.17% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 8.34%);" /></div>
+        </div>
+        <span class="label">Logout Account</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom-text">PRIVACY NOTICE &bull; LEGAL INFORMATION</div>
+  </aside>
+
+  <!-- ─── Main content ─────────────────────── -->
+  <div class="main">
+
+    <!-- Top navbar -->
+    <header class="topnav">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="7" cy="7" r="4.5" stroke="#848484" stroke-width="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Search</span>
+      </div>
+      <nav class="topnav-links">
+        <a href="#">Blog</a>
+        <a href="#">Guide</a>
+        <a href="#">Subscription</a>
+      </nav>
+      <div class="topnav-buttons">
+        <button class="btn-primary">Create Free Account</button>
+        <button class="btn-secondary">Log in <span class="green-dot-wrap"><img src="http://localhost:3845/assets/b136c23032446e3ea960eb3580e238f7bd9e8c54.svg" alt="" /></span></button>
+      </div>
+    </header>
+
+    <!-- Content: 3 columns -->
+    <div class="content">
+
+      <!-- Chats Panel -->
+      <div class="chats-panel">
+        <div class="chats-panel-title">Chats</div>
+        <div class="chats-search">
+          <div class="search-icon">
+            <div class="figma-icon">
+              <div class="vi" style="top:70.83%;left:70.83%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/3b0018026586900a958a939ff08eb1a0a524ef8f.svg" alt="" style="inset:-18.75%;width:calc(100% + 37.5%);height:calc(100% + 37.5%);" /></div>
+              <div class="vi" style="top:12.5%;left:12.5%;right:20.83%;bottom:20.83%;"><img src="http://localhost:3845/assets/12c74a8ae6904118069aac33b58fbd8d9522f106.svg" alt="" style="inset:-4.69%;width:calc(100% + 9.38%);height:calc(100% + 9.38%);" /></div>
+            </div>
+          </div>
+          <span>Search for a profile</span>
+        </div>
+        <div class="chats-list">
+          <!-- Chat 1 - Active -->
+          <div class="chat-item active">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 2 -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 3 with notification -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="notif-badge">3 <span style="width:5px;height:5px;position:relative;display:inline-block;"><img src="http://localhost:3845/assets/dada33e5a2709393004f19970e3edadf7f02c7ff.svg" alt="" style="position:absolute;inset:-120%;width:340%;height:340%;display:block;max-width:none;" /></span></div>
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 4 -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 5 -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 6 with notification -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="notif-badge">3 <span style="width:5px;height:5px;position:relative;display:inline-block;"><img src="http://localhost:3845/assets/dada33e5a2709393004f19970e3edadf7f02c7ff.svg" alt="" style="position:absolute;inset:-120%;width:340%;height:340%;display:block;max-width:none;" /></span></div>
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 7 with notification -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="notif-badge">3 <span style="width:5px;height:5px;position:relative;display:inline-block;"><img src="http://localhost:3845/assets/dada33e5a2709393004f19970e3edadf7f02c7ff.svg" alt="" style="position:absolute;inset:-120%;width:340%;height:340%;display:block;max-width:none;" /></span></div>
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 8 -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat 9 -->
+          <div class="chat-item">
+            <div class="chat-item-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-item-message">
+              <div class="chat-item-name">Diana Smith</div>
+              <div class="chat-item-preview">Amazinggggg...</div>
+            </div>
+            <div class="chat-item-dots">
+              <div class="figma-icon" style="width:12px;height:12px;">
+                <div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Center Area -->
+      <div class="chat-center">
+        <div class="chat-center-inner">
+
+          <!-- Chat Header -->
+          <div class="chat-header">
+            <div class="chat-header-avatar">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            </div>
+            <div class="chat-header-name">Diana Smith</div>
+            <div class="chat-header-buttons">
+              <button class="chat-btn">Options</button>
+              <button class="chat-btn">
+                <div class="figma-icon">
+                  <div class="vi" style="top:29.17%;left:29.17%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/d1717bab63265291e38e7187dfb2459228d21724.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+                  <div class="vi" style="top:16.67%;left:16.67%;right:25%;bottom:25%;"><img src="http://localhost:3845/assets/06766527c3acc3dc168888ea211287f2ef2d238c.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+                  <div class="vi" style="top:62.5%;left:29.17%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/1d3e86978e756eb9bf3b67787cbc5fbfa8cf971d.svg" alt="" style="inset:-25% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 50%);" /></div>
+                  <div class="vi" style="top:41.67%;left:62.5%;right:25%;bottom:45.83%;"><img src="http://localhost:3845/assets/0a89b1058b947be5421ae80adbd64b23999bb97a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                </div>
+                View all media
+              </button>
+              <div class="chat-btn-icon">
+                <div class="figma-icon">
+                  <div class="vi" style="top:18.75%;left:12.5%;right:12.5%;bottom:75%;"><img src="http://localhost:3845/assets/62dcbb234262598f553f4123e12e1b1cfe73ab67.svg" alt="" style="inset:-1px -5%;width:calc(100% + 10%);height:calc(100% + 2px);" /></div>
+                  <div class="vi" style="top:43.75%;left:18.75%;right:12.5%;bottom:50%;"><img src="http://localhost:3845/assets/3cf511693113447053fc0d05dc44ac7eae286671.svg" alt="" style="inset:-1px -7.14%;width:calc(100% + 14.28%);height:calc(100% + 2px);" /></div>
+                  <div class="vi" style="top:56.25%;left:68.75%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/24a74342c36d89331c1b48eec40b4f64cf36f9ed.svg" alt="" style="inset:-8.33% -16.67%;width:calc(100% + 33.34%);height:calc(100% + 16.66%);" /></div>
+                  <div class="vi" style="top:68.75%;left:12.5%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/729531ee15534c94ce701c45a598eceaa2b45516.svg" alt="" style="inset:-1px -5%;width:calc(100% + 10%);height:calc(100% + 2px);" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Messages -->
+          <div class="chat-messages">
+            <!-- AI Text Message -->
+            <div class="message from-ai">
+              <div class="message-bubble">People often think grief is loud. That iannounces itself with tears... </div>
+              <div class="message-actions">
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:16.67%;left:50%;right:50%;bottom:16.67%;"><img src="http://localhost:3845/assets/e99d70414afc19da6a420a898b95039dd7f31182.svg" alt="" style="inset:-4.69% -1px;width:calc(100% + 2px);height:calc(100% + 9.38%);" /></div><div class="vi" style="top:37.5%;left:33.34%;right:66.66%;bottom:37.5%;"><img src="http://localhost:3845/assets/2b16235171675fa00ec8cc24126ebdf1148c739d.svg" alt="" style="inset:-12.5% -1px;width:calc(100% + 2px);height:calc(100% + 25%);" /></div><div class="vi" style="top:41.67%;left:83.34%;right:16.66%;bottom:41.67%;"><img src="http://localhost:3845/assets/5a5e08ab16a056ff78510e24ce3bed706f906c23.svg" alt="" style="inset:-18.75% -1px;width:calc(100% + 2px);height:calc(100% + 37.5%);" /></div><div class="vi" style="top:41.67%;left:16.66%;right:83.34%;bottom:41.67%;"><img src="http://localhost:3845/assets/5a5e08ab16a056ff78510e24ce3bed706f906c23.svg" alt="" style="inset:-18.75% -1px;width:calc(100% + 2px);height:calc(100% + 37.5%);" /></div><div class="vi" style="top:29.17%;left:66.66%;right:33.34%;bottom:29.17%;"><img src="http://localhost:3845/assets/37974df23f4f3a193beb353af0b9ce0b44af4c49.svg" alt="" style="inset:-7.5% -1px;width:calc(100% + 2px);height:calc(100% + 15%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:11.33%;left:14.59%;right:15.07%;bottom:16.67%;"><img src="http://localhost:3845/assets/0b4f2286b10d579ebc0358e8991a0925c4ef70ef.svg" alt="" style="inset:-5.79% -5.93% -5.79% -5.92%;width:calc(100% + 11.85%);height:calc(100% + 11.58%);" /></div><div class="vi" style="top:37.5%;left:29.16%;right:70.84%;bottom:16.67%;"><img src="http://localhost:3845/assets/9d1761152130179ec7dd618fbeccb02987541d33.svg" alt="" style="inset:-9.09% -0.5px;width:calc(100% + 1px);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.58%;left:14.59%;right:15.07%;bottom:13.42%;"><img src="http://localhost:3845/assets/a2d0afab1a50527004fd18b5df34d5c9ed4ebb67.svg" alt="" style="inset:-5.79% -5.93% -5.79% -5.92%;width:calc(100% + 11.85%);height:calc(100% + 11.58%);" /></div><div class="vi" style="top:14.58%;left:29.16%;right:70.84%;bottom:39.58%;"><img src="http://localhost:3845/assets/9d1761152130179ec7dd618fbeccb02987541d33.svg" alt="" style="inset:-9.09% -0.5px;width:calc(100% + 1px);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:37.5%;right:16.67%;bottom:16.67%;"><img src="http://localhost:3845/assets/eb8184ed2dce5bdd929abc7495a103216432e596.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div><div class="vi" style="top:16.67%;left:16.66%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/e310d38b9f9c72b889008d4f4e17a5f8bf82e1c0.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:16.66%;right:16.67%;bottom:8.33%;"><img src="http://localhost:3845/assets/12b7e276164928ff5774bc9695cd0cc954434286.svg" alt="" style="inset:-7.69% -6.25%;width:calc(100% + 12.5%);height:calc(100% + 15.38%);" /></div><div class="vi" style="top:8.33%;left:12.5%;right:12.5%;bottom:75%;"><img src="http://localhost:3845/assets/fee4545a53863bda5e88b0a213c9ecd02001cb38.svg" alt="" style="inset:-25% -5.56%;width:calc(100% + 11.12%);height:calc(100% + 50%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.94%;left:16.35%;right:13.87%;bottom:15.28%;"><img src="http://localhost:3845/assets/6a4196301b785582bf2da6c32dc110eb3fe45ecb.svg" alt="" style="inset:-5.97%;width:calc(100% + 11.94%);height:calc(100% + 11.94%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:12.5%;left:12.5%;right:15.64%;bottom:53.75%;"><img src="http://localhost:3845/assets/2b5bc56ea23071c92cc91fe4e877d0b875b281be.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:16.25%;left:68.7%;right:12.5%;bottom:65%;"><img src="http://localhost:3845/assets/0262fefd25778752c560f30f3efd2c974e93ea10.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div><div class="vi" style="top:53.75%;left:15.64%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/5d40e7984b8582629a3135d06ee47a8e6fa5e763.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:65%;left:12.5%;right:68.71%;bottom:16.25%;"><img src="http://localhost:3845/assets/21a2d2ae1a813c65bf680f0301b545934312d675.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div></div></div></div>
+                <div class="message-time">12:40</div>
+              </div>
+            </div>
+
+            <!-- User Text Message -->
+            <div class="message from-me">
+              <div class="message-bubble">People often think grief is loud.</div>
+              <div class="message-actions">
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:37.5%;right:16.67%;bottom:16.67%;"><img src="http://localhost:3845/assets/eb8184ed2dce5bdd929abc7495a103216432e596.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div><div class="vi" style="top:16.67%;left:16.66%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/e310d38b9f9c72b889008d4f4e17a5f8bf82e1c0.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:16.66%;right:16.67%;bottom:8.33%;"><img src="http://localhost:3845/assets/12b7e276164928ff5774bc9695cd0cc954434286.svg" alt="" style="inset:-7.69% -6.25%;width:calc(100% + 12.5%);height:calc(100% + 15.38%);" /></div><div class="vi" style="top:8.33%;left:12.5%;right:12.5%;bottom:75%;"><img src="http://localhost:3845/assets/fee4545a53863bda5e88b0a213c9ecd02001cb38.svg" alt="" style="inset:-25% -5.56%;width:calc(100% + 11.12%);height:calc(100% + 50%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.94%;left:16.35%;right:13.87%;bottom:15.28%;"><img src="http://localhost:3845/assets/6a4196301b785582bf2da6c32dc110eb3fe45ecb.svg" alt="" style="inset:-5.97%;width:calc(100% + 11.94%);height:calc(100% + 11.94%);" /></div></div></div></div>
+                <div class="message-time">12:40</div>
+              </div>
+            </div>
+
+            <!-- AI Image Message -->
+            <div class="message from-ai-image">
+              <div class="message-bubble">
+                Here it is...
+                <div class="message-image-card">
+                  <div class="card-bg">
+                    <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+                    <div class="card-bg-overlay"></div>
+                  </div>
+                  <div class="card-top-content">
+                    <div class="card-tag">
+                      <div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:12.5%;left:12.5%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/73ad965cce762041c41a7215496a9336c1e05ac5.svg" alt="" style="inset:-4.17%;width:calc(100% + 8.34%);height:calc(100% + 8.34%);" /></div><div class="vi" style="top:54.17%;left:12.5%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/7a9e0cb99afd5c0385c333ffb460f543f93a85ad.svg" alt="" style="inset:-16.4% -1.72% -13.66% -1.64%;width:calc(100% + 3.36%);height:calc(100% + 30.06%);" /></div><div class="vi" style="top:25%;left:58.34%;right:25%;bottom:58.33%;"><img src="http://localhost:3845/assets/99a384c8a630c6a7af8cd00e579e16588dc473ee.svg" alt="" style="inset:-18.75%;width:calc(100% + 37.5%);height:calc(100% + 37.5%);" /></div></div>
+                      Image
+                    </div>
+                    <div class="card-actions">
+                      <div class="card-action-btn"><div class="figma-icon"><div class="vi" style="top:12.5%;left:8.33%;right:8.34%;bottom:12.5%;"><img src="http://localhost:3845/assets/02ea91fa039488c5c84474ef8ccb18e66be52980.svg" alt="" style="inset:-4.17% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 8.34%);" /></div></div></div>
+                      <div class="card-action-btn"><div class="figma-icon"><div class="vi" style="top:12.5%;left:12.5%;right:15.64%;bottom:53.75%;"><img src="http://localhost:3845/assets/f1b5fb6ef23e0c012528f9db480df4f71786ccc0.svg" alt="" style="inset:-9.26% -4.35%;width:calc(100% + 8.7%);height:calc(100% + 18.52%);" /></div><div class="vi" style="top:16.25%;left:68.7%;right:12.5%;bottom:65%;"><img src="http://localhost:3845/assets/a9b67ab6ee42d55e65190cc40577b48dfbfeb448.svg" alt="" style="inset:-16.67% -16.63%;width:calc(100% + 33.26%);height:calc(100% + 33.34%);" /></div><div class="vi" style="top:53.75%;left:15.64%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/b6aa04a6cf0bb0693d8c97c8efbb0a88712e11f0.svg" alt="" style="inset:-9.26% -4.35%;width:calc(100% + 8.7%);height:calc(100% + 18.52%);" /></div><div class="vi" style="top:65%;left:12.5%;right:68.71%;bottom:16.25%;"><img src="http://localhost:3845/assets/3447929081abc5e4c93eae18e00660b280339c12.svg" alt="" style="inset:-16.67% -16.63%;width:calc(100% + 33.26%);height:calc(100% + 33.34%);" /></div></div></div>
+                      <div class="card-action-btn"><div class="figma-icon"><div class="vi" style="top:50%;left:81.25%;right:6.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div><div class="vi" style="top:50%;left:43.75%;right:43.75%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/87af466aaa4a7c76b74ca367bcb86ff18179790c.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div><div class="vi" style="top:50%;left:6.25%;right:81.25%;bottom:50%;transform:translateY(-50%);aspect-ratio:1;"><img src="http://localhost:3845/assets/9a6e8b3a7a4224bba06ad42d922168baefd4234a.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="message-actions">
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:16.67%;left:50%;right:50%;bottom:16.67%;"><img src="http://localhost:3845/assets/e99d70414afc19da6a420a898b95039dd7f31182.svg" alt="" style="inset:-4.69% -1px;width:calc(100% + 2px);height:calc(100% + 9.38%);" /></div><div class="vi" style="top:37.5%;left:33.34%;right:66.66%;bottom:37.5%;"><img src="http://localhost:3845/assets/2b16235171675fa00ec8cc24126ebdf1148c739d.svg" alt="" style="inset:-12.5% -1px;width:calc(100% + 2px);height:calc(100% + 25%);" /></div><div class="vi" style="top:41.67%;left:83.34%;right:16.66%;bottom:41.67%;"><img src="http://localhost:3845/assets/5a5e08ab16a056ff78510e24ce3bed706f906c23.svg" alt="" style="inset:-18.75% -1px;width:calc(100% + 2px);height:calc(100% + 37.5%);" /></div><div class="vi" style="top:41.67%;left:16.66%;right:83.34%;bottom:41.67%;"><img src="http://localhost:3845/assets/5a5e08ab16a056ff78510e24ce3bed706f906c23.svg" alt="" style="inset:-18.75% -1px;width:calc(100% + 2px);height:calc(100% + 37.5%);" /></div><div class="vi" style="top:29.17%;left:66.66%;right:33.34%;bottom:29.17%;"><img src="http://localhost:3845/assets/37974df23f4f3a193beb353af0b9ce0b44af4c49.svg" alt="" style="inset:-7.5% -1px;width:calc(100% + 2px);height:calc(100% + 15%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:11.33%;left:14.59%;right:15.07%;bottom:16.67%;"><img src="http://localhost:3845/assets/0b4f2286b10d579ebc0358e8991a0925c4ef70ef.svg" alt="" style="inset:-5.79% -5.93% -5.79% -5.92%;width:calc(100% + 11.85%);height:calc(100% + 11.58%);" /></div><div class="vi" style="top:37.5%;left:29.16%;right:70.84%;bottom:16.67%;"><img src="http://localhost:3845/assets/9d1761152130179ec7dd618fbeccb02987541d33.svg" alt="" style="inset:-9.09% -0.5px;width:calc(100% + 1px);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.58%;left:14.59%;right:15.07%;bottom:13.42%;"><img src="http://localhost:3845/assets/a2d0afab1a50527004fd18b5df34d5c9ed4ebb67.svg" alt="" style="inset:-5.79% -5.93% -5.79% -5.92%;width:calc(100% + 11.85%);height:calc(100% + 11.58%);" /></div><div class="vi" style="top:14.58%;left:29.16%;right:70.84%;bottom:39.58%;"><img src="http://localhost:3845/assets/9d1761152130179ec7dd618fbeccb02987541d33.svg" alt="" style="inset:-9.09% -0.5px;width:calc(100% + 1px);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:37.5%;right:16.67%;bottom:16.67%;"><img src="http://localhost:3845/assets/eb8184ed2dce5bdd929abc7495a103216432e596.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div><div class="vi" style="top:16.67%;left:16.66%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/e310d38b9f9c72b889008d4f4e17a5f8bf82e1c0.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:16.66%;right:16.67%;bottom:8.33%;"><img src="http://localhost:3845/assets/12b7e276164928ff5774bc9695cd0cc954434286.svg" alt="" style="inset:-7.69% -6.25%;width:calc(100% + 12.5%);height:calc(100% + 15.38%);" /></div><div class="vi" style="top:8.33%;left:12.5%;right:12.5%;bottom:75%;"><img src="http://localhost:3845/assets/fee4545a53863bda5e88b0a213c9ecd02001cb38.svg" alt="" style="inset:-25% -5.56%;width:calc(100% + 11.12%);height:calc(100% + 50%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.94%;left:16.35%;right:13.87%;bottom:15.28%;"><img src="http://localhost:3845/assets/6a4196301b785582bf2da6c32dc110eb3fe45ecb.svg" alt="" style="inset:-5.97%;width:calc(100% + 11.94%);height:calc(100% + 11.94%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:12.5%;left:12.5%;right:15.64%;bottom:53.75%;"><img src="http://localhost:3845/assets/2b5bc56ea23071c92cc91fe4e877d0b875b281be.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:16.25%;left:68.7%;right:12.5%;bottom:65%;"><img src="http://localhost:3845/assets/0262fefd25778752c560f30f3efd2c974e93ea10.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div><div class="vi" style="top:53.75%;left:15.64%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/5d40e7984b8582629a3135d06ee47a8e6fa5e763.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:65%;left:12.5%;right:68.71%;bottom:16.25%;"><img src="http://localhost:3845/assets/21a2d2ae1a813c65bf680f0301b545934312d675.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div></div></div></div>
+                <div class="message-time">12:40</div>
+              </div>
+            </div>
+
+            <!-- User Text Message 2 -->
+            <div class="message from-me">
+              <div class="message-bubble">People often think grief is loud.</div>
+              <div class="message-actions">
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:37.5%;right:16.67%;bottom:16.67%;"><img src="http://localhost:3845/assets/eb8184ed2dce5bdd929abc7495a103216432e596.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div><div class="vi" style="top:16.67%;left:16.66%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/e310d38b9f9c72b889008d4f4e17a5f8bf82e1c0.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:16.66%;right:16.67%;bottom:8.33%;"><img src="http://localhost:3845/assets/12b7e276164928ff5774bc9695cd0cc954434286.svg" alt="" style="inset:-7.69% -6.25%;width:calc(100% + 12.5%);height:calc(100% + 15.38%);" /></div><div class="vi" style="top:8.33%;left:12.5%;right:12.5%;bottom:75%;"><img src="http://localhost:3845/assets/fee4545a53863bda5e88b0a213c9ecd02001cb38.svg" alt="" style="inset:-25% -5.56%;width:calc(100% + 11.12%);height:calc(100% + 50%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:14.94%;left:16.35%;right:13.87%;bottom:15.28%;"><img src="http://localhost:3845/assets/6a4196301b785582bf2da6c32dc110eb3fe45ecb.svg" alt="" style="inset:-5.97%;width:calc(100% + 11.94%);height:calc(100% + 11.94%);" /></div></div></div></div>
+                <div class="message-time">12:40</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggest Reply -->
+          <div class="suggest-reply-bar">
+            <div class="suggest-label">
+              Suggest Reply
+              <span style="width:7px;height:6px;position:relative;display:inline-block;"><img src="http://localhost:3845/assets/e198ac7184eb2a9d45d0d5c9a1cb7dde4b3f0da8.svg" alt="" style="position:absolute;width:100%;height:100%;" /></span>
+            </div>
+            <div class="suggest-reply-content">
+              <div class="suggest-reply-text">People often think grief is loud. That iannounces itself with tears... </div>
+              <div class="suggest-reply-actions">
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:37.5%;left:37.5%;right:16.67%;bottom:16.67%;"><img src="http://localhost:3845/assets/eb8184ed2dce5bdd929abc7495a103216432e596.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div><div class="vi" style="top:16.67%;left:16.66%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/e310d38b9f9c72b889008d4f4e17a5f8bf82e1c0.svg" alt="" style="inset:-9.09%;width:calc(100% + 18.18%);height:calc(100% + 18.18%);" /></div></div></div></div>
+                <div class="action-btn"><div class="action-icon"><div class="figma-icon" style="width:12px;height:12px;"><div class="vi" style="top:12.5%;left:12.5%;right:15.64%;bottom:53.75%;"><img src="http://localhost:3845/assets/2b5bc56ea23071c92cc91fe4e877d0b875b281be.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:16.25%;left:68.7%;right:12.5%;bottom:65%;"><img src="http://localhost:3845/assets/0262fefd25778752c560f30f3efd2c974e93ea10.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div><div class="vi" style="top:53.75%;left:15.64%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/5d40e7984b8582629a3135d06ee47a8e6fa5e763.svg" alt="" style="inset:-12.35% -5.8%;width:calc(100% + 11.6%);height:calc(100% + 24.7%);" /></div><div class="vi" style="top:65%;left:12.5%;right:68.71%;bottom:16.25%;"><img src="http://localhost:3845/assets/21a2d2ae1a813c65bf680f0301b545934312d675.svg" alt="" style="inset:-22.22% -22.17%;width:calc(100% + 44.34%);height:calc(100% + 44.44%);" /></div></div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="chat-input-bar">
+            <button class="ask-btn">
+              <div class="ask-btn-icon">
+                <div class="figma-icon">
+                  <div class="vi" style="top:29.17%;left:29.17%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/0b65e99d1791cd379cd1c2920e960b764296c01c.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+                  <div class="vi" style="top:16.67%;left:16.67%;right:25%;bottom:25%;"><img src="http://localhost:3845/assets/647cbc22e663f933601938ae55aea1d012c4d6f0.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+                  <div class="vi" style="top:62.5%;left:29.17%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/80a003509ebe72b068ec5432abe75c0f2f0343c0.svg" alt="" style="inset:-25% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 50%);" /></div>
+                  <div class="vi" style="top:41.67%;left:62.5%;right:25%;bottom:45.83%;"><img src="http://localhost:3845/assets/0cf6253ee13b2290c2e3471b16fdef1e1f51ec8b.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+                </div>
+              </div>
+              <span class="ask-btn-text">Ask</span>
+              <div class="figma-icon" style="width:16px;height:16px;flex-shrink:0;"><div class="vi" style="top:37.5%;left:25%;right:25%;bottom:37.5%;"><img src="http://localhost:3845/assets/fba589da52cd7eddb3c14b819a89131666a485ff.svg" alt="" style="inset:-12.5% -6.25%;width:calc(100% + 12.5%);height:calc(100% + 25%);" /></div></div>
+            </button>
+            <input type="text" class="chat-text-input" placeholder="Leave a message..." />
+            <button class="input-icon-btn">
+              <div class="figma-icon"><div class="vi" style="top:3.57%;left:32.14%;right:32.14%;bottom:35.71%;"><img src="http://localhost:3845/assets/0c1b1ca1dc7b950d5492fa69a06950bcdfb3585b.svg" alt="" style="inset:-5.15% -8.75%;width:calc(100% + 17.5%);height:calc(100% + 10.3%);" /></div><div class="vi" style="top:50%;left:14.28%;right:14.29%;bottom:17.86%;"><img src="http://localhost:3845/assets/4cc7c94df10c616513689ab7d94d296e65b53bc0.svg" alt="" style="inset:-9.72% -4.38% -9.72% -4.37%;width:calc(100% + 8.75%);height:calc(100% + 19.44%);" /></div><div class="vi" style="top:82.14%;left:50%;right:50%;bottom:3.57%;"><img src="http://localhost:3845/assets/74fbfb9ab01026b7eb89f7a3cedbbf829128fa37.svg" alt="" style="inset:-21.87% -1px;width:calc(100% + 2px);height:calc(100% + 43.74%);" /></div></div>
+            </button>
+            <button class="input-icon-btn send">
+              <div class="figma-icon"><div class="vi" style="top:12.5%;left:18.75%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/e501b22a4e503852c07a83ef059785ad14add959.svg" alt="" style="inset:-4.17% -4.55%;width:calc(100% + 9.1%);height:calc(100% + 8.34%);" /></div><div class="vi" style="top:50%;left:31.25%;right:12.5%;bottom:50%;"><img src="http://localhost:3845/assets/8f067b7049996a88b72e9068cbd2eb8a1a2195a9.svg" alt="" style="inset:-0.5px -5.56%;width:calc(100% + 11.12%);height:calc(100% + 1px);" /></div></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Info Panel -->
+      <div class="right-panel">
+        <!-- Profile Gallery -->
+        <div class="profile-gallery">
+          <div class="gallery-bg">
+            <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            <div class="gallery-bg-overlay"></div>
+          </div>
+          <div class="small-avatar" style="z-index:2; position:relative;">
+            <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+            <div class="link-badge">
+              <img src="http://localhost:3845/assets/4a4f989636a8a2ae2f256db930d0ba69161efeae.svg" alt="" />
+            </div>
+          </div>
+          <div class="profile-slider">
+            <div class="slider-bar active"><div class="slider-bar-inner"></div></div>
+            <div class="slider-bar inactive"><div class="slider-bar-inner"></div></div>
+            <div class="slider-bar inactive"><div class="slider-bar-inner"></div></div>
+            <div class="slider-bar inactive"><div class="slider-bar-inner"></div></div>
+            <div class="slider-bar inactive"><div class="slider-bar-inner"></div></div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="profile-buttons">
+          <button class="profile-btn-secondary">Relationships settings</button>
+          <button class="profile-btn-primary">Edit Character</button>
+        </div>
+
+        <!-- Profile Text -->
+        <div class="profile-text">
+          <div class="profile-name">Diana Smith</div>
+          <div class="profile-bio">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn't like that. Mine is quieter. Mine is knowing... knowing that grief isn't that is dark; it is knowing that light is temporary. </div>
+        </div>
+
+        <div class="profile-separator"></div>
+
+        <!-- About Me -->
+        <div class="about-me">
+          <div class="about-me-title">About me:</div>
+
+          <!-- Age -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:16.67%;left:33.33%;right:33.34%;bottom:50%;"><img src="http://localhost:3845/assets/3cd183a6fb56ea0fde1785c5e5eec3aaf64bd479.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+                <div class="vi" style="top:62.5%;left:58.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/05c915260ba423c0c513d5f5110825f40660d6b6.svg" alt="" style="inset:-10.71% -9.37%;width:calc(100% + 18.74%);height:calc(100% + 21.42%);" /></div>
+                <div class="vi" style="top:50%;left:20.83%;right:37.5%;bottom:16.67%;"><img src="http://localhost:3845/assets/fda65201f174cf4b8a21553012b68418eaab2a92.svg" alt="" style="inset:-9.37% -7.5%;width:calc(100% + 15%);height:calc(100% + 18.74%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Age</div>
+              <div class="info-card-value">29</div>
+            </div>
+          </div>
+
+          <!-- Personality -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:41.67%;left:33.34%;right:33.33%;bottom:58.33%;"><img src="http://localhost:3845/assets/3188420c8150b25b6827b2e6b4da91fbe64e683d.svg" alt="" style="inset:-0.5px -9.37%;width:calc(100% + 18.74%);height:calc(100% + 1px);" /></div>
+                <div class="vi" style="top:58.33%;left:33.34%;right:50%;bottom:41.67%;"><img src="http://localhost:3845/assets/7f2fbdd1e8454210cd12a85f8a6006b81233c904.svg" alt="" style="inset:-0.5px -18.75%;width:calc(100% + 37.5%);height:calc(100% + 1px);" /></div>
+                <div class="vi" style="top:8.33%;left:8.34%;right:8.33%;bottom:8.33%;"><img src="http://localhost:3845/assets/b78b09c6cfd126c9eb58cde62cf51a46a1cf1ea9.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Personality</div>
+              <div class="info-card-value">Bratty, Playful, Attention Seeker</div>
+            </div>
+          </div>
+
+          <!-- Lifestyle -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:45.83%;left:4.17%;right:62.5%;bottom:20.83%;"><img src="http://localhost:3845/assets/7eb0beb0b8bb7307ebbd7e2179c4c3fa5101fb32.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+                <div class="vi" style="top:18.75%;left:35.42%;right:20.83%;bottom:37.5%;"><img src="http://localhost:3845/assets/6d0010084e890fc0272edb8bd63020956af2f5d4.svg" alt="" style="inset:-7.14%;width:calc(100% + 14.28%);height:calc(100% + 14.28%);" /></div>
+                <div class="vi" style="top:31.25%;left:20.83%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/9bb17e455aec76e76f690b7f577c0c84c2b00fb6.svg" alt="" style="inset:-10% -7.5%;width:calc(100% + 15%);height:calc(100% + 20%);" /></div>
+                <div class="vi" style="top:18.75%;left:20.83%;right:64.59%;bottom:68.75%;"><img src="http://localhost:3845/assets/ecfee64d59f5cc887f6b6f28df03cdfe0fe9538f.svg" alt="" style="inset:-25% -21.43%;width:calc(100% + 42.86%);height:calc(100% + 50%);" /></div>
+                <div class="vi" style="top:45.83%;left:62.5%;right:4.17%;bottom:20.83%;"><img src="http://localhost:3845/assets/8a4227a67c613d73ff5d58776e689d37314a27f6.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Lifestyle</div>
+              <div class="info-card-value">Lazy, Unemployed</div>
+            </div>
+          </div>
+
+          <!-- Relationships -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:12.5%;left:10.22%;right:65.05%;bottom:62.77%;"><img src="http://localhost:3845/assets/e1a7a2443693f7c5576ce4057fbd1113acf32592.svg" alt="" style="inset:-12.64%;width:calc(100% + 25.28%);height:calc(100% + 25.28%);" /></div>
+                <div class="vi" style="top:49.6%;left:61.96%;right:7.12%;bottom:7.13%;"><img src="http://localhost:3845/assets/05d94dc38f0d928018d8dfcca7b4aebd14d81bbb.svg" alt="" style="inset:-7.22% -10.11%;width:calc(100% + 20.22%);height:calc(100% + 14.44%);" /></div>
+                <div class="vi" style="top:12.5%;left:59.68%;right:15.59%;bottom:62.77%;"><img src="http://localhost:3845/assets/e1a7a2443693f7c5576ce4057fbd1113acf32592.svg" alt="" style="inset:-12.64%;width:calc(100% + 25.28%);height:calc(100% + 25.28%);" /></div>
+                <div class="vi" style="top:49.6%;left:12.5%;right:56.59%;bottom:7.13%;"><img src="http://localhost:3845/assets/a32dd2691973819143a6ff971a5c91df1878e638.svg" alt="" style="inset:-7.22% -10.11%;width:calc(100% + 20.22%);height:calc(100% + 14.44%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Relationships</div>
+              <div class="info-card-value">Single</div>
+            </div>
+          </div>
+
+          <!-- Kinks -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:3.39%;left:14.28%;right:14.25%;bottom:3.5%;"><img src="http://localhost:3845/assets/fd4ab9763eb3131d3f5e18f706687dc50336e8f2.svg" alt="" style="inset:-3.36% -4.37%;width:calc(100% + 8.74%);height:calc(100% + 6.72%);" /></div>
+                <div class="vi" style="top:64.29%;left:53.57%;right:32.14%;bottom:21.43%;"><img src="http://localhost:3845/assets/da90f4e4f61176cd86ce2b36eb39e27582d13f31.svg" alt="" style="inset:-21.88%;width:calc(100% + 43.76%);height:calc(100% + 43.76%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Kinks</div>
+              <div class="info-card-value">Role Play</div>
+            </div>
+          </div>
+
+          <!-- Hobbies -->
+          <div class="info-card">
+            <div class="info-card-icon">
+              <div class="figma-icon">
+                <div class="vi" style="top:27.96%;left:54.95%;right:32.68%;bottom:59.68%;"><img src="http://localhost:3845/assets/e2dbc5729fb915196ea2596090435276d33e227e.svg" alt="" style="inset:-25.27%;width:calc(100% + 50.54%);height:calc(100% + 50.54%);" /></div>
+                <div class="vi" style="top:65.05%;left:33.32%;right:60.5%;bottom:28.76%;"><img src="http://localhost:3845/assets/6b7f67060143aeadc09a43d573f781d9a0127a32.svg" alt="" style="inset:-50.54%;width:calc(100% + 101.08%);height:calc(100% + 101.08%);" /></div>
+                <div class="vi" style="top:37.23%;left:30.23%;right:57.41%;bottom:50.4%;"><img src="http://localhost:3845/assets/e2dbc5729fb915196ea2596090435276d33e227e.svg" alt="" style="inset:-25.27%;width:calc(100% + 50.54%);height:calc(100% + 50.54%);" /></div>
+                <div class="vi" style="top:12.5%;left:12.5%;right:8.72%;bottom:7.13%;"><img src="http://localhost:3845/assets/993b534deba65a693709ab07b75173d84cb692ea.svg" alt="" style="inset:-3.89% -3.97%;width:calc(100% + 7.94%);height:calc(100% + 7.78%);" /></div>
+              </div>
+            </div>
+            <div class="info-card-text">
+              <div class="info-card-label">Hobbies</div>
+              <div class="info-card-value">Photography</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+</body>
+</html>

@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>lovecast.AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #090909;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-feature-settings: 'lnum', 'pnum';
+    }
+
+    /* ─── Layout ─────────────────────────────────── */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── Sidebar ────────────────────────────────── */
+    .sidebar {
+      width: 196px;
+      flex-shrink: 0;
+      background: #090909;
+      border-right: 1px solid #313131;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding-left: 12px;
+    }
+    .logo-wrap {
+      position: relative;
+      width: 137.336px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .logo-wrap img {
+      position: absolute;
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: 100%;
+    }
+    .logo-part1 { position: absolute; top: 7.95%; left: 0.31%; right: 84.29%; bottom: 8.33%; }
+    .logo-part2 { position: absolute; top: 60.42%; left: 3.13%; right: 91.84%; bottom: 8.15%; }
+    .logo-part3 { position: absolute; top: 46.79%; left: 0.94%; right: 94.02%; bottom: 21.79%; }
+    .logo-title { position: absolute; top: 27.02%; left: 20.87%; right: 0; bottom: 27.02%; }
+
+    .sidebar-separator {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    .nav-section { display: flex; flex-direction: column; gap: 4px; }
+    .nav-title {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #969696;
+      padding: 0 12px;
+      line-height: 1.2;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #969696;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      background: #090909;
+      width: 172px;
+    }
+    .nav-link:hover { background: #1a1a1a; }
+    .nav-link.active {
+      background: #121212;
+      border: 1px solid #313131;
+      color: #fff;
+    }
+    .nav-link .icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-link .label { flex: 1; }
+    /* Figma-style multi-vector icon */
+    .figma-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .figma-icon .vi {
+      position: absolute;
+    }
+    .figma-icon .vi img {
+      position: absolute;
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-badge {
+      background: #20271f;
+      color: #c1f0aa;
+      font-size: 8px;
+      font-weight: 500;
+      padding: 4px;
+      border-radius: 54px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 13px;
+    }
+    .nav-badge .badge-dot {
+      width: 5px;
+      height: 5px;
+    }
+    .nav-badge .badge-dot img {
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-link.premium {
+      background: #1a1316;
+      border: 0.8px solid rgba(228,0,120,0.2);
+      border-radius: 4px;
+      color: #f95bad;
+    }
+
+    .nav-link.logout { color: #e36466; }
+
+    .nav-chevron { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Push settings to fill space, bottom nav at bottom */
+    .settings-nav { flex: 1; }
+
+    .sidebar-footer {
+      font-size: 7px;
+      font-weight: 500;
+      color: #969696;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 12px;
+      line-height: 1.2;
+    }
+
+    /* ─── Main area ──────────────────────────────── */
+    .main {
+      margin-left: 196px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Top Navbar ─────────────────────────────── */
+    .topnav {
+      background: #090909;
+      border-bottom: 1px solid #313131;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      padding: 12px 36px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .search-box {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 220px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      color: #848484;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      cursor: text;
+      flex-shrink: 0;
+    }
+    .search-box img { width: 16px; height: 16px; flex-shrink: 0; }
+    .search-box span { flex: 1; line-height: 1.2; }
+
+    .topnav-links {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 36px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .topnav-links a {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .topnav-buttons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border: none;
+      border-radius: 4px;
+      height: 30px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-secondary {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      height: 30px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    .green-dot-wrap {
+      width: 6px;
+      height: 6px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: visible;
+    }
+    .green-dot-wrap img {
+      position: absolute;
+      inset: -100%;
+      display: block;
+      max-width: none;
+      width: 300%;
+      height: 300%;
+    }
+
+    /* ─── Content area ───────────────────────────── */
+    .content {
+      position: relative;
+    }
+
+    /* ─── Hero Banner ────────────────────────────── */
+    .hero {
+      border: 1px solid #313131;
+      border-radius: 8px;
+      height: 160px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 8px;
+      margin: 0 36px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 4px 8px;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .hero-bg img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 453px;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+
+    .hero-progress {
+      position: relative;
+      width: 100%;
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 2px;
+      position: relative;
+    }
+    .progress-bar-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 1px;
+    }
+    .progress-bar.active .progress-bar-inner {
+      background: #f95bad;
+      box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6);
+    }
+    .progress-bar.active .progress-bar-glow {
+      position: absolute;
+      inset: -500% 0 -800% 0;
+    }
+    .progress-bar.inactive {
+      opacity: 0.7;
+    }
+    .progress-bar.inactive .progress-bar-inner {
+      background: #46383e;
+      border-radius: 1px;
+    }
+
+    /* ─── Stories ────────────────────────────────── */
+    .stories-section {
+      position: absolute;
+      left: 36px;
+      right: 36px;
+      top: 196px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #969696;
+      line-height: 1.2;
+    }
+
+    .stories-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .story-avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      object-fit: cover;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .stories-arrow {
+      position: absolute;
+      right: -26px;
+      top: 26px;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* ─── Characters ─────────────────────────────── */
+    .characters-section {
+      position: absolute;
+      left: 36px;
+      top: 312px;
+      width: 1172px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chars-header {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 570px;
+    }
+    .chars-title {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .chars-title .pink { color: #ff99ce; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .search-and-sorting {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .filter-search-wrap {
+      display: flex;
+      flex: 1;
+      gap: 4px;
+      align-items: center;
+    }
+    .filter-search {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      flex: 1;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #848484;
+      line-height: 1.2;
+    }
+    .filter-search img { width: 16px; height: 16px; flex-shrink: 0; }
+    .filter-search span { flex: 1; }
+    .filter-settings-btn {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .filter-settings-btn img { width: 16px; height: 16px; }
+
+    .filter-separator {
+      width: 0;
+      height: 20px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .filter-separator img {
+      position: absolute;
+      inset: -2.5% -0.5px;
+      display: block;
+    }
+
+    .sorting-buttons {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .sorting-btn {
+      background: #1e1e1e;
+      border-radius: 4px;
+      height: 30px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .sorting-btn-text {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .sorting-btn-text .muted { color: #969696; }
+    .sorting-btn-text .value { color: #fff; }
+    .sorting-btn-text .value-green { color: #c1f0aa; }
+    /* Chevron down icon for sorting buttons & nav */
+    .chevron-down-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    /* Arrow right icon */
+    .arrow-right-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* Tags row */
+    .tags-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      width: 100%;
+    }
+    .tag {
+      background: #121212;
+      border-radius: 4px;
+      height: 30px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .tag.active {
+      background: #1e1e1e;
+      position: relative;
+      padding: 8px 12px;
+      overflow: visible;
+    }
+    /* Small bright bar at bottom */
+    .tag.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 3px;
+      background: #f95bad;
+      box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6);
+      border-radius: 0.5px;
+      filter: blur(0.5px);
+      z-index: 2;
+    }
+    /* Oval pink glow below the active tab */
+    .tag-glow {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 30px;
+      background: radial-gradient(ellipse at center, rgba(249,91,173,0.8) 0%, rgba(249,91,173,0.4) 35%, rgba(249,91,173,0.1) 55%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      filter: blur(3px);
+    }
+    .tag.group-chats {
+      background: #1e1e1e;
+      height: 30px;
+      padding: 8px 12px;
+    }
+    .tags-arrow {
+      position: absolute;
+      right: -26px;
+      top: 7px;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Character cards */
+    .cards-row {
+      height: 300px;
+      position: relative;
+      width: 100%;
+    }
+
+    .card {
+      border: 1px solid #313131;
+      border-radius: 8px;
+      width: 220px;
+      height: 300px;
+      overflow: hidden;
+      position: absolute;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .card-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    .card-bg img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, rgba(9,9,9,0) 56.167%, rgba(9,9,9,0.8) 100%);
+    }
+
+    .card-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      position: relative;
+      z-index: 1;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    /* Featured card container — any card can become featured on hover */
+    .card-featured-wrap {
+      position: absolute;
+      top: 0;
+      height: 300px;
+      width: 220px;
+    }
+    .card-featured-wrap:hover {
+      z-index: 5;
+    }
+
+    /* Hover panel — hidden by default, shown on hover */
+    .hover-panel {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 458px;
+      height: 300px;
+      background: rgba(9,9,9,0.7);
+      backdrop-filter: blur(2px);
+      border: 0.8px solid rgba(228,0,120,0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 16px 16px 16px 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .card-featured-wrap:hover .hover-panel {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Card border highlight on hover */
+    .card-featured-wrap:hover .card.featured {
+      border-color: #5b5b5b;
+    }
+    .card-featured-wrap .card.featured {
+      border-color: #313131;
+    }
+
+    /* Show action buttons and progress bar only on hover */
+    .card-featured-wrap .card-actions,
+    .card-featured-wrap .card-progress {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .card-featured-wrap:hover .card-actions,
+    .card-featured-wrap:hover .card-progress {
+      opacity: 1;
+    }
+
+    .hover-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      width: 198px;
+      align-content: flex-start;
+    }
+    .hover-tag {
+      background: rgba(255,153,206,0.6);
+      backdrop-filter: blur(2px);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 8px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .hover-description {
+      font-size: 10px;
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.3;
+      width: 198px;
+    }
+
+    .hover-stats {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      width: 198px;
+      white-space: nowrap;
+    }
+    .hover-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .hover-stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .hover-stat-label {
+      font-size: 7px;
+      font-weight: 500;
+      color: #848484;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    /* Featured card (the actual card portion) */
+    .card.featured {
+      border-color: #5b5b5b;
+      left: 0;
+      z-index: 2;
+    }
+
+    .card-actions {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      position: relative;
+      z-index: 2;
+      width: 100%;
+    }
+    .card-action-btn {
+      width: 28px;
+      height: 28px;
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-action-btn img { width: 16px; height: 16px; }
+
+    .card-progress {
+      display: flex;
+      gap: 2px;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+    }
+    .card-progress .progress-bar {
+      flex: 1;
+      height: 2px;
+    }
+
+    /* ─── Sidebar footer ─────────────────────────── */
+    .sidebar-bottom-text {
+      font-size: 7px;
+      font-weight: 500;
+      color: #5b5b5b;
+      text-transform: uppercase;
+      padding: 0 12px;
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ─── Sidebar ──────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-wrap">
+        <div class="logo-part1"><img src="http://localhost:3845/assets/4324af60bd5838bbeb3c32e99e14bc8d894f20e0.svg" alt="" /></div>
+        <div class="logo-part2"><img src="http://localhost:3845/assets/b563d66a439cdeab3fb4943eff30c4c3b14cd589.svg" alt="" /></div>
+        <div class="logo-part3"><img src="http://localhost:3845/assets/b563d66a439cdeab3fb4943eff30c4c3b14cd589.svg" alt="" /></div>
+        <div class="logo-title"><img src="http://localhost:3845/assets/b26dec13b831377550a10af107006da1cf10544b.svg" alt="" /></div>
+      </div>
+    </div>
+
+    <div class="sidebar-separator"></div>
+
+    <!-- Main nav -->
+    <nav class="nav-section">
+      <div class="nav-title">Main</div>
+      <a class="nav-link active">
+        <!-- Home icon (3 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:66.67%;left:41.67%;right:41.66%;bottom:33.33%;"><img src="http://localhost:3845/assets/00ce9200ae0e0d43ab49f6e39042263cd93f76d1.svg" alt="" style="inset:-0.5px -18.75%;width:calc(100% + 37.5%);height:calc(100% + 1px);" /></div>
+          <div class="vi" style="top:12.8%;left:8.33%;right:8.34%;bottom:66.67%;"><img src="http://localhost:3845/assets/63f7eb240f0729d19b6c42bb79dbcc26aac8ca8b.svg" alt="" style="inset:-15.22% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 30.44%);" /></div>
+          <div class="vi" style="top:45.83%;left:16.67%;right:16.66%;bottom:12.5%;"><img src="http://localhost:3845/assets/db287ef9443069dde69fbf84c4c40a9b867e77c1.svg" alt="" style="inset:-7.5% -4.69%;width:calc(100% + 9.38%);height:calc(100% + 15%);" /></div>
+        </div>
+        <span class="label">Home</span>
+      </a>
+      <a class="nav-link">
+        <!-- Shorts/Compass icon (2 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:29.38%;left:29.38%;right:29.38%;bottom:29.38%;"><img src="http://localhost:3845/assets/0e3f985525fbbc3eeb8c1713a08518581986fa3b.svg" alt="" style="inset:-7.58%;width:calc(100% + 15.16%);height:calc(100% + 15.16%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/717c200aae4e6f28932bc2d7611108c81b715ea3.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Shorts</span>
+      </a>
+      <a class="nav-link">
+        <!-- Chat icon (4 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:47.92%;left:68.75%;right:27.08%;bottom:47.92%;"><img src="http://localhost:3845/assets/681f0e0c62c3637f99c40525d031fcf22ce678d8.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:47.92%;left:47.92%;right:47.91%;bottom:47.92%;"><img src="http://localhost:3845/assets/681f0e0c62c3637f99c40525d031fcf22ce678d8.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:47.92%;left:27.08%;right:68.75%;bottom:47.92%;"><img src="http://localhost:3845/assets/0595a28a6b9b355b8465313df312e4b1b5a80872.svg" alt="" style="inset:-75%;width:calc(100% + 150%);height:calc(100% + 150%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/b78b09c6cfd126c9eb58cde62cf51a46a1cf1ea9.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Chat</span>
+        <span class="nav-badge">3 <span class="badge-dot" style="width:5px;height:5px;position:relative;"><img src="http://localhost:3845/assets/dada33e5a2709393004f19970e3edadf7f02c7ff.svg" alt="" style="position:absolute;inset:-120%;width:340%;height:340%;display:block;max-width:none;" /></span></span>
+      </a>
+      <a class="nav-link">
+        <!-- Gallery icon (4 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:29.17%;left:29.17%;right:12.5%;bottom:12.5%;"><img src="http://localhost:3845/assets/0b65e99d1791cd379cd1c2920e960b764296c01c.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+          <div class="vi" style="top:16.67%;left:16.67%;right:25%;bottom:25%;"><img src="http://localhost:3845/assets/647cbc22e663f933601938ae55aea1d012c4d6f0.svg" alt="" style="inset:-5.36%;width:calc(100% + 10.72%);height:calc(100% + 10.72%);" /></div>
+          <div class="vi" style="top:62.5%;left:29.17%;right:12.5%;bottom:25%;"><img src="http://localhost:3845/assets/80a003509ebe72b068ec5432abe75c0f2f0343c0.svg" alt="" style="inset:-25% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 50%);" /></div>
+          <div class="vi" style="top:41.67%;left:62.5%;right:25%;bottom:45.83%;"><img src="http://localhost:3845/assets/0cf6253ee13b2290c2e3471b16fdef1e1f51ec8b.svg" alt="" style="inset:-25%;width:calc(100% + 50%);height:calc(100% + 50%);" /></div>
+        </div>
+        <span class="label">Gallery</span>
+      </a>
+      <a class="nav-link">
+        <!-- Generate Content / Photo icon (2 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:12.5%;left:8.33%;right:8.34%;bottom:12.5%;"><img src="http://localhost:3845/assets/d19a82ae6484698943b19132a135d37d38956d24.svg" alt="" style="inset:-4.17% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 8.34%);" /></div>
+          <div class="vi" style="top:37.5%;left:33.33%;right:33.34%;bottom:29.17%;"><img src="http://localhost:3845/assets/7e052be7e17c24a6659568ad6d99eadc7cf5a329.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+        </div>
+        <span class="label">Generate Content</span>
+      </a>
+      <a class="nav-link">
+        <!-- Create Character / user_plus icon (3 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:29.17%;left:70.83%;right:4.17%;bottom:45.83%;"><img src="http://localhost:3845/assets/817b6da1bb9d84b2a9e58fb5fd7357a42f72573c.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:50%;left:4.17%;right:37.5%;bottom:16.67%;"><img src="http://localhost:3845/assets/ae40a27807484ef5f6072b1ecf6895792df207dd.svg" alt="" style="inset:-9.37% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 18.74%);" /></div>
+          <div class="vi" style="top:16.67%;left:16.67%;right:50%;bottom:50%;"><img src="http://localhost:3845/assets/ac7e5406bbc69924e4543d14256213c39e58e1fc.svg" alt="" style="inset:-9.37%;width:calc(100% + 18.74%);height:calc(100% + 18.74%);" /></div>
+        </div>
+        <span class="label">Create Character</span>
+      </a>
+      <a class="nav-link">
+        <!-- My AI / Heart icon (1 vector) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:12.5%;left:8.33%;right:8.34%;bottom:12.5%;"><img src="http://localhost:3845/assets/73c077160f57d53f52d0bdc3a7f38f652fa1e2b4.svg" alt="" style="inset:-4.17% -3.75%;width:calc(100% + 7.5%);height:calc(100% + 8.34%);" /></div>
+        </div>
+        <span class="label">My AI</span>
+      </a>
+      <a class="nav-link premium">
+        <img class="icon" src="http://localhost:3845/assets/ecda1cb5e0d2bcd6e589ee48e0745891e21c4311.svg" alt="" />
+        <span class="label">Become Premium</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-separator"></div>
+
+    <!-- Settings nav -->
+    <nav class="nav-section settings-nav">
+      <div class="nav-title">Settings</div>
+      <a class="nav-link">
+        <!-- Account icon (3 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/35c2d550729147f7b5b9ff1fe84e1c9ce255bb43.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+          <div class="vi" style="top:64.58%;left:17.8%;right:17.79%;bottom:23.56%;"><img src="http://localhost:3845/assets/ba810d43de8e63402912f003a55a32c54920d430.svg" alt="" style="inset:-26.36% -4.85%;width:calc(100% + 9.7%);height:calc(100% + 52.72%);" /></div>
+          <div class="vi" style="top:25%;left:37.5%;right:37.5%;bottom:50%;"><img src="http://localhost:3845/assets/cfeca3e384f8734f4583d5ad5cf056ec90a4ac42.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+        </div>
+        <span class="label">Creator account</span>
+      </a>
+      <a class="nav-link">
+        <!-- Settings icon (2 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:37.5%;left:37.5%;right:37.5%;bottom:37.5%;"><img src="http://localhost:3845/assets/073cb9f1e11431823182dbffee338c363b43bdf3.svg" alt="" style="inset:-12.5%;width:calc(100% + 25%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/2418d0e179c6a7dc5cfb70d65cd62c6caf37ec7e.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+        </div>
+        <span class="label">Settings</span>
+        <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </nav>
+
+    <!-- Bottom links -->
+    <nav class="nav-section">
+      <a class="nav-link">
+        <img class="icon" src="http://localhost:3845/assets/8ae469fff107c192a29b4759817450ef81546340.png" alt="" />
+        <span class="label">English</span>
+        <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="nav-link">
+        <!-- Help icon (3 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:8.33%;left:8.33%;right:8.34%;bottom:8.33%;"><img src="http://localhost:3845/assets/0f47804f77e143fc6963ab556afbbd2728b809ff.svg" alt="" style="inset:-3.75%;width:calc(100% + 7.5%);height:calc(100% + 7.5%);" /></div>
+          <div class="vi" style="top:26.56%;left:37.5%;right:39.58%;bottom:41.67%;"><img src="http://localhost:3845/assets/7d603f60b9cd08d55aab6f85549010da00775f9c.svg" alt="" style="inset:-9.84% -13.64%;width:calc(100% + 27.28%);height:calc(100% + 19.68%);" /></div>
+          <div class="vi" style="top:75%;left:49.96%;right:50%;bottom:24.96%;"><img src="http://localhost:3845/assets/ba22947984a8f2ccd2643f0f3ef6bbed6aec2b93.svg" alt="" style="inset:-0.5px;width:calc(100% + 1px);height:calc(100% + 1px);" /></div>
+        </div>
+        <span class="label">Help center</span>
+      </a>
+      <a class="nav-link logout">
+        <!-- Logout icon (2 vectors) -->
+        <div class="figma-icon">
+          <div class="vi" style="top:37.5%;left:50%;right:20.83%;bottom:37.5%;"><img src="http://localhost:3845/assets/438f9790609b6f21c3f47b837fa8b2d5eacac111.svg" alt="" style="inset:-12.5% -10.71%;width:calc(100% + 21.42%);height:calc(100% + 25%);" /></div>
+          <div class="vi" style="top:12.5%;left:20.83%;right:20.84%;bottom:12.5%;"><img src="http://localhost:3845/assets/9ac73ff23c13404f1096b6dc046d3ef579f6cce4.svg" alt="" style="inset:-4.17% -5.36%;width:calc(100% + 10.72%);height:calc(100% + 8.34%);" /></div>
+        </div>
+        <span class="label">Logout Account</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom-text">PRIVACY NOTICE &bull; LEGAL INFORMATION</div>
+  </aside>
+
+  <!-- ─── Main content ─────────────────────── -->
+  <div class="main">
+
+    <!-- Top navbar -->
+    <header class="topnav">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="7" cy="7" r="4.5" stroke="#848484" stroke-width="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Search</span>
+      </div>
+      <nav class="topnav-links">
+        <a href="#">Blog</a>
+        <a href="#">Guide</a>
+        <a href="#">Subscription</a>
+      </nav>
+      <div class="topnav-buttons">
+        <button class="btn-primary">Create Free Account</button>
+        <button class="btn-secondary">Log in <span class="green-dot-wrap"><img src="http://localhost:3845/assets/b136c23032446e3ea960eb3580e238f7bd9e8c54.svg" alt="" /></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Hero Banner -->
+      <div class="hero">
+        <div class="hero-bg">
+          <img src="http://localhost:3845/assets/04cc7730b4941b0976e69c3ba3fd929336b76b45.png" alt="" />
+        </div>
+        <div class="hero-content">
+          <h1 class="hero-title">Create your New Gilfriend</h1>
+          <button class="btn-primary">Create Now</button>
+        </div>
+        <div class="hero-progress">
+          <div class="progress-bar active">
+            <div class="progress-bar-glow">
+              <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
+            </div>
+            <div class="progress-bar-inner"></div>
+          </div>
+          <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+          <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+        </div>
+      </div>
+
+      <!-- Stories -->
+      <div class="stories-section">
+        <div class="section-label">Stories</div>
+        <div class="stories-row">
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <div class="stories-arrow">
+            <svg class="arrow-right-icon" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Characters section -->
+      <div class="characters-section">
+        <div class="chars-header">
+          <div class="section-label">CHARACTERs</div>
+          <h2 class="chars-title"><span class="pink">Choose Your Partner </span>for Today</h2>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <div class="search-and-sorting">
+            <div class="filter-search-wrap">
+              <div class="filter-search">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="7" cy="7" r="4.5" stroke="#848484" stroke-width="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span>Search</span>
+              </div>
+              <div class="filter-settings-btn">
+                <img src="http://localhost:3845/assets/efb3b98d44957f626166245fdd59b5326f7ff39e.svg" alt="" />
+              </div>
+            </div>
+            <div class="filter-separator">
+              <img src="http://localhost:3845/assets/ac3a9e3ce7f82488576b3aaf85916137ee7993f6.svg" alt="" />
+            </div>
+            <div class="sorting-buttons">
+              <div class="sorting-btn" style="width:123px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Gender:</span>
+                  <span class="value">Female</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:116px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Style:</span>
+                  <span class="value">Realistic</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:155px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Created by:</span>
+                  <span class="value-green">lovecast.ai</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:123px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Type:</span>
+                  <span class="value">Character</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:169px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Sort by:</span>
+                  <span class="value">New &bull; Last month</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="tags-row">
+            <span class="tag active">
+              <span class="tag-glow"></span>
+              All
+            </span>
+            <span class="tag group-chats">Group Chats</span>
+            <span class="tag">Teen</span>
+            <span class="tag">Asian</span>
+            <span class="tag">Anime</span>
+            <span class="tag">Blond</span>
+            <span class="tag">Strong</span>
+            <span class="tag">Lonely</span>
+            <span class="tag">Young</span>
+            <span class="tag">Latina</span>
+            <span class="tag">Romantic</span>
+            <span class="tag">Athletic</span>
+            <span class="tag">Strong</span>
+            <span class="tag">Lonely</span>
+            <span class="tag">Young</span>
+            <span class="tag">Latina</span>
+            <span class="tag">Romantic</span>
+            <div class="tags-arrow">
+              <svg class="arrow-right-icon" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Character cards -->
+        <div class="cards-row">
+          <!-- Card 1 - Diana 29 (default) -->
+          <div class="card" style="left:0;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+
+          <!-- Card 2 - Diana Smith 29 (featured / expanded) -->
+          <div class="card-featured-wrap" style="left:238px;">
+            <!-- Hover panel (expanded info) -->
+            <div class="hover-panel">
+              <div class="hover-tags">
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Strong</span>
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Romantic</span>
+                <span class="hover-tag">Asian</span>
+                <span class="hover-tag">Anime Girl</span>
+              </div>
+              <p class="hover-description">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn't like that. Mine is quieter. Mine is knowing... knowing that grief isn't that is dark; it is knowing that light is temporary. </p>
+              <div class="hover-stats">
+                <div class="hover-stat">
+                  <span class="hover-stat-value">54.2K</span>
+                  <span class="hover-stat-label">likes</span>
+                </div>
+                <div class="hover-stat">
+                  <span class="hover-stat-value">1.2K</span>
+                  <span class="hover-stat-label">comments</span>
+                </div>
+                <div class="hover-stat">
+                  <span class="hover-stat-value">600</span>
+                  <span class="hover-stat-label">generated</span>
+                </div>
+              </div>
+            </div>
+            <!-- The actual card -->
+            <div class="card featured">
+              <div class="card-bg">
+                <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+                <div class="card-overlay"></div>
+              </div>
+              <div class="card-actions">
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
+                </div>
+              </div>
+              <div class="card-name">Diana Smith, 29</div>
+              <div class="card-progress">
+                <div class="progress-bar active">
+                  <div class="progress-bar-glow">
+                    <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
+                  </div>
+                  <div class="progress-bar-inner"></div>
+                </div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 - Diana 29 -->
+          <div class="card" style="left:476px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+
+          <!-- Card 4 - Diana 29 -->
+          <div class="card" style="left:714px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+
+          <!-- Card 5 - Diana 29 -->
+          <div class="card" style="left:952px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+</body>
+</html>
