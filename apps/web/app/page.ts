@@ -1,310 +1,758 @@
 import React from "react";
 
-export const dynamic = "force-static";
+const PAGE_CSS = `
+    /* ─── Content area ───────────────────────────── */
+    .content {
+      position: relative;
+    }
 
-const HTML = `<style>:root {
-            --bg-dark: #0b0512;
-            --sidebar-bg: #120a1d;
-            --accent-purple: #8e44ad;
-            --active-violet: #6c5ce7;
-            --text-main: #ffffff;
-            --text-dim: #a0a0a0;
-            --card-bg: #1c1427;
-            --coral: #ff7675;
-            --tag-border: #3d2b55;
-        }
+    /* ─── Hero Banner ────────────────────────────── */
+    .hero {
+      border: 1px solid #313131;
+      border-radius: 8px;
+      height: 160px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 8px;
+      margin: 0 36px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 4px 8px;
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .hero-bg img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
 
-        #app-root {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 453px;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
 
-        /* Sidebar */
-        .sidebar {
-            width: 200px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--tag-border);
-            display: flex;
-            flex-direction: column;
-            padding: 20px 15px;
-            flex-shrink: 0;
-        }
+    .hero-progress {
+      position: relative;
+      width: 100%;
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 2px;
+      position: relative;
+    }
+    .progress-bar-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 1px;
+    }
+    .progress-bar.active .progress-bar-inner {
+      background: #f95bad;
+      box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6);
+    }
+    .progress-bar.active .progress-bar-glow {
+      position: absolute;
+      inset: -500% 0 -800% 0;
+    }
+    .progress-bar.inactive {
+      opacity: 0.7;
+    }
+    .progress-bar.inactive .progress-bar-inner {
+      background: #46383e;
+      border-radius: 1px;
+    }
 
-        .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; margin-bottom: 30px; }
-        .logo-box { width: 30px; height: 30px; background: linear-gradient(135deg, #a29bfe, #6c5ce7); border-radius: 6px; }
+    /* ─── Stories ────────────────────────────────── */
+    .stories-section {
+      position: absolute;
+      left: 36px;
+      right: 36px;
+      top: 196px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: #969696;
+      line-height: 1.2;
+    }
 
-        .menu-item {
-            display: flex; align-items: center; gap: 12px; padding: 10px 15px;
-            color: var(--text-dim); text-decoration: none; border-radius: 8px; font-size: 14px; margin-bottom: 4px;
-            /* Добавлено: плавность анимации */
-            transition: all 0.2s ease;
-        }
+    .stories-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .story-avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      object-fit: cover;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .stories-arrow {
+      position: absolute;
+      right: -26px;
+      top: 26px;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
 
-        /* Добавлено: анимация наведения на меню */
-        .menu-item:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.05);
-            transform: translateX(5px);
-        }
+    /* ─── Characters ─────────────────────────────── */
+    .characters-section {
+      position: absolute;
+      left: 36px;
+      top: 312px;
+      width: 1172px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        .menu-item.active { background-color: var(--active-violet); color: white; }
+    .chars-header {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 570px;
+    }
+    .chars-title {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .chars-title .pink { color: #ff99ce; }
 
-        .btn-footer {
-            display: block; width: 100%; padding: 10px; margin-top: 8px;
-            border: 1px solid var(--tag-border); background: transparent; color: white;
-            border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px;
-            /* Добавлено */
-            transition: all 0.2s ease;
-        }
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .search-and-sorting {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .filter-search-wrap {
+      display: flex;
+      flex: 1;
+      gap: 4px;
+      align-items: center;
+    }
+    .filter-search {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      flex: 1;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Syne', sans-serif;
+      color: #848484;
+      line-height: 1.2;
+    }
+    .filter-search img { width: 16px; height: 16px; flex-shrink: 0; }
+    .filter-search span { flex: 1; }
+    .filter-settings-btn {
+      background: #121212;
+      border: 1px solid #313131;
+      border-radius: 4px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .filter-settings-btn img { width: 16px; height: 16px; }
 
-        .btn-footer:hover {
-            background-color: var(--tag-border);
-        }
+    .filter-separator {
+      width: 0;
+      height: 20px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .filter-separator img {
+      position: absolute;
+      inset: -2.5% -0.5px;
+      display: block;
+    }
 
-        /* Content Area */
-        .content { flex-grow: 1; overflow-y: auto; padding: 20px 40px; }
+    .sorting-buttons {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .sorting-btn {
+      background: #1e1e1e;
+      border-radius: 4px;
+      height: 30px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .sorting-btn-text {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .sorting-btn-text .muted { color: #969696; }
+    .sorting-btn-text .value { color: #fff; }
+    .sorting-btn-text .value-green { color: #c1f0aa; }
 
-        .top-nav { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 25px; }
-        .nav-btn {
-            background: var(--card-bg); border: 1px solid var(--tag-border); color: white;
-            padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
-            text-decoration: none; display: inline-block;
-            transition: all 0.2s ease;
-        }
-        .nav-btn:hover { border-color: var(--active-violet); }
+    /* Tags row */
+    .tags-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      width: 100%;
+    }
+    .tag {
+      background: #121212;
+      border-radius: 4px;
+      height: 30px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .tag.active {
+      background: #1e1e1e;
+      position: relative;
+      padding: 8px 12px;
+      overflow: visible;
+    }
+    .tag.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 3px;
+      background: #f95bad;
+      box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6);
+      border-radius: 0.5px;
+      filter: blur(0.5px);
+      z-index: 2;
+    }
+    .tag-glow {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 30px;
+      background: radial-gradient(ellipse at center, rgba(249,91,173,0.8) 0%, rgba(249,91,173,0.4) 35%, rgba(249,91,173,0.1) 55%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      filter: blur(3px);
+    }
+    .tag.group-chats {
+      background: #1e1e1e;
+      height: 30px;
+      padding: 8px 12px;
+    }
+    .tags-arrow {
+      position: absolute;
+      right: -26px;
+      top: 7px;
+      width: 16px;
+      height: 16px;
+    }
 
-        /* Hero */
-        .hero {
-            background: linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%);
-            border-radius: 16px; padding: 35px; display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 35px;
-        }
-        .hero h1 { font-size: 32px; margin-bottom: 15px; }
-        .btn-create { 
-            background: var(--coral); border: none; color: white; padding: 10px 25px; 
-            border-radius: 8px; font-weight: bold; cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        .btn-create:hover { transform: scale(1.05); }
+    /* Character cards */
+    .cards-row {
+      height: 300px;
+      position: relative;
+      width: 100%;
+    }
 
-        /* Filters & Tags */
-        .section-title { font-size: 18px; margin: 25px 0 15px; }
-        .filters-header { display: flex; justify-content: space-between; align-items: center; }
-        .search-box { background: var(--card-bg); border: 1px solid var(--tag-border); padding: 10px 15px; border-radius: 10px; width: 320px; color: white; font-size: 13px; }
+    .card {
+      border: 1px solid #313131;
+      border-radius: 8px;
+      width: 220px;
+      height: 300px;
+      overflow: hidden;
+      position: absolute;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px;
+      cursor: pointer;
+    }
 
-        .primary-tags { display: flex; gap: 8px; margin: 20px 0 12px; }
-        
-        .tag { 
-            background: var(--card-bg); color: var(--text-dim); padding: 6px 14px; 
-            border-radius: 15px; font-size: 12px; cursor: pointer;
-            /* Добавлено */
-            transition: all 0.2s ease;
-        }
+    .card-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    .card-bg img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, rgba(9,9,9,0) 56.167%, rgba(9,9,9,0.8) 100%);
+    }
 
-        /* Добавлено: анимация тегов */
-        .tag:hover:not(.active) {
-            background-color: #251b35;
-            color: white;
-            transform: translateY(-2px);
-        }
+    .card-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      position: relative;
+      z-index: 1;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
 
-        .tag.active { background: var(--coral); color: white; }
+    .card-featured-wrap {
+      position: absolute;
+      top: 0;
+      height: 300px;
+      width: 220px;
+    }
+    .card-featured-wrap:hover {
+      z-index: 5;
+    }
 
-        .secondary-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 30px; }
-        
-        .tag-sm { 
-            background: var(--card-bg); color: #888; padding: 4px 10px; 
-            border-radius: 6px; font-size: 11px; border: 1px solid var(--tag-border); cursor: pointer;
-            /* Добавлено */
-            transition: all 0.2s ease;
-        }
+    .hover-panel {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 458px;
+      height: 300px;
+      background: rgba(9,9,9,0.7);
+      backdrop-filter: blur(2px);
+      border: 0.8px solid rgba(228,0,120,0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 16px 16px 16px 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .card-featured-wrap:hover .hover-panel {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-        /* Добавлено: анимация мелких тегов */
-        .tag-sm:hover {
-            border-color: var(--active-violet);
-            color: white;
-            background-color: rgba(108, 92, 231, 0.1);
-        }
+    .card-featured-wrap:hover .card.featured {
+      border-color: #5b5b5b;
+    }
+    .card-featured-wrap .card.featured {
+      border-color: #313131;
+    }
 
-        /* Character Grid */
-        .char-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-            padding-bottom: 40px;
-        }
+    .card-featured-wrap .card-actions,
+    .card-featured-wrap .card-progress {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .card-featured-wrap:hover .card-actions,
+    .card-featured-wrap:hover .card-progress {
+      opacity: 1;
+    }
 
-        .char-card {
-            background: var(--card-bg);
-            border-radius: 14px;
-            overflow: hidden;
-            position: relative;
-            height: 300px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border-color 0.3s ease;
-        }
+    .hover-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      width: 198px;
+      align-content: flex-start;
+    }
+    .hover-tag {
+      background: rgba(255,153,206,0.6);
+      backdrop-filter: blur(2px);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 8px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+    }
 
-        .char-card:hover {
-            border-color: var(--active-violet);
-        }
+    .hover-description {
+      font-size: 10px;
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.3;
+      width: 198px;
+    }
 
-        .char-img {
-            height: 100%;
-            width: 100%;
-            background: #2d1b44;
-            background-image: url('https://via.placeholder.com/200x300/2d1b44/ffffff?text=AI+Girl'); 
-            background-size: cover;
-            transition: filter 0.3s ease;
-        }
+    .hover-stats {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      width: 198px;
+      white-space: nowrap;
+    }
+    .hover-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .hover-stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .hover-stat-label {
+      font-size: 7px;
+      font-weight: 500;
+      color: #848484;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
 
-        .char-card:hover .char-img {
-            filter: brightness(0.4);
-        }
+    .card.featured {
+      border-color: #5b5b5b;
+      left: 0;
+      z-index: 2;
+    }
 
-        .char-info {
-            position: absolute;
-            bottom: 0;
-            padding: 15px;
-            width: 100%;
-            z-index: 2;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
+    .card-actions {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      position: relative;
+      z-index: 2;
+      width: 100%;
+    }
+    .card-action-btn {
+      width: 28px;
+      height: 28px;
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-action-btn img { width: 16px; height: 16px; }
 
-        .char-card:hover .char-info {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .card-progress {
+      display: flex;
+      gap: 2px;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+    }
+    .card-progress .progress-bar {
+      flex: 1;
+      height: 2px;
+    }
+`;
 
-        .char-info h4 { font-size: 15px; margin-bottom: 5px; color: white; }
-        .char-info p { font-size: 11px; color: #ddd; line-height: 1.4; margin-bottom: 12px; }
-
-        .btn-chat {
-            width: 100%;
-            background: var(--active-violet);
-            border: none;
-            color: white;
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-chat:hover { background: #7d6dfa; }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-            color: var(--text-dim);
-            font-size: 14px;
-        }
-        /* Добавлено для страниц */
-        .pagination span { cursor: pointer; transition: color 0.2s; }
-        .pagination span:hover { color: white; }</style><div id='app-root'><aside class="sidebar">
-        <div class="logo">
-            <div class="logo-box"></div>
-            <span>Leonardo.Ai</span>
+const CONTENT_HTML = `
+      <!-- Hero Banner -->
+      <div class="hero">
+        <div class="hero-bg">
+          <img src="http://localhost:3845/assets/04cc7730b4941b0976e69c3ba3fd929336b76b45.png" alt="" />
         </div>
-        <nav>
-            <a href="/" class="menu-item active">🏠 Главная</a>
-            <a href="#" class="menu-item">📱 Шортсы</a>
-            <a href="/generation" class="menu-item">📸 Фото/видео</a>
-            <a href="#" class="menu-item">👤 Мой AI</a>
-            <a href="#" class="menu-item">🖼️ Галерея</a>
-            <a href="#" class="menu-item">✨ Персонаж</a>
-            <a href="/chat" class="menu-item">💬 Чат</a>
-        </nav>
-        <div style="margin-top: auto;">
-            <button class="btn-footer">👑 Премиум</button>
-            <button class="btn-footer">📘 Гайд</button>
+        <div class="hero-content">
+          <h1 class="hero-title">Create your New Girlfriend</h1>
+          <button class="btn-primary">Create Now</button>
         </div>
-    </aside>
-
-    <main class="content">
-        <header class="top-nav">
-            <a href="/profile" class="nav-btn">👤 Профиль</a>
-            <button class="nav-btn">🌐 Русский</button>
-        </header>
-
-        <section class="hero">
-            <div>
-                <h1>Создай девушку<br>своей мечты</h1>
-                <button class="btn-create">✨ Создать</button>
+        <div class="hero-progress">
+          <div class="progress-bar active">
+            <div class="progress-bar-glow">
+              <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
             </div>
-        </section>
+            <div class="progress-bar-inner"></div>
+          </div>
+          <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+          <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+        </div>
+      </div>
 
-        <div class="filters-header">
-            <h3 class="section-title">Ai персонажи</h3>
-            <input type="text" class="search-box" placeholder="Найди характер, внешность, возраст">
+      <!-- Stories -->
+      <div class="stories-section">
+        <div class="section-label">Stories</div>
+        <div class="stories-row">
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <div class="stories-arrow">
+            <svg class="arrow-right-icon" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Characters section -->
+      <div class="characters-section">
+        <div class="chars-header">
+          <div class="section-label">CHARACTERs</div>
+          <h2 class="chars-title"><span class="pink">Choose Your Partner </span>for Today</h2>
         </div>
 
-        <div class="primary-tags">
-            <span class="tag active">⭐ Популярное</span>
-            <span class="tag">🕒 Недавнее</span>
-            <span class="tag">📈 Тренды</span>
-            <span class="tag">🆕 Новое</span>
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <div class="search-and-sorting">
+            <div class="filter-search-wrap">
+              <div class="filter-search">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="7" cy="7" r="4.5" stroke="#848484" stroke-width="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span>Search</span>
+              </div>
+              <div class="filter-settings-btn">
+                <img src="http://localhost:3845/assets/efb3b98d44957f626166245fdd59b5326f7ff39e.svg" alt="" />
+              </div>
+            </div>
+            <div class="filter-separator">
+              <img src="http://localhost:3845/assets/ac3a9e3ce7f82488576b3aaf85916137ee7993f6.svg" alt="" />
+            </div>
+            <div class="sorting-buttons">
+              <div class="sorting-btn" style="width:123px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Gender:</span>
+                  <span class="value">Female</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:116px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Style:</span>
+                  <span class="value">Realistic</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:155px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Created by:</span>
+                  <span class="value-green">lovecast.ai</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:123px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Type:</span>
+                  <span class="value">Character</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="sorting-btn" style="width:169px;">
+                <span class="sorting-btn-text">
+                  <span class="muted">Sort by:</span>
+                  <span class="value">New &bull; Last month</span>
+                </span>
+                <svg class="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="tags-row">
+            <span class="tag active">
+              <span class="tag-glow"></span>
+              All
+            </span>
+            <span class="tag group-chats">Group Chats</span>
+            <span class="tag">Teen</span>
+            <span class="tag">Asian</span>
+            <span class="tag">Anime</span>
+            <span class="tag">Blond</span>
+            <span class="tag">Strong</span>
+            <span class="tag">Lonely</span>
+            <span class="tag">Young</span>
+            <span class="tag">Latina</span>
+            <span class="tag">Romantic</span>
+            <span class="tag">Athletic</span>
+            <span class="tag">Strong</span>
+            <span class="tag">Lonely</span>
+            <span class="tag">Young</span>
+            <span class="tag">Latina</span>
+            <span class="tag">Romantic</span>
+            <div class="tags-arrow">
+              <svg class="arrow-right-icon" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
         </div>
 
-        <div class="secondary-tags">
-            <span class="tag-sm">Romantic</span>
-            <span class="tag-sm">Athletic</span>
-            <span class="tag-sm">Caring</span>
-            <span class="tag-sm">Virgin</span>
-            <span class="tag-sm">Anime</span>
-            <span class="tag-sm">College Student</span>
-            <span class="tag-sm">Показать все ▿</span>
-        </div>
+        <!-- Character cards -->
+        <div class="cards-row">
+          <!-- Card 1 -->
+          <div class="card" style="left:0;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
 
-        <section class="char-grid">
-            <div class="char-card">
-                <div class="char-img"></div>
-                <div class="char-info">
-                    <h4>Harriet, 20</h4>
-                    <p>The soft, curvy new girl in the office doesn't seem to mind when you stare...</p>
-                    <button class="btn-chat">💬 Chat</button>
+          <!-- Card 2 - Featured -->
+          <div class="card-featured-wrap" style="left:238px;">
+            <div class="hover-panel">
+              <div class="hover-tags">
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Strong</span>
+                <span class="hover-tag">Young</span>
+                <span class="hover-tag">Romantic</span>
+                <span class="hover-tag">Asian</span>
+                <span class="hover-tag">Anime Girl</span>
+              </div>
+              <p class="hover-description">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn't like that. Mine is quieter. Mine is knowing... knowing that grief isn't that is dark; it is knowing that light is temporary. </p>
+              <div class="hover-stats">
+                <div class="hover-stat">
+                  <span class="hover-stat-value">54.2K</span>
+                  <span class="hover-stat-label">likes</span>
                 </div>
-            </div>
-            <div class="char-card">
-                <div class="char-img"></div>
-                <div class="char-info">
-                    <h4>Jessica, 22</h4>
-                    <p>A tall, athletic trainer who loves to push your limits at the gym.</p>
-                    <button class="btn-chat">💬 Chat</button>
+                <div class="hover-stat">
+                  <span class="hover-stat-value">1.2K</span>
+                  <span class="hover-stat-label">comments</span>
                 </div>
+                <div class="hover-stat">
+                  <span class="hover-stat-value">600</span>
+                  <span class="hover-stat-label">generated</span>
+                </div>
+              </div>
             </div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-            <div class="char-card"><div class="char-img"></div><div class="char-info"><h4>Harriet, 20</h4><p>The soft, curvy new girl...</p><button class="btn-chat">💬 Chat</button></div></div>
-        </section>
+            <div class="card featured">
+              <div class="card-bg">
+                <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+                <div class="card-overlay"></div>
+              </div>
+              <div class="card-actions">
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="card-action-btn">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
+                </div>
+              </div>
+              <div class="card-name">Diana Smith, 29</div>
+              <div class="card-progress">
+                <div class="progress-bar active">
+                  <div class="progress-bar-glow">
+                    <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
+                  </div>
+                  <div class="progress-bar-inner"></div>
+                </div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
+              </div>
+            </div>
+          </div>
 
-        <div class="pagination">
-            <span>&lt; Первая</span>
-            <span style="color: white; font-weight: bold;">1</span>
-            <span>2</span>
-            <span>3</span>
-            <span>4</span>
-            <span>Последняя &gt;</span>
+          <!-- Card 3 -->
+          <div class="card" style="left:476px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="card" style="left:714px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="card" style="left:952px;">
+            <div class="card-bg">
+              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div class="card-overlay"></div>
+            </div>
+            <div class="card-name">Diana, 29</div>
+          </div>
         </div>
-    </main></div>`;
+      </div>
+`;
 
 export default function HomePage() {
   return React.createElement("div", {
-    suppressHydrationWarning: true,
-    dangerouslySetInnerHTML: { __html: HTML },
+    dangerouslySetInnerHTML: {
+      __html: `<style>${PAGE_CSS}</style><div class="content">${CONTENT_HTML}</div>`,
+    },
   });
 }

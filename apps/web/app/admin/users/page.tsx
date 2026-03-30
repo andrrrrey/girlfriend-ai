@@ -3,6 +3,148 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, type AdminUser } from "../../../lib/api";
+import { adminStyles } from "../admin-styles";
+
+const pageStyles: Record<string, React.CSSProperties> = {
+  badge: {
+    background: "rgba(249,91,173,0.2)",
+    color: "#f95bad",
+    fontSize: 13,
+    padding: "2px 10px",
+    borderRadius: 12,
+    fontWeight: "normal" as const,
+  },
+  searchInput: {
+    background: "#1e1e1e",
+    border: "1px solid #313131",
+    borderRadius: 8,
+    padding: "8px 14px",
+    color: "#fff",
+    fontSize: 13,
+    outline: "none",
+    width: 240,
+  },
+  tableWrapper: { overflowX: "auto" as const },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse" as const,
+    fontSize: 13,
+  },
+  th: {
+    color: "#848484",
+    fontWeight: "600" as const,
+    textAlign: "left" as const,
+    padding: "8px 12px",
+    borderBottom: "1px solid #313131",
+    whiteSpace: "nowrap" as const,
+  },
+  tr: { borderBottom: "1px solid #1e1e1e" },
+  td: {
+    padding: "12px 12px",
+    verticalAlign: "middle" as const,
+  },
+  userEmail: { color: "#fff", fontWeight: "500" as const },
+  userNick: { color: "#888", fontSize: 12, marginTop: 2 },
+  demoTag: {
+    background: "rgba(253,203,110,0.15)",
+    color: "#fdcb6e",
+    fontSize: 10,
+    padding: "1px 7px",
+    borderRadius: 8,
+    marginTop: 3,
+    display: "inline-block",
+  },
+  badgePaid: {
+    background: "rgba(193,240,170,0.15)",
+    color: "#c1f0aa",
+    padding: "3px 12px",
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: "600" as const,
+  },
+  badgeFree: {
+    background: "rgba(249,91,173,0.1)",
+    color: "#f95bad",
+    padding: "3px 12px",
+    borderRadius: 12,
+    fontSize: 12,
+  },
+  badgeAdmin: {
+    background: "rgba(249,91,173,0.15)",
+    color: "#f95bad",
+    padding: "3px 10px",
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: "600" as const,
+  },
+  badgeUser: {
+    background: "rgba(255,255,255,0.06)",
+    color: "#969696",
+    padding: "3px 10px",
+    borderRadius: 12,
+    fontSize: 12,
+  },
+  limitText: { color: "#fdcb6e", fontSize: 12 },
+  dateText: { color: "#848484", fontSize: 12 },
+  actions: { display: "flex", gap: 6, flexWrap: "wrap" as const },
+  btn: {
+    border: "none",
+    padding: "5px 12px",
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: "600" as const,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+  },
+  btnSuccess: {
+    background: "rgba(193,240,170,0.15)",
+    color: "#c1f0aa",
+  },
+  btnDanger: {
+    background: "rgba(227,100,102,0.15)",
+    color: "#e36466",
+  },
+  btnSecondary: {
+    background: "rgba(253,203,110,0.12)",
+    color: "#fdcb6e",
+  },
+  btnGhost: {
+    background: "rgba(255,255,255,0.05)",
+    color: "#848484",
+  },
+  pagination: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 24,
+  },
+  pageBtn: {
+    background: "transparent",
+    border: "1px solid #313131",
+    color: "#aaa",
+    padding: "7px 18px",
+    borderRadius: 8,
+    fontSize: 13,
+    cursor: "pointer",
+  },
+  pageInfo: { color: "#888", fontSize: 13 },
+  alert: {
+    borderRadius: 8,
+    padding: "10px 16px",
+    fontSize: 13,
+  },
+  alertError: {
+    background: "rgba(227,100,102,0.15)",
+    border: "1px solid #e36466",
+    color: "#e36466",
+  },
+  alertSuccess: {
+    background: "rgba(193,240,170,0.15)",
+    border: "1px solid #c1f0aa",
+    color: "#c1f0aa",
+  },
+};
 
 export default function AdminUsersPage() {
   const { user, loading } = useAuth();
@@ -40,14 +182,14 @@ export default function AdminUsersPage() {
     }
   }, [loading, user, search, offset, loadUsers]);
 
-  if (loading) return <div style={styles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
+  if (loading) return <div style={adminStyles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
   if (!user || user.role !== "admin") {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Доступ запрещён</h1>
+      <div style={adminStyles.page}>
+        <div style={adminStyles.card}>
+          <h1 style={adminStyles.title}>Доступ запрещён</h1>
           <p style={{ color: "#aaa" }}>Требуются права администратора.</p>
-          <a href="/" style={styles.link}>На главную</a>
+          <a href="/" style={adminStyles.link}>На главную</a>
         </div>
       </div>
     );
@@ -103,41 +245,35 @@ export default function AdminUsersPage() {
   const currentPage = Math.floor(offset / LIMIT) + 1;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.nav}>
-          <a href="/" style={styles.link}>Главная</a>
-          <span style={styles.navSep}>/</span>
-          <span style={{ color: "#fff" }}>Админ</span>
-        </div>
-
-        <div style={styles.tabs}>
-          <a href="/admin" style={styles.tab}>Настройки</a>
-          <a href="/admin/characters" style={styles.tab}>Персонажи</a>
-          <a href="/admin/users" style={{ ...styles.tab, ...styles.tabActive }}>Пользователи</a>
+    <div style={adminStyles.page}>
+      <div style={adminStyles.containerWide}>
+        <div style={adminStyles.tabs}>
+          <a href="/admin" style={adminStyles.tab}>Настройки</a>
+          <a href="/admin/characters" style={adminStyles.tab}>Персонажи</a>
+          <a href="/admin/users" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Пользователи</a>
         </div>
 
         {error && (
-          <div style={{ ...styles.alert, ...styles.alertError, marginBottom: 16 }}>{error}</div>
+          <div style={{ ...pageStyles.alert, ...pageStyles.alertError, marginBottom: 16 }}>{error}</div>
         )}
         {actionMsg && (
-          <div style={{ ...styles.alert, ...styles.alertSuccess, marginBottom: 16 }}>{actionMsg}</div>
+          <div style={{ ...pageStyles.alert, ...pageStyles.alertSuccess, marginBottom: 16 }}>{actionMsg}</div>
         )}
 
-        <div style={styles.card}>
-          <div style={styles.headerRow}>
-            <h2 style={styles.title}>
+        <div style={adminStyles.card}>
+          <div style={adminStyles.headerRow}>
+            <h2 style={{ ...adminStyles.title, display: "flex", alignItems: "center", gap: 10 }}>
               Пользователи
-              <span style={styles.badge}>{total}</span>
+              <span style={pageStyles.badge}>{total}</span>
             </h2>
-            <form onSubmit={handleSearch} style={styles.searchForm}>
+            <form onSubmit={handleSearch} style={{ display: "flex", gap: 8 }}>
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Поиск по email или имени..."
-                style={styles.searchInput}
+                style={pageStyles.searchInput}
               />
-              <button type="submit" style={styles.btnSearch}>Найти</button>
+              <button type="submit" style={adminStyles.button}>Найти</button>
             </form>
           </div>
 
@@ -146,72 +282,72 @@ export default function AdminUsersPage() {
           ) : users.length === 0 ? (
             <p style={{ color: "#888", padding: "20px 0" }}>Пользователи не найдены.</p>
           ) : (
-            <div style={styles.tableWrapper}>
-              <table style={styles.table}>
+            <div style={pageStyles.tableWrapper}>
+              <table style={pageStyles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Email / Ник</th>
-                    <th style={styles.th}>Подписка</th>
-                    <th style={styles.th}>Роль</th>
-                    <th style={styles.th}>Лимиты</th>
-                    <th style={styles.th}>Дата регистрации</th>
-                    <th style={styles.th}>Действия</th>
+                    <th style={pageStyles.th}>Email / Ник</th>
+                    <th style={pageStyles.th}>Подписка</th>
+                    <th style={pageStyles.th}>Роль</th>
+                    <th style={pageStyles.th}>Лимиты</th>
+                    <th style={pageStyles.th}>Дата регистрации</th>
+                    <th style={pageStyles.th}>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => {
                     const msgCounter = u.usageCounters?.find((c) => c.action === "chat_message");
                     return (
-                      <tr key={u.id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <div style={styles.userEmail}>{u.email}</div>
+                      <tr key={u.id} style={pageStyles.tr}>
+                        <td style={pageStyles.td}>
+                          <div style={pageStyles.userEmail}>{u.email}</div>
                           {u.nickname && (
-                            <div style={styles.userNick}>{u.nickname}</div>
+                            <div style={pageStyles.userNick}>{u.nickname}</div>
                           )}
-                          {u.isDemo && <span style={styles.demoTag}>demo</span>}
+                          {u.isDemo && <span style={pageStyles.demoTag}>demo</span>}
                         </td>
-                        <td style={styles.td}>
+                        <td style={pageStyles.td}>
                           <span
                             style={
                               u.subscription === "paid"
-                                ? styles.badgePaid
-                                : styles.badgeFree
+                                ? pageStyles.badgePaid
+                                : pageStyles.badgeFree
                             }
                           >
                             {u.subscription === "paid" ? "Premium" : "Free"}
                           </span>
                         </td>
-                        <td style={styles.td}>
+                        <td style={pageStyles.td}>
                           <span
                             style={
-                              u.role === "admin" ? styles.badgeAdmin : styles.badgeUser
+                              u.role === "admin" ? pageStyles.badgeAdmin : pageStyles.badgeUser
                             }
                           >
                             {u.role}
                           </span>
                         </td>
-                        <td style={styles.td}>
+                        <td style={pageStyles.td}>
                           {msgCounter ? (
-                            <span style={styles.limitText}>
+                            <span style={pageStyles.limitText}>
                               {msgCounter.count} / 20 сообщ.
                             </span>
                           ) : (
                             <span style={{ color: "#555", fontSize: 12 }}>—</span>
                           )}
                         </td>
-                        <td style={styles.td}>
-                          <span style={styles.dateText}>
+                        <td style={pageStyles.td}>
+                          <span style={pageStyles.dateText}>
                             {new Date(u.createdAt).toLocaleDateString("ru-RU")}
                           </span>
                         </td>
-                        <td style={styles.td}>
-                          <div style={styles.actions}>
+                        <td style={pageStyles.td}>
+                          <div style={pageStyles.actions}>
                             <button
                               onClick={() => handleToggleSubscription(u)}
                               style={
                                 u.subscription === "paid"
-                                  ? { ...styles.btn, ...styles.btnDanger }
-                                  : { ...styles.btn, ...styles.btnSuccess }
+                                  ? { ...pageStyles.btn, ...pageStyles.btnDanger }
+                                  : { ...pageStyles.btn, ...pageStyles.btnSuccess }
                               }
                               title={
                                 u.subscription === "paid"
@@ -223,14 +359,14 @@ export default function AdminUsersPage() {
                             </button>
                             <button
                               onClick={() => handleResetLimits(u)}
-                              style={{ ...styles.btn, ...styles.btnSecondary }}
+                              style={{ ...pageStyles.btn, ...pageStyles.btnSecondary }}
                               title="Сбросить лимиты"
                             >
                               Сбросить лимиты
                             </button>
                             <button
                               onClick={() => handleToggleRole(u)}
-                              style={{ ...styles.btn, ...styles.btnGhost }}
+                              style={{ ...pageStyles.btn, ...pageStyles.btnGhost }}
                               title={u.role === "admin" ? "Снять права администратора" : "Дать права администратора"}
                             >
                               {u.role === "admin" ? "→ user" : "→ admin"}
@@ -246,21 +382,21 @@ export default function AdminUsersPage() {
           )}
 
           {totalPages > 1 && (
-            <div style={styles.pagination}>
+            <div style={pageStyles.pagination}>
               <button
                 disabled={currentPage === 1}
                 onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-                style={styles.pageBtn}
+                style={pageStyles.pageBtn}
               >
                 ← Назад
               </button>
-              <span style={styles.pageInfo}>
+              <span style={pageStyles.pageInfo}>
                 {currentPage} / {totalPages}
               </span>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => setOffset(offset + LIMIT)}
-                style={styles.pageBtn}
+                style={pageStyles.pageBtn}
               >
                 Вперёд →
               </button>
@@ -271,188 +407,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#0b0512",
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    padding: 20,
-  },
-  container: { maxWidth: 1100, margin: "0 auto" },
-  nav: { marginBottom: 20, display: "flex", alignItems: "center", gap: 8 },
-  navSep: { color: "#555" },
-  link: { color: "#6c5ce7", textDecoration: "none", fontSize: 14 },
-  tabs: { display: "flex", gap: 0, marginBottom: 20 },
-  tab: {
-    padding: "10px 24px",
-    color: "#aaa",
-    textDecoration: "none",
-    fontSize: 14,
-    borderBottom: "2px solid transparent",
-  },
-  tabActive: { color: "#fff", borderBottom: "2px solid #6c5ce7" },
-  card: {
-    background: "#120a1d",
-    border: "1px solid #3d2b55",
-    borderRadius: 16,
-    padding: "30px 30px",
-  },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    flexWrap: "wrap" as const,
-    gap: 12,
-  },
-  title: { color: "#fff", fontSize: 22, margin: 0, display: "flex", alignItems: "center", gap: 10 },
-  badge: {
-    background: "rgba(108,92,231,0.25)",
-    color: "#a29bfe",
-    fontSize: 13,
-    padding: "2px 10px",
-    borderRadius: 12,
-    fontWeight: "normal" as const,
-  },
-  searchForm: { display: "flex", gap: 8 },
-  searchInput: {
-    background: "rgba(0,0,0,0.3)",
-    border: "1px solid #3d2b55",
-    borderRadius: 8,
-    padding: "8px 14px",
-    color: "#fff",
-    fontSize: 13,
-    outline: "none",
-    width: 240,
-  },
-  btnSearch: {
-    background: "#6c5ce7",
-    border: "none",
-    color: "#fff",
-    padding: "8px 18px",
-    borderRadius: 8,
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  tableWrapper: { overflowX: "auto" as const },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse" as const,
-    fontSize: 13,
-  },
-  th: {
-    color: "#888",
-    fontWeight: "600" as const,
-    textAlign: "left" as const,
-    padding: "8px 12px",
-    borderBottom: "1px solid #1e1430",
-    whiteSpace: "nowrap" as const,
-  },
-  tr: { borderBottom: "1px solid #160e26" },
-  td: {
-    padding: "12px 12px",
-    verticalAlign: "middle" as const,
-  },
-  userEmail: { color: "#fff", fontWeight: "500" as const },
-  userNick: { color: "#888", fontSize: 12, marginTop: 2 },
-  demoTag: {
-    background: "rgba(253,203,110,0.15)",
-    color: "#fdcb6e",
-    fontSize: 10,
-    padding: "1px 7px",
-    borderRadius: 8,
-    marginTop: 3,
-    display: "inline-block",
-  },
-  badgePaid: {
-    background: "rgba(0,184,148,0.15)",
-    color: "#00b894",
-    padding: "3px 12px",
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: "600" as const,
-  },
-  badgeFree: {
-    background: "rgba(108,92,231,0.12)",
-    color: "#a29bfe",
-    padding: "3px 12px",
-    borderRadius: 12,
-    fontSize: 12,
-  },
-  badgeAdmin: {
-    background: "rgba(253,121,168,0.15)",
-    color: "#fd79a8",
-    padding: "3px 10px",
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: "600" as const,
-  },
-  badgeUser: {
-    background: "rgba(255,255,255,0.06)",
-    color: "#aaa",
-    padding: "3px 10px",
-    borderRadius: 12,
-    fontSize: 12,
-  },
-  limitText: { color: "#fdcb6e", fontSize: 12 },
-  dateText: { color: "#666", fontSize: 12 },
-  actions: { display: "flex", gap: 6, flexWrap: "wrap" as const },
-  btn: {
-    border: "none",
-    padding: "5px 12px",
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: "600" as const,
-    cursor: "pointer",
-    whiteSpace: "nowrap" as const,
-  },
-  btnSuccess: {
-    background: "rgba(0,184,148,0.2)",
-    color: "#00b894",
-  },
-  btnDanger: {
-    background: "rgba(255,118,117,0.15)",
-    color: "#ff7675",
-  },
-  btnSecondary: {
-    background: "rgba(253,203,110,0.12)",
-    color: "#fdcb6e",
-  },
-  btnGhost: {
-    background: "rgba(255,255,255,0.05)",
-    color: "#888",
-  },
-  pagination: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-    marginTop: 24,
-  },
-  pageBtn: {
-    background: "transparent",
-    border: "1px solid #3d2b55",
-    color: "#aaa",
-    padding: "7px 18px",
-    borderRadius: 8,
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  pageInfo: { color: "#888", fontSize: 13 },
-  alert: {
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 13,
-  },
-  alertError: {
-    background: "rgba(255,118,117,0.15)",
-    border: "1px solid #ff7675",
-    color: "#ff7675",
-  },
-  alertSuccess: {
-    background: "rgba(0,206,201,0.15)",
-    border: "1px solid #00cec9",
-    color: "#00cec9",
-  },
-};

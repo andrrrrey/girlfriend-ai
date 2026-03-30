@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #090909;
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-feature-settings: 'lnum', 'pnum';
+}
+
+/* ─── Layout ─────────────────────────────────── */
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── Sidebar ────────────────────────────────── */
+.sidebar {
+  width: 196px;
+  flex-shrink: 0;
+  background: #090909;
+  border-right: 1px solid #313131;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-left: 12px;
+}
+.logo-wrap {
+  position: relative;
+  width: 137.336px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.logo-wrap img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+}
+.logo-part1 { position: absolute; top: 7.95%; left: 0.31%; right: 84.29%; bottom: 8.33%; }
+.logo-part2 { position: absolute; top: 60.42%; left: 3.13%; right: 91.84%; bottom: 8.15%; }
+.logo-part3 { position: absolute; top: 46.79%; left: 0.94%; right: 94.02%; bottom: 21.79%; }
+.logo-title { position: absolute; top: 27.02%; left: 20.87%; right: 0; bottom: 27.02%; }
+
+.sidebar-separator {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.nav-section { display: flex; flex-direction: column; gap: 4px; }
+.nav-title {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #969696;
+  padding: 0 12px;
+  line-height: 1.2;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #969696;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  background: #090909;
+  width: 172px;
+}
+.nav-link:hover { background: #1a1a1a; }
+.nav-link.active {
+  background: #121212;
+  border: 1px solid #313131;
+  color: #fff;
+}
+.nav-link .icon { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-link .label { flex: 1; }
+
+.figma-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.figma-icon .vi {
+  position: absolute;
+}
+.figma-icon .vi img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+}
+
+.nav-badge {
+  background: #20271f;
+  color: #c1f0aa;
+  font-size: 8px;
+  font-weight: 500;
+  padding: 4px;
+  border-radius: 54px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 13px;
+}
+.nav-badge .badge-dot {
+  width: 5px;
+  height: 5px;
+}
+.nav-badge .badge-dot img {
+  width: 100%;
+  height: 100%;
+}
+
+.nav-link.premium {
+  background: #1a1316;
+  border: 0.8px solid rgba(228,0,120,0.2);
+  border-radius: 4px;
+  color: #f95bad;
+}
+
+.nav-link.logout { color: #e36466; }
+
+.nav-chevron { width: 16px; height: 16px; flex-shrink: 0; }
+
+.settings-nav { flex: 1; }
+
+.sidebar-footer {
+  font-size: 7px;
+  font-weight: 500;
+  color: #969696;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 12px;
+  line-height: 1.2;
+}
+
+.sidebar-bottom-text {
+  font-size: 7px;
+  font-weight: 500;
+  color: #5b5b5b;
+  text-transform: uppercase;
+  padding: 0 12px;
+  line-height: 1.2;
+}
+
+/* ─── Main area ──────────────────────────────── */
+.main {
+  margin-left: 196px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ─── Top Navbar ─────────────────────────────── */
+.topnav {
+  background: #090909;
+  border-bottom: 1px solid #313131;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  padding: 12px 36px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.search-box {
+  background: #121212;
+  border: 1px solid #313131;
+  border-radius: 4px;
+  width: 220px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  color: #848484;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Syne', sans-serif;
+  cursor: text;
+  flex-shrink: 0;
+}
+.search-box img { width: 16px; height: 16px; flex-shrink: 0; }
+.search-box span { flex: 1; line-height: 1.2; }
+
+.topnav-links {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 36px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.topnav-links a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.topnav-buttons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.btn-primary {
+  background: linear-gradient(to right, #f95bad, #ff0084);
+  border: none;
+  border-radius: 4px;
+  height: 30px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Syne', sans-serif;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary {
+  background: #121212;
+  border: 1px solid #313131;
+  border-radius: 4px;
+  height: 30px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Syne', sans-serif;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: visible;
+}
+.green-dot-wrap {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: visible;
+}
+.green-dot-wrap img {
+  position: absolute;
+  inset: -100%;
+  display: block;
+  max-width: none;
+  width: 300%;
+  height: 300%;
+}
+
+/* ─── Chevron icons ──────────────────────────── */
+.chevron-down-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.arrow-right-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
