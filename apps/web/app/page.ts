@@ -379,8 +379,7 @@ const PAGE_CSS = `
 
     .hover-panel {
       position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
       top: 0;
       width: 458px;
       height: 300px;
