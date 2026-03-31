@@ -14,14 +14,16 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
+        <svg width="28" height="22" viewBox="0 0 28 22" fill="none" style={{flexShrink:0}}>
+          <path d="M8 1C4.5 1 2 3.5 2 6.5c0 2 1 3.5 2.5 4.5L14 20l9.5-9C25 10 26 8.5 26 6.5 26 3.5 23.5 1 20 1c-2.5 0-4.5 1.5-6 4C12.5 2.5 10.5 1 8 1z" stroke="#f95bad" strokeWidth="1.5" fill="none"/>
+          <path d="M7 6c-1.5 0-3 1-3 2.5S5.5 11 7 12.5l7 7 7-7c1.5-1.5 3-2.5 3-4S22.5 6 21 6c-1.5 0-2.5 1-3.5 2.5L14 12l-3.5-3.5C9.5 7 8.5 6 7 6z" stroke="#f95bad" strokeWidth="1" fill="none" opacity="0.5"/>
+        </svg>
         <span style={{
           fontWeight: 700,
-          fontSize: "1.25rem",
-          background: "linear-gradient(135deg, #f95bad, #ff7eb3)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          letterSpacing: "-0.02em",
-        }}>lovecast.AI</span>
+          fontSize: "0.9rem",
+          color: "#fff",
+          letterSpacing: "0.05em",
+        }}>LOVECAST<span style={{color:'#fff'}}>.</span>AI</span>
       </div>
 
       <div className="sidebar-separator"></div>
@@ -34,32 +36,32 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
           <span className="label">Home</span>
         </a>
         <a className={navLinkClass("shorts")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
           <span className="label">Shorts</span>
         </a>
         <a href="/chat" className={navLinkClass("chat")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><circle cx="8" cy="10" r="0.5" fill="currentColor"/><circle cx="12" cy="10" r="0.5" fill="currentColor"/><circle cx="16" cy="10" r="0.5" fill="currentColor"/></svg>
           <span className="label">Chat</span>
-          <span className="nav-badge">3 <span style={{width:5,height:5,borderRadius:'50%',background:'#f95bad',display:'inline-block'}}></span></span>
+          <span className="nav-badge">3 <span className="badge-dot" style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block',boxShadow:'0 0 6px 2px rgba(74,222,128,0.6)'}}></span></span>
         </a>
         <a className={navLinkClass("gallery")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           <span className="label">Gallery</span>
         </a>
         <a className={navLinkClass("generate")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <span className="label">Generate Content</span>
         </a>
         <a className={navLinkClass("create-character")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           <span className="label">Create Character</span>
         </a>
         <a className={navLinkClass("my-ai")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           <span className="label">My AI</span>
         </a>
         <a className="nav-link premium">
-          <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polygon points="6 3 18 3 22 9 12 22 2 9"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="22" x2="8" y2="9"/><line x1="12" y1="22" x2="16" y2="9"/><line x1="6" y1="3" x2="8" y2="9"/><line x1="18" y1="3" x2="16" y2="9"/><line x1="12" y1="3" x2="12" y2="9"/></svg>
           <span className="label">Become Premium</span>
         </a>
       </nav>
@@ -70,7 +72,7 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
       <nav className="nav-section settings-nav">
         <div className="nav-title">Settings</div>
         <a href={user?.role === "admin" ? "/admin" : "/profile"} className={navLinkClass("admin")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><path d="M12 16c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4"/><path d="M17.5 19.5c-.76-2.42-3.04-4-5.5-4s-4.74 1.58-5.5 4"/></svg>
           <span className="label">Creator account</span>
         </a>
         <a className="nav-link">
