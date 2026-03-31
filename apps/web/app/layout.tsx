@@ -1,14 +1,18 @@
 import { AuthProvider } from "../context/auth";
+import LayoutShell from "./components/LayoutShell";
+import "./globals.css";
 
 export const metadata = {
-  title: "Leonardo AI - Hover Interaction",
+  title: "lovecast.AI",
 };
 
 export default function RootLayout({ children }: { children: import("react").ReactNode }) {
   return (
     <html lang="ru">
-      <body style={{ margin: 0 }}>
-        <AuthProvider>{children}</AuthProvider>
+      <body>
+        <AuthProvider>
+          <LayoutShell>{children}</LayoutShell>
+        </AuthProvider>
       </body>
     </html>
   );
