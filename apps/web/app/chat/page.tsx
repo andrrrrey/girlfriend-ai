@@ -516,7 +516,33 @@ export default function ChatPage() {
 .edit-textarea { background: #1e1e1e; border: 1px solid #f95bad; border-radius: 6px; color: #fff; font-size: 10px; padding: 8px 10px; resize: none; outline: none; width: 100%; line-height: 1.3; font-family: 'Syne', sans-serif; }
 .edit-save-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
 .edit-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
-.msg-bubble:hover .msg-actions { opacity: 1 !important; }
+.ask-btn { background: #1e1e1e; border-radius: 4px; height: 32px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; border: none; font-family: 'Syne', sans-serif; }
+.ask-btn-text { font-size: 10px; font-weight: 500; color: #969696; }
+.right-panel { width: 256px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; overflow-y: auto; height: calc(100vh - 46px); }
+.profile-gallery { width: 100%; height: 300px; border-radius: 8px; border: 1px solid #252525; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 8px; }
+.profile-gallery .gallery-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%); }
+.profile-gallery .gallery-bg-overlay { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8)); }
+.profile-gallery .small-avatar { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #313131; position: relative; overflow: visible; z-index: 2; background: #313131; }
+.profile-gallery .small-avatar .link-badge { position: absolute; right: -3.5px; bottom: -3.5px; width: 16px; height: 16px; border-radius: 34px; background: linear-gradient(to right, #f95bad, #ff0084); display: flex; align-items: center; justify-content: center; }
+.profile-slider { display: flex; gap: 2px; width: 100%; position: relative; z-index: 2; margin-top: 8px; }
+.slider-bar { flex: 1; height: 2px; position: relative; }
+.slider-bar.active .slider-bar-inner { background: #f95bad; box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6); border-radius: 1px; position: absolute; inset: 0; }
+.slider-bar.inactive { opacity: 0.7; }
+.slider-bar.inactive .slider-bar-inner { background: #46383e; border-radius: 1px; position: absolute; inset: 0; }
+.profile-buttons { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.profile-btn-secondary { background: #121212; border: 1px solid #313131; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; cursor: pointer; }
+.profile-btn-primary { background: linear-gradient(to right, #f95bad, #ff0084); border: none; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; cursor: pointer; }
+.profile-text { display: flex; flex-direction: column; gap: 8px; }
+.profile-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.profile-bio { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
+.profile-separator { width: 100%; height: 1px; background: rgba(255,255,255,0.08); }
+.about-me { display: flex; flex-direction: column; gap: 12px; }
+.about-me-title { font-size: 12px; font-weight: 500; line-height: 1.2; }
+.info-card { display: flex; gap: 8px; align-items: center; height: 28px; }
+.info-card-icon { width: 28px; height: 28px; border-radius: 30px; background: #313131; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; padding: 6px; }
+.info-card-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.info-card-label { font-size: 7px; font-weight: 500; text-transform: uppercase; color: #848484; line-height: 1.2; }
+.info-card-value { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
       `}</style>
 
       {/* Chats Panel */}
@@ -527,8 +553,8 @@ export default function ChatPage() {
         </div>
 
         <div className="chats-search">
-          <span>🔍</span>
-          <span>Search</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
+          <span>Search for a profile</span>
         </div>
 
         {showNewChat && (
@@ -658,7 +684,7 @@ export default function ChatPage() {
                         minute: "2-digit",
                       })}
                     </span>
-                    <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center", opacity: 0, transition: "opacity 0.15s" }}>
+                    <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
                       {msg.role === "user" && !msg.id.startsWith("temp-") && (
                         <button
                           onClick={() => handleStartEdit(msg)}
@@ -738,6 +764,19 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
+                  <button className="ask-btn" title="Ask">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 4.5L10 6.5L6.5 4.5ZM6.5 4.5V11.5L10 9.5V6.5L6.5 4.5Z" stroke="#969696" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="ask-btn-text">Ask</span>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><path d="M4 6l4 4 4-4" stroke="#969696" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="chat-text-input"
+                    placeholder="Leave a message..."
+                    disabled={streaming}
+                  />
                   <button
                     onClick={startRecording}
                     disabled={streaming}
@@ -745,23 +784,14 @@ export default function ChatPage() {
                     style={isDemo ? { color: "#555", cursor: "default" } : {}}
                     title={isDemo ? "Голосовые функции доступны по подписке" : "Голосовое сообщение"}
                   >
-                    {isDemo ? "🔒" : "🎤"}
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round"/></svg>
                   </button>
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="chat-text-input"
-                    placeholder="Введите сообщение..."
-                    disabled={streaming}
-                  />
                   <button
                     onClick={handleSend}
                     disabled={streaming || !input.trim()}
-                    className="input-icon-btn"
-                    style={{ background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none" }}
+                    className="input-icon-btn send"
                   >
-                    ➤
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </>
               )}
@@ -782,6 +812,85 @@ export default function ChatPage() {
           </div>
         )}
       </section>
+
+      {/* Right Info Panel */}
+      {activeChat && (
+        <aside className="right-panel">
+          {/* Profile Gallery */}
+          <div className="profile-gallery">
+            <div className="gallery-bg">
+              <div className="gallery-bg-overlay" />
+            </div>
+            <div className="small-avatar" style={{zIndex:2, position:'relative', background:'#313131'}}>
+              <div className="link-badge">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3.5 4.5L4.5 5.5M4.5 2.5L3.5 3.5M5 1.5L6.5 3M2.5 5L1 6.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
+              </div>
+            </div>
+            <div className="profile-slider">
+              <div className="slider-bar active"><div className="slider-bar-inner" /></div>
+              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
+              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
+              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
+              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="profile-buttons">
+            <button className="profile-btn-secondary">Relationships settings</button>
+            <button className="profile-btn-primary">Edit Character</button>
+          </div>
+
+          {/* Profile Text */}
+          <div className="profile-text">
+            <div className="profile-name">{activeChatData?.character?.name || "Character"}</div>
+            <div className="profile-bio">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn&apos;t like that. Mine is quieter.</div>
+          </div>
+
+          <div className="profile-separator" />
+
+          {/* About Me */}
+          <div className="about-me">
+            <div className="about-me-title">About me:</div>
+            <div className="info-card">
+              <div className="info-card-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14A6 6 0 108 2a6 6 0 000 12z" stroke="#fff" strokeWidth="1.2"/><path d="M8 5v3l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              </div>
+              <div className="info-card-text">
+                <div className="info-card-label">AGE</div>
+                <div className="info-card-value">29 years old</div>
+              </div>
+            </div>
+            <div className="info-card">
+              <div className="info-card-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="info-card-text">
+                <div className="info-card-label">OCCUPATION</div>
+                <div className="info-card-value">Model</div>
+              </div>
+            </div>
+            <div className="info-card">
+              <div className="info-card-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="#fff" strokeWidth="1.2"/><circle cx="8" cy="7" r="1.5" stroke="#fff" strokeWidth="1.2"/></svg>
+              </div>
+              <div className="info-card-text">
+                <div className="info-card-label">LOCATION</div>
+                <div className="info-card-value">Los Angeles, CA</div>
+              </div>
+            </div>
+            <div className="info-card">
+              <div className="info-card-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="info-card-text">
+                <div className="info-card-label">RELATIONSHIP</div>
+                <div className="info-card-value">Single</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
