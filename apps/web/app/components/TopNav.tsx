@@ -16,7 +16,7 @@ export default function TopNav() {
       </nav>
       <div className="topnav-buttons">
         <button className="btn-primary">Create Free Account</button>
-        <button className="btn-secondary">Log in <span className="green-dot-wrap"><img src="http://localhost:3845/assets/b136c23032446e3ea960eb3580e238f7bd9e8c54.svg" alt="" /></span></button>
+        <button className="btn-secondary">Log in <span style={{width:6,height:6,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginLeft:4}}></span></button>
       </div>
     </header>
   );
