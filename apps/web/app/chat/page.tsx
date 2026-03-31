@@ -685,30 +685,35 @@ export default function ChatPage() {
                       })}
                     </span>
                     <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      {msg.role === "user" && !msg.id.startsWith("temp-") && (
-                        <button
-                          onClick={() => handleStartEdit(msg)}
-                          className="action-btn"
-                          disabled={streaming}
-                          title="Редактировать"
-                        >
-                          ✏️
-                        </button>
-                      )}
                       {msg.role === "assistant" && !msg.id.startsWith("temp-") && (
                         <>
                           <button
                             onClick={() => handlePlayTTS(msg.id)}
                             className="action-btn"
-                            style={isDemo ? { color: "#555", cursor: "default" } : {}}
+                            style={isDemo ? { opacity: 0.4, cursor: "default" } : {}}
                             disabled={loadingTTSId === msg.id}
                             title={isDemo ? "Доступно по подписке" : (playingTTSId === msg.id ? "Остановить" : "Озвучить")}
                           >
-                            {loadingTTSId === msg.id
-                              ? "..."
-                              : playingTTSId === msg.id
-                                ? "⏹"
-                                : isDemo ? "🔒" : "🔊"}
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5h1.5L6 2.5v7L3.5 7.5H2a.5.5 0 01-.5-.5V5a.5.5 0 01.5-.5z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 4a2.5 2.5 0 010 4" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/><path d="M9.5 2.5a4.5 4.5 0 010 7" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
+                          </button>
+                          <button className="action-btn" title="Нравится">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3.5 5.5V10M1.5 6.5v3a1 1 0 001 1h5.38a1 1 0 00.97-.75l.88-3.5a.5.5 0 00-.48-.62H7V3.5a1 1 0 00-1-1l-2 3.5H2.5a1 1 0 00-1 1z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button className="action-btn" title="Не нравится">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 6.5V2M10.5 5.5v-3a1 1 0 00-1-1H4.12a1 1 0 00-.97.75l-.88 3.5a.5.5 0 00.48.62H5v2.13a1 1 0 001 1l2-3.5h1.5a1 1 0 001-1z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="action-btn"
+                            title="Удалить"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button className="action-btn" title="Редактировать">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
                           <button
                             onClick={() => handleRegenerate(msg.id)}
@@ -716,18 +721,31 @@ export default function ChatPage() {
                             disabled={streaming}
                             title="Перегенерировать"
                           >
-                            🔄
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
                         </>
                       )}
-                      {!msg.id.startsWith("temp-") && (
-                        <button
-                          onClick={() => handleDeleteMessage(msg.id)}
-                          className="action-btn"
-                          title="Удалить"
-                        >
-                          🗑️
-                        </button>
+                      {msg.role === "user" && !msg.id.startsWith("temp-") && (
+                        <>
+                          <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="action-btn"
+                            title="Удалить"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button
+                            onClick={() => handleStartEdit(msg)}
+                            className="action-btn"
+                            disabled={streaming}
+                            title="Редактировать"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -823,7 +841,7 @@ export default function ChatPage() {
             </div>
             <div className="small-avatar" style={{zIndex:2, position:'relative', background:'#313131'}}>
               <div className="link-badge">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3.5 4.5L4.5 5.5M4.5 2.5L3.5 3.5M5 1.5L6.5 3M2.5 5L1 6.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3.4 4.6l-0.6 0.6a1.1 1.1 0 01-1.6-1.6l1.2-1.2a1.1 1.1 0 011.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M4.6 3.4l0.6-0.6a1.1 1.1 0 011.6 1.6l-1.2 1.2a1.1 1.1 0 01-1.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
             </div>
             <div className="profile-slider">
