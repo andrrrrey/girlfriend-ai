@@ -517,7 +517,7 @@ const CONTENT_HTML = `
       <!-- Hero Banner -->
       <div class="hero">
         <div class="hero-bg">
-          <img src="http://localhost:3845/assets/04cc7730b4941b0976e69c3ba3fd929336b76b45.png" alt="" />
+          <div style="width:100%;height:100%;background:linear-gradient(135deg, #1a0a1e 0%, #2d1b3d 30%, #1a0a2e 60%, #0d0d1a 100%);border-radius:8px;"></div>
         </div>
         <div class="hero-content">
           <h1 class="hero-title">Create your New Girlfriend</h1>
@@ -526,8 +526,7 @@ const CONTENT_HTML = `
         <div class="hero-progress">
           <div class="progress-bar active">
             <div class="progress-bar-glow">
-              <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
-            </div>
+                          </div>
             <div class="progress-bar-inner"></div>
           </div>
           <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
@@ -539,20 +538,20 @@ const CONTENT_HTML = `
       <div class="stories-section">
         <div class="section-label">Stories</div>
         <div class="stories-row">
-          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/18769dffea86fbb25a7edeae97e48fba81be64c8.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
-          <img class="story-avatar" src="http://localhost:3845/assets/a37e2959bb91f8617d82e1249d9ea4ac0e9ca612.png" alt="" />
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
+          <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
           <div class="stories-arrow">
             <svg class="arrow-right-icon" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
@@ -575,11 +574,11 @@ const CONTENT_HTML = `
                 <span>Search</span>
               </div>
               <div class="filter-settings-btn">
-                <img src="http://localhost:3845/assets/efb3b98d44957f626166245fdd59b5326f7ff39e.svg" alt="" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#848484" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
               </div>
             </div>
             <div class="filter-separator">
-              <img src="http://localhost:3845/assets/ac3a9e3ce7f82488576b3aaf85916137ee7993f6.svg" alt="" />
+              <div style="width:1px;height:20px;background:#313131;"></div>
             </div>
             <div class="sorting-buttons">
               <div class="sorting-btn" style="width:123px;">
@@ -653,7 +652,7 @@ const CONTENT_HTML = `
           <!-- Card 1 -->
           <div class="card" style="left:0;">
             <div class="card-bg">
-              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
               <div class="card-overlay"></div>
             </div>
             <div class="card-name">Diana, 29</div>
@@ -689,7 +688,7 @@ const CONTENT_HTML = `
             </div>
             <div class="card featured">
               <div class="card-bg">
-                <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+                <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
                 <div class="card-overlay"></div>
               </div>
               <div class="card-actions">
@@ -707,8 +706,7 @@ const CONTENT_HTML = `
               <div class="card-progress">
                 <div class="progress-bar active">
                   <div class="progress-bar-glow">
-                    <img src="http://localhost:3845/assets/23903eba01c0d5b4cd4525a2f8215f7174b7e5d7.svg" alt="" style="width:100%;height:100%;" />
-                  </div>
+                                      </div>
                   <div class="progress-bar-inner"></div>
                 </div>
                 <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
@@ -722,7 +720,7 @@ const CONTENT_HTML = `
           <!-- Card 3 -->
           <div class="card" style="left:476px;">
             <div class="card-bg">
-              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
               <div class="card-overlay"></div>
             </div>
             <div class="card-name">Diana, 29</div>
@@ -731,7 +729,7 @@ const CONTENT_HTML = `
           <!-- Card 4 -->
           <div class="card" style="left:714px;">
             <div class="card-bg">
-              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
               <div class="card-overlay"></div>
             </div>
             <div class="card-name">Diana, 29</div>
@@ -740,7 +738,7 @@ const CONTENT_HTML = `
           <!-- Card 5 -->
           <div class="card" style="left:952px;">
             <div class="card-bg">
-              <img src="http://localhost:3845/assets/5e7cdb0e2b1fd2600976d72610a9974651f3618c.png" alt="" />
+              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
               <div class="card-overlay"></div>
             </div>
             <div class="card-name">Diana, 29</div>
