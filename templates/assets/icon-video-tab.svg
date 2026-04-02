@@ -1,0 +1,8 @@
+<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- video_plus: frame -->
+  <path d="M9.17 14.5H2.9a.4.4 0 0 1-.4-.4V2.9a.4.4 0 0 1 .4-.4h11.2a.4.4 0 0 1 .4.4v6.27" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- play triangle -->
+  <path d="M6.81 5.37a.33.33 0 0 0-.5.28v3.96c0 .26.28.43.5.28l3.46-1.98a.33.33 0 0 0 0-.57L6.81 5.37z" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- plus -->
+  <path d="M11.17 12.5h2m-2 0h2m-1 1v-2m0 0v2" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- image frame -->
+  <path d="M9.17 14.5H2.9a.4.4 0 0 1-.4-.4V2.9a.4.4 0 0 1 .4-.4h11.2a.4.4 0 0 1 .4.4v6.27" stroke="#C1F0AA"/>
+  <!-- mountain/landscape line -->
+  <path d="M2.7 10.67l4.17-2.5 3.66 1.67" stroke="#C1F0AA"/>
+  <!-- sun circle -->
+  <path d="M11.5 7.83a1.33 1.33 0 1 1-2.67 0 1.33 1.33 0 0 1 2.67 0z" stroke="#C1F0AA"/>
+  <!-- plus -->
+  <path d="M12.67 12.5h-2m1-1v2" stroke="#C1F0AA" stroke-linecap="round"/>
+</svg>

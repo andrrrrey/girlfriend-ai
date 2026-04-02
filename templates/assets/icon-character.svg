@@ -1,0 +1,8 @@
+<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- head circle -->
+  <path d="M9.17 9.5a3.83 3.83 0 1 0 0-7.67 3.83 3.83 0 0 0 0 7.67z" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- body path -->
+  <path d="M2.5 15.17V14.33c0-3.22 2.61-5.83 5.83-5.83.55 0 1.08.08 1.58.22" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- heart -->
+  <path d="M15.17 10.4a2.17 2.17 0 0 0-3.04-.06l-.09.09-.09-.09a1.93 1.93 0 0 0-2.73 0 1.93 1.93 0 0 0 0 2.73l2.82 2.82 2.82-2.82.06-.06a2.17 2.17 0 0 0 .25-2.61z" stroke="white" stroke-linejoin="round"/>
+</svg>

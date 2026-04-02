@@ -1,0 +1,8 @@
+<svg viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- main curve -->
+  <path d="M.5.5C9.3.5 13.5 9.17 14.5 13.5" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- dots/marks -->
+  <path d="M3 5.5L7.5 2.5" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.5 8.5L11 3.5" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.5 3L8 10" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
