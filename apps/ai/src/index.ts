@@ -732,7 +732,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
  * Используется для перевода пользовательских промптов перед генерацией изображений.
  */
 app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async (req, reply) => {
-  const requestId = getRequestId(req);
+  const requestId = getRequestId(req.raw, env.REQUEST_ID_HEADER);
   const { text, targetLang } = req.body;
 
   if (!text || !targetLang) {
