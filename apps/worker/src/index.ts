@@ -49,6 +49,7 @@ const JOB_NAMES = {
   CHAT: "ai:chat",
   STT: "ai:stt",
   TTS: "ai:tts",
+  IMAGE: "ai:image",
 } as const;
 
 /**
@@ -267,6 +268,58 @@ async function handleTtsJob(job: Job): Promise<void> {
   logger.info({ jobId, url: result.url }, "tts_job_done");
 }
 
+/**
+ * Преобразует строку aspectRatio в размеры изображения.
+ */
+function getImageDimensions(aspectRatio?: string): { width: number; height: number } {
+  switch (aspectRatio) {
+    case "4:5":  return { width: 512, height: 640 };
+    case "5:4":  return { width: 640, height: 512 };
+    case "9:16": return { width: 576, height: 1024 };
+    case "16:9": return { width: 1024, height: 576 };
+    case "1:1":
+    default:     return { width: 512, height: 512 };
+  }
+}
+
+/**
+ * Обработчик задания генерации изображения (ai:image).
+ *
+ * Алгоритм:
+ * 1. Устанавливает статус "processing"
+ * 2. Вычисляет размеры из aspectRatio
+ * 3. Отправляет POST /ai/image/generate на AI-сервис (ModelsLab)
+ * 4. Получает { url } — ссылку на S3
+ * 5. Сохраняет output = { url } в AiJob, логирует использование
+ *
+ * @param {Job} job - BullMQ Job с данными типа ImageJobData
+ */
+async function handleImageJob(job: Job): Promise<void> {
+  const { jobId, userId, prompt, negativePrompt, model, aspectRatio } = job.data;
+  logger.info({ jobId, userId }, "image_job_started");
+
+  await updateJobStatus(jobId, "processing");
+
+  const { width, height } = getImageDimensions(aspectRatio);
+
+  const response = await fetch(`http://localhost:${env.AI_PORT}/ai/image/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Image generation service returned ${response.status}: ${errText}`);
+  }
+
+  const result = await response.json() as { url: string };
+
+  await updateJobStatus(jobId, "completed", { output: { url: result.url } });
+  await logUsage(userId, "generation");
+  logger.info({ jobId, url: result.url }, "image_job_done");
+}
+
 // ─── Worker ───────────────────────────────────────────────────
 
 /**
@@ -295,6 +348,9 @@ new Worker(
         break;
       case JOB_NAMES.TTS:
         await handleTtsJob(job);
+        break;
+      case JOB_NAMES.IMAGE:
+        await handleImageJob(job);
         break;
       default:
         logger.warn({ name: job.name }, "unknown_job_type");

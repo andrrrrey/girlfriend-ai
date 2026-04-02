@@ -549,6 +549,166 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
   }
 });
 
+// ─── Image Generation (ModelsLab API) ────────────────────────────────────────
+
+/**
+ * Тело запроса для генерации изображения.
+ */
+interface ImageGenerateBody {
+  /** Текстовый промпт для генерации */
+  prompt: string;
+  /** Негативный промпт */
+  negativePrompt?: string;
+  /** ID модели ModelsLab */
+  model?: string;
+  /** Ширина изображения в пикселях */
+  width?: number;
+  /** Высота изображения в пикселях */
+  height?: number;
+}
+
+/**
+ * POST /ai/image/generate
+ *
+ * Генерирует изображение через ModelsLab API и загружает результат в S3.
+ *
+ * Логика:
+ * 1. Получает MODELSLAB_API_KEY и MODELSLAB_DEFAULT_MODEL из настроек БД
+ * 2. Отправляет запрос в ModelsLab text2img API
+ * 3. Если статус "processing" — поллит fetch_result URL (до 60 сек)
+ * 4. Скачивает сгенерированное изображение и загружает в S3
+ * 5. Возвращает публичный S3 URL
+ *
+ * @returns { url: string } — публичная ссылка на изображение в S3
+ */
+app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) => {
+  const { prompt, negativePrompt, model, width, height } = req.body;
+
+  if (!prompt) {
+    return reply.status(400).send({ error: "prompt is required" });
+  }
+
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "failed_to_fetch_settings_image");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+
+  const apiKey = settings.MODELSLAB_API_KEY;
+  if (!apiKey) {
+    return reply.status(503).send({ error: "ModelsLab API key not configured" });
+  }
+
+  const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
+  const imgWidth = width || 512;
+  const imgHeight = height || 512;
+
+  try {
+    // 1. Запрос к ModelsLab text2img API
+    const mlResponse = await fetch("https://modelslab.com/api/v6/images/text2img", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: apiKey,
+        model_id: modelId,
+        prompt,
+        negative_prompt: negativePrompt || "",
+        width: imgWidth,
+        height: imgHeight,
+        samples: 1,
+        safety_checker: "no",
+        enhance_prompt: "no",
+        num_inference_steps: 30,
+        seed: null,
+      }),
+    });
+
+    if (!mlResponse.ok) {
+      const errBody = await mlResponse.text();
+      logger.error({ status: mlResponse.status, body: errBody }, "modelslab_api_error");
+      return reply.status(502).send({ error: "ModelsLab API error" });
+    }
+
+    let mlResult = await mlResponse.json() as {
+      status: string;
+      output?: string[];
+      fetch_result?: string;
+      eta?: number;
+    };
+
+    // 2. Если статус "processing" — поллить fetch_result
+    if (mlResult.status === "processing" && mlResult.fetch_result) {
+      const fetchUrl = mlResult.fetch_result;
+      const maxAttempts = 20; // 20 * 3s = 60 секунд максимум
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        const pollResponse = await fetch(fetchUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: apiKey }),
+        });
+
+        if (!pollResponse.ok) {
+          logger.warn({ status: pollResponse.status, attempt: i }, "modelslab_poll_error");
+          continue;
+        }
+
+        const pollResult = await pollResponse.json() as {
+          status: string;
+          output?: string[];
+        };
+
+        if (pollResult.status === "success" && pollResult.output?.length) {
+          mlResult = pollResult;
+          break;
+        }
+
+        if (pollResult.status === "failed") {
+          return reply.status(502).send({ error: "Image generation failed" });
+        }
+      }
+    }
+
+    // 3. Проверяем наличие результата
+    if (mlResult.status !== "success" || !mlResult.output?.length) {
+      return reply.status(502).send({ error: "Image generation timed out or failed" });
+    }
+
+    const imageUrl = mlResult.output[0];
+
+    // 4. Скачиваем изображение
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return reply.status(502).send({ error: "Failed to download generated image" });
+    }
+    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+
+    // 5. Загружаем в S3
+    const s3 = createS3Client();
+    const bucket = env.S3_BUCKET || "media";
+
+    if (s3) {
+      const key = `images/${randomUUID()}.png`;
+      try {
+        const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
+        logger.info({ key, modelId }, "image_uploaded_to_s3");
+        return reply.send({ url });
+      } catch (s3Err: any) {
+        logger.warn({ err: s3Err }, "image_s3_upload_failed");
+      }
+    }
+
+    // Fallback: вернуть оригинальный URL если S3 не настроен
+    return reply.send({ url: imageUrl });
+  } catch (err: any) {
+    logger.error({ err }, "image_generation_error");
+    return reply.status(502).send({ error: "Image generation failed", details: err.message });
+  }
+});
+
 // ─── Start Server ────────────────────────────────────────────────────────────
 
 // 0.0.0.0 — слушаем на всех интерфейсах (обязательно для Docker)

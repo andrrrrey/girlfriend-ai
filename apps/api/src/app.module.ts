@@ -25,6 +25,7 @@ import { InternalModule } from "./internal/internal.module";
 import { ChatsModule } from "./chats/chats.module";
 import { CleanupModule } from "./cleanup/cleanup.module";
 import { QueueModule } from "./queue/queue.module";
+import { GenerationModule } from "./generation/generation.module";
 
 @Module({
   imports: [
@@ -33,8 +34,9 @@ import { QueueModule } from "./queue/queue.module";
     UsersModule,    // Операции с профилем текущего пользователя
     AdminModule,    // Административные операции (защищены ролью "admin")
     InternalModule, // Внутренние API для ai-сервиса и worker-а (без аутентификации!)
-    ChatsModule,    // Чаты, сообщения, SSE, STT, TTS
-    CleanupModule,  // Фоновая задача: мягкое удаление неактивных чатов
+    ChatsModule,      // Чаты, сообщения, SSE, STT, TTS
+    GenerationModule, // Генерация изображений (ModelsLab API)
+    CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [PrismaService],       // Prisma-клиент для подключения к PostgreSQL
