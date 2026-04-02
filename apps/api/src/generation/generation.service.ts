@@ -1,9 +1,15 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Queue } from "bullmq";
 import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
 import type { ImageJobData } from "../queue/queue.types";
+import { loadEnv } from "@repo/config";
+
+const env = loadEnv();
+const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
+
+const CYRILLIC_RE = /[а-яА-ЯёЁ]/;
 
 const IMAGE_MODELS = [
   { id: "realistic-vision-v51", name: "Realistic Vision", description: "Photorealistic images" },
@@ -14,22 +20,52 @@ const IMAGE_MODELS = [
 
 @Injectable()
 export class GenerationService {
+  private readonly logger = new Logger(GenerationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(AI_QUEUE) private readonly queue: Queue,
   ) {}
 
+  private async translateToEnglish(text: string): Promise<string> {
+    try {
+      const res = await fetch(`${AI_BASE}/ai/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, targetLang: "English" }),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Translation failed with status ${res.status}, using original prompt`);
+        return text;
+      }
+      const data = await res.json() as { translated: string };
+      return data.translated || text;
+    } catch (err) {
+      this.logger.warn(`Translation request failed, using original prompt: ${err}`);
+      return text;
+    }
+  }
+
   async createImageJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string },
   ) {
+    let prompt = data.prompt;
+    const originalPrompt = data.prompt;
+
+    if (CYRILLIC_RE.test(prompt)) {
+      this.logger.log("Cyrillic detected in prompt, translating to English");
+      prompt = await this.translateToEnglish(prompt);
+    }
+
     const aiJob = await this.prisma.aiJob.create({
       data: {
         userId,
         type: "image",
         status: "pending",
         input: {
-          prompt: data.prompt,
+          prompt,
+          originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
           negativePrompt: data.negativePrompt,
           model: data.model,
           aspectRatio: data.aspectRatio,
@@ -40,7 +76,7 @@ export class GenerationService {
     const jobData: ImageJobData = {
       jobId: aiJob.id,
       userId,
-      prompt: data.prompt,
+      prompt,
       negativePrompt: data.negativePrompt,
       aspectRatio: data.aspectRatio,
       model: data.model,

@@ -381,7 +381,7 @@ const PAGE_CSS = `
       position: absolute;
       left: 0;
       top: 0;
-      width: 458px;
+      width: 220px;
       height: 300px;
       background: rgba(9,9,9,0.7);
       backdrop-filter: blur(2px);
@@ -390,9 +390,9 @@ const PAGE_CSS = `
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
+      align-items: flex-start;
       justify-content: space-between;
-      padding: 16px 16px 16px 24px;
+      padding: 12px;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s ease;
@@ -423,7 +423,7 @@ const PAGE_CSS = `
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      width: 198px;
+      width: 100%;
       align-content: flex-start;
     }
     .hover-tag {
@@ -442,14 +442,14 @@ const PAGE_CSS = `
       font-weight: 500;
       color: #fff;
       line-height: 1.3;
-      width: 198px;
+      width: 100%;
     }
 
     .hover-stats {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      width: 198px;
+      width: 100%;
       white-space: nowrap;
     }
     .hover-stat {
