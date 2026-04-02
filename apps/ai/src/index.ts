@@ -678,10 +678,25 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     }
 
     const imageUrl = mlResult.output[0];
+    logger.info({ imageUrl }, "image_url_received");
 
-    // 4. Скачиваем изображение
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
+    // 4. Скачиваем изображение (с retry — CDN может быть не сразу готов)
+    let imageResponse: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      try {
+        imageResponse = await fetch(imageUrl);
+        if (imageResponse.ok) break;
+        logger.warn({ status: imageResponse.status, attempt, imageUrl }, "image_download_retry");
+      } catch (dlErr: any) {
+        logger.warn({ err: dlErr.message, attempt, imageUrl }, "image_download_fetch_error");
+      }
+    }
+
+    if (!imageResponse || !imageResponse.ok) {
+      logger.error({ imageUrl, status: imageResponse?.status }, "image_download_failed");
       return reply.status(502).send({ error: "Failed to download generated image" });
     }
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
