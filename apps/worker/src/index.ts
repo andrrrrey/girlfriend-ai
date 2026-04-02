@@ -23,8 +23,8 @@
  *
  * Связи:
  * - Redis URL: env.REDIS_URL (та же очередь, что и в API)
- * - AI-сервис: http://localhost:{env.AI_PORT}
- * - Internal API: http://localhost:{env.API_PORT}/internal/*
+ * - AI-сервис: http://{env.AI_HOST}:{env.AI_PORT}
+ * - Internal API: http://{env.API_HOST}:{env.API_PORT}/internal/*
  */
 
 import { loadEnv } from "@repo/config";
@@ -39,7 +39,7 @@ const logger = createLogger({ service: "worker", env: env.ENV, level: env.LOG_LE
 const QUEUE_NAME = "ai-jobs";
 
 /** Базовый URL для internal API (без JWT авторизации) */
-const API_BASE = `http://localhost:${env.API_PORT}`;
+const API_BASE = `http://${env.API_HOST}:${env.API_PORT}`;
 
 /**
  * Названия заданий — идентичны JOB_NAMES из apps/api/src/queue/queue.types.ts.
@@ -145,7 +145,7 @@ async function handleChatJob(job: Job): Promise<void> {
 
   await updateJobStatus(jobId, "processing");
 
-  const response = await fetch(`http://localhost:${env.AI_PORT}/ai/chat/completion`, {
+  const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/chat/completion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, characterId }),
@@ -215,7 +215,7 @@ async function handleSttJob(job: Job): Promise<void> {
   const formData = new FormData();
   formData.append("audio", new Blob([audioBuffer], { type: mimeType }), filename || "audio.webm");
 
-  const response = await fetch(`http://localhost:${env.AI_PORT}/ai/stt`, {
+  const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/stt`, {
     method: "POST",
     body: formData,
   });
@@ -251,7 +251,7 @@ async function handleTtsJob(job: Job): Promise<void> {
 
   await updateJobStatus(jobId, "processing");
 
-  const response = await fetch(`http://localhost:${env.AI_PORT}/ai/tts`, {
+  const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/tts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, voiceId }),
@@ -302,7 +302,7 @@ async function handleImageJob(job: Job): Promise<void> {
 
   const { width, height } = getImageDimensions(aspectRatio);
 
-  const response = await fetch(`http://localhost:${env.AI_PORT}/ai/image/generate`, {
+  const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/image/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, negativePrompt, model, width, height }),
