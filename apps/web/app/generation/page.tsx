@@ -21,23 +21,9 @@ const CSS = `
     --tag-border: #3d2b55;
     --coral: #ff7675;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
   .sidebar {
-    width: 200px;
     background-color: var(--sidebar-bg);
-    border-right: 1px solid var(--tag-border);
-    display: flex;
-    flex-direction: column;
-    padding: 20px 15px;
-    flex-shrink: 0;
+    border-right-color: var(--tag-border);
   }
   .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; margin-bottom: 30px; }
   .logo-box { width: 30px; height: 30px; background: linear-gradient(135deg, #a29bfe, #6c5ce7); border-radius: 6px; }
@@ -54,13 +40,6 @@ const CSS = `
     border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px;
   }
   .content { flex-grow: 1; overflow-y: auto; padding: 20px 40px; }
-  .top-nav { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 25px; }
-  .nav-btn {
-    background: var(--card-bg); border: 1px solid var(--tag-border); color: white;
-    padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
-    text-decoration: none; display: inline-block; transition: border-color 0.2s;
-  }
-  .nav-btn:hover { border-color: var(--active-violet); }
 
   .tabs-switcher {
     display: flex;
@@ -259,16 +238,6 @@ const CSS = `
     color: var(--text-dim);
     font-size: 14px;
   }
-
-  .unauth-msg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 60vh;
-    color: var(--text-dim);
-    font-size: 16px;
-  }
-  .unauth-msg a { color: var(--active-violet); margin-left: 6px; }
 `;
 
 interface ImageModel {
@@ -285,7 +254,7 @@ interface HistoryItem {
 }
 
 export default function GenerationPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"photo" | "video">("photo");
   const [promptOpen, setPromptOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
@@ -296,7 +265,6 @@ export default function GenerationPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load models and history on mount
   useEffect(() => {
     if (!user) return;
     getImageStyles()
@@ -307,7 +275,6 @@ export default function GenerationPage() {
       .catch(() => {});
   }, [user]);
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -325,7 +292,6 @@ export default function GenerationPage() {
         model: selectedModel,
       });
 
-      // Poll for status every 2 seconds
       pollingRef.current = setInterval(async () => {
         try {
           const status = await getJobStatus(jobId);
@@ -333,7 +299,6 @@ export default function GenerationPage() {
             if (pollingRef.current) clearInterval(pollingRef.current);
             pollingRef.current = null;
             setGenerating(false);
-            // Add to history
             setHistory((prev) => [
               {
                 jobId: status.jobId,
@@ -363,44 +328,32 @@ export default function GenerationPage() {
     }
   }, [prompt, selectedModel, generating]);
 
-  if (!user) {
-    return (
-      <div style={{ display: "flex", height: "100vh" }}>
-        <style>{CSS}</style>
-        <div className="unauth-msg" style={{ width: "100%" }}>
-          Please <a href="/login">log in</a> to use the generator
-        </div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      <style>{CSS}</style>
-
-      {/* Sidebar */}
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <aside className="sidebar">
         <div className="logo">
-          <div className="logo-box" />
+          <div className="logo-box"></div>
           <span>Lovecast.AI</span>
         </div>
         <nav>
           <a href="/" className="menu-item">&#127968; Home</a>
-          <a href="/generation" className="menu-item active">&#128248; Generation</a>
+          <a href="#" className="menu-item">&#128241; Shorts</a>
+          <a href="/generation" className="menu-item active">&#128248; Generate</a>
+          <a href="#" className="menu-item">&#128100; My AI</a>
+          <a href="#" className="menu-item">&#128444;&#65039; Gallery</a>
+          <a href="#" className="menu-item">&#10024; Character</a>
           <a href="/chat" className="menu-item">&#128172; Chat</a>
-          <a href="/profile" className="menu-item">&#128100; Profile</a>
         </nav>
         <div style={{ marginTop: "auto" }}>
           <button className="btn-footer">&#128081; Premium</button>
+          <button className="btn-footer">&#128216; Guide</button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="content">
-        <header className="top-nav">
-          <a href="/profile" className="nav-btn">&#128100; Profile</a>
-        </header>
-
         {/* Tabs */}
         <div className="tabs-switcher">
           <button
@@ -535,6 +488,6 @@ export default function GenerationPage() {
           </>
         )}
       </main>
-    </div>
+    </>
   );
 }

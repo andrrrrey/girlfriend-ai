@@ -24,6 +24,14 @@ const SETTING_GROUPS = [
       { key: "ELEVENLABS_MODEL_ID", label: "Модель ElevenLabs", type: "select", options: ["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_turbo_v2", "eleven_monolingual_v1"] },
     ],
   },
+  {
+    title: "ModelsLab",
+    subtitle: "Параметры генерации изображений (ModelsLab)",
+    keys: [
+      { key: "MODELSLAB_API_KEY", label: "Ключ API ModelsLab", type: "password" },
+      { key: "MODELSLAB_DEFAULT_MODEL", label: "Модель по умолчанию", type: "select", options: ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"] },
+    ],
+  },
 ];
 
 // Flat list for backward compat
