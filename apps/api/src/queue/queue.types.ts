@@ -34,6 +34,8 @@ export const JOB_NAMES = {
   STT: "ai:stt",
   /** Задание на Text-to-Speech (синтез речи через ElevenLabs) */
   TTS: "ai:tts",
+  /** Задание на генерацию изображения (ModelsLab API) */
+  IMAGE: "ai:image",
 } as const;
 
 /** Тип-объединение всех возможных названий заданий */
@@ -101,8 +103,27 @@ export interface TtsJobData {
   voiceId?: string;
 }
 
+/**
+ * Данные задания для генерации изображения (ai:image).
+ * Worker вызывает AI-сервис (ModelsLab), получает URL изображения и сохраняет в AiJob.output.
+ */
+export interface ImageJobData {
+  /** ID записи AiJob в PostgreSQL (для обновления статуса через internal API) */
+  jobId: string;
+  /** ID пользователя (для логов и аудита) */
+  userId: string;
+  /** Текстовый промпт для генерации изображения */
+  prompt: string;
+  /** Негативный промпт (что НЕ должно быть на изображении) */
+  negativePrompt?: string;
+  /** Соотношение сторон: "1:1" | "4:5" | "5:4" | "9:16" | "16:9" */
+  aspectRatio?: string;
+  /** ID модели ModelsLab: realistic-vision-v51 | sdxl | juggernaut-xl | flux */
+  model?: string;
+}
+
 /** Объединённый тип payload для всех заданий очереди */
-export type AiJobData = ChatJobData | SttJobData | TtsJobData;
+export type AiJobData = ChatJobData | SttJobData | TtsJobData | ImageJobData;
 
 /**
  * Результат выполнения задания, записываемый в AiJob.output.

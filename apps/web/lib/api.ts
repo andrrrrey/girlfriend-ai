@@ -898,3 +898,44 @@ export async function fetchTTS(
 
   return res.arrayBuffer();
 }
+
+// ─── Generation API ─────────────────────────────────────────────────────────
+
+export async function createImageJob(data: {
+  prompt: string;
+  model?: string;
+  negativePrompt?: string;
+  aspectRatio?: string;
+}) {
+  return apiFetch<{ jobId: string; status: string }>("/generation/image", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getJobStatus(jobId: string) {
+  return apiFetch<{
+    jobId: string;
+    status: string;
+    output: { url?: string } | null;
+    error: string | null;
+    createdAt: string;
+  }>(`/generation/jobs/${jobId}`);
+}
+
+export async function getImageStyles() {
+  return apiFetch<{ id: string; name: string; description: string }[]>(
+    "/generation/image/styles",
+  );
+}
+
+export async function getGenerationHistory() {
+  return apiFetch<
+    {
+      jobId: string;
+      output: { url?: string } | null;
+      input: { prompt?: string; model?: string } | null;
+      createdAt: string;
+    }[]
+  >("/generation/history");
+}
