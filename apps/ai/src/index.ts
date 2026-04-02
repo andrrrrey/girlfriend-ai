@@ -724,6 +724,55 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   }
 });
 
+// ─── Translate ──────────────────────────────────────────────────────────────
+
+/**
+ * POST /ai/translate
+ * Переводит текст на указанный язык через OpenAI Chat Completions.
+ * Используется для перевода пользовательских промптов перед генерацией изображений.
+ */
+app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async (req, reply) => {
+  const requestId = getRequestId(req);
+  const { text, targetLang } = req.body;
+
+  if (!text || !targetLang) {
+    return reply.status(400).send({ error: "text and targetLang are required" });
+  }
+
+  logger.info({ requestId, targetLang, textLength: text.length }, "translate_start");
+
+  const settings = await fetchSettings();
+  const apiKey = settings.OPENAI_API_KEY;
+  if (!apiKey) {
+    logger.error({ requestId }, "translate_no_api_key");
+    return reply.status(503).send({ error: "OpenAI API key not configured" });
+  }
+
+  const openai = createOpenAIClient(apiKey);
+  const model = settings.OPENAI_MODEL || "gpt-4o";
+
+  try {
+    const response = await openai.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: `You are a translator. Translate the following text to ${targetLang}. Return ONLY the translation, nothing else. Do not add explanations or notes.`,
+        },
+        { role: "user", content: text },
+      ],
+      temperature: 0.3,
+    });
+
+    const translated = response.choices[0]?.message?.content?.trim() || text;
+    logger.info({ requestId, tokens: response.usage?.total_tokens }, "translate_done");
+    return reply.send({ translated });
+  } catch (err: any) {
+    logger.error({ err, requestId }, "translate_error");
+    return reply.status(502).send({ error: "Translation failed", details: err.message });
+  }
+});
+
 // ─── Start Server ────────────────────────────────────────────────────────────
 
 // 0.0.0.0 — слушаем на всех интерфейсах (обязательно для Docker)
