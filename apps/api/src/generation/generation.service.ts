@@ -19,12 +19,15 @@ const IMAGE_MODELS = [
 ];
 
 const VIDEO_MODELS = [
-  { id: "wan2.1", name: "Wan 2.1", description: "High quality, NSFW supported" },
-  { id: "wan2.2", name: "Wan 2.2", description: "Latest Wan model, NSFW supported" },
-  { id: "cogvideox", name: "CogVideoX", description: "High quality text-to-video (SFW only)" },
-  { id: "hunyuan-video", name: "Hunyuan Video", description: "Realistic video generation" },
-  { id: "animatediff", name: "AnimateDiff", description: "Animate any style" },
-  { id: "ltx-video", name: "LTX Video", description: "Lightweight fast video" },
+  { id: "wan2.1", name: "Wan 2.1", description: "High quality video", provider: "modelslab" },
+  { id: "wan2.2", name: "Wan 2.2", description: "Latest Wan model", provider: "modelslab" },
+  { id: "cogvideox", name: "CogVideoX", description: "High quality text-to-video (SFW only)", provider: "modelslab" },
+  { id: "hunyuan-video", name: "Hunyuan Video", description: "Realistic video generation", provider: "modelslab" },
+  { id: "animatediff", name: "AnimateDiff", description: "Animate any style", provider: "modelslab" },
+  { id: "ltx-video", name: "LTX Video", description: "Lightweight fast video", provider: "modelslab" },
+  { id: "wan-2.2-t2v-spicy", name: "Wan 2.2 Spicy", description: "NSFW supported, high quality", provider: "atlascloud" },
+  { id: "wan-2.1-t2v-spicy", name: "Wan 2.1 Spicy", description: "NSFW supported", provider: "atlascloud" },
+  { id: "seedance-v1.5-t2v-spicy", name: "Seedance 1.5 Spicy", description: "NSFW supported, cinematic", provider: "atlascloud" },
 ];
 
 @Injectable()
@@ -119,7 +122,7 @@ export class GenerationService {
 
   async createVideoJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -128,6 +131,9 @@ export class GenerationService {
       this.logger.log("Cyrillic detected in video prompt, translating to English");
       prompt = await this.translateToEnglish(prompt);
     }
+
+    // Auto-detect provider from model if not explicitly set
+    const provider = data.provider || VIDEO_MODELS.find((m) => m.id === data.model)?.provider || "modelslab";
 
     const aiJob = await this.prisma.aiJob.create({
       data: {
@@ -140,6 +146,7 @@ export class GenerationService {
           negativePrompt: data.negativePrompt,
           model: data.model,
           aspectRatio: data.aspectRatio,
+          provider,
         },
       },
     });
@@ -151,6 +158,7 @@ export class GenerationService {
       negativePrompt: data.negativePrompt,
       aspectRatio: data.aspectRatio,
       model: data.model,
+      provider,
     };
 
     await this.queue.add(JOB_NAMES.VIDEO, jobData);

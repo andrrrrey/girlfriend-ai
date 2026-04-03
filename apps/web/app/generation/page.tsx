@@ -790,6 +790,7 @@ interface GenModel {
   id: string;
   name: string;
   description: string;
+  provider?: string;
 }
 
 interface HistoryItem {
@@ -846,11 +847,22 @@ export default function GenerationPage() {
     const model = isVideo ? selectedVideoModel : selectedModel;
 
     try {
-      const createFn = isVideo ? createVideoJob : createImageJob;
-      const { jobId } = await createFn({
-        prompt: prompt.trim(),
-        model,
-      });
+      let jobId: string;
+      if (isVideo) {
+        const videoProvider = videoModels.find((m) => m.id === selectedVideoModel)?.provider;
+        const result = await createVideoJob({
+          prompt: prompt.trim(),
+          model,
+          provider: videoProvider,
+        });
+        jobId = result.jobId;
+      } else {
+        const result = await createImageJob({
+          prompt: prompt.trim(),
+          model,
+        });
+        jobId = result.jobId;
+      }
 
       pollingRef.current = setInterval(async () => {
         try {
