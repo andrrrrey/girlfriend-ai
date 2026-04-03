@@ -7,7 +7,7 @@ const ALLOWED_VIDEO_MODELS = [
   "hunyuan-video",
   "animatediff",
   "ltx-video",
-  "alibaba/wan-2.6/text-to-video",
+  "atlascloud/van-2.6/text-to-video",
   "atlascloud/wan-2.2-turbo-spicy/image-to-video",
   "atlascloud/hunyuan-video/t2v",
 ] as const;

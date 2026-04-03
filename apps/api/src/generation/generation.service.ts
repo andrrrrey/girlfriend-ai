@@ -25,7 +25,7 @@ const VIDEO_MODELS = [
   { id: "hunyuan-video", name: "Hunyuan Video", description: "Realistic video generation", provider: "modelslab" },
   { id: "animatediff", name: "AnimateDiff", description: "Animate any style", provider: "modelslab" },
   { id: "ltx-video", name: "LTX Video", description: "Lightweight fast video", provider: "modelslab" },
-  { id: "alibaba/wan-2.6/text-to-video", name: "Wan 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
+  { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
   { id: "atlascloud/wan-2.2-turbo-spicy/image-to-video", name: "Wan 2.2 Spicy (I2V)", description: "Image-to-video, NSFW, $0.01/sec", provider: "atlascloud" },
   { id: "atlascloud/hunyuan-video/t2v", name: "Hunyuan (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
 ];
