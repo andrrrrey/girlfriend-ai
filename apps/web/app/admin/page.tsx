@@ -26,10 +26,11 @@ const SETTING_GROUPS = [
   },
   {
     title: "ModelsLab",
-    subtitle: "Параметры генерации изображений (ModelsLab)",
+    subtitle: "Параметры генерации изображений и видео (ModelsLab)",
     keys: [
       { key: "MODELSLAB_API_KEY", label: "Ключ API ModelsLab", type: "password" },
-      { key: "MODELSLAB_DEFAULT_MODEL", label: "Модель по умолчанию", type: "select", options: ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"] },
+      { key: "MODELSLAB_DEFAULT_MODEL", label: "Модель изображений", type: "select", options: ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"] },
+      { key: "MODELSLAB_DEFAULT_VIDEO_MODEL", label: "Модель видео", type: "select", options: ["wan2.1", "wan2.2", "cogvideox", "hunyuan-video", "animatediff", "ltx-video"] },
     ],
   },
 ];
