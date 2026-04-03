@@ -7,9 +7,9 @@ const ALLOWED_VIDEO_MODELS = [
   "hunyuan-video",
   "animatediff",
   "ltx-video",
-  "wan-2.2-t2v-spicy",
-  "wan-2.1-t2v-spicy",
-  "seedance-v1.5-t2v-spicy",
+  "alibaba/wan-2.6/text-to-video",
+  "atlascloud/wan-2.2-turbo-spicy/image-to-video",
+  "atlascloud/hunyuan-video/t2v",
 ] as const;
 
 const ALLOWED_ASPECT_RATIOS = ["1:1", "4:5", "5:4", "9:16", "16:9"] as const;
