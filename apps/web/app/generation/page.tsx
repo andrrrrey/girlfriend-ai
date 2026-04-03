@@ -812,7 +812,7 @@ export default function GenerationPage() {
   const [promptOpen, setPromptOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("realistic-vision-v51");
-  const [selectedVideoModel, setSelectedVideoModel] = useState("cogvideox");
+  const [selectedVideoModel, setSelectedVideoModel] = useState("wan2.1");
   const [imageModels, setImageModels] = useState<GenModel[]>([]);
   const [videoModels, setVideoModels] = useState<GenModel[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -1023,7 +1023,7 @@ export default function GenerationPage() {
                 <span className="label">AI model:</span>
                 <span className="value">
                   {activeTab === "video"
-                    ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "CogVideoX")
+                    ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
                     : (imageModels.find((m) => m.id === selectedModel)?.name || "FireFly 12")
                   }
                 </span>
