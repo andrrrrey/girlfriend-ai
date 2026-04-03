@@ -814,15 +814,22 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
       status: string;
       output?: string[];
       fetch_result?: string;
+      future_links?: string[];
       eta?: number;
+      id?: number;
+      messege?: string; // ModelsLab typo in their API
     };
 
+    logger.info({ status: mlResult.status, eta: mlResult.eta, hasOutput: !!mlResult.output?.length, fetchResult: mlResult.fetch_result, futureLinks: mlResult.future_links, id: mlResult.id, messege: mlResult.messege }, "modelslab_video_initial_response");
+
     // 2. Если статус "processing" — поллить fetch_result (видео дольше генерируется)
-    if (mlResult.status === "processing" && mlResult.fetch_result) {
-      const fetchUrl = mlResult.fetch_result;
-      const maxAttempts = 40; // 40 * 3s = 120 секунд максимум
+    const fetchUrl = mlResult.fetch_result
+      || (mlResult.id ? `https://modelslab.com/api/v1/enterprise/video/fetch/${mlResult.id}` : null);
+
+    if ((mlResult.status === "processing" || mlResult.status === "queued") && fetchUrl) {
+      const maxAttempts = 60; // 60 * 5s = 300 секунд максимум (enterprise может быть медленнее)
       for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const pollResponse = await fetch(fetchUrl, {
           method: "POST",
@@ -838,25 +845,38 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         const pollResult = await pollResponse.json() as {
           status: string;
           output?: string[];
+          future_links?: string[];
         };
+
+        logger.info({ status: pollResult.status, hasOutput: !!pollResult.output?.length, attempt: i }, "modelslab_video_poll_result");
 
         if (pollResult.status === "success" && pollResult.output?.length) {
           mlResult = pollResult;
           break;
         }
 
-        if (pollResult.status === "failed") {
+        // Enterprise API может вернуть output в future_links
+        if (pollResult.status === "success" && pollResult.future_links?.length) {
+          mlResult = { ...pollResult, output: pollResult.future_links };
+          break;
+        }
+
+        if (pollResult.status === "failed" || pollResult.status === "error") {
+          logger.error({ pollResult }, "modelslab_video_generation_failed");
           return reply.status(502).send({ error: "Video generation failed" });
         }
       }
     }
 
     // 3. Проверяем наличие результата
-    if (mlResult.status !== "success" || !mlResult.output?.length) {
+    // Enterprise API может вернуть output или future_links
+    const outputUrls = mlResult.output || (mlResult as any).future_links;
+    if (mlResult.status !== "success" || !outputUrls?.length) {
+      logger.error({ finalStatus: mlResult.status, mlResult }, "modelslab_video_no_output");
       return reply.status(502).send({ error: "Video generation timed out or failed" });
     }
 
-    const videoUrl = mlResult.output[0];
+    const videoUrl = outputUrls[0];
     logger.info({ videoUrl }, "video_url_received");
 
     // 4. Скачиваем видео (с retry — CDN может быть не сразу готов)
