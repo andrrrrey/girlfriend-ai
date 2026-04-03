@@ -50,6 +50,7 @@ const JOB_NAMES = {
   STT: "ai:stt",
   TTS: "ai:tts",
   IMAGE: "ai:image",
+  VIDEO: "ai:video",
 } as const;
 
 /**
@@ -320,6 +321,44 @@ async function handleImageJob(job: Job): Promise<void> {
   logger.info({ jobId, url: result.url }, "image_job_done");
 }
 
+/**
+ * Обработчик задания генерации видео (ai:video).
+ *
+ * Алгоритм:
+ * 1. Устанавливает статус "processing"
+ * 2. Вычисляет размеры из aspectRatio
+ * 3. Отправляет POST /ai/video/generate на AI-сервис (ModelsLab)
+ * 4. Получает { url } — ссылку на S3
+ * 5. Сохраняет output = { url } в AiJob, логирует использование
+ *
+ * @param {Job} job - BullMQ Job с данными типа VideoJobData
+ */
+async function handleVideoJob(job: Job): Promise<void> {
+  const { jobId, userId, prompt, negativePrompt, model, aspectRatio } = job.data;
+  logger.info({ jobId, userId }, "video_job_started");
+
+  await updateJobStatus(jobId, "processing");
+
+  const { width, height } = getImageDimensions(aspectRatio);
+
+  const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/video/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Video generation service returned ${response.status}: ${errText}`);
+  }
+
+  const result = await response.json() as { url: string };
+
+  await updateJobStatus(jobId, "completed", { output: { url: result.url } });
+  await logUsage(userId, "generation");
+  logger.info({ jobId, url: result.url }, "video_job_done");
+}
+
 // ─── Worker ───────────────────────────────────────────────────
 
 /**
@@ -351,6 +390,9 @@ new Worker(
         break;
       case JOB_NAMES.IMAGE:
         await handleImageJob(job);
+        break;
+      case JOB_NAMES.VIDEO:
+        await handleVideoJob(job);
         break;
       default:
         logger.warn({ name: job.name }, "unknown_job_type");

@@ -724,6 +724,183 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   }
 });
 
+// ─── Video Generation (ModelsLab API) ───────────────────────────────────────
+
+/**
+ * Тело запроса для генерации видео.
+ */
+interface VideoGenerateBody {
+  /** Текстовый промпт для генерации */
+  prompt: string;
+  /** Негативный промпт */
+  negativePrompt?: string;
+  /** ID модели ModelsLab для видео */
+  model?: string;
+  /** Ширина видео в пикселях */
+  width?: number;
+  /** Высота видео в пикселях */
+  height?: number;
+}
+
+/**
+ * POST /ai/video/generate
+ *
+ * Генерирует видео через ModelsLab text2video API и загружает результат в S3.
+ *
+ * Логика:
+ * 1. Получает MODELSLAB_API_KEY из настроек БД
+ * 2. Отправляет запрос в ModelsLab text2video API
+ * 3. Если статус "processing" — поллит fetch_result URL (до 120 сек)
+ * 4. Скачивает сгенерированное видео и загружает в S3
+ * 5. Возвращает публичный S3 URL
+ *
+ * @returns { url: string } — публичная ссылка на видео в S3
+ */
+app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) => {
+  const { prompt, negativePrompt, model, width, height } = req.body;
+
+  if (!prompt) {
+    return reply.status(400).send({ error: "prompt is required" });
+  }
+
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "failed_to_fetch_settings_video");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+
+  const apiKey = settings.MODELSLAB_API_KEY;
+  if (!apiKey) {
+    return reply.status(503).send({ error: "ModelsLab API key not configured" });
+  }
+
+  const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "cogvideox";
+  const vidWidth = width || 512;
+  const vidHeight = height || 512;
+
+  try {
+    // 1. Запрос к ModelsLab text2video API
+    const mlResponse = await fetch("https://modelslab.com/api/v6/video/text2video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: apiKey,
+        model_id: modelId,
+        prompt,
+        negative_prompt: negativePrompt || "",
+        width: vidWidth,
+        height: vidHeight,
+        num_frames: 16,
+        num_inference_steps: 20,
+        guidance_scale: 7,
+        output_type: "mp4",
+        safety_checker: "no",
+        enhance_prompt: "no",
+        seed: null,
+      }),
+    });
+
+    if (!mlResponse.ok) {
+      const errBody = await mlResponse.text();
+      logger.error({ status: mlResponse.status, body: errBody }, "modelslab_video_api_error");
+      return reply.status(502).send({ error: "ModelsLab Video API error" });
+    }
+
+    let mlResult = await mlResponse.json() as {
+      status: string;
+      output?: string[];
+      fetch_result?: string;
+      eta?: number;
+    };
+
+    // 2. Если статус "processing" — поллить fetch_result (видео дольше генерируется)
+    if (mlResult.status === "processing" && mlResult.fetch_result) {
+      const fetchUrl = mlResult.fetch_result;
+      const maxAttempts = 40; // 40 * 3s = 120 секунд максимум
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        const pollResponse = await fetch(fetchUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: apiKey }),
+        });
+
+        if (!pollResponse.ok) {
+          logger.warn({ status: pollResponse.status, attempt: i }, "modelslab_video_poll_error");
+          continue;
+        }
+
+        const pollResult = await pollResponse.json() as {
+          status: string;
+          output?: string[];
+        };
+
+        if (pollResult.status === "success" && pollResult.output?.length) {
+          mlResult = pollResult;
+          break;
+        }
+
+        if (pollResult.status === "failed") {
+          return reply.status(502).send({ error: "Video generation failed" });
+        }
+      }
+    }
+
+    // 3. Проверяем наличие результата
+    if (mlResult.status !== "success" || !mlResult.output?.length) {
+      return reply.status(502).send({ error: "Video generation timed out or failed" });
+    }
+
+    const videoUrl = mlResult.output[0];
+    logger.info({ videoUrl }, "video_url_received");
+
+    // 4. Скачиваем видео (с retry — CDN может быть не сразу готов)
+    let videoResponse: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      try {
+        videoResponse = await fetch(videoUrl);
+        if (videoResponse.ok) break;
+        logger.warn({ status: videoResponse.status, attempt, videoUrl }, "video_download_retry");
+      } catch (dlErr: any) {
+        logger.warn({ err: dlErr.message, attempt, videoUrl }, "video_download_fetch_error");
+      }
+    }
+
+    if (!videoResponse || !videoResponse.ok) {
+      logger.error({ videoUrl, status: videoResponse?.status }, "video_download_failed");
+      return reply.status(502).send({ error: "Failed to download generated video" });
+    }
+    const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+
+    // 5. Загружаем в S3
+    const s3 = createS3Client();
+    const bucket = env.S3_BUCKET || "media";
+
+    if (s3) {
+      const key = `videos/${randomUUID()}.mp4`;
+      try {
+        const url = await uploadToS3(s3, bucket, key, videoBuffer, "video/mp4");
+        logger.info({ key, modelId }, "video_uploaded_to_s3");
+        return reply.send({ url });
+      } catch (s3Err: any) {
+        logger.warn({ err: s3Err }, "video_s3_upload_failed");
+      }
+    }
+
+    // Fallback: вернуть оригинальный URL если S3 не настроен
+    return reply.send({ url: videoUrl });
+  } catch (err: any) {
+    logger.error({ err }, "video_generation_error");
+    return reply.status(502).send({ error: "Video generation failed", details: err.message });
+  }
+});
+
 // ─── Translate ──────────────────────────────────────────────────────────────
 
 /**

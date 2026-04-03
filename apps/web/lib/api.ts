@@ -929,13 +929,39 @@ export async function getImageStyles() {
   );
 }
 
-export async function getGenerationHistory() {
+export async function createVideoJob(data: {
+  prompt: string;
+  model?: string;
+  negativePrompt?: string;
+  aspectRatio?: string;
+}) {
+  return apiFetch<{ jobId: string; status: string }>("/generation/video", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getVideoStyles() {
+  return apiFetch<{ id: string; name: string; description: string }[]>(
+    "/generation/video/styles",
+  );
+}
+
+export async function getGenerationHistory(type?: string) {
+  const query = type ? `?type=${type}` : "";
   return apiFetch<
     {
       jobId: string;
+      type: string;
       output: { url?: string } | null;
       input: { prompt?: string; model?: string } | null;
       createdAt: string;
     }[]
-  >("/generation/history");
+  >(`/generation/history${query}`);
+}
+
+export async function deleteGenerationJob(jobId: string) {
+  return apiFetch<{ deleted: boolean }>(`/generation/jobs/${jobId}`, {
+    method: "DELETE",
+  });
 }

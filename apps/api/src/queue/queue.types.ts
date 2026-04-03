@@ -36,6 +36,8 @@ export const JOB_NAMES = {
   TTS: "ai:tts",
   /** Задание на генерацию изображения (ModelsLab API) */
   IMAGE: "ai:image",
+  /** Задание на генерацию видео (ModelsLab API) */
+  VIDEO: "ai:video",
 } as const;
 
 /** Тип-объединение всех возможных названий заданий */
@@ -122,8 +124,27 @@ export interface ImageJobData {
   model?: string;
 }
 
+/**
+ * Данные задания для генерации видео (ai:video).
+ * Worker вызывает AI-сервис (ModelsLab text2video), получает URL видео и сохраняет в AiJob.output.
+ */
+export interface VideoJobData {
+  /** ID записи AiJob в PostgreSQL (для обновления статуса через internal API) */
+  jobId: string;
+  /** ID пользователя (для логов и аудита) */
+  userId: string;
+  /** Текстовый промпт для генерации видео */
+  prompt: string;
+  /** Негативный промпт (что НЕ должно быть в видео) */
+  negativePrompt?: string;
+  /** Соотношение сторон: "1:1" | "4:5" | "5:4" | "9:16" | "16:9" */
+  aspectRatio?: string;
+  /** ID модели ModelsLab для видео */
+  model?: string;
+}
+
 /** Объединённый тип payload для всех заданий очереди */
-export type AiJobData = ChatJobData | SttJobData | TtsJobData | ImageJobData;
+export type AiJobData = ChatJobData | SttJobData | TtsJobData | ImageJobData | VideoJobData;
 
 /**
  * Результат выполнения задания, записываемый в AiJob.output.

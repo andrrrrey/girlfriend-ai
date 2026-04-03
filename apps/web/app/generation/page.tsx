@@ -4,9 +4,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../context/auth";
 import {
   createImageJob,
+  createVideoJob,
   getJobStatus,
   getImageStyles,
+  getVideoStyles,
   getGenerationHistory,
+  deleteGenerationJob,
 } from "../../lib/api";
 
 const CSS = `
@@ -476,19 +479,310 @@ const CSS = `
     height: 16px;
   }
 
-  .video-placeholder {
-    text-align: center;
-    padding: 60px;
-    color: #969696;
-    font-size: 14px;
+  /* ── Video sub-tabs ── */
+  .video-subtabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    position: relative;
   }
+  .video-subtab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #969696;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .video-subtab.active {
+    color: #fff;
+  }
+  .video-subtab.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .video-subtabs-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #313131;
+  }
+  .video-subtabs-glow {
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #f95bad, #ff0084);
+    box-shadow: 0 0 8px rgba(249, 91, 173, 0.6), 0 0 16px rgba(249, 91, 173, 0.3);
+    border-radius: 1px;
+    transition: left 0.3s, width 0.3s;
+  }
+
+  /* ── Gallery section ── */
+  .gallery-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+  .gallery-title {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .gallery-title .accent { color: #ff99ce; }
+
+  /* Gallery filter tabs */
+  .gallery-filter-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    padding: 3px;
+    width: fit-content;
+    margin: 0 auto;
+  }
+  .gallery-filter-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 26px;
+    padding: 5px 24px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #969696;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: 'Syne', sans-serif;
+  }
+  .gallery-filter-tab.active {
+    background: #313131;
+    color: #fff;
+  }
+  .gallery-filter-tab svg { width: 14px; height: 14px; }
+
+  /* Gallery toolbar */
+  .gallery-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .gallery-search {
+    flex: 1;
+    height: 32px;
+    background: #1e1e1e;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    padding: 0 10px 0 32px;
+    color: #fff;
+    font-size: 11px;
+    font-family: 'Syne', sans-serif;
+    position: relative;
+  }
+  .gallery-search:focus { outline: none; border-color: #f95bad; }
+  .gallery-search::placeholder { color: #969696; }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: #969696;
+    pointer-events: none;
+  }
+  .chosen-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .chosen-count span { color: #fff; font-weight: 700; }
+  .btn-download-selected {
+    height: 32px;
+    padding: 0 16px;
+    background: linear-gradient(90deg, #f95bad, #ff0084);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Syne', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-download-selected:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-download-selected svg { width: 14px; height: 14px; }
+  .btn-delete-selected {
+    height: 32px;
+    padding: 0 16px;
+    background: #1e1e1e;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Syne', sans-serif;
+    white-space: nowrap;
+  }
+  .btn-delete-selected:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-delete-selected svg { width: 14px; height: 14px; }
+
+  /* Gallery tag chips */
+  .gallery-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .gallery-tag {
+    height: 26px;
+    padding: 0 14px;
+    border-radius: 4px;
+    background: transparent;
+    border: 1px solid #313131;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    white-space: nowrap;
+  }
+  .gallery-tag:hover { border-color: #f95bad; }
+  .gallery-tag.active { border-color: #f95bad; color: #f95bad; }
+
+  /* Gallery grid */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .gallery-item {
+    aspect-ratio: 3/4;
+    background: #1e1e1e;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .gallery-item.selected {
+    border-color: #f95bad;
+  }
+  .gallery-item img, .gallery-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .gallery-item .item-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 500;
+    color: #fff;
+  }
+  .gallery-item .item-badge svg { width: 12px; height: 12px; }
+  .gallery-item .item-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .gallery-item .item-check.checked {
+    background: #f95bad;
+    border-color: #f95bad;
+  }
+  .gallery-item .item-check svg { width: 12px; height: 12px; }
+  .gallery-item .item-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    font-size: 11px;
+    color: #969696;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .gallery-item:hover .item-overlay { opacity: 1; }
+  .gallery-item .item-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .gallery-item:hover .item-actions { opacity: 1; }
+  .item-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+  }
+  .item-action-btn:hover { background: rgba(249,91,173,0.6); }
+  .item-action-btn svg { width: 14px; height: 14px; }
 `;
 
 const CHEVRON_DOWN = `<svg viewBox="0 0 9 5" fill="none"><path d="M0.5 0.5L4.5 4.5L8.5 0.5" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 const PREMIUM_GEM = `<svg viewBox="0 0 15.86 13.51" fill="none"><path d="M12.09.5l.01-.5c.27.01.54.08.77.21.24.13.44.31.59.53l2.08 2.88c.22.31.33.68.31 1.06-.02.38-.16.74-.41 1.03L9.21 12.9c-.15.19-.34.34-.56.45-.22.11-.47.17-.72.17s-.5-.06-.72-.17c-.22-.11-.41-.26-.56-.45L.41 5.71c-.25-.29-.39-.65-.41-1.03-.02-.38.09-.75.31-1.06l2.08-2.88c.15-.22.36-.4.59-.53.24-.13.5-.2.77-.21h8.33V.5zM5.3 5.31l2.64 6.37 2.65-6.37H5.3zM1.39 5.31l5.4 6.22-2.58-6.22H1.39zm10.28 0l-2.59 6.21 5.39-6.21h-2.8zM3.7 1.01a.68.68 0 0 0-.48.3l-2.08 2.88c-.03.04-.05.07-.06.12h3.21l2.14-3.31H3.79zm1.77 3.3h4.95L8.3 1H7.6zm6.14 0h3.19c-.02-.04-.04-.08-.06-.12l-2.08-2.87a.72.72 0 0 0-.49-.3L12.08 1H9.48l2.13 3.31z" fill="url(#pg)"/><defs><linearGradient id="pg" x1="0" y1="6.76" x2="15.86" y2="6.76" gradientUnits="userSpaceOnUse"><stop stop-color="#F95BAD"/><stop offset="1" stop-color="#FF0084"/></linearGradient></defs></svg>`;
 
-interface ImageModel {
+interface GenModel {
   id: string;
   name: string;
   description: string;
@@ -496,31 +790,41 @@ interface ImageModel {
 
 interface HistoryItem {
   jobId: string;
+  type: string;
   output: { url?: string } | null;
   input: { prompt?: string; model?: string } | null;
   createdAt: string;
 }
 
+type VideoSubTab = "scratch" | "img2vid" | "continue";
+type GalleryFilter = "all" | "image" | "video";
+
+const GALLERY_TAGS = ["All", "Group Chats", "Teen", "Asian", "Anime", "Blond", "Strong", "Lonely", "Young", "Latina", "Romantic", "Athletic"];
+
 export default function GenerationPage() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
+  const [videoSubTab, setVideoSubTab] = useState<VideoSubTab>("scratch");
   const [promptOpen, setPromptOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("realistic-vision-v51");
-  const [models, setModels] = useState<ImageModel[]>([]);
+  const [selectedVideoModel, setSelectedVideoModel] = useState("cogvideox");
+  const [imageModels, setImageModels] = useState<GenModel[]>([]);
+  const [videoModels, setVideoModels] = useState<GenModel[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
+  const [gallerySearch, setGallerySearch] = useState("");
+  const [activeTag, setActiveTag] = useState("All");
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    getImageStyles()
-      .then(setModels)
-      .catch(() => {});
-    getGenerationHistory()
-      .then(setHistory)
-      .catch(() => {});
+    getImageStyles().then(setImageModels).catch(() => {});
+    getVideoStyles().then(setVideoModels).catch(() => {});
+    getGenerationHistory().then(setHistory).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -534,10 +838,14 @@ export default function GenerationPage() {
     setError(null);
     setGenerating(true);
 
+    const isVideo = activeTab === "video";
+    const model = isVideo ? selectedVideoModel : selectedModel;
+
     try {
-      const { jobId } = await createImageJob({
+      const createFn = isVideo ? createVideoJob : createImageJob;
+      const { jobId } = await createFn({
         prompt: prompt.trim(),
-        model: selectedModel,
+        model,
       });
 
       pollingRef.current = setInterval(async () => {
@@ -550,8 +858,9 @@ export default function GenerationPage() {
             setHistory((prev) => [
               {
                 jobId: status.jobId,
+                type: isVideo ? "video" : "image",
                 output: status.output,
-                input: { prompt: prompt.trim(), model: selectedModel },
+                input: { prompt: prompt.trim(), model },
                 createdAt: status.createdAt,
               },
               ...prev,
@@ -561,7 +870,7 @@ export default function GenerationPage() {
             if (pollingRef.current) clearInterval(pollingRef.current);
             pollingRef.current = null;
             setGenerating(false);
-            setError(status.error || "Image generation failed");
+            setError(status.error || `${isVideo ? "Video" : "Image"} generation failed`);
           }
         } catch {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -569,12 +878,53 @@ export default function GenerationPage() {
           setGenerating(false);
           setError("Failed to check job status");
         }
-      }, 2000);
+      }, isVideo ? 4000 : 2000);
     } catch (err: any) {
       setGenerating(false);
       setError(err.message || "Failed to start generation");
     }
-  }, [prompt, selectedModel, generating]);
+  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab]);
+
+  const toggleSelect = useCallback((jobId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const ids = Array.from(selectedItems);
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map((id) => deleteGenerationJob(id)));
+      setHistory((prev) => prev.filter((h) => !selectedItems.has(h.jobId)));
+      setSelectedItems(new Set());
+    } catch {
+      setError("Failed to delete some items");
+    }
+  }, [selectedItems]);
+
+  const handleDownloadSelected = useCallback(async () => {
+    const items = history.filter((h) => selectedItems.has(h.jobId) && h.output?.url);
+    for (const item of items) {
+      const url = item.output!.url!;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${item.type}-${item.jobId.slice(0, 8)}.${item.type === "video" ? "mp4" : "png"}`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }, [selectedItems, history]);
+
+  const filteredHistory = history.filter((item) => {
+    if (galleryFilter !== "all" && item.type !== galleryFilter) return false;
+    if (gallerySearch && !item.input?.prompt?.toLowerCase().includes(gallerySearch.toLowerCase())) return false;
+    return true;
+  });
 
   if (loading) return null;
 
@@ -608,269 +958,447 @@ export default function GenerationPage() {
             </button>
           </div>
 
-          {activeTab === "video" ? (
-            <div className="video-placeholder">
-              Video generation coming soon
+          {/* Video sub-tabs (only shown when video tab active) */}
+          {activeTab === "video" && (
+            <div className="video-subtabs">
+              <button
+                className={`video-subtab ${videoSubTab === "scratch" ? "active" : ""}`}
+                onClick={() => setVideoSubTab("scratch")}
+              >
+                Create from Scratch
+              </button>
+              <button
+                className={`video-subtab disabled`}
+                onClick={() => {}}
+              >
+                Convert Image to Video
+              </button>
+              <button
+                className={`video-subtab disabled`}
+                onClick={() => {}}
+              >
+                Continue Existing Video
+              </button>
+              <div className="video-subtabs-line" />
+              <div
+                className="video-subtabs-glow"
+                style={{ left: "0%", width: "33.33%" }}
+              />
             </div>
-          ) : (
-            <>
-              {/* Separator */}
-              <div className="sep" />
+          )}
 
-              {/* Sorting row */}
-              <div className="sorting-row">
-                <div className="sort-btn">
-                  <div className="sort-text">
-                    <span className="label">Gender:</span>
-                    <span className="value">Female</span>
-                  </div>
-                  <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
-                </div>
-                <div className="sort-btn">
-                  <div className="sort-text">
-                    <span className="label">Style:</span>
-                    <span className="value">Realistic</span>
-                  </div>
-                  <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
-                </div>
-                <div className="sort-btn">
-                  <div className="sort-text">
-                    <span className="label">AI model:</span>
-                    <span className="value">FireFly 12</span>
-                  </div>
-                  <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
-                </div>
-                <div className="btn-random">
-                  <svg viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-                  Generate Random
-                </div>
+          {/* Separator */}
+          <div className="sep" />
+
+          {/* Sorting row */}
+          <div className="sorting-row">
+            <div className="sort-btn">
+              <div className="sort-text">
+                <span className="label">Gender:</span>
+                <span className="value">Female</span>
               </div>
-
-              {/* Editor cards */}
-              <div className="editor-section">
-                {/* Row 1 */}
-                <div className="editor-row">
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Character</div>
-                        <div className="sub required">required</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="5" r="2.5" stroke="#fff" strokeWidth="1.2"/><path d="M7 10c-1 2-1 5 0 7M13 10c1 2 1 5 0 7M10 8v9" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Pose</div>
-                        <div className="sub required">required</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 14l4-4 3 3 4-4 5 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Background</div>
-                        <div className="sub">optional</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Row 2 */}
-                <div className="editor-row">
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><path d="M6 3h8l2 4H4l2-4zM4 7h12v2a6 6 0 0 1-12 0V7z" stroke="#fff" strokeWidth="1.2"/><path d="M10 15v3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Outfit</div>
-                        <div className="sub">optional</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" stroke="#fff" strokeWidth="1.2"/><path d="M10 11v4M7 18h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="10" cy="8" r="1" fill="#fff"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Jewelry</div>
-                        <div className="sub">optional</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="editor-card">
-                    <div className="card-content">
-                      <div className="editor-icon">
-                        <svg viewBox="0 0 20 20" fill="none"><path d="M8 6c1-2 3-2 4 0s0 4-2 5c-2-1-3-3-2-5z" stroke="#fff" strokeWidth="1.2"/><path d="M6 12c1.5 0 3 1 3 3s-1.5 3-3 3" stroke="#fff" strokeWidth="1.2"/></svg>
-                      </div>
-                      <div className="editor-text">
-                        <div className="name">Body Marks</div>
-                        <div className="sub">optional</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custom Prompt */}
-                {!promptOpen ? (
-                  <div
-                    className="custom-prompt-card"
-                    onClick={() => setPromptOpen(true)}
-                  >
-                    <div className="custom-prompt-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="heading">
-                      <span>Custom Prompt</span>
-                      <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                    </div>
-                    <div className="premium-label">premium feature</div>
-                  </div>
-                ) : (
-                  <div className="custom-prompt-card expanded">
-                    <textarea
-                      className="prompt-textarea"
-                      placeholder="Describe the image you want to generate..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      autoFocus
-                    />
-                    <div className="model-selector">
-                      <label>AI model:</label>
-                      <select
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                      >
-                        {models.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} — {m.description}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
+              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
+            </div>
+            <div className="sort-btn">
+              <div className="sort-text">
+                <span className="label">Style:</span>
+                <span className="value">Realistic</span>
               </div>
+              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
+            </div>
+            <div className="sort-btn">
+              <div className="sort-text">
+                <span className="label">AI model:</span>
+                <span className="value">
+                  {activeTab === "video"
+                    ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "CogVideoX")
+                    : (imageModels.find((m) => m.id === selectedModel)?.name || "FireFly 12")
+                  }
+                </span>
+              </div>
+              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
+            </div>
+            <div className="btn-random">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
+              Generate Random
+            </div>
+          </div>
 
-              {/* Separator */}
-              <div className="sep" />
-
-              {/* Orientation */}
-              <div className="chips-section">
-                <div className="section-title">Orientation</div>
-                <div className="chips-row">
-                  <div className="chip orient active">
-                    <span className="orient-icon"><span className="orient-rect r-4-5" /></span>
-                    Portraite (4:5)
+          {/* Editor cards */}
+          <div className="editor-section">
+            {/* Row 1: Character, Pose, Action (video) or Character, Pose, Background (image) */}
+            <div className="editor-row">
+              <div className="editor-card">
+                <div className="card-content">
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
                   </div>
-                  <div className="chip orient">
-                    <span className="orient-icon"><span className="orient-rect r-5-4" /></span>
-                    Landscape (5:4)
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                  </div>
-                  <div className="chip orient-sm">
-                    <span className="orient-icon"><span className="orient-rect r-9-16" /></span>
-                    9:16
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                  </div>
-                  <div className="chip orient-sm">
-                    <span className="orient-icon"><span className="orient-rect r-16-9" /></span>
-                    16:9
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                  </div>
-                  <div className="chip orient-sm">
-                    <span className="orient-icon"><span className="orient-rect r-1-1" /></span>
-                    1:1
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+                  <div className="editor-text">
+                    <div className="name">Character</div>
+                    <div className="sub required">required</div>
                   </div>
                 </div>
               </div>
-
-              {/* Separator */}
-              <div className="sep" />
-
-              {/* Number of Images */}
-              <div className="chips-section">
-                <div className="section-title">Number of Images</div>
-                <div className="chips-row">
-                  <div className="chip flex-1 active">1</div>
-                  <div className="chip flex-1">
-                    4
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              <div className="editor-card">
+                <div className="card-content">
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="5" r="2.5" stroke="#fff" strokeWidth="1.2"/><path d="M7 10c-1 2-1 5 0 7M13 10c1 2 1 5 0 7M10 8v9" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                   </div>
-                  <div className="chip flex-1">
-                    8
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                  </div>
-                  <div className="chip flex-1">
-                    16
-                    <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+                  <div className="editor-text">
+                    <div className="name">Pose</div>
+                    <div className="sub required">required</div>
                   </div>
                 </div>
               </div>
-
-              {/* Bottom buttons */}
-              <div className="bottom-btns">
-                <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
-                <button
-                  className="btn-generate"
-                  disabled={!prompt.trim() || generating}
-                  onClick={handleGenerate}
-                >
-                  {generating ? "Generating..." : "Generate Image"}
-                </button>
-              </div>
-
-              {/* Spinner */}
-              {generating && (
-                <div className="spinner-container">
-                  <div className="spinner" />
-                  <span>Creating your image...</span>
-                </div>
-              )}
-
-              {/* Error */}
-              {error && <div className="error-msg">{error}</div>}
-
-              {/* Gallery */}
-              <div className="sep" />
-              <div className="gallery-header">
-                <h3>Gallery <span>generated images</span></h3>
-              </div>
-
-              {history.length === 0 ? (
-                <div className="empty-gallery">
-                  No generated images yet. Create your first one above!
+              {activeTab === "video" ? (
+                <div className="editor-card">
+                  <div className="card-content">
+                    <div className="editor-icon">
+                      <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l2.5 3H14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5L10 2z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11l3-3 3 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="editor-text">
+                      <div className="name">Action</div>
+                      <div className="sub required">required</div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="image-grid">
-                  {history.map((item) => {
-                    const url = item.output?.url;
-                    if (!url) return null;
-                    return (
-                      <div key={item.jobId} className="img-item">
-                        <img src={url} alt={item.input?.prompt || "Generated"} loading="lazy" />
-                        <div className="img-overlay">
-                          {item.input?.prompt?.slice(0, 60)}
-                          {(item.input?.prompt?.length || 0) > 60 ? "..." : ""}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="editor-card">
+                  <div className="card-content">
+                    <div className="editor-icon">
+                      <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 14l4-4 3 3 4-4 5 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="editor-text">
+                      <div className="name">Background</div>
+                      <div className="sub">optional</div>
+                    </div>
+                  </div>
                 </div>
               )}
-            </>
+            </div>
+
+            {/* Row 2: 4 cards for video, 3 cards for image */}
+            <div className="editor-row">
+              {activeTab === "video" && (
+                <div className="editor-card">
+                  <div className="card-content">
+                    <div className="editor-icon">
+                      <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 14l4-4 3 3 4-4 5 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="editor-text">
+                      <div className="name">Background</div>
+                      <div className="sub">optional</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="editor-card">
+                <div className="card-content">
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M6 3h8l2 4H4l2-4zM4 7h12v2a6 6 0 0 1-12 0V7z" stroke="#fff" strokeWidth="1.2"/><path d="M10 15v3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  </div>
+                  <div className="editor-text">
+                    <div className="name">Outfit</div>
+                    <div className="sub">optional</div>
+                  </div>
+                </div>
+              </div>
+              <div className="editor-card">
+                <div className="card-content">
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" stroke="#fff" strokeWidth="1.2"/><path d="M10 11v4M7 18h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="10" cy="8" r="1" fill="#fff"/></svg>
+                  </div>
+                  <div className="editor-text">
+                    <div className="name">Jewelry</div>
+                    <div className="sub">optional</div>
+                  </div>
+                </div>
+              </div>
+              <div className="editor-card">
+                <div className="card-content">
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M8 6c1-2 3-2 4 0s0 4-2 5c-2-1-3-3-2-5z" stroke="#fff" strokeWidth="1.2"/><path d="M6 12c1.5 0 3 1 3 3s-1.5 3-3 3" stroke="#fff" strokeWidth="1.2"/></svg>
+                  </div>
+                  <div className="editor-text">
+                    <div className="name">Body Marks</div>
+                    <div className="sub">optional</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Prompt */}
+            {!promptOpen ? (
+              <div
+                className="custom-prompt-card"
+                onClick={() => setPromptOpen(true)}
+              >
+                <div className="custom-prompt-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="heading">
+                  <span>Custom Promt</span>
+                  <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+                </div>
+                <div className="premium-label">premium feature</div>
+              </div>
+            ) : (
+              <div className="custom-prompt-card expanded">
+                <textarea
+                  className="prompt-textarea"
+                  placeholder={activeTab === "video"
+                    ? "Describe the video you want to generate..."
+                    : "Describe the image you want to generate..."
+                  }
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  autoFocus
+                />
+                <div className="model-selector">
+                  <label>AI model:</label>
+                  {activeTab === "video" ? (
+                    <select
+                      value={selectedVideoModel}
+                      onChange={(e) => setSelectedVideoModel(e.target.value)}
+                    >
+                      {videoModels.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} — {m.description}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                    >
+                      {imageModels.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} — {m.description}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Separator */}
+          <div className="sep" />
+
+          {/* Orientation */}
+          <div className="chips-section">
+            <div className="section-title">Orientation</div>
+            <div className="chips-row">
+              <div className="chip orient active">
+                <span className="orient-icon"><span className="orient-rect r-4-5" /></span>
+                Portraite (4:5)
+              </div>
+              <div className="chip orient">
+                <span className="orient-icon"><span className="orient-rect r-5-4" /></span>
+                Landscape (5:4)
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+              <div className="chip orient-sm">
+                <span className="orient-icon"><span className="orient-rect r-9-16" /></span>
+                9:16
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+              <div className="chip orient-sm">
+                <span className="orient-icon"><span className="orient-rect r-16-9" /></span>
+                16:9
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+              <div className="chip orient-sm">
+                <span className="orient-icon"><span className="orient-rect r-1-1" /></span>
+                1:1
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="sep" />
+
+          {/* Number of items */}
+          <div className="chips-section">
+            <div className="section-title">Number of {activeTab === "video" ? "Videos" : "Images"}</div>
+            <div className="chips-row">
+              <div className="chip flex-1 active">1</div>
+              <div className="chip flex-1">
+                4
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+              <div className="chip flex-1">
+                8
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+              <div className="chip flex-1">
+                16
+                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom buttons */}
+          <div className="bottom-btns">
+            <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
+            <button
+              className="btn-generate"
+              disabled={!prompt.trim() || generating}
+              onClick={handleGenerate}
+            >
+              {generating
+                ? "Generating..."
+                : `Generate ${activeTab === "video" ? "Video" : "Image"}`
+              }
+            </button>
+          </div>
+
+          {/* Spinner */}
+          {generating && (
+            <div className="spinner-container">
+              <div className="spinner" />
+              <span>Creating your {activeTab === "video" ? "video" : "image"}...</span>
+            </div>
           )}
+
+          {/* Error */}
+          {error && <div className="error-msg">{error}</div>}
+
+          {/* ── Photo&Video Gallery ── */}
+          <div className="sep" />
+          <div className="gallery-section">
+            <h2 className="gallery-title">
+              Photo&Video <span className="accent">Gallery</span>
+            </h2>
+
+            {/* Gallery filter tabs */}
+            <div className="gallery-filter-tabs">
+              <button
+                className={`gallery-filter-tab ${galleryFilter === "all" ? "active" : ""}`}
+                onClick={() => setGalleryFilter("all")}
+              >
+                <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
+                All
+              </button>
+              <button
+                className={`gallery-filter-tab ${galleryFilter === "image" ? "active" : ""}`}
+                onClick={() => setGalleryFilter("image")}
+              >
+                <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1"/><path d="M2 12l3.5-3.5L8 11l3-3 3 3v1.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V12z" fill="currentColor" fillOpacity="0.3"/></svg>
+                Image
+              </button>
+              <button
+                className={`gallery-filter-tab ${galleryFilter === "video" ? "active" : ""}`}
+                onClick={() => setGalleryFilter("video")}
+              >
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor"/></svg>
+                Video
+              </button>
+            </div>
+
+            {/* Toolbar: search + chosen count + download + delete */}
+            <div className="gallery-toolbar">
+              <div className="search-wrap">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2"/><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                <input
+                  className="gallery-search"
+                  placeholder="Search"
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                />
+              </div>
+              <div className="chosen-count">
+                Chosen content: <span>{selectedItems.size}</span>
+              </div>
+              <button
+                className="btn-download-selected"
+                disabled={selectedItems.size === 0}
+                onClick={handleDownloadSelected}
+              >
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Download
+              </button>
+              <button
+                className="btn-delete-selected"
+                disabled={selectedItems.size === 0}
+                onClick={handleDeleteSelected}
+              >
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 4l1 10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-10" stroke="currentColor" strokeWidth="1.2"/></svg>
+                Delete
+              </button>
+            </div>
+
+            {/* Tags row */}
+            <div className="gallery-tags">
+              {GALLERY_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  className={`gallery-tag ${activeTag === tag ? "active" : ""}`}
+                  onClick={() => setActiveTag(tag)}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Gallery grid */}
+            {filteredHistory.length === 0 ? (
+              <div className="empty-gallery">
+                No generated content yet. Create your first one above!
+              </div>
+            ) : (
+              <div className="gallery-grid">
+                {filteredHistory.map((item) => {
+                  const url = item.output?.url;
+                  if (!url) return null;
+                  const isVideo = item.type === "video";
+                  const isSelected = selectedItems.has(item.jobId);
+                  return (
+                    <div
+                      key={item.jobId}
+                      className={`gallery-item ${isSelected ? "selected" : ""}`}
+                    >
+                      {/* Type badge */}
+                      <div className="item-badge">
+                        {isVideo ? (
+                          <svg viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor"/></svg>
+                        ) : (
+                          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1"/></svg>
+                        )}
+                        {isVideo ? "Video" : "Image"}
+                      </div>
+
+                      {/* Checkbox */}
+                      <div
+                        className={`item-check ${isSelected ? "checked" : ""}`}
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(item.jobId); }}
+                      >
+                        {isSelected && (
+                          <svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      {isVideo ? (
+                        <video src={url} muted loop playsInline onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} />
+                      ) : (
+                        <img src={url} alt={item.input?.prompt || "Generated"} loading="lazy" />
+                      )}
+
+                      {/* Hover overlay with prompt */}
+                      <div className="item-overlay">
+                        {item.input?.prompt?.slice(0, 60)}
+                        {(item.input?.prompt?.length || 0) > 60 ? "..." : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
