@@ -1015,7 +1015,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
       if (!apiKey) {
         return reply.status(503).send({ error: "Atlas Cloud API key not configured" });
       }
-      const modelId = model || "wan-2.2-t2v-spicy";
+      const modelId = model || "alibaba/wan-2.6/text-to-video";
       logger.info({ modelId, provider: "atlascloud" }, "video_generation_start");
 
       videoResult = await generateVideoAtlasCloud({
