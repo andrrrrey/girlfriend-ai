@@ -870,19 +870,25 @@ async function generateVideoAtlasCloud(params: {
 }): Promise<{ url: string }> {
   const { apiKey, modelId, prompt, aspectRatio, resolution, duration } = params;
 
+  const requestBody = {
+    model: modelId,
+    input: {
+      prompt,
+      aspect_ratio: aspectRatio || "16:9",
+      resolution: resolution || "720p",
+      duration: duration || 5,
+    },
+  };
+
+  logger.info({ requestBody }, "atlascloud_video_request_body");
+
   const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateVideo", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: modelId,
-      prompt,
-      aspect_ratio: aspectRatio || "16:9",
-      resolution: resolution || "720p",
-      duration: duration || 5,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
