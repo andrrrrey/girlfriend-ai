@@ -339,12 +339,13 @@ async function handleVideoJob(job: Job): Promise<void> {
 
   await updateJobStatus(jobId, "processing");
 
+  // Atlas Cloud uses aspect_ratio/resolution instead of width/height
   const { width, height } = getImageDimensions(aspectRatio);
 
   const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/video/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider }),
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider, aspectRatio }),
   });
 
   if (!response.ok) {
