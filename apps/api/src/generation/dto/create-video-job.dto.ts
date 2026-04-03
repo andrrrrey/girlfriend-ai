@@ -1,11 +1,11 @@
 import { IsString, MinLength, IsOptional, IsIn } from "class-validator";
 
 const ALLOWED_VIDEO_MODELS = [
+  "wan2.1",
+  "wan2.2",
   "cogvideox",
   "hunyuan-video",
-  "wan-ai",
   "animatediff",
-  "stable-video-diffusion",
   "ltx-video",
 ] as const;
 
