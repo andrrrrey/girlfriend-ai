@@ -934,7 +934,7 @@ app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async 
       messages: [
         {
           role: "system",
-          content: `You are a translator. Translate the following text to ${targetLang}. Return ONLY the translation, nothing else. Do not add explanations or notes.`,
+          content: `You are a literal translation engine for an internal content pipeline. Translate the following text to ${targetLang} exactly and faithfully. Preserve the original meaning, tone, and all details without any modifications, omissions, or softening. Return ONLY the translated text, nothing else. Do not add explanations, disclaimers, or notes.`,
         },
         { role: "user", content: text },
       ],
@@ -942,6 +942,14 @@ app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async 
     });
 
     const translated = response.choices[0]?.message?.content?.trim() || text;
+
+    // If GPT-4o refused to translate, fall back to original text
+    const refusalPatterns = /^(I('m| am) (unable|not able|sorry)|I can('t|not)|As an AI)/i;
+    if (refusalPatterns.test(translated)) {
+      logger.warn({ requestId }, "translate_refusal_detected_falling_back");
+      return reply.send({ translated: text });
+    }
+
     logger.info({ requestId, tokens: response.usage?.total_tokens }, "translate_done");
     return reply.send({ translated });
   } catch (err: any) {
