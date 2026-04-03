@@ -792,7 +792,7 @@ interface HistoryItem {
   jobId: string;
   type: string;
   output: { url?: string } | null;
-  input: { prompt?: string; model?: string } | null;
+  input: { prompt?: string; originalPrompt?: string; model?: string } | null;
   createdAt: string;
 }
 
@@ -860,7 +860,7 @@ export default function GenerationPage() {
                 jobId: status.jobId,
                 type: isVideo ? "video" : "image",
                 output: status.output,
-                input: { prompt: prompt.trim(), model },
+                input: status.input || { prompt: prompt.trim(), model },
                 createdAt: status.createdAt,
               },
               ...prev,
@@ -910,13 +910,21 @@ export default function GenerationPage() {
     const items = history.filter((h) => selectedItems.has(h.jobId) && h.output?.url);
     for (const item of items) {
       const url = item.output!.url!;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${item.type}-${item.jobId.slice(0, 8)}.${item.type === "video" ? "mp4" : "png"}`;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const filename = `${item.type}-${item.jobId.slice(0, 8)}.${item.type === "video" ? "mp4" : "png"}`;
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch {
+        window.open(url, "_blank");
+      }
     }
   }, [selectedItems, history]);
 
@@ -1390,8 +1398,8 @@ export default function GenerationPage() {
 
                       {/* Hover overlay with prompt */}
                       <div className="item-overlay">
-                        {item.input?.prompt?.slice(0, 60)}
-                        {(item.input?.prompt?.length || 0) > 60 ? "..." : ""}
+                        {(item.input?.originalPrompt || item.input?.prompt)?.slice(0, 60)}
+                        {((item.input?.originalPrompt || item.input?.prompt)?.length || 0) > 60 ? "..." : ""}
                       </div>
                     </div>
                   );

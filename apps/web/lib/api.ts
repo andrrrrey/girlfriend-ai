@@ -918,6 +918,7 @@ export async function getJobStatus(jobId: string) {
     jobId: string;
     status: string;
     output: { url?: string } | null;
+    input: { prompt?: string; originalPrompt?: string; model?: string } | null;
     error: string | null;
     createdAt: string;
   }>(`/generation/jobs/${jobId}`);
@@ -954,7 +955,7 @@ export async function getGenerationHistory(type?: string) {
       jobId: string;
       type: string;
       output: { url?: string } | null;
-      input: { prompt?: string; model?: string } | null;
+      input: { prompt?: string; originalPrompt?: string; model?: string } | null;
       createdAt: string;
     }[]
   >(`/generation/history${query}`);

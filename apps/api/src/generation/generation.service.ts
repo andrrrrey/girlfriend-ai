@@ -107,6 +107,7 @@ export class GenerationService {
       jobId: job.id,
       status: job.status,
       output: job.output,
+      input: job.input,
       error: job.error,
       createdAt: job.createdAt,
     };
