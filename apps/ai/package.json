@@ -14,7 +14,8 @@
     "@repo/logger": "workspace:*",
     "@repo/types": "workspace:*",
     "fastify": "^4.28.1",
-    "openai": "^4.73.0"
+    "openai": "^4.73.0",
+    "@vitalets/google-translate-api": "^9.2.0"
   },
   "devDependencies": {
     "tsup": "^8.2.0",

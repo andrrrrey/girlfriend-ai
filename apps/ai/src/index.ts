@@ -28,6 +28,7 @@ import { getRequestId } from "@repo/logger";
 import type { HealthResponse } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
+import { translate as googleTranslate } from "@vitalets/google-translate-api";
 import { S3Client, PutObjectCommand, CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
@@ -903,10 +904,23 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
 
 // ─── Translate ──────────────────────────────────────────────────────────────
 
+/** Маппинг названий языков → ISO 639-1 коды для google-translate-api */
+const LANG_MAP: Record<string, string> = {
+  english: "en",
+  russian: "ru",
+  spanish: "es",
+  french: "fr",
+  german: "de",
+  chinese: "zh-CN",
+  japanese: "ja",
+  korean: "ko",
+};
+
 /**
  * POST /ai/translate
- * Переводит текст на указанный язык через OpenAI Chat Completions.
- * Используется для перевода пользовательских промптов перед генерацией изображений.
+ * Переводит текст на указанный язык через Google Translate (дословный перевод без цензуры).
+ * Fallback на OpenAI если Google Translate недоступен.
+ * Используется для перевода пользовательских промптов перед генерацией изображений/видео.
  */
 app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async (req, reply) => {
   const requestId = getRequestId(req.raw, env.REQUEST_ID_HEADER);
@@ -918,43 +932,52 @@ app.post<{ Body: { text: string; targetLang: string } }>("/ai/translate", async 
 
   logger.info({ requestId, targetLang, textLength: text.length }, "translate_start");
 
-  const settings = await fetchSettings();
-  const apiKey = settings.OPENAI_API_KEY;
-  if (!apiKey) {
-    logger.error({ requestId }, "translate_no_api_key");
-    return reply.status(503).send({ error: "OpenAI API key not configured" });
+  const targetCode = LANG_MAP[targetLang.toLowerCase()] || targetLang;
+
+  // Основной перевод — Google Translate (дословный, без фильтрации контента)
+  try {
+    const result = await googleTranslate(text, { to: targetCode });
+    logger.info({ requestId }, "translate_done_google");
+    return reply.send({ translated: result.text });
+  } catch (googleErr: any) {
+    logger.warn({ err: googleErr, requestId }, "translate_google_failed_trying_openai");
   }
 
-  const openai = createOpenAIClient(apiKey);
-  const model = settings.OPENAI_MODEL || "gpt-4o";
+  // Fallback — OpenAI (если Google Translate упал)
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err, requestId }, "translate_fallback_settings_error");
+    return reply.status(502).send({ error: "Translation failed and settings unavailable" });
+  }
+
+  const apiKey = settings.OPENAI_API_KEY;
+  if (!apiKey) {
+    logger.error({ requestId }, "translate_no_fallback_api_key");
+    return reply.status(502).send({ error: "Translation failed and no OpenAI fallback available" });
+  }
 
   try {
+    const openai = createOpenAIClient(apiKey);
+    const model = settings.OPENAI_MODEL || "gpt-4o";
     const response = await openai.chat.completions.create({
       model,
       messages: [
         {
           role: "system",
-          content: `You are a literal translation engine for an internal content pipeline. Translate the following text to ${targetLang} exactly and faithfully. Preserve the original meaning, tone, and all details without any modifications, omissions, or softening. Return ONLY the translated text, nothing else. Do not add explanations, disclaimers, or notes.`,
+          content: `Translate the following text to ${targetLang}. Return ONLY the translated text.`,
         },
         { role: "user", content: text },
       ],
       temperature: 0.3,
     });
-
     const translated = response.choices[0]?.message?.content?.trim() || text;
-
-    // If GPT-4o refused to translate, fall back to original text
-    const refusalPatterns = /^(I('m| am) (unable|not able|sorry)|I can('t|not)|As an AI)/i;
-    if (refusalPatterns.test(translated)) {
-      logger.warn({ requestId }, "translate_refusal_detected_falling_back");
-      return reply.send({ translated: text });
-    }
-
-    logger.info({ requestId, tokens: response.usage?.total_tokens }, "translate_done");
+    logger.info({ requestId }, "translate_done_openai_fallback");
     return reply.send({ translated });
-  } catch (err: any) {
-    logger.error({ err, requestId }, "translate_error");
-    return reply.status(502).send({ error: "Translation failed", details: err.message });
+  } catch (openaiErr: any) {
+    logger.error({ err: openaiErr, requestId }, "translate_fallback_error");
+    return reply.status(502).send({ error: "Translation failed", details: openaiErr.message });
   }
 });
 
