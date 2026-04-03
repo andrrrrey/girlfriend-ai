@@ -725,7 +725,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   }
 });
 
-// ─── Video Generation (ModelsLab API) ───────────────────────────────────────
+// ─── Video Generation ────────────────────────────────────────────────────────
 
 /**
  * Тело запроса для генерации видео.
@@ -735,30 +735,262 @@ interface VideoGenerateBody {
   prompt: string;
   /** Негативный промпт */
   negativePrompt?: string;
-  /** ID модели ModelsLab для видео */
+  /** ID модели для видео */
   model?: string;
   /** Ширина видео в пикселях */
   width?: number;
   /** Высота видео в пикселях */
   height?: number;
+  /** Провайдер: "modelslab" | "atlascloud" */
+  provider?: string;
+}
+
+/**
+ * Генерация видео через ModelsLab text2video API.
+ * Возвращает URL готового видео.
+ */
+async function generateVideoModelsLab(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt: string;
+  width: number;
+  height: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
+
+  const mlResponse = await fetch("https://modelslab.com/api/v6/video/text2video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      key: apiKey,
+      model_id: modelId,
+      prompt,
+      negative_prompt: negativePrompt,
+      width,
+      height,
+      num_frames: 16,
+      num_inference_steps: 20,
+      guidance_scale: 7,
+      output_type: "mp4",
+      safety_checker: false,
+      safety_checker_type: "none",
+      seed: null,
+    }),
+  });
+
+  if (!mlResponse.ok) {
+    const errBody = await mlResponse.text();
+    logger.error({ status: mlResponse.status, body: errBody }, "modelslab_video_api_error");
+    throw new Error("ModelsLab Video API error");
+  }
+
+  let mlResult = await mlResponse.json() as {
+    status: string;
+    output?: string[];
+    fetch_result?: string;
+    future_links?: string[];
+    eta?: number;
+    id?: number;
+    messege?: string;
+  };
+
+  logger.info({ status: mlResult.status, eta: mlResult.eta, hasOutput: !!mlResult.output?.length, fetchResult: mlResult.fetch_result, futureLinks: mlResult.future_links, id: mlResult.id, messege: mlResult.messege }, "modelslab_video_initial_response");
+
+  const fetchUrl = mlResult.fetch_result
+    || (mlResult.id ? `https://modelslab.com/api/v6/video/fetch/${mlResult.id}` : null);
+
+  if ((mlResult.status === "processing" || mlResult.status === "queued") && fetchUrl) {
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      const pollResponse = await fetch(fetchUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: apiKey }),
+      });
+
+      if (!pollResponse.ok) {
+        logger.warn({ status: pollResponse.status, attempt: i }, "modelslab_video_poll_error");
+        continue;
+      }
+
+      const pollResult = await pollResponse.json() as {
+        status: string;
+        output?: string[];
+        future_links?: string[];
+      };
+
+      logger.info({ status: pollResult.status, hasOutput: !!pollResult.output?.length, attempt: i }, "modelslab_video_poll_result");
+
+      if (pollResult.status === "success" && pollResult.output?.length) {
+        mlResult = pollResult;
+        break;
+      }
+
+      if (pollResult.status === "success" && pollResult.future_links?.length) {
+        mlResult = { ...pollResult, output: pollResult.future_links };
+        break;
+      }
+
+      if (pollResult.status === "failed" || pollResult.status === "error") {
+        logger.error({ pollResult }, "modelslab_video_generation_failed");
+        throw new Error("Video generation failed");
+      }
+    }
+  }
+
+  const outputUrls = mlResult.output || (mlResult as any).future_links;
+  if (mlResult.status !== "success" || !outputUrls?.length) {
+    logger.error({ finalStatus: mlResult.status, mlResult }, "modelslab_video_no_output");
+    throw new Error("Video generation timed out or failed");
+  }
+
+  return { url: outputUrls[0] };
+}
+
+/**
+ * Генерация видео через Atlas Cloud API.
+ * Поддерживает NSFW модели (spicy).
+ */
+async function generateVideoAtlasCloud(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  width: number;
+  height: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, width, height } = params;
+
+  const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateVideo", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: modelId,
+      prompt,
+      width,
+      height,
+      duration: 5,
+      fps: 24,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    logger.error({ status: response.status, body: errBody }, "atlascloud_video_api_error");
+    throw new Error("Atlas Cloud Video API error");
+  }
+
+  const result = await response.json() as {
+    id: string;
+    status: string;
+    urls?: { get: string };
+    outputs?: string[];
+  };
+
+  logger.info({ id: result.id, status: result.status }, "atlascloud_video_initial_response");
+
+  const predictionId = result.id;
+  if (!predictionId) {
+    throw new Error("Atlas Cloud did not return a prediction ID");
+  }
+
+  // Поллим статус до завершен��я
+  const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  const maxAttempts = 120; // 120 * 5s = 600 секунд максимум
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    const pollResponse = await fetch(pollUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!pollResponse.ok) {
+      logger.warn({ status: pollResponse.status, attempt: i }, "atlascloud_video_poll_error");
+      continue;
+    }
+
+    const pollResult = await pollResponse.json() as {
+      id: string;
+      status: string;
+      outputs?: string[];
+      output?: { video?: string };
+    };
+
+    logger.info({ status: pollResult.status, hasOutputs: !!pollResult.outputs?.length, attempt: i }, "atlascloud_video_poll_result");
+
+    if (pollResult.status === "completed" || pollResult.status === "succeeded") {
+      const videoUrl = pollResult.outputs?.[0] || pollResult.output?.video;
+      if (videoUrl) {
+        return { url: videoUrl };
+      }
+    }
+
+    if (pollResult.status === "failed" || pollResult.status === "error" || pollResult.status === "canceled") {
+      logger.error({ pollResult }, "atlascloud_video_generation_failed");
+      throw new Error("Atlas Cloud video generation failed");
+    }
+  }
+
+  throw new Error("Atlas Cloud video generation timed out");
+}
+
+/**
+ * Скачивает видео по URL и загружает в S3.
+ * Возвращает S3 URL или оригинальный URL как fallback.
+ */
+async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
+  logger.info({ videoUrl }, "video_url_received");
+
+  let videoResponse: Response | null = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const delay = attempt === 0 ? 10000 : 5000;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    try {
+      videoResponse = await fetch(videoUrl);
+      if (videoResponse.ok) break;
+      logger.warn({ status: videoResponse.status, attempt, videoUrl }, "video_download_retry");
+    } catch (dlErr: any) {
+      logger.warn({ err: dlErr.message, attempt, videoUrl }, "video_download_fetch_error");
+    }
+  }
+
+  if (!videoResponse || !videoResponse.ok) {
+    logger.warn({ videoUrl, status: videoResponse?.status }, "video_download_failed_returning_direct_url");
+    return videoUrl;
+  }
+  const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+
+  const s3 = createS3Client();
+  const bucket = env.S3_BUCKET || "media";
+
+  if (s3) {
+    const key = `videos/${randomUUID()}.mp4`;
+    try {
+      const url = await uploadToS3(s3, bucket, key, videoBuffer, "video/mp4");
+      logger.info({ key }, "video_uploaded_to_s3");
+      return url;
+    } catch (s3Err: any) {
+      logger.warn({ err: s3Err }, "video_s3_upload_failed");
+    }
+  }
+
+  return videoUrl;
 }
 
 /**
  * POST /ai/video/generate
  *
- * Генерирует видео через ModelsLab text2video API и загружает результат в S3.
- *
- * Логика:
- * 1. Получает MODELSLAB_API_KEY из настроек БД
- * 2. Отправляет запрос в ModelsLab text2video API
- * 3. Если статус "processing" — поллит fetch_result URL (до 120 сек)
- * 4. Скачивает сгенерированное видео и загружает в S3
- * 5. Возвращает публичный S3 URL
- *
- * @returns { url: string } — публичная ссылка на видео в S3
+ * Генерирует видео через ModelsLab или Atlas Cloud и загружает результат в S3.
+ * Роутинг по провайдеру: "atlascloud" для NSFW моделей, "modelslab" по умолчанию.
  */
 app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, width, height } = req.body;
+  const { prompt, negativePrompt, model, width, height, provider } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
@@ -772,153 +1004,49 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
-  const apiKey = settings.MODELSLAB_API_KEY;
-  if (!apiKey) {
-    return reply.status(503).send({ error: "ModelsLab API key not configured" });
-  }
-
-  const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "wan2.1";
   const vidWidth = width || 512;
   const vidHeight = height || 512;
 
   try {
-    // 1. Запрос к ModelsLab text2video API
-    const mlResponse = await fetch("https://modelslab.com/api/v6/video/text2video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        key: apiKey,
-        model_id: modelId,
+    let videoResult: { url: string };
+
+    if (provider === "atlascloud") {
+      const apiKey = settings.ATLASCLOUD_API_KEY;
+      if (!apiKey) {
+        return reply.status(503).send({ error: "Atlas Cloud API key not configured" });
+      }
+      const modelId = model || "wan-2.2-t2v-spicy";
+      logger.info({ modelId, provider: "atlascloud" }, "video_generation_start");
+
+      videoResult = await generateVideoAtlasCloud({
+        apiKey,
+        modelId,
         prompt,
-        negative_prompt: negativePrompt || "",
         width: vidWidth,
         height: vidHeight,
-        num_frames: 16,
-        num_inference_steps: 20,
-        guidance_scale: 7,
-        output_type: "mp4",
-        safety_checker: false,
-        safety_checker_type: "none",
-        seed: null,
-      }),
-    });
-
-    if (!mlResponse.ok) {
-      const errBody = await mlResponse.text();
-      logger.error({ status: mlResponse.status, body: errBody }, "modelslab_video_api_error");
-      return reply.status(502).send({ error: "ModelsLab Video API error" });
-    }
-
-    let mlResult = await mlResponse.json() as {
-      status: string;
-      output?: string[];
-      fetch_result?: string;
-      future_links?: string[];
-      eta?: number;
-      id?: number;
-      messege?: string; // ModelsLab typo in their API
-    };
-
-    logger.info({ status: mlResult.status, eta: mlResult.eta, hasOutput: !!mlResult.output?.length, fetchResult: mlResult.fetch_result, futureLinks: mlResult.future_links, id: mlResult.id, messege: mlResult.messege }, "modelslab_video_initial_response");
-
-    // 2. Если статус "processing" — поллить fetch_result (видео дольше генерируется)
-    const fetchUrl = mlResult.fetch_result
-      || (mlResult.id ? `https://modelslab.com/api/v6/video/fetch/${mlResult.id}` : null);
-
-    if ((mlResult.status === "processing" || mlResult.status === "queued") && fetchUrl) {
-      const maxAttempts = 60; // 60 * 5s = 300 секунд максимум (enterprise может быть медленнее)
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        const pollResponse = await fetch(fetchUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: apiKey }),
-        });
-
-        if (!pollResponse.ok) {
-          logger.warn({ status: pollResponse.status, attempt: i }, "modelslab_video_poll_error");
-          continue;
-        }
-
-        const pollResult = await pollResponse.json() as {
-          status: string;
-          output?: string[];
-          future_links?: string[];
-        };
-
-        logger.info({ status: pollResult.status, hasOutput: !!pollResult.output?.length, attempt: i }, "modelslab_video_poll_result");
-
-        if (pollResult.status === "success" && pollResult.output?.length) {
-          mlResult = pollResult;
-          break;
-        }
-
-        // Enterprise API может вернуть output в future_links
-        if (pollResult.status === "success" && pollResult.future_links?.length) {
-          mlResult = { ...pollResult, output: pollResult.future_links };
-          break;
-        }
-
-        if (pollResult.status === "failed" || pollResult.status === "error") {
-          logger.error({ pollResult }, "modelslab_video_generation_failed");
-          return reply.status(502).send({ error: "Video generation failed" });
-        }
+      });
+    } else {
+      const apiKey = settings.MODELSLAB_API_KEY;
+      if (!apiKey) {
+        return reply.status(503).send({ error: "ModelsLab API key not configured" });
       }
+      const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "wan2.1";
+      logger.info({ modelId, provider: "modelslab" }, "video_generation_start");
+
+      videoResult = await generateVideoModelsLab({
+        apiKey,
+        modelId,
+        prompt,
+        negativePrompt: negativePrompt || "",
+        width: vidWidth,
+        height: vidHeight,
+      });
     }
 
-    // 3. Проверяем наличие результата
-    // Enterprise API может вернуть output или future_links
-    const outputUrls = mlResult.output || (mlResult as any).future_links;
-    if (mlResult.status !== "success" || !outputUrls?.length) {
-      logger.error({ finalStatus: mlResult.status, mlResult }, "modelslab_video_no_output");
-      return reply.status(502).send({ error: "Video generation timed out or failed" });
-    }
-
-    const videoUrl = outputUrls[0];
-    logger.info({ videoUrl }, "video_url_received");
-
-    // 4. Скачиваем видео (с retry — CDN может быть не сразу готов после генерации)
-    // Первая пауза 10с чтобы CDN успел пропагировать файл
-    let videoResponse: Response | null = null;
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const delay = attempt === 0 ? 10000 : 5000;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      try {
-        videoResponse = await fetch(videoUrl);
-        if (videoResponse.ok) break;
-        logger.warn({ status: videoResponse.status, attempt, videoUrl }, "video_download_retry");
-      } catch (dlErr: any) {
-        logger.warn({ err: dlErr.message, attempt, videoUrl }, "video_download_fetch_error");
-      }
-    }
-
-    if (!videoResponse || !videoResponse.ok) {
-      // CDN не готов даже после 6 попыток — вернуть прямой URL ModelsLab
-      logger.warn({ videoUrl, status: videoResponse?.status }, "video_download_failed_returning_direct_url");
-      return reply.send({ url: videoUrl });
-    }
-    const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-
-    // 5. Загружаем в S3
-    const s3 = createS3Client();
-    const bucket = env.S3_BUCKET || "media";
-
-    if (s3) {
-      const key = `videos/${randomUUID()}.mp4`;
-      try {
-        const url = await uploadToS3(s3, bucket, key, videoBuffer, "video/mp4");
-        logger.info({ key, modelId }, "video_uploaded_to_s3");
-        return reply.send({ url });
-      } catch (s3Err: any) {
-        logger.warn({ err: s3Err }, "video_s3_upload_failed");
-      }
-    }
-
-    // Fallback: вернуть оригинальный URL если S3 не настроен
-    return reply.send({ url: videoUrl });
+    const finalUrl = await downloadAndUploadVideo(videoResult.url);
+    return reply.send({ url: finalUrl });
   } catch (err: any) {
-    logger.error({ err }, "video_generation_error");
+    logger.error({ err, provider }, "video_generation_error");
     return reply.status(502).send({ error: "Video generation failed", details: err.message });
   }
 });

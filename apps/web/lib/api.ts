@@ -935,6 +935,7 @@ export async function createVideoJob(data: {
   model?: string;
   negativePrompt?: string;
   aspectRatio?: string;
+  provider?: string;
 }) {
   return apiFetch<{ jobId: string; status: string }>("/generation/video", {
     method: "POST",
@@ -943,7 +944,7 @@ export async function createVideoJob(data: {
 }
 
 export async function getVideoStyles() {
-  return apiFetch<{ id: string; name: string; description: string }[]>(
+  return apiFetch<{ id: string; name: string; description: string; provider?: string }[]>(
     "/generation/video/styles",
   );
 }

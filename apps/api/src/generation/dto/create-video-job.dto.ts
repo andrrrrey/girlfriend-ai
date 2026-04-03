@@ -7,9 +7,14 @@ const ALLOWED_VIDEO_MODELS = [
   "hunyuan-video",
   "animatediff",
   "ltx-video",
+  "wan-2.2-t2v-spicy",
+  "wan-2.1-t2v-spicy",
+  "seedance-v1.5-t2v-spicy",
 ] as const;
 
 const ALLOWED_ASPECT_RATIOS = ["1:1", "4:5", "5:4", "9:16", "16:9"] as const;
+
+const ALLOWED_PROVIDERS = ["modelslab", "atlascloud"] as const;
 
 export class CreateVideoJobDto {
   @IsString()
@@ -29,4 +34,9 @@ export class CreateVideoJobDto {
   @IsString()
   @IsIn(ALLOWED_ASPECT_RATIOS)
   aspectRatio?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(ALLOWED_PROVIDERS)
+  provider?: string;
 }

@@ -139,8 +139,10 @@ export interface VideoJobData {
   negativePrompt?: string;
   /** Соотношение сторон: "1:1" | "4:5" | "5:4" | "9:16" | "16:9" */
   aspectRatio?: string;
-  /** ID модели ModelsLab для видео */
+  /** ID модели для видео */
   model?: string;
+  /** Провайдер генерации: "modelslab" | "atlascloud" */
+  provider?: string;
 }
 
 /** Объединённый тип payload для всех заданий очереди */

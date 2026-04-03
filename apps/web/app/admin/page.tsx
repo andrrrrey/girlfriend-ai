@@ -33,6 +33,13 @@ const SETTING_GROUPS = [
       { key: "MODELSLAB_DEFAULT_VIDEO_MODEL", label: "Модель видео", type: "select", options: ["wan2.1", "wan2.2", "cogvideox", "hunyuan-video", "animatediff", "ltx-video"] },
     ],
   },
+  {
+    title: "Atlas Cloud",
+    subtitle: "Параметры генерации NSFW видео (Atlas Cloud)",
+    keys: [
+      { key: "ATLASCLOUD_API_KEY", label: "Ключ API Atlas Cloud", type: "password" },
+    ],
+  },
 ];
 
 // Flat list for backward compat
