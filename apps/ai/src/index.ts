@@ -777,7 +777,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     return reply.status(503).send({ error: "ModelsLab API key not configured" });
   }
 
-  const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "cogvideox";
+  const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "wan2.1";
   const vidWidth = width || 512;
   const vidHeight = height || 512;
 
@@ -797,8 +797,6 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         num_inference_steps: 20,
         guidance_scale: 7,
         output_type: "mp4",
-        safety_checker: "no",
-        enhance_prompt: "no",
         seed: null,
       }),
     });

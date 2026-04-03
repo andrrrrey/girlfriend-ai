@@ -19,11 +19,11 @@ const IMAGE_MODELS = [
 ];
 
 const VIDEO_MODELS = [
-  { id: "cogvideox", name: "CogVideoX", description: "High quality text-to-video" },
+  { id: "wan2.1", name: "Wan 2.1", description: "High quality, NSFW supported" },
+  { id: "wan2.2", name: "Wan 2.2", description: "Latest Wan model, NSFW supported" },
+  { id: "cogvideox", name: "CogVideoX", description: "High quality text-to-video (SFW only)" },
   { id: "hunyuan-video", name: "Hunyuan Video", description: "Realistic video generation" },
-  { id: "wan-ai", name: "Wan AI", description: "Fast video synthesis" },
   { id: "animatediff", name: "AnimateDiff", description: "Animate any style" },
-  { id: "stable-video-diffusion", name: "SVD", description: "Stable Video Diffusion" },
   { id: "ltx-video", name: "LTX Video", description: "Lightweight fast video" },
 ];
 
