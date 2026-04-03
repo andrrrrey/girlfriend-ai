@@ -745,8 +745,6 @@ interface VideoGenerateBody {
   provider?: string;
   /** Соотношение сторон для Atlas Cloud: "16:9", "9:16", "1:1", etc. */
   aspectRatio?: string;
-  /** Разрешение для Atlas Cloud: "480p", "720p", "1080p" */
-  resolution?: string;
   /** Длительность видео в секундах */
   duration?: number;
 }
@@ -865,10 +863,18 @@ async function generateVideoAtlasCloud(params: {
   modelId: string;
   prompt: string;
   aspectRatio?: string;
-  resolution?: string;
   duration?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, aspectRatio, resolution, duration } = params;
+  const { apiKey, modelId, prompt, aspectRatio, duration } = params;
+
+  const requestBody = {
+    model: modelId,
+    prompt,
+    aspect_ratio: aspectRatio || "16:9",
+    duration: duration || 5,
+  };
+
+  logger.info({ requestBody }, "atlascloud_video_request_body");
 
   const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateVideo", {
     method: "POST",
@@ -876,13 +882,7 @@ async function generateVideoAtlasCloud(params: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: modelId,
-      prompt,
-      aspect_ratio: aspectRatio || "16:9",
-      resolution: resolution || "720p",
-      duration: duration || 5,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -1042,7 +1042,6 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         modelId,
         prompt,
         aspectRatio: req.body.aspectRatio,
-        resolution: req.body.resolution,
         duration: req.body.duration,
       });
     } else {
