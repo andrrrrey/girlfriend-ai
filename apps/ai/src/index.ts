@@ -782,8 +782,11 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
   const vidHeight = height || 512;
 
   try {
-    // 1. Запрос к ModelsLab text2video API
-    const mlResponse = await fetch("https://modelslab.com/api/v6/video/text2video", {
+    // 1. Запрос к ModelsLab Enterprise text2video API
+    // Enterprise endpoint не применяет серверную фильтрацию NSFW-контента,
+    // в отличие от стандартного v6 endpoint который фильтрует на стороне сервера.
+    // Параметр safety_checker поддерживается только для images, не для video.
+    const mlResponse = await fetch("https://modelslab.com/api/v1/enterprise/video/text2video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -797,8 +800,6 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         num_inference_steps: 20,
         guidance_scale: 7,
         output_type: "mp4",
-        safety_checker: "no",
-        enhance_prompt: "no",
         seed: null,
       }),
     });
