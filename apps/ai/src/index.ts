@@ -867,11 +867,24 @@ async function generateVideoAtlasCloud(params: {
 }): Promise<{ url: string }> {
   const { apiKey, modelId, prompt, aspectRatio, duration } = params;
 
+  // Map aspect ratio to Atlas Cloud size format (width*height)
+  const sizeMap: Record<string, string> = {
+    "16:9": "1920*1080",
+    "9:16": "1080*1920",
+    "1:1": "1440*1440",
+    "4:3": "1632*1248",
+    "3:4": "1248*1632",
+  };
+  const size = sizeMap[aspectRatio || "16:9"] || "1920*1080";
+
   const requestBody = {
     model: modelId,
     prompt,
-    aspect_ratio: aspectRatio || "16:9",
+    size,
     duration: duration || 5,
+    enable_prompt_expansion: false,  // MUST be false for NSFW — default true rewrites/censors the prompt
+    shot_type: "single",
+    generate_audio: false,
   };
 
   logger.info({ requestBody }, "atlascloud_video_request_body");
