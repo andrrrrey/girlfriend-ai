@@ -715,6 +715,7 @@ const CSS = `
     font-size: 9px;
     font-weight: 500;
     color: #fff;
+    z-index: 2;
   }
   .gallery-item .item-badge svg { width: 12px; height: 12px; }
   .gallery-item .item-check {
@@ -731,6 +732,7 @@ const CSS = `
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+    z-index: 2;
   }
   .gallery-item .item-check.checked {
     background: #f95bad;
@@ -748,6 +750,8 @@ const CSS = `
     color: #969696;
     opacity: 0;
     transition: opacity 0.2s;
+    z-index: 2;
+    pointer-events: none;
   }
   .gallery-item:hover .item-overlay { opacity: 1; }
   .gallery-item .item-actions {
