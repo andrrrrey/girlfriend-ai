@@ -878,12 +878,12 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     const videoUrl = outputUrls[0];
     logger.info({ videoUrl }, "video_url_received");
 
-    // 4. Скачиваем видео (с retry — CDN может быть не сразу готов)
+    // 4. Скачиваем видео (с retry — CDN может быть не сразу готов после генерации)
+    // Первая пауза 10с чтобы CDN успел пропагировать файл
     let videoResponse: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const delay = attempt === 0 ? 10000 : 5000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
       try {
         videoResponse = await fetch(videoUrl);
         if (videoResponse.ok) break;
@@ -894,8 +894,9 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     }
 
     if (!videoResponse || !videoResponse.ok) {
-      logger.error({ videoUrl, status: videoResponse?.status }, "video_download_failed");
-      return reply.status(502).send({ error: "Failed to download generated video" });
+      // CDN не готов даже после 6 попыток — вернуть прямой URL ModelsLab
+      logger.warn({ videoUrl, status: videoResponse?.status }, "video_download_failed_returning_direct_url");
+      return reply.send({ url: videoUrl });
     }
     const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
 
