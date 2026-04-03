@@ -885,22 +885,28 @@ async function generateVideoAtlasCloud(params: {
     throw new Error("Atlas Cloud Video API error");
   }
 
-  const result = await response.json() as {
-    id: string;
-    status: string;
-    urls?: { get: string };
-    outputs?: string[];
+  const rawResult = await response.json() as {
+    data?: {
+      id: string;
+      status: string;
+      outputs?: string[];
+    };
+    id?: string;
+    status?: string;
   };
 
-  logger.info({ id: result.id, status: result.status }, "atlascloud_video_initial_response");
+  // Atlas Cloud wraps response in "data" key
+  const result = rawResult.data || rawResult as { id: string; status: string; outputs?: string[] };
+
+  logger.info({ id: result.id, status: result.status, rawKeys: Object.keys(rawResult) }, "atlascloud_video_initial_response");
 
   const predictionId = result.id;
   if (!predictionId) {
     throw new Error("Atlas Cloud did not return a prediction ID");
   }
 
-  // Поллим статус до завершен��я
-  const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  // Поллим статус до завершения
+  const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
   const maxAttempts = 120; // 120 * 5s = 600 секунд максимум
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -915,17 +921,24 @@ async function generateVideoAtlasCloud(params: {
       continue;
     }
 
-    const pollResult = await pollResponse.json() as {
-      id: string;
-      status: string;
+    const rawPoll = await pollResponse.json() as {
+      data?: {
+        id: string;
+        status: string;
+        outputs?: string[];
+      };
+      id?: string;
+      status?: string;
       outputs?: string[];
-      output?: { video?: string };
     };
+
+    // Atlas Cloud wraps response in "data" key
+    const pollResult = rawPoll.data || rawPoll as { id: string; status: string; outputs?: string[] };
 
     logger.info({ status: pollResult.status, hasOutputs: !!pollResult.outputs?.length, attempt: i }, "atlascloud_video_poll_result");
 
     if (pollResult.status === "completed" || pollResult.status === "succeeded") {
-      const videoUrl = pollResult.outputs?.[0] || pollResult.output?.video;
+      const videoUrl = pollResult.outputs?.[0];
       if (videoUrl) {
         return { url: videoUrl };
       }
