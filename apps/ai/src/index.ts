@@ -797,6 +797,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         num_inference_steps: 20,
         guidance_scale: 7,
         output_type: "mp4",
+        safety_checker: "no",
         seed: null,
       }),
     });
