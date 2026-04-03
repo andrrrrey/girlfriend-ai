@@ -896,23 +896,26 @@ async function generateVideoAtlasCloud(params: {
       id: string;
       status: string;
       outputs?: string[];
+      urls?: { get?: string; cancel?: string };
     };
     id?: string;
     status?: string;
+    urls?: { get?: string; cancel?: string };
   };
 
   // Atlas Cloud wraps response in "data" key
-  const result = rawResult.data || rawResult as { id: string; status: string; outputs?: string[] };
+  const result = rawResult.data || rawResult as { id: string; status: string; outputs?: string[]; urls?: { get?: string; cancel?: string } };
 
-  logger.info({ id: result.id, status: result.status, rawKeys: Object.keys(rawResult) }, "atlascloud_video_initial_response");
+  logger.info({ id: result.id, status: result.status, urls: result.urls, rawKeys: Object.keys(rawResult) }, "atlascloud_video_initial_response");
 
   const predictionId = result.id;
   if (!predictionId) {
     throw new Error("Atlas Cloud did not return a prediction ID");
   }
 
-  // Поллим статус до завершения
-  const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  // Use API-provided polling URL if available, fallback to constructed URL
+  const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  logger.info({ pollUrl, hasUrlsGet: !!result.urls?.get }, "atlascloud_poll_url");
   const maxAttempts = 120; // 120 * 5s = 600 секунд максимум
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
