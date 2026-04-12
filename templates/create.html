@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>Create Character - Lovecast</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: #090909;
+      color: #fff;
+      width: 1440px;
+      height: 832px;
+      overflow: hidden;
+      font-feature-settings: 'lnum', 'pnum';
+      position: relative;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      position: absolute; left: 0; top: 0;
+      width: 196px; height: 832px;
+      background: #090909;
+      border-right: 1px solid #313131;
+      display: flex; flex-direction: column;
+      gap: 12px; padding: 12px;
+      align-items: center;
+      z-index: 10;
+    }
+    .sidebar-logo {
+      display: flex; gap: 9px; align-items: center;
+      padding-left: 12px; width: 100%; flex-shrink: 0;
+    }
+    .sidebar-logo svg { height: 22px; width: auto; }
+    .sidebar-sep {
+      width: 194px; height: 0; flex-shrink: 0;
+      border-top: 1px solid #313131;
+    }
+    .sidebar-section-title {
+      font-weight: 500; font-size: 10px; line-height: 1.2;
+      color: #969696; text-transform: uppercase;
+      padding: 0 12px; width: 100%;
+    }
+    .nav-group {
+      display: flex; flex-direction: column; gap: 4px;
+      width: 100%; flex-shrink: 0;
+    }
+    .settings-nav {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; flex: 1; min-height: 0;
+    }
+    .menu-item {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px 12px; border-radius: 4px;
+      width: 172px; background: #090909; cursor: pointer;
+    }
+    .menu-item.active {
+      background: #121212;
+      border: 1px solid #313131;
+    }
+    .menu-item .icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .menu-item .label {
+      flex: 1; font-weight: 500; font-size: 12px;
+      color: #969696; line-height: normal;
+    }
+    .menu-item.active .label { color: #fff; }
+    .menu-item .label.red { color: #e36466; }
+    .menu-item .badge {
+      background: #20271f; border-radius: 54px;
+      padding: 4px; height: 13px;
+      display: flex; align-items: center; gap: 3px;
+      font-weight: 500; font-size: 8px; color: #c1f0aa;
+    }
+    .menu-item .badge-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #c1f0aa;
+    }
+    .menu-item .chevron { width: 16px; height: 16px; flex-shrink: 0; }
+    .premium-tab {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px 8px 8px 12px; border-radius: 4px;
+      width: 172px; cursor: pointer;
+      background: #1a1316;
+      border: 0.8px solid rgba(228,0,120,0.2);
+      overflow: hidden;
+    }
+    .premium-tab .label {
+      flex: 1; font-weight: 500; font-size: 12px;
+      color: #f95bad; line-height: normal;
+    }
+    .bottom-nav {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; flex-shrink: 0;
+    }
+    .legal-info {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px; width: 100%; flex-shrink: 0;
+    }
+    .legal-info span {
+      font-weight: 500; font-size: 7px; color: #848484;
+      text-transform: uppercase; line-height: 1.2;
+    }
+    .legal-dot {
+      width: 3px; height: 3px; border-radius: 50%;
+      background: #848484;
+    }
+
+    /* ===== TOP BAR ===== */
+    .top-bar {
+      position: absolute; top: 0; right: 0;
+      width: 1244px; height: 46px;
+      background: #090909;
+      border-bottom: 1px solid #313131;
+      display: flex; align-items: center;
+      gap: 60px; padding: 12px 36px;
+      z-index: 10;
+    }
+    .search-box {
+      width: 220px; height: 30px;
+      background: #121212; border: 1px solid #313131;
+      border-radius: 4px;
+      display: flex; align-items: center;
+      gap: 10px; padding: 7px 12px; flex-shrink: 0;
+    }
+    .search-box .search-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .search-box .search-text {
+      flex: 1; font-weight: 500; font-size: 12px;
+      color: #848484; line-height: 1.2;
+    }
+    .menu-tabs {
+      display: flex; flex: 1; gap: 36px; align-items: center;
+      font-weight: 500; font-size: 12px; color: #fff;
+    }
+    .menu-tabs span { cursor: pointer; white-space: nowrap; }
+    .top-buttons { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .btn-create-account {
+      height: 30px; background: linear-gradient(to right, #f95bad, #ff0084);
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      padding: 8px 14px; font-weight: 500; font-size: 12px; color: #fff;
+      border: none; cursor: pointer; white-space: nowrap;
+    }
+    .btn-login {
+      height: 30px; background: #121212; border: 1px solid #313131;
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px 14px;
+      font-weight: 500; font-size: 12px; color: #fff;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-login .dot { width: 5px; height: 5px; border-radius: 50%; background: #c1f0aa; }
+
+    /* ===== MAIN CONTENT ===== */
+    .breadcrumb {
+      position: absolute; left: 232px; top: 66px;
+      font-weight: 500; font-size: 10px; color: #969696;
+      text-transform: uppercase; line-height: 1.2;
+    }
+    .page-title {
+      position: absolute; left: 470px; top: 66px;
+      font-weight: 700; font-size: 32px; line-height: 1.1;
+      width: 696px;
+    }
+    .page-title .pink { color: #ff99ce; }
+
+    /* ===== CREATION FORM CARD ===== */
+    .form-card {
+      position: absolute; left: 470px; top: 124px;
+      width: 934px; height: 668px;
+      background: #090909;
+      border: 1px solid #313131;
+      border-radius: 8px;
+      display: flex; flex-direction: column;
+      gap: 22px; padding: 24px;
+      overflow: hidden;
+    }
+    .form-header {
+      display: flex; gap: 4px; align-items: flex-start; width: 100%; flex-shrink: 0;
+    }
+    .form-header .stage-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .form-header .stage-label {
+      font-weight: 500; font-size: 7px; color: #848484;
+      text-transform: uppercase; line-height: 1.2;
+    }
+    .form-header .stage-title {
+      font-weight: 700; font-size: 20px; color: #fff; line-height: 1.2;
+    }
+    .btn-generate {
+      height: 30px; background: #121212;
+      border: 1px solid #313131; border-radius: 4px;
+      display: flex; gap: 8px; align-items: center; justify-content: center;
+      padding: 8px 14px; cursor: pointer; flex-shrink: 0;
+      font-weight: 500; font-size: 12px; color: #fff;
+      white-space: nowrap;
+    }
+    .btn-generate .icon { width: 16px; height: 16px; }
+    .form-sep {
+      width: 100%; height: 0; flex-shrink: 0;
+      border-top: 1px solid #313131;
+    }
+    .sorting-row {
+      display: flex; gap: 4px; align-items: center; width: 100%; flex-shrink: 0;
+    }
+    .sorting-btn {
+      flex: 1; height: 30px; background: #1e1e1e;
+      border-radius: 4px; display: flex; align-items: center;
+      justify-content: space-between; padding: 7px 10px;
+      overflow: hidden;
+    }
+    .sorting-btn .text {
+      display: flex; gap: 4px; align-items: center;
+      font-weight: 500; font-size: 10px; white-space: nowrap;
+    }
+    .sorting-btn .text .lbl { color: #969696; }
+    .sorting-btn .text .val { color: #fff; }
+    .sorting-btn .chevron { width: 16px; height: 16px; flex-shrink: 0; }
+    .field { display: flex; flex-direction: column; gap: 16px; width: 100%; flex-shrink: 0; }
+    .field-label {
+      font-weight: 500; font-size: 12px; color: #fff; line-height: 1.2;
+    }
+    .input-filled {
+      width: 100%; height: 30px; background: #252525;
+      border: 1px solid #313131; border-radius: 6px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 12px; overflow: hidden;
+    }
+    .input-filled .value {
+      flex: 1; font-weight: 500; font-size: 10px; color: #fff; line-height: 1.3;
+    }
+    .input-filled .check-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .input-empty {
+      width: 100%; height: 30px; background: #1e1e1e;
+      border: 1px solid #313131; border-radius: 6px;
+      display: flex; align-items: center;
+      padding: 6px 12px; overflow: hidden;
+    }
+    .input-empty .placeholder {
+      flex: 1; font-weight: 500; font-size: 10px; color: #848484; line-height: 1.3;
+    }
+    .field-age { display: flex; flex-direction: column; gap: 22px; width: 100%; flex-shrink: 0; }
+    .slider-container {
+      display: flex; gap: 4px; align-items: center; width: 100%;
+    }
+    .slider-min, .slider-max {
+      font-weight: 500; font-size: 10px; color: #969696;
+      flex-shrink: 0; line-height: 1.2;
+    }
+    .slider-track {
+      flex: 1; height: 4px; background: #313131;
+      border-radius: 2px; position: relative;
+    }
+    .slider-fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 51%; background: linear-gradient(to right, #c1f0aa, #f95bad);
+      border-radius: 2px;
+    }
+    .slider-thumb {
+      position: absolute; right: -6px; top: -4px;
+      width: 12px; height: 12px; background: #fff;
+      border-radius: 50%; cursor: pointer;
+    }
+    .slider-tooltip {
+      position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+      background: #252525; border: 1px solid #313131;
+      border-radius: 4px; padding: 2px 8px;
+      font-weight: 500; font-size: 10px; color: #fff;
+      white-space: nowrap;
+    }
+    .field-style { display: flex; flex-direction: column; gap: 16px; width: 100%; flex: 1; min-height: 0; }
+    .style-row { display: flex; gap: 10px; width: 100%; }
+    .style-card {
+      flex: 1; height: 160px; border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 12px;
+      overflow: hidden; position: relative; cursor: pointer;
+    }
+    .style-card.selected { border: 1px solid #f95bad; }
+    .style-card.unselected { border: 1px dashed #969696; }
+    .style-card img.bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 8px;
+      pointer-events: none;
+    }
+    .style-card .overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px; pointer-events: none;
+    }
+    .style-card .name {
+      position: relative; z-index: 1;
+      font-weight: 700; font-size: 16px; color: #fff;
+      text-align: center; width: 100%;
+    }
+    .buttons-row {
+      display: flex; gap: 8px; width: 100%; flex-shrink: 0;
+    }
+    .btn-cancel {
+      flex: 1; height: 38px; background: #121212;
+      border: 1px solid #313131; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 32px; cursor: pointer;
+      font-weight: 500; font-size: 14px; color: #fff;
+    }
+    .btn-continue {
+      flex: 1; height: 38px;
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 32px; cursor: pointer;
+      font-weight: 500; font-size: 14px; color: #fff;
+      border: none;
+    }
+
+    /* ===== STAGES PANEL ===== */
+    .stages-panel {
+      position: absolute; left: 232px; top: 124px;
+      width: 200px; display: flex; flex-direction: column;
+      align-items: flex-end;
+    }
+    .progress-stage {
+      display: flex; gap: 8px; align-items: center; width: 200px;
+    }
+    .stage-icon-wrap {
+      display: flex; align-items: center; align-self: stretch;
+    }
+    .stage-icon-active {
+      width: 36px; align-self: stretch;
+      background: linear-gradient(180deg, #f9a0c8 0%, #f95bad 30%, #ff0084 100%);
+      border-radius: 34px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: visible; flex-shrink: 0;
+    }
+    .stage-icon-active::before {
+      content: '';
+      position: absolute; top: -5px; left: -5px;
+      width: 35px; height: 35px;
+      background: radial-gradient(ellipse at center, rgba(255,200,80,0.55) 0%, rgba(249,160,100,0.25) 50%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .stage-icon-active .icon-content {
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stage-icon-inactive {
+      width: 36px; height: 36px;
+      background: #313131; border-radius: 34px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .stage-icon-inactive svg { transform: rotate(0deg); }
+    .stage-text { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .stage-text.with-desc { gap: 10px; padding: 4px 0; }
+    .stage-text .header { display: flex; flex-direction: column; gap: 4px; }
+    .stage-number {
+      font-weight: 500; font-size: 7px; color: #848484;
+      text-transform: uppercase; line-height: 1.2;
+    }
+    .stage-name {
+      font-weight: 500; font-size: 12px; color: #fff; line-height: 1.2;
+    }
+    .stage-desc {
+      font-weight: 400; font-size: 8px; color: #fff; line-height: 1.3;
+    }
+    .stage-separator {
+      display: flex; align-items: center;
+      padding-left: 17px; width: 100%;
+    }
+    .stage-sep-line {
+      width: 2px; height: 22px;
+    }
+    .stage-sep-line.pink {
+      background: linear-gradient(to bottom, #f95bad, #ff0084);
+    }
+    .stage-sep-line.gray {
+      background: #313131;
+    }
+    .loader-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Stage content switching */
+    .stage-content { display: none; }
+    .stage-content.active { display: contents; }
+
+    /* Stage 01 completed checkmark */
+    .stage-icon-completed {
+      width: 36px; height: 36px;
+      background: linear-gradient(180deg, #f9a0c8 0%, #f95bad 30%, #ff0084 100%);
+      border-radius: 34px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ===== STAGE 02 STYLES ===== */
+    .dropdown-row {
+      display: flex; gap: 4px; align-items: center; width: 100%; flex-shrink: 0;
+    }
+    .dropdown-btn {
+      flex: 1; height: 30px; background: #1e1e1e;
+      border-radius: 4px; display: flex; align-items: center;
+      justify-content: space-between; padding: 7px 10px;
+      overflow: hidden; cursor: pointer;
+    }
+    .dropdown-btn .text {
+      display: flex; gap: 4px; align-items: center;
+      font-weight: 500; font-size: 10px; white-space: nowrap;
+    }
+    .dropdown-btn .text .lbl { color: #969696; }
+    .dropdown-btn .text .val { color: #fff; }
+    .dropdown-btn .chevron { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .ethnicity-section {
+      display: flex; flex-direction: column; gap: 16px; width: 100%; flex: 1; min-height: 0;
+    }
+    .ethnicity-grid {
+      display: flex; gap: 10px; width: 100%; flex-wrap: wrap;
+      overflow-y: auto; overflow-x: hidden;
+    }
+    .ethnicity-card {
+      width: calc(20% - 8px); height: 120px;
+      border-radius: 8px; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; cursor: pointer;
+      border: 1px dashed #969696;
+    }
+    .ethnicity-card.selected {
+      border: 1px solid #f95bad;
+    }
+    .ethnicity-card img.bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 8px;
+      pointer-events: none;
+    }
+    .ethnicity-card .overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px; pointer-events: none;
+    }
+    .ethnicity-card .card-name {
+      position: relative; z-index: 1;
+      font-weight: 700; font-size: 14px; color: #fff;
+      text-align: center;
+    }
+    .ethnicity-card.custom-card {
+      border: 1px dashed #969696;
+      background: transparent;
+      flex-direction: column; gap: 8px;
+    }
+    .ethnicity-card.custom-card .pen-icon {
+      width: 32px; height: 32px;
+      background: rgba(249,91,173,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ethnicity-card.custom-card .premium-label {
+      font-weight: 500; font-size: 7px; color: #f95bad;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .ethnicity-card.custom-card .premium-icon {
+      display: flex; align-items: center; gap: 3px;
+    }
+
+    .voice-section {
+      display: flex; flex-direction: column; gap: 16px; width: 100%; flex-shrink: 0;
+    }
+    .voice-row {
+      display: flex; gap: 8px; width: 100%;
+    }
+    .voice-btn {
+      flex: 1; height: 34px; background: #1e1e1e;
+      border-radius: 4px; display: flex; align-items: center;
+      justify-content: center; gap: 8px; cursor: pointer;
+      font-weight: 500; font-size: 12px; color: #fff;
+      border: 1px solid transparent;
+    }
+    .voice-btn.selected {
+      background: #252525;
+      border: 1px solid #313131;
+    }
+    .voice-btn .voice-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ===== STAGE 03 STYLES ===== */
+    .facial-scroll {
+      display: flex; flex-direction: column; gap: 22px;
+      flex: 1; min-height: 0; overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .facial-scroll .ethnicity-section { flex: none; }
+    .facial-grid { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+
+    /* ===== STAGE 05 STYLES ===== */
+    .personality-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px; width: 100%;
+    }
+    .personality-card {
+      background: #121212; border: 1px solid #313131;
+      border-radius: 8px; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      cursor: pointer; min-height: 90px;
+    }
+    .personality-card.selected {
+      border: 1px solid #f95bad;
+    }
+    .personality-card .p-icon {
+      width: 24px; height: 24px;
+      background: #252525; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .personality-card .p-title {
+      font-weight: 700; font-size: 10px; color: #fff; line-height: 1.3;
+    }
+    .personality-card .p-desc {
+      font-weight: 400; font-size: 8px; color: #969696; line-height: 1.3;
+    }
+    .personality-card.custom-personality {
+      border: 1px dashed #969696;
+      background: transparent;
+      align-items: center; justify-content: center;
+    }
+    .personality-scroll {
+      display: flex; flex-direction: column; gap: 16px;
+      flex: 1; min-height: 0; overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .personality-scroll::-webkit-scrollbar { width: 4px; }
+    .personality-scroll::-webkit-scrollbar-track { background: transparent; }
+    .personality-scroll::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+
+    /* ===== STAGE 06 STYLES ===== */
+    .tags-section {
+      display: flex; flex-direction: column; gap: 12px; width: 100%; flex-shrink: 0;
+    }
+    .tags-wrap {
+      display: flex; flex-wrap: wrap; gap: 6px; width: 100%;
+    }
+    .tag-chip {
+      height: 28px; background: #1e1e1e;
+      border: 1px solid #313131; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 6px 14px; cursor: pointer;
+      font-weight: 500; font-size: 10px; color: #fff;
+      white-space: nowrap;
+    }
+    .tag-chip.selected {
+      background: #252525; border-color: #f95bad;
+    }
+    .tag-chip.add-custom {
+      gap: 6px; border-style: dashed; border-color: #969696;
+      background: transparent;
+    }
+    .tag-chip.add-custom .chip-icon { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* ===== STAGE 08 STYLES ===== */
+    .memory-field {
+      display: flex; flex-direction: column; gap: 12px; width: 100%; flex-shrink: 0;
+    }
+    .memory-label {
+      display: flex; align-items: center; gap: 6px;
+      font-weight: 700; font-size: 12px; color: #fff; line-height: 1.2;
+    }
+    .memory-label .premium-badge {
+      width: 18px; height: 18px;
+      background: linear-gradient(135deg, #f95bad, #ff0084);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .memory-label .premium-badge svg { width: 10px; height: 10px; }
+    .memory-textarea {
+      width: 100%; min-height: 80px;
+      background: #1e1e1e; border: 1px solid #313131;
+      border-radius: 6px; padding: 10px 12px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 400; font-size: 10px; color: #fff;
+      line-height: 1.4; resize: vertical;
+      outline: none;
+    }
+    .memory-textarea::placeholder { color: #848484; }
+    .memory-textarea:focus { border-color: #f95bad; }
+    .stage-title-with-icon {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-generate.disabled {
+      opacity: 0.4; pointer-events: none;
+    }
+
+    /* ===== STAGE 09 STYLES ===== */
+    .preview-tabs {
+      display: flex; gap: 0; width: 100%; flex-shrink: 0;
+      position: relative;
+    }
+    .preview-tabs::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+      height: 1px; background: #313131;
+    }
+    .preview-tab {
+      flex: 1; padding: 10px 0; text-align: center;
+      font-weight: 500; font-size: 12px; color: #969696;
+      cursor: pointer; position: relative; z-index: 1;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s;
+    }
+    .preview-tab.active {
+      color: #fff;
+      border-image: linear-gradient(to right, #f95bad, #ff0084) 1;
+    }
+    .preview-layout {
+      display: flex; gap: 14px; flex: 1; min-height: 0; overflow: hidden;
+    }
+    .preview-left {
+      width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0;
+    }
+    .preview-avatar-wrap {
+      width: 220px; flex: 1; min-height: 0; border-radius: 8px;
+      overflow: hidden; position: relative;
+    }
+    .preview-avatar-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .preview-avatar-wrap .expand-icon {
+      position: absolute; top: 10px; right: 10px;
+      width: 28px; height: 28px; background: rgba(0,0,0,0.5);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .preview-avatar-wrap .avatar-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 14px; display: flex; flex-direction: column; gap: 4px;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+    }
+    .preview-name-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .preview-name {
+      font-weight: 700; font-size: 20px; color: #fff;
+    }
+    .preview-age {
+      font-weight: 500; font-size: 16px; color: #fff;
+    }
+    .preview-edit-icon {
+      width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;
+    }
+    .btn-manage-tags {
+      width: 100%; height: 30px; background: #121212;
+      border: 1px solid #313131; border-radius: 0 0 8px 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 500; font-size: 10px; color: #fff; cursor: pointer;
+      flex-shrink: 0;
+    }
+    .preview-right {
+      flex: 1; display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto; min-height: 0;
+    }
+    .preview-right::-webkit-scrollbar { width: 4px; }
+    .preview-right::-webkit-scrollbar-track { background: transparent; }
+    .preview-right::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+    .attr-grid-complex {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px; width: 100%;
+    }
+    .attr-card {
+      border-radius: 6px; position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px; overflow: hidden;
+      border: 1px solid #313131; cursor: pointer;
+      min-height: 0;
+    }
+    .attr-card img.bg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; border-radius: 6px; pointer-events: none;
+    }
+    .attr-card .overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+      border-radius: 6px; pointer-events: none;
+    }
+    .attr-card .attr-icon {
+      position: relative; z-index: 1;
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .attr-card .attr-name {
+      position: relative; z-index: 1;
+      font-weight: 700; font-size: 14px; color: #fff; text-align: center;
+    }
+    .attr-card .attr-sub {
+      position: relative; z-index: 1;
+      font-weight: 400; font-size: 7px; color: #969696;
+      text-transform: uppercase; text-align: center;
+    }
+    .attr-card.no-bg {
+      background: #090909;
+    }
+    .attr-card.custom-attr {
+      border-style: dashed; border-color: #969696;
+      background: transparent;
+    }
+    .attr-card .color-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      position: relative; z-index: 1;
+    }
+    /* Right column: 2 stacked cards in row 1 area */
+    .attr-right-stack {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .attr-right-stack .attr-card { flex: 1; }
+    .preview-textareas {
+      display: flex; gap: 12px; width: 100%;
+    }
+    .preview-textareas .memory-field { flex: 1; }
+    .preview-textareas .memory-textarea { min-height: 60px; }
+    .btn-bring-to-life {
+      flex: 1; height: 38px;
+      background: linear-gradient(to right, #f95bad, #ff0084);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 32px; cursor: pointer;
+      font-weight: 500; font-size: 14px; color: #fff;
+      border: none;
+    }
+
+    /* Tab content switching */
+    .preview-tab-content { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+    .preview-tab-content.active { display: flex; }
+    /* Personality tab rows */
+    .pers-list { display: flex; flex-direction: column; gap: 0; flex: 1; min-height: 0; }
+    .pers-row {
+      display: flex; align-items: center; gap: 8px; padding: 12px 0;
+    }
+    .pers-row-icon {
+      width: 32px; height: 32px; border-radius: 30px; flex-shrink: 0;
+      background: #313131;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; padding: 6px;
+    }
+    .pers-row-icon svg { width: 16px; height: 16px; }
+    .pers-row-text { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .pers-row-label { font-weight: 500; font-size: 10px; color: #848484; text-transform: uppercase; line-height: 1.2; }
+    .pers-row-value { font-weight: 500; font-size: 12px; color: #fff; line-height: 1.2; }
+    .pers-row-edit {
+      width: 28px; height: 28px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border-radius: 8px;
+      background: rgba(48,39,43,0.4);
+      backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    }
+    .pers-row-edit svg { width: 16px; height: 16px; }
+
+    /* Scrollbar for ethnicity grid */
+    .ethnicity-grid::-webkit-scrollbar { width: 4px; height: 4px; }
+    .ethnicity-grid::-webkit-scrollbar-track { background: transparent; }
+    .ethnicity-grid::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+    .facial-scroll::-webkit-scrollbar { width: 4px; }
+    .facial-scroll::-webkit-scrollbar-track { background: transparent; }
+    .facial-scroll::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== SIDEBAR ===== -->
+  <div class="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg width="137" height="22" viewBox="0 0 137 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8.5 2C5.5 2 3 4.5 3 7.5C3 13 8.5 17.5 8.5 17.5C8.5 17.5 14 13 14 7.5C14 4.5 11.5 2 8.5 2Z" stroke="white" stroke-width="1.2"/>
+        <path d="M11.5 7C11.5 7 13 8.5 11.5 10C10 11.5 8.5 10 8.5 10" stroke="white" stroke-width="1.2"/>
+        <path d="M8.5 2C5.5 2 3 4.5 3 7.5C3 13 8.5 17.5 8.5 17.5" stroke="white" stroke-width="1.2"/>
+        <text x="22" y="16" fill="white" font-family="Syne" font-weight="700" font-size="14">LOVECAST.AI</text>
+      </svg>
+    </div>
+
+    <div class="sidebar-sep"></div>
+
+    <!-- Main Navigation -->
+    <div class="nav-group">
+      <div class="sidebar-section-title">Main</div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M2 6.667L8 2l6 4.667v6.666A1.333 1.333 0 0112.667 14.667H3.333A1.333 1.333 0 012 13.333V6.667z" stroke="#969696" stroke-width="1.1"/><path d="M6 14.667V8h4v6.667" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Home</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.333" stroke="#969696" stroke-width="1.1"/><path d="M10.6 5.4L9.2 7.6 8 8l-1.2.4-1.4 2.2" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Shorts</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M2 12.667V3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6a1.333 1.333 0 01-1.333 1.334H5.333L2 12.667z" stroke="#969696" stroke-width="1.1"/><circle cx="5" cy="6.667" r="0.5" fill="#969696"/><circle cx="8" cy="6.667" r="0.5" fill="#969696"/><circle cx="11" cy="6.667" r="0.5" fill="#969696"/></svg>
+        <span class="label">Chat</span>
+        <div class="badge">3<div class="badge-dot"></div></div>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="0.5" stroke="#969696" stroke-width="1.1"/><rect x="9" y="2" width="5" height="5" rx="0.5" stroke="#969696" stroke-width="1.1"/><rect x="2" y="9" width="5" height="5" rx="0.5" stroke="#969696" stroke-width="1.1"/><circle cx="11.5" cy="11.5" r="1" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Gallery</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1" stroke="#969696" stroke-width="1.1"/><circle cx="6.5" cy="7" r="1.5" stroke="#969696" stroke-width="1.1"/><path d="M2 11l3-2 2 1 3-2.5 4 3" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Generate Content</span>
+      </div>
+
+      <div class="menu-item active">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M10.667 14v-1.333a2.667 2.667 0 00-2.667-2.667H4.667A2.667 2.667 0 002 12.667V14" stroke="white" stroke-width="1.1"/><circle cx="6.333" cy="5.333" r="2.667" stroke="white" stroke-width="1.1"/><path d="M14 5.333v4" stroke="white" stroke-width="1.1"/><path d="M12 7.333h4" stroke="white" stroke-width="1.1"/></svg>
+        <span class="label">Create Character</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M2.667 13.333C2.667 11.124 4.457 9.333 6.667 9.333h2.666c2.21 0 4 1.791 4 4" stroke="#969696" stroke-width="1.1"/><path d="M8 9.333A3.333 3.333 0 108 2.667a3.333 3.333 0 000 6.666z" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">My AI</span>
+      </div>
+
+      <div class="premium-tab">
+        <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+        <span class="label">Become Premium</span>
+      </div>
+    </div>
+
+    <div class="sidebar-sep"></div>
+
+    <!-- Settings Navigation -->
+    <div class="settings-nav">
+      <div class="sidebar-section-title">Settings</div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="#969696" stroke-width="1.1"/><path d="M3 13.333c0-2.21 2.239-4 5-4s5 1.79 5 4" stroke="#969696" stroke-width="1.1"/><rect x="2" y="2" width="12" height="12" rx="2" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Creator account</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="#969696" stroke-width="1.1"/><path d="M13.3 10a1.1 1.1 0 00.2 1.2l.04.04a1.333 1.333 0 11-1.886 1.886l-.04-.04a1.1 1.1 0 00-1.2-.2 1.1 1.1 0 00-.667 1.007v.113a1.333 1.333 0 01-2.666 0v-.06a1.1 1.1 0 00-.72-1.007 1.1 1.1 0 00-1.2.2l-.04.04a1.333 1.333 0 11-1.886-1.886l.04-.04A1.1 1.1 0 003.54 10a1.1 1.1 0 00-1.007-.667h-.113a1.333 1.333 0 010-2.666h.06A1.1 1.1 0 003.487 5.95a1.1 1.1 0 00-.2-1.2l-.04-.04A1.333 1.333 0 115.133 2.824l.04.04a1.1 1.1 0 001.2.2h.053a1.1 1.1 0 00.667-1.007v-.113a1.333 1.333 0 012.666 0v.06a1.1 1.1 0 00.667 1.007 1.1 1.1 0 001.2-.2l.04-.04a1.333 1.333 0 111.886 1.886l-.04.04a1.1 1.1 0 00-.2 1.2v.053a1.1 1.1 0 001.007.667h.113a1.333 1.333 0 010 2.666h-.06a1.1 1.1 0 00-1.007.667z" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Settings</span>
+        <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+      <div class="menu-item">
+        <img src="assets/english-flag.png" class="icon" alt="" style="border-radius: 2px;">
+        <span class="label">English</span>
+        <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.333" stroke="#969696" stroke-width="1.1"/><path d="M8 5.333v2.334l1.667 1" stroke="#969696" stroke-width="1.1"/><path d="M6.167 10.333a2.5 2.5 0 013.666 0" stroke="#969696" stroke-width="1.1"/></svg>
+        <span class="label">Help center</span>
+      </div>
+
+      <div class="menu-item">
+        <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M10 13.333h3.333A1.333 1.333 0 0014.667 12V4a1.333 1.333 0 00-1.334-1.333H6A1.333 1.333 0 004.667 4v8a1.333 1.333 0 001.333 1.333H8" stroke="#e36466" stroke-width="1.1"/><path d="M8 8h4.667" stroke="#e36466" stroke-width="1.1"/><path d="M10.667 5.667L13 8l-2.333 2.333" stroke="#e36466" stroke-width="1.1"/></svg>
+        <span class="label red">Logout Account</span>
+      </div>
+    </div>
+
+    <div class="sidebar-sep"></div>
+
+    <!-- Legal Info -->
+    <div class="legal-info">
+      <span>Privacy Notice</span>
+      <div class="legal-dot"></div>
+      <span>Legal Information</span>
+    </div>
+  </div>
+
+  <!-- ===== TOP BAR ===== -->
+  <div class="top-bar">
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="7.333" cy="7.333" r="4.667" stroke="#848484" stroke-width="1.1"/><path d="M14 14l-3.1-3.1" stroke="#848484" stroke-width="1.1"/></svg>
+      <span class="search-text">Search</span>
+    </div>
+    <div class="menu-tabs">
+      <span>Blog</span>
+      <span>Guide</span>
+      <span>Subscription</span>
+    </div>
+    <div class="top-buttons">
+      <button class="btn-create-account">Create Free Account</button>
+      <button class="btn-login">Log in <div class="dot"></div></button>
+    </div>
+  </div>
+
+  <!-- ===== BREADCRUMB ===== -->
+  <div class="breadcrumb">Create Character</div>
+
+  <!-- ===== PAGE TITLE ===== -->
+  <div class="page-title">
+    <span class="pink">Create </span>Your Character
+  </div>
+
+  <!-- ===== CREATION FORM CARD ===== -->
+  <div class="form-card">
+    <!-- ===== STAGE 01 CONTENT ===== -->
+    <div class="stage-content active" id="stage-01-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 01</div>
+          <div class="stage-title">Basic parameters</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Gender / Orientation -->
+      <div class="sorting-row">
+        <div class="sorting-btn">
+          <div class="text"><span class="lbl">Gender:</span><span class="val">Female</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+        <div class="sorting-btn">
+          <div class="text"><span class="lbl">Orientation:</span><span class="val">Heterosexual</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+
+      <!-- Name -->
+      <div class="field">
+        <div class="field-label">Name</div>
+        <div class="input-filled">
+          <span class="value">Johanna</span>
+          <svg class="check-icon" viewBox="0 0 16 16" fill="none"><path d="M3.333 8l3.334 3.333L12.667 5" stroke="#C1F0AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <!-- Surname -->
+      <div class="field">
+        <div class="field-label">Surname</div>
+        <div class="input-empty">
+          <span class="placeholder">Choose a surname for your character</span>
+        </div>
+      </div>
+
+      <!-- Age -->
+      <div class="field-age">
+        <div class="field-label">Age</div>
+        <div class="slider-container">
+          <span class="slider-min">18</span>
+          <div class="slider-track">
+            <div class="slider-fill">
+              <div class="slider-thumb">
+                <div class="slider-tooltip">45</div>
+              </div>
+            </div>
+          </div>
+          <span class="slider-max">100</span>
+        </div>
+      </div>
+
+      <!-- Style -->
+      <div class="field-style">
+        <div class="field-label">Style</div>
+        <div class="style-row">
+          <div class="style-card selected">
+            <img class="bg" src="assets/style-realistic-new.png" alt="">
+            <span class="name">Realistic</span>
+          </div>
+          <div class="style-card unselected">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="name">Semi-real</span>
+          </div>
+          <div class="style-card unselected">
+            <img class="bg" src="assets/style-anime-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="name">Anime</span>
+          </div>
+          <div class="style-card unselected">
+            <img class="bg" src="assets/style-2d-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="name">2d</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(2)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 02 CONTENT ===== -->
+    <div class="stage-content" id="stage-02-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 02</div>
+          <div class="stage-title">Origin</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Nationality / Language -->
+      <div class="dropdown-row">
+        <div class="dropdown-btn">
+          <div class="text"><span class="lbl">Nationality:</span><span class="val">German</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+        <div class="dropdown-btn">
+          <div class="text"><span class="lbl">Language:</span><span class="val">English</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+
+      <!-- Ethnicity -->
+      <div class="ethnicity-section">
+        <div class="field-label">Ethnicity</div>
+        <div class="ethnicity-grid">
+          <!-- Custom -->
+          <div class="ethnicity-card custom-card">
+            <div class="pen-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="card-name">Custom</span>
+            <div class="premium-icon">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+              <span class="premium-label">Premium Feature</span>
+            </div>
+          </div>
+          <!-- Slavic (selected) -->
+          <div class="ethnicity-card selected">
+            <img class="bg" src="assets/style-realistic-new.png" alt="">
+            <span class="card-name">Slavic</span>
+          </div>
+          <!-- Caucasian -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-anime-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Caucasian</span>
+          </div>
+          <!-- Asian -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-anime-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Asian</span>
+          </div>
+          <!-- Asian -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-anime-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Asian</span>
+          </div>
+          <!-- Hispanic -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Hispanic</span>
+          </div>
+          <!-- Arabic -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Arabic</span>
+          </div>
+          <!-- Black -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Black</span>
+          </div>
+          <!-- Latino -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Latino</span>
+          </div>
+          <!-- Latino -->
+          <div class="ethnicity-card">
+            <img class="bg" src="assets/style-semireal-new.png" alt="">
+            <div class="overlay"></div>
+            <span class="card-name">Latino</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice -->
+      <div class="voice-section">
+        <div class="field-label">Voice</div>
+        <div class="voice-row">
+          <div class="voice-btn selected">
+            <svg class="voice-icon" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Gentle</span>
+          </div>
+          <div class="voice-btn">
+            <svg class="voice-icon" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>High-pitched</span>
+          </div>
+          <div class="voice-btn">
+            <svg class="voice-icon" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Deep</span>
+          </div>
+          <div class="voice-btn">
+            <svg class="voice-icon" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Rough</span>
+          </div>
+          <div class="voice-btn">
+            <svg class="voice-icon" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Calm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(1)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(3)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 03 CONTENT ===== -->
+    <div class="stage-content" id="stage-03-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 03</div>
+          <div class="stage-title">Facial</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Scrollable area for 3 sections -->
+      <div class="facial-scroll">
+        <!-- Eye color -->
+        <div class="ethnicity-section">
+          <div class="field-label">Eye color</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Blue</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Brown</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Green</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Green</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hair style -->
+        <div class="ethnicity-section">
+          <div class="field-label">Hair style</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Straight</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Braids</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Bun</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Short</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hair color -->
+        <div class="ethnicity-section">
+          <div class="field-label">Hair color</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Blonde</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-semireal-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Brunette</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Black</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Black</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(2)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(4)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 04 CONTENT ===== -->
+    <div class="stage-content" id="stage-04-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 04</div>
+          <div class="stage-title">Body type</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Scrollable area for 3 sections -->
+      <div class="facial-scroll">
+        <!-- Body type -->
+        <div class="ethnicity-section">
+          <div class="field-label">Body type</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Petite</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Athletic</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Curvy</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Thick</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Breast size -->
+        <div class="ethnicity-section">
+          <div class="field-label">Breast size</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Flat</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Small</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Medium</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Huge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Butt size -->
+        <div class="ethnicity-section">
+          <div class="field-label">Butt size</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Flat</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Small</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Medium</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Huge</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(3)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(5)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 05 CONTENT ===== -->
+    <div class="stage-content" id="stage-05-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 05</div>
+          <div class="stage-title">Personality</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Relationships / Family status -->
+      <div class="dropdown-row">
+        <div class="dropdown-btn">
+          <div class="text"><span class="lbl">Relationships type:</span><span class="val">Girlfriend</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+        <div class="dropdown-btn">
+          <div class="text"><span class="lbl">Family status:</span><span class="val">Single</span></div>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#969696" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+
+      <!-- Personality -->
+      <div class="personality-scroll">
+        <div class="field-label">Personality</div>
+        <div class="personality-grid">
+          <!-- Custom -->
+          <div class="personality-card custom-personality">
+            <div class="pen-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="card-name">Custom</span>
+            <div class="premium-icon">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+              <span class="premium-label">Premium Feature</span>
+            </div>
+          </div>
+          <!-- Overly Confident (selected) -->
+          <div class="personality-card selected">
+            <div class="p-icon">👑</div>
+            <div class="p-title">Overly Confident</div>
+            <div class="p-desc">Bold and dominating, with a magnetic presence in intimacy.</div>
+          </div>
+          <!-- Mysterious -->
+          <div class="personality-card">
+            <div class="p-icon">🔮</div>
+            <div class="p-title">Mysterious</div>
+            <div class="p-desc">Secretive and intriguing, sparking curiosity in others.</div>
+          </div>
+          <!-- Obsessed With You -->
+          <div class="personality-card">
+            <div class="p-icon">💕</div>
+            <div class="p-title">Obsessed With You</div>
+            <div class="p-desc">Possessive and needy, with an intense focus on love.</div>
+          </div>
+          <!-- Caregiver -->
+          <div class="personality-card">
+            <div class="p-icon">🌸</div>
+            <div class="p-title">Caregiver</div>
+            <div class="p-desc">Tender and nurturing, providing comforting sensuality.</div>
+          </div>
+          <!-- Dominant -->
+          <div class="personality-card">
+            <div class="p-icon">🔥</div>
+            <div class="p-title">Dominant</div>
+            <div class="p-desc">Assertive and commanding, arousing in erotic encounters.</div>
+          </div>
+          <!-- Submissive -->
+          <div class="personality-card">
+            <div class="p-icon">🎀</div>
+            <div class="p-title">Submissive</div>
+            <div class="p-desc">Yielding and obedient, finding pleasure in compliance.</div>
+          </div>
+          <!-- Seductress -->
+          <div class="personality-card">
+            <div class="p-icon">💋</div>
+            <div class="p-title">Seductress</div>
+            <div class="p-desc">Seductively secretive, fueling curiosity and desire.</div>
+          </div>
+          <!-- Cruel & Unforgiving -->
+          <div class="personality-card">
+            <div class="p-icon">⛓️</div>
+            <div class="p-title">Cruel & Unforgiving</div>
+            <div class="p-desc">Harsh and ruthless, gives a darkly thrilling experience.</div>
+          </div>
+          <!-- Cruel & Unforgiving -->
+          <div class="personality-card">
+            <div class="p-icon">⛓️</div>
+            <div class="p-title">Cruel & Unforgiving</div>
+            <div class="p-desc">Harsh and ruthless, gives a darkly thrilling experience.</div>
+          </div>
+          <!-- Free Spirited -->
+          <div class="personality-card">
+            <div class="p-icon">🦋</div>
+            <div class="p-title">Free Spirited</div>
+            <div class="p-desc">Uninhibited and adventurous, passionately spontaneous.</div>
+          </div>
+          <!-- Demanding Bully -->
+          <div class="personality-card">
+            <div class="p-icon">😈</div>
+            <div class="p-title">Demanding Bully</div>
+            <div class="p-desc">Aggressive and uses power to get what they want.</div>
+          </div>
+          <!-- Hopeless Romantic -->
+          <div class="personality-card">
+            <div class="p-icon">💝</div>
+            <div class="p-title">Hopeless Romantic</div>
+            <div class="p-desc">Deeply passionate, cherishing emotional intimacy.</div>
+          </div>
+          <!-- Insatiable -->
+          <div class="personality-card">
+            <div class="p-icon">🌙</div>
+            <div class="p-title">Insatiable</div>
+            <div class="p-desc">Unending lust, constantly demanding of your affection.</div>
+          </div>
+          <!-- Insatiable -->
+          <div class="personality-card">
+            <div class="p-icon">🌙</div>
+            <div class="p-title">Insatiable</div>
+            <div class="p-desc">Unending lust, constantly demanding of your affection.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(4)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(6)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 06 CONTENT ===== -->
+    <div class="stage-content" id="stage-06-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 06</div>
+          <div class="stage-title">Lifestyle</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <div class="facial-scroll">
+        <!-- Lifestyle cards -->
+        <div class="ethnicity-section">
+          <div class="field-label">Lifestyle</div>
+          <div class="ethnicity-grid facial-grid">
+            <div class="ethnicity-card custom-card">
+              <div class="pen-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="card-name">Custom</span>
+              <div class="premium-icon">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="#f95bad" stroke-width="1.1"/></svg>
+                <span class="premium-label">Premium Feature</span>
+              </div>
+            </div>
+            <div class="ethnicity-card selected">
+              <img class="bg" src="assets/style-realistic-new.png" alt="">
+              <span class="card-name">Active</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Lazy</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Homesitter</span>
+            </div>
+            <div class="ethnicity-card">
+              <img class="bg" src="assets/style-anime-new.png" alt="">
+              <div class="overlay"></div>
+              <span class="card-name">Sporty</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Work -->
+        <div class="tags-section">
+          <div class="field-label">Work</div>
+          <div class="tags-wrap">
+            <div class="tag-chip add-custom">
+              <svg class="chip-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Add custom
+            </div>
+            <div class="tag-chip selected">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+          </div>
+        </div>
+
+        <!-- Hobby -->
+        <div class="tags-section">
+          <div class="field-label">Hobby</div>
+          <div class="tags-wrap">
+            <div class="tag-chip add-custom">
+              <svg class="chip-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Add custom
+            </div>
+            <div class="tag-chip selected">Pottery making</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(5)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(7)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 07 CONTENT ===== -->
+    <div class="stage-content" id="stage-07-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 07</div>
+          <div class="stage-title">Kinks</div>
+        </div>
+        <div class="btn-generate">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <div class="facial-scroll">
+        <!-- Kinks 1 -->
+        <div class="tags-section">
+          <div class="field-label">Kinks</div>
+          <div class="tags-wrap">
+            <div class="tag-chip add-custom">
+              <svg class="chip-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Add custom
+            </div>
+            <div class="tag-chip selected">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+          </div>
+        </div>
+
+        <!-- Kinks 2 -->
+        <div class="tags-section">
+          <div class="field-label">Kinks</div>
+          <div class="tags-wrap">
+            <div class="tag-chip add-custom">
+              <svg class="chip-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Add custom
+            </div>
+            <div class="tag-chip selected">Pottery making</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Cook</div>
+          </div>
+        </div>
+
+        <!-- Kinks 3 -->
+        <div class="tags-section">
+          <div class="field-label">Kinks</div>
+          <div class="tags-wrap">
+            <div class="tag-chip add-custom">
+              <svg class="chip-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Add custom
+            </div>
+            <div class="tag-chip selected">Pottery making</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Unemployed</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">House wife</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+            <div class="tag-chip">Teacher</div>
+            <div class="tag-chip">Cook</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(6)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(8)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 08 CONTENT ===== -->
+    <div class="stage-content" id="stage-08-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 08</div>
+          <div class="stage-title-with-icon">
+            <span class="stage-title" style="display:inline">Memories</span>
+            <div class="memory-label"><div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div></div>
+          </div>
+        </div>
+        <div class="btn-generate disabled">
+          <svg class="icon" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="white" stroke-width="1.1"/>
+            <path d="M12 1l.75 1.75L14.5 3.5l-1.75.75L12 6l-.75-1.75L9.5 3.5l1.75-.75L12 1z" stroke="white" stroke-width="1.1"/>
+          </svg>
+          <span>Generate Random</span>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <div class="facial-scroll">
+        <!-- Childhood and adolescence -->
+        <div class="memory-field">
+          <div class="memory-label">
+            Childhood and adolescence
+            <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+          </div>
+          <textarea class="memory-textarea" placeholder="Describe any childhood memory"></textarea>
+        </div>
+
+        <!-- Memories and life story -->
+        <div class="memory-field">
+          <div class="memory-label">
+            Memories and life story
+            <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+          </div>
+          <textarea class="memory-textarea" placeholder="Make a life story of your character"></textarea>
+        </div>
+
+        <!-- Phobias -->
+        <div class="memory-field">
+          <div class="memory-label">
+            Phobias
+            <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+          </div>
+          <textarea class="memory-textarea" placeholder="Describe phobias"></textarea>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(7)">Cancel</div>
+        <div class="btn-continue" onclick="goToStage(9)">Continue</div>
+      </div>
+    </div>
+
+    <!-- ===== STAGE 09 CONTENT ===== -->
+    <div class="stage-content" id="stage-09-content">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="stage-info">
+          <div class="stage-label">Stage 09</div>
+          <div class="stage-title">Final preview</div>
+        </div>
+      </div>
+
+      <div class="form-sep"></div>
+
+      <!-- Content area with tabs -->
+      <div class="preview-layout">
+        <!-- Left: avatar with overlaid name -->
+        <div class="preview-left">
+          <div class="preview-avatar-wrap">
+            <img src="assets/style-realistic-new.png" alt="Character">
+            <div class="expand-icon">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 10v4h4M14 6V2h-4M2 6V2h4M14 10v4h-4" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="avatar-info">
+              <div class="preview-name-row">
+                <span class="preview-name">Diana Smith</span>
+                <svg class="preview-edit-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="preview-name-row">
+                <span class="preview-age">29 yo</span>
+                <svg class="preview-edit-icon" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="btn-manage-tags">Manage tags</div>
+        </div>
+
+        <!-- Right: tabs + attributes -->
+        <div class="preview-right">
+          <!-- Tabs -->
+          <div class="preview-tabs">
+            <div class="preview-tab active">Appearance</div>
+            <div class="preview-tab">Personality</div>
+            <div class="preview-tab">Memories</div>
+          </div>
+
+          <!-- ===== TAB: Appearance ===== -->
+          <div class="preview-tab-content active" id="tab-appearance">
+            <!-- Attribute grid: 3 image cols + 1 right stack col, 2 rows -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; flex:1; min-height:0;">
+              <!-- Row 1, Col 1: Deep -->
+              <div class="attr-card no-bg">
+                <div class="attr-icon" style="background:rgba(255,255,255,0.1); width:32px; height:32px; border-radius:50%;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.333 2.667L4 5.333H2v5.334h2L7.333 13.333V2.667z" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.36 5.64a3.333 3.333 0 010 4.72" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <span class="attr-name">Deep</span>
+                <span class="attr-sub">Voice</span>
+              </div>
+              <!-- Row 1, Col 2: Straight -->
+              <div class="attr-card">
+                <img class="bg" src="assets/style-realistic-new.png" alt="">
+                <div class="overlay"></div>
+                <span class="attr-name">Straight</span>
+                <span class="attr-sub">Hairstyle</span>
+              </div>
+              <!-- Row 1, Col 3: Bikini -->
+              <div class="attr-card">
+                <img class="bg" src="assets/style-anime-new.png" alt="">
+                <div class="overlay"></div>
+                <span class="attr-name">Bikini</span>
+                <span class="attr-sub">Outfit</span>
+              </div>
+              <!-- Row 1, Col 4: Blue + Blond stacked -->
+              <div class="attr-right-stack">
+                <div class="attr-card no-bg">
+                  <div class="color-dot" style="background:#4a90d9;"></div>
+                  <span class="attr-name">Blue</span>
+                  <span class="attr-sub">Eyes</span>
+                </div>
+                <div class="attr-card no-bg">
+                  <div class="color-dot" style="background:#d4a843;"></div>
+                  <span class="attr-name">Blond</span>
+                  <span class="attr-sub">Hair color</span>
+                </div>
+              </div>
+              <!-- Row 2, Col 1: Slim -->
+              <div class="attr-card">
+                <img class="bg" src="assets/style-semireal-new.png" alt="">
+                <div class="overlay"></div>
+                <span class="attr-name">Slim</span>
+                <span class="attr-sub">Body type</span>
+              </div>
+              <!-- Row 2, Col 2: Slavic -->
+              <div class="attr-card">
+                <img class="bg" src="assets/style-anime-new.png" alt="">
+                <div class="overlay"></div>
+                <span class="attr-name">Slavic</span>
+                <span class="attr-sub">Ethnicity</span>
+              </div>
+              <!-- Row 2, Col 3: Pink room -->
+              <div class="attr-card">
+                <img class="bg" src="assets/style-semireal-new.png" alt="">
+                <div class="overlay"></div>
+                <span class="attr-name">Pink room</span>
+                <span class="attr-sub">Ethnicity</span>
+              </div>
+              <!-- Row 2, Col 4: Custom -->
+              <div class="attr-card custom-attr">
+                <div class="pen-icon" style="width:32px; height:32px;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#f95bad" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div style="display:flex; align-items:center; gap:4px; position:relative; z-index:1;">
+                  <span class="attr-name">Custom</span>
+                  <div class="premium-badge" style="width:14px; height:14px;"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+                </div>
+                <span class="attr-sub" style="color:#f95bad;">Background image</span>
+              </div>
+            </div>
+
+            <!-- Custom textareas -->
+            <div class="preview-textareas">
+              <div class="memory-field">
+                <div class="memory-label">
+                  Custom appearance details
+                  <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+                </div>
+                <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+              </div>
+              <div class="memory-field">
+                <div class="memory-label">
+                  Custom face details
+                  <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+                </div>
+                <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== TAB: Personality ===== -->
+          <div class="preview-tab-content" id="tab-personality">
+            <div class="pers-list">
+              <!-- Personality — chat_2 icon -->
+              <div class="pers-row">
+                <div class="pers-row-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M14 7.667a5.167 5.167 0 01-.557 2.333A5.333 5.333 0 018.667 13a5.167 5.167 0 01-2.334-.557L2 14l1.557-4.333A5.167 5.167 0 013 7.333a5.333 5.333 0 013-4.776A5.167 5.167 0 018.333 2h.334A5.313 5.313 0 0114 7.333v.334z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="pers-row-text">
+                  <span class="pers-row-label">Personality</span>
+                  <span class="pers-row-value">Overly Confident</span>
+                </div>
+                <div class="pers-row-edit">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <!-- Lifestyle — bicycle icon -->
+              <div class="pers-row">
+                <div class="pers-row-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><circle cx="4" cy="11" r="2.5" stroke="#969696" stroke-width="1.1"/><circle cx="12" cy="11" r="2.5" stroke="#969696" stroke-width="1.1"/><path d="M4 11l2.5-5.5h3L12 11" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 5.5L8 3" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M9.5 5.5h-2" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+                </div>
+                <div class="pers-row-text">
+                  <span class="pers-row-label">Lifestyle</span>
+                  <span class="pers-row-value">Lazy, Unemployed</span>
+                </div>
+                <div class="pers-row-edit">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <!-- Relationships — relationships icon -->
+              <div class="pers-row">
+                <div class="pers-row-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4.5" r="2" stroke="#969696" stroke-width="1.1"/><circle cx="11" cy="4.5" r="2" stroke="#969696" stroke-width="1.1"/><path d="M1 13c0-2.21 1.79-4 4-4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M11 9c2.21 0 4 1.79 4 4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M6.5 10.5l1.5 1 1.5-1" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="pers-row-text">
+                  <span class="pers-row-label">Relationships</span>
+                  <span class="pers-row-value">Single</span>
+                </div>
+                <div class="pers-row-edit">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <!-- Kinks — fire icon -->
+              <div class="pers-row">
+                <div class="pers-row-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.333s-1.333 2-1.333 3.334A1.333 1.333 0 008 6a1.333 1.333 0 001.333-1.333c0-1.334-1.333-3.334-1.333-3.334z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.667 9.333c0 2.578-2.09 4.667-4.667 4.667S3.333 11.911 3.333 9.333c0-2.577 2.667-5.333 4.667-7.333 2 2 4.667 4.756 4.667 7.333z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="pers-row-text">
+                  <span class="pers-row-label">Kinks</span>
+                  <span class="pers-row-value">Role Play</span>
+                </div>
+                <div class="pers-row-edit">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <!-- Hobbies — hobby/palette icon -->
+              <div class="pers-row">
+                <div class="pers-row-icon">
+                  <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#969696" stroke-width="1.1"/><circle cx="8" cy="4" r="1" fill="#969696"/><circle cx="5" cy="6.5" r="1" fill="#969696"/><circle cx="5.5" cy="10" r="1" fill="#969696"/><path d="M10.5 10.5c.828 0 1.5-.895 1.5-2s-.672-2-1.5-2-1.5.895-1.5 2 .672 2 1.5 2z" stroke="#969696" stroke-width="1.1"/></svg>
+                </div>
+                <div class="pers-row-text">
+                  <span class="pers-row-label">Hobbies</span>
+                  <span class="pers-row-value">Photography</span>
+                </div>
+                <div class="pers-row-edit">
+                  <svg viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0114 4.667l-8.667 8.666L2 14l.667-3.333L11.333 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Custom personality textarea -->
+            <div class="memory-field" style="width:100%;">
+              <div class="memory-label">
+                Custom personality details
+                <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+              </div>
+              <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+            </div>
+          </div>
+
+          <!-- ===== TAB: Memories (placeholder) ===== -->
+          <div class="preview-tab-content" id="tab-memories">
+            <div class="memory-field" style="width:100%;">
+              <div class="memory-label">
+                Custom personality details
+                <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+              </div>
+              <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+            </div>
+            <div class="memory-field" style="width:100%;">
+              <div class="memory-label">
+                Custom personality details
+                <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+              </div>
+              <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+            </div>
+            <div class="memory-field" style="width:100%;">
+              <div class="memory-label">
+                Custom personality details
+                <div class="premium-badge"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 7l-3.5 1.5L8 12l-1.5-3.5L3 7l3.5-1.5L8 2z" stroke="white" stroke-width="1.2"/></svg></div>
+              </div>
+              <textarea class="memory-textarea" placeholder="Describe any appearance details"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="buttons-row">
+        <div class="btn-cancel" onclick="goToStage(8)">Cancel</div>
+        <div class="btn-bring-to-life">Bring to Life</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STAGES PANEL ===== -->
+  <div class="stages-panel">
+    <!-- Stage 01 -->
+    <div class="progress-stage" id="stage-01-progress">
+      <div class="stage-icon-active" id="stage-01-icon">
+        <div class="icon-content">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="5.333" cy="5.333" r="2.667" stroke="white" stroke-width="1.1"/>
+            <path d="M7.333 10A4 4 0 001 13.333" stroke="white" stroke-width="1.1"/>
+            <path d="M12 9c0 0 1.5 1 1.5 2.5S12 14 12 14s-1.5-1-1.5-2.5S12 9 12 9z" stroke="white" stroke-width="1.1"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stage-text with-desc" id="stage-01-text">
+        <div class="header">
+          <div class="stage-number">Stage 01</div>
+          <div class="stage-name" style="text-decoration: none;" id="stage-01-name">Basic parameters</div>
+        </div>
+        <div class="stage-desc" id="stage-01-desc">Here you can choose how your character's face will look, including the color and shape of the eyes, hairstyle and hair length</div>
+      </div>
+    </div>
+
+    <!-- Separator (pink) -->
+    <div class="stage-separator" id="sep-01-02"><div class="stage-sep-line pink"></div></div>
+
+    <!-- Stage 02 -->
+    <div class="progress-stage" id="stage-02-progress">
+      <div class="stage-icon-inactive" id="stage-02-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.333A5.333 5.333 0 002.667 6.667C2.667 10.667 8 14.667 8 14.667s5.333-4 5.333-8A5.333 5.333 0 008 1.333z" stroke="#969696" stroke-width="1.1"/><circle cx="8" cy="6.667" r="1.333" stroke="#969696" stroke-width="1.1"/></svg>
+      </div>
+      <div class="stage-text" id="stage-02-text">
+        <div class="stage-number">Stage 02</div>
+        <div class="stage-name">Origin</div>
+      </div>
+      <svg class="loader-icon" id="stage-02-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- Separator -->
+    <div class="stage-separator" id="sep-02-03"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 03 -->
+    <div class="progress-stage" id="stage-03-progress">
+      <div class="stage-icon-inactive" id="stage-03-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.333" stroke="#969696" stroke-width="1.1"/><path d="M5.5 9.5s1 1.5 2.5 1.5 2.5-1.5 2.5-1.5" stroke="#969696" stroke-width="1.1"/><circle cx="6" cy="6.5" r="0.5" fill="#969696"/><circle cx="10" cy="6.5" r="0.5" fill="#969696"/></svg>
+      </div>
+      <div class="stage-text" id="stage-03-text">
+        <div class="stage-number">Stage 03</div>
+        <div class="stage-name">Facial</div>
+      </div>
+      <svg class="loader-icon" id="stage-03-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-03-04"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 04 -->
+    <div class="progress-stage" id="stage-04-progress">
+      <div class="stage-icon-inactive" id="stage-04-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3.333" y="5" width="2.667" height="6" rx="1" stroke="#969696" stroke-width="1.1"/><rect x="10" y="5" width="2.667" height="6" rx="1" stroke="#969696" stroke-width="1.1"/><path d="M6 8h4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M2 7v2" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M14 7v2" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+      </div>
+      <div class="stage-text" id="stage-04-text">
+        <div class="stage-number">Stage 04</div>
+        <div class="stage-name">Body type</div>
+      </div>
+      <svg class="loader-icon" id="stage-04-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-04-05"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 05 -->
+    <div class="progress-stage" id="stage-05-progress">
+      <div class="stage-icon-inactive" id="stage-05-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 7.667a5.667 5.667 0 01-.607 2.553A5.733 5.733 0 018.333 13.333a5.667 5.667 0 01-2.553-.606L2 14l1.273-3.78A5.667 5.667 0 012.667 7.667a5.733 5.733 0 013.113-5.06A5.667 5.667 0 018.333 2h.334A5.713 5.713 0 0114 7.333v.334z" stroke="#969696" stroke-width="1.1"/><path d="M6 7.333h.007M8.333 7.333h.007M10.667 7.333h.006" stroke="#969696" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="stage-text" id="stage-05-text">
+        <div class="stage-number">Stage 05</div>
+        <div class="stage-name">Personality</div>
+      </div>
+      <svg class="loader-icon" id="stage-05-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-05-06"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 06 -->
+    <div class="progress-stage" id="stage-06-progress">
+      <div class="stage-icon-inactive" id="stage-06-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="10.5" r="2.5" stroke="#969696" stroke-width="1.1"/><circle cx="12" cy="10.5" r="2.5" stroke="#969696" stroke-width="1.1"/><path d="M4 10.5L6.5 5h2L12 10.5" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 5L8 10.5" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M5.5 4h3" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+      </div>
+      <div class="stage-text" id="stage-06-text">
+        <div class="stage-number">Stage 06</div>
+        <div class="stage-name">Lifestyle</div>
+      </div>
+      <svg class="loader-icon" id="stage-06-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-06-07"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 07 -->
+    <div class="progress-stage" id="stage-07-progress">
+      <div class="stage-icon-inactive" id="stage-07-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2C8 2 4 6 4 9.5C4 12 5.8 14 8 14s4-2 4-4.5C12 6 8 2 8 2z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14c-1.2 0-2.2-1-2.2-2.3 0-2 2.2-4 2.2-4s2.2 2 2.2 4c0 1.3-1 2.3-2.2 2.3z" stroke="#969696" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="stage-text" id="stage-07-text">
+        <div class="stage-number">Stage 07</div>
+        <div class="stage-name">Kinks</div>
+      </div>
+      <svg class="loader-icon" id="stage-07-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-07-08"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 08 -->
+    <div class="progress-stage" id="stage-08-progress">
+      <div class="stage-icon-inactive" id="stage-08-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="#969696" stroke-width="1.1"/><path d="M12 8l.75 1.75L14.5 10.5l-1.75.75L12 13l-.75-1.75L9.5 10.5l1.75-.75L12 8z" stroke="#969696" stroke-width="1.1"/></svg>
+      </div>
+      <div class="stage-text" id="stage-08-text">
+        <div class="stage-number">Stage 08</div>
+        <div class="stage-name">Memories</div>
+      </div>
+      <svg class="loader-icon" id="stage-08-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="stage-separator" id="sep-08-09"><div class="stage-sep-line gray"></div></div>
+
+    <!-- Stage 09 -->
+    <div class="progress-stage" id="stage-09-progress">
+      <div class="stage-icon-inactive" id="stage-09-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.333 8S4 3.333 8 3.333 14.667 8 14.667 8 12 12.667 8 12.667 1.333 8 1.333 8z" stroke="#969696" stroke-width="1.1"/><circle cx="8" cy="8" r="2" stroke="#969696" stroke-width="1.1"/></svg>
+      </div>
+      <div class="stage-text" id="stage-09-text">
+        <div class="stage-number">Stage 09</div>
+        <div class="stage-name">Final preview</div>
+      </div>
+      <svg class="loader-icon" id="stage-09-loader" viewBox="0 0 16 16" fill="none"><path d="M8 1.333V4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M8 12v2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 3.287l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 10.827l1.886 1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M1.333 8H4" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M12 8h2.667" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M3.287 12.713l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/><path d="M10.827 5.173l1.886-1.886" stroke="#969696" stroke-width="1.1" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <script>
+    var stageIcons = {
+      1: '<circle cx="5.333" cy="5.333" r="2.667" stroke="white" stroke-width="1.1"/><path d="M7.333 10A4 4 0 001 13.333" stroke="white" stroke-width="1.1"/><path d="M12 9c0 0 1.5 1 1.5 2.5S12 14 12 14s-1.5-1-1.5-2.5S12 9 12 9z" stroke="white" stroke-width="1.1"/>',
+      2: '<path d="M8 1.333A5.333 5.333 0 002.667 6.667C2.667 10.667 8 14.667 8 14.667s5.333-4 5.333-8A5.333 5.333 0 008 1.333z" stroke="__CLR__" stroke-width="1.1"/><circle cx="8" cy="6.667" r="1.333" stroke="__CLR__" stroke-width="1.1"/>',
+      3: '<circle cx="8" cy="8" r="5.333" stroke="__CLR__" stroke-width="1.1"/><path d="M5.5 9.5s1 1.5 2.5 1.5 2.5-1.5 2.5-1.5" stroke="__CLR__" stroke-width="1.1"/><circle cx="6" cy="6.5" r="0.5" fill="__CLR__"/><circle cx="10" cy="6.5" r="0.5" fill="__CLR__"/>',
+      4: '<rect x="3.333" y="5" width="2.667" height="6" rx="1" stroke="__CLR__" stroke-width="1.1"/><rect x="10" y="5" width="2.667" height="6" rx="1" stroke="__CLR__" stroke-width="1.1"/><path d="M6 8h4" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round"/><path d="M2 7v2" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round"/><path d="M14 7v2" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round"/>',
+      5: '<path d="M14 7.667a5.667 5.667 0 01-.607 2.553A5.733 5.733 0 018.333 13.333a5.667 5.667 0 01-2.553-.606L2 14l1.273-3.78A5.667 5.667 0 012.667 7.667a5.733 5.733 0 013.113-5.06A5.667 5.667 0 018.333 2h.334A5.713 5.713 0 0114 7.333v.334z" stroke="__CLR__" stroke-width="1.1"/><path d="M6 7.333h.007M8.333 7.333h.007M10.667 7.333h.006" stroke="__CLR__" stroke-width="1.3" stroke-linecap="round"/>',
+      6: '<circle cx="4" cy="10.5" r="2.5" stroke="__CLR__" stroke-width="1.1"/><circle cx="12" cy="10.5" r="2.5" stroke="__CLR__" stroke-width="1.1"/><path d="M4 10.5L6.5 5h2L12 10.5" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 5L8 10.5" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round"/><path d="M5.5 4h3" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round"/>',
+      7: '<path d="M8 2C8 2 4 6 4 9.5C4 12 5.8 14 8 14s4-2 4-4.5C12 6 8 2 8 2z" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14c-1.2 0-2.2-1-2.2-2.3 0-2 2.2-4 2.2-4s2.2 2 2.2 4c0 1.3-1 2.3-2.2 2.3z" stroke="__CLR__" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>',
+      8: '<path d="M6 2L7.5 5.5 11 7l-3.5 1.5L6 12l-1.5-3.5L1 7l3.5-1.5L6 2z" stroke="__CLR__" stroke-width="1.1"/><path d="M12 8l.75 1.75L14.5 10.5l-1.75.75L12 13l-.75-1.75L9.5 10.5l1.75-.75L12 8z" stroke="__CLR__" stroke-width="1.1"/>',
+      9: '<path d="M1.333 8S4 3.333 8 3.333 14.667 8 14.667 8 12 12.667 8 12.667 1.333 8 1.333 8z" stroke="__CLR__" stroke-width="1.1"/><circle cx="8" cy="8" r="2" stroke="__CLR__" stroke-width="1.1"/>'
+    };
+    var stageNames = { 1: 'Basic parameters', 2: 'Origin', 3: 'Facial' };
+    var stageDesc = "Here you can choose how your character's face will look, including the color and shape of the eyes, hairstyle and hair length";
+    var checkSvg = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.333 8l3.334 3.333L12.667 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function setStageCompleted(n) {
+      var icon = document.getElementById('stage-0' + n + '-icon');
+      icon.className = 'stage-icon-completed';
+      icon.innerHTML = checkSvg;
+      var nameEl = icon.parentElement.querySelector('.stage-name');
+      if (nameEl) nameEl.style.textDecoration = 'line-through';
+      var textEl = document.getElementById('stage-0' + n + '-text');
+      if (textEl) { textEl.classList.remove('with-desc'); }
+      var desc = document.getElementById('stage-0' + n + '-desc');
+      if (desc) desc.style.display = 'none';
+      var loader = document.getElementById('stage-0' + n + '-loader');
+      if (loader) loader.style.display = 'none';
+    }
+
+    function setStageActive(n) {
+      var icon = document.getElementById('stage-0' + n + '-icon');
+      icon.className = 'stage-icon-active';
+      var svg = stageIcons[n].replace(/__CLR__/g, 'white');
+      icon.innerHTML = '<div class="icon-content"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">' + svg + '</svg></div>';
+      var nameEl = icon.parentElement.querySelector('.stage-name');
+      if (nameEl) nameEl.style.textDecoration = 'none';
+      var textEl = document.getElementById('stage-0' + n + '-text');
+      textEl.classList.add('with-desc');
+      if (!document.getElementById('stage-0' + n + '-desc')) {
+        var d = document.createElement('div');
+        d.className = 'stage-desc'; d.id = 'stage-0' + n + '-desc';
+        d.textContent = stageDesc;
+        textEl.appendChild(d);
+      } else {
+        document.getElementById('stage-0' + n + '-desc').style.display = '';
+      }
+      var loader = document.getElementById('stage-0' + n + '-loader');
+      if (loader) loader.style.display = 'none';
+    }
+
+    function setStageInactive(n) {
+      var icon = document.getElementById('stage-0' + n + '-icon');
+      icon.className = 'stage-icon-inactive';
+      var svg = stageIcons[n].replace(/__CLR__/g, '#969696');
+      icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none">' + svg + '</svg>';
+      var nameEl = icon.parentElement.querySelector('.stage-name');
+      if (nameEl) nameEl.style.textDecoration = 'none';
+      var textEl = document.getElementById('stage-0' + n + '-text');
+      textEl.classList.remove('with-desc');
+      var desc = document.getElementById('stage-0' + n + '-desc');
+      if (desc) desc.style.display = 'none';
+      var loader = document.getElementById('stage-0' + n + '-loader');
+      if (loader) loader.style.display = '';
+    }
+
+    function goToStage(stageNum) {
+      // Switch form content
+      document.querySelectorAll('.stage-content').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById('stage-0' + stageNum + '-content').classList.add('active');
+
+      // Update progress bar for stages 1-9
+      for (var i = 1; i <= 9; i++) {
+        if (i < stageNum) {
+          setStageCompleted(i);
+        } else if (i === stageNum) {
+          setStageActive(i);
+        } else {
+          setStageInactive(i);
+        }
+      }
+
+      // Update separators
+      var seps = [
+        { id: 'sep-01-02', pinkIf: 2 },
+        { id: 'sep-02-03', pinkIf: 3 },
+        { id: 'sep-03-04', pinkIf: 4 },
+        { id: 'sep-04-05', pinkIf: 5 },
+        { id: 'sep-05-06', pinkIf: 6 },
+        { id: 'sep-06-07', pinkIf: 7 },
+        { id: 'sep-07-08', pinkIf: 8 },
+        { id: 'sep-08-09', pinkIf: 9 }
+      ];
+      seps.forEach(function(s) {
+        var el = document.getElementById(s.id);
+        if (el) el.innerHTML = stageNum >= s.pinkIf
+          ? '<div class="stage-sep-line pink"></div>'
+          : '<div class="stage-sep-line gray"></div>';
+      });
+
+      initCardHandlers();
+    }
+
+    function initCardHandlers() {
+      // Per-grid card selection (each grid independent)
+      document.querySelectorAll('.ethnicity-grid').forEach(function(grid) {
+        grid.querySelectorAll('.ethnicity-card').forEach(function(card) {
+          card.onclick = function() {
+            grid.querySelectorAll('.ethnicity-card').forEach(function(c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+          };
+        });
+      });
+      // Preview tab switching
+      var tabMap = { 'Appearance': 'tab-appearance', 'Personality': 'tab-personality', 'Memories': 'tab-memories' };
+      document.querySelectorAll('.preview-tab').forEach(function(tab) {
+        tab.onclick = function() {
+          document.querySelectorAll('.preview-tab').forEach(function(t) { t.classList.remove('active'); });
+          tab.classList.add('active');
+          document.querySelectorAll('.preview-tab-content').forEach(function(c) { c.classList.remove('active'); });
+          var targetId = tabMap[tab.textContent.trim()];
+          if (targetId) document.getElementById(targetId).classList.add('active');
+        };
+      });
+      // Tag chip toggle (multi-select per section)
+      document.querySelectorAll('.tags-wrap').forEach(function(wrap) {
+        wrap.querySelectorAll('.tag-chip:not(.add-custom)').forEach(function(chip) {
+          chip.onclick = function() {
+            chip.classList.toggle('selected');
+          };
+        });
+      });
+      // Personality card selection
+      document.querySelectorAll('.personality-grid').forEach(function(grid) {
+        grid.querySelectorAll('.personality-card').forEach(function(card) {
+          card.onclick = function() {
+            grid.querySelectorAll('.personality-card').forEach(function(c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+          };
+        });
+      });
+      // Voice button selection
+      document.querySelectorAll('.voice-btn').forEach(function(btn) {
+        btn.onclick = function() {
+          document.querySelectorAll('.voice-btn').forEach(function(b) { b.classList.remove('selected'); });
+          btn.classList.add('selected');
+        };
+      });
+    }
+    initCardHandlers();
+  </script>
+
+</body>
+</html>
