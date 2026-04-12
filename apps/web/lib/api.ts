@@ -620,10 +620,49 @@ export function streamEditMessage(
   return controller;
 }
 
-/** Список публичных персонажей (GET /characters, без авторизации). */
+export interface CreateCharacterFormData {
+  name: string;
+  surname?: string;
+  age: number;
+  gender: string;
+  orientation: string;
+  style: string;
+  nationality?: string;
+  language?: string;
+  ethnicity?: string;
+  voice?: string;
+  eyeColor?: string;
+  hairStyle?: string;
+  hairColor?: string;
+  bodyType?: string;
+  breastSize?: string;
+  buttSize?: string;
+  personality?: string;
+  relationshipType?: string;
+  familyStatus?: string;
+  lifestyle?: string;
+  work?: string[];
+  hobbies?: string[];
+  kinks?: string[];
+  childhoodMemory?: string;
+  lifeStory?: string;
+  phobias?: string;
+}
+
 export const characters = {
   async listPublic(): Promise<Character[]> {
     return apiFetch<Character[]>("/characters");
+  },
+
+  async listMy(): Promise<Character[]> {
+    return apiFetch<Character[]>("/characters/my");
+  },
+
+  async create(data: CreateCharacterFormData): Promise<Character> {
+    return apiFetch<Character>("/characters", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
 

@@ -12,6 +12,7 @@ type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-
 function getActivePage(pathname: string): ActivePage | undefined {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/chat")) return "chat";
+  if (pathname.startsWith("/create")) return "create-character";
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/profile")) return "admin";
   if (pathname.startsWith("/generation")) return "generate";
