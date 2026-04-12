@@ -74,7 +74,12 @@ export default function ChatPage() {
   useEffect(() => {
     if (!loading && user) {
       loadChats();
-      charactersApi.listPublic().then(setCharList).catch(() => {});
+      Promise.all([charactersApi.listPublic(), charactersApi.listMy()])
+        .then(([pub, my]) => {
+          const myIds = new Set(my.map((c: Character) => c.id));
+          setCharList([...my, ...pub.filter((p: Character) => !myIds.has(p.id))]);
+        })
+        .catch(() => {});
     }
   }, [loading, user, loadChats]);
 
