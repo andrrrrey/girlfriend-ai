@@ -64,6 +64,11 @@ export class GenerationController {
     return this.generationService.getVideoStyles();
   }
 
+  @Get("gallery")
+  async getGallery() {
+    return this.generationService.getGallery();
+  }
+
   @Get("history")
   async getHistory(@Req() req: any, @Query("type") type?: string) {
     return this.generationService.getHistory(req.user.id, type);

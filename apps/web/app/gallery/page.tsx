@@ -1,0 +1,412 @@
+"use client";
+
+import React, { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/auth";
+import { getPublicGallery } from "../../lib/api";
+
+/* ── CSS ─────────────────────────────────────────── */
+
+const PAGE_CSS = `
+  .gallery-content {
+    position: relative;
+    min-height: calc(100vh - 46px);
+    padding: 28px 36px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Title */
+  .gallery-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 4px;
+  }
+  .gallery-title {
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .gallery-title .pink { color: #f95bad; }
+  .gallery-title .white { color: #fff; }
+
+  /* Tabs */
+  .gallery-tabs {
+    display: flex;
+    align-items: center;
+    background: #252525;
+    border-radius: 6px;
+    padding: 3px;
+    width: fit-content;
+    align-self: center;
+  }
+  .gallery-tab {
+    padding: 6px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #969696;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .gallery-tab.active {
+    background: #1e1e1e;
+    color: #fff;
+  }
+
+  /* Filter row */
+  .gallery-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .filter-dropdown {
+    height: 30px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-dropdown .muted { font-size: 10px; font-weight: 500; color: #969696; }
+  .filter-dropdown .val { font-size: 10px; font-weight: 500; color: #fff; }
+
+  /* Tags */
+  .gallery-tags {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .g-tag {
+    background: #121212;
+    border-radius: 4px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  .g-tag.active {
+    background: #1e1e1e;
+  }
+  .g-tag.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 3px;
+    background: #f95bad;
+    box-shadow: 0 0 5px 1px rgba(228,0,120,0.6);
+    border-radius: 0.5px;
+    z-index: 2;
+  }
+
+  /* Grid */
+  .gallery-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .g-card {
+    width: 160px;
+    height: 220px;
+    border-radius: 8px;
+    border: 1px solid #313131;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    background: #1e1e1e;
+  }
+
+  .g-card-thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .g-card-thumb-placeholder {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .g-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(9,9,9,0) 50%, rgba(9,9,9,0.75) 100%);
+    border-radius: 8px;
+  }
+
+  .g-card-type-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    height: 20px;
+    background: rgba(9,9,9,0.65);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 9px;
+    font-weight: 600;
+    color: #fff;
+    z-index: 3;
+    white-space: nowrap;
+  }
+
+  .g-card-creator {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .g-card-creator-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #313131;
+    border: 1.5px solid rgba(249,91,173,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  /* Loading skeleton */
+  .g-card-skeleton {
+    width: 160px;
+    height: 220px;
+    border-radius: 8px;
+    background: #1e1e1e;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .g-card-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+  @keyframes skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Empty / error state */
+  .gallery-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 60px 0;
+    color: #969696;
+    font-size: 14px;
+    width: 100%;
+  }
+  .gallery-empty svg { opacity: 0.3; }
+`;
+
+/* ── SVGs ─────────────────────────────────────────── */
+
+const CHEVRON_SVG = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const IMAGE_ICON = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#fff" stroke-width="1.2"/><circle cx="5.5" cy="5.5" r="1" fill="#fff"/><path d="M2 11l3.5-3.5 2.5 2.5 2-2L14 11" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const VIDEO_ICON = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 5a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" stroke="#fff" stroke-width="1.2"/><path d="M12 6.5l3-2v7l-3-2V6.5z" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+const PLUS_ICON = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 2v6M2 5h6" stroke="#f95bad" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+
+const TAGS = ["All", "Group Chats", "Teen", "Asian", "Anime", "Blond", "Strong", "Lonely", "Young", "Latina", "Romantic", "Athletic"];
+
+/* ── HTML builder ─────────────────────────────────── */
+
+function buildContent() {
+  const tags = TAGS.map((t, i) =>
+    `<span class="g-tag${i === 0 ? " active" : ""}" data-tag="${t}">${t}</span>`
+  ).join("");
+
+  return `
+    <div class="gallery-title-row">
+      <div class="gallery-title">
+        <span class="pink">AI Photo&amp;Video </span><span class="white">Gallery</span>
+      </div>
+    </div>
+
+    <div class="gallery-tabs">
+      <div class="gallery-tab active" data-tab="all">All</div>
+      <div class="gallery-tab" data-tab="image">Image</div>
+      <div class="gallery-tab" data-tab="video">Video</div>
+    </div>
+
+    <div class="gallery-filter-row">
+      <div class="filter-dropdown">
+        <span class="muted">Gender:</span>
+        <span class="val">All</span>
+        ${CHEVRON_SVG}
+      </div>
+      <div class="filter-dropdown">
+        <span class="muted">Style:</span>
+        <span class="val">All</span>
+        ${CHEVRON_SVG}
+      </div>
+      <div class="filter-dropdown">
+        <span class="muted">Created by:</span>
+        <span class="val">Everyone</span>
+        ${CHEVRON_SVG}
+      </div>
+      <div class="filter-dropdown">
+        <span class="muted">Sort by:</span>
+        <span class="val">Newest</span>
+        ${CHEVRON_SVG}
+      </div>
+    </div>
+
+    <div class="gallery-tags">${tags}</div>
+
+    <div class="gallery-grid" id="gallery-grid">
+      ${[1,2,3,4,5,6,7,8,9,10].map(() => `<div class="g-card-skeleton"></div>`).join("")}
+    </div>
+  `;
+}
+
+function cardHtml(item: { type: string; url?: string | null; creatorAvatar?: string | null }) {
+  const typeIcon = item.type === "video" ? VIDEO_ICON : IMAGE_ICON;
+  const typeLabel = item.type === "video" ? "Video" : "Image";
+  const bg = item.url;
+  const bgStyle = bg ? `background: #1e1e1e;` : `background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);`;
+
+  return `
+    <div class="g-card">
+      <div class="g-card-thumb-placeholder" style="${bgStyle}">
+        ${bg ? `<img class="g-card-thumb" src="${bg}" alt="Generated" loading="lazy" />` : ""}
+      </div>
+      <div class="g-card-overlay"></div>
+      <div class="g-card-type-badge">${typeIcon} ${typeLabel}</div>
+      <div class="g-card-creator">
+        <div class="g-card-creator-avatar">
+          ${item.creatorAvatar
+            ? `<img src="${item.creatorAvatar}" alt="creator" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+            : PLUS_ICON}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ── Component ───────────────────────────────────── */
+
+export default function GalleryPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const initRef = useRef(false);
+  const allItems = useRef<any[]>([]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (initRef.current) return;
+    initRef.current = true;
+
+    // Tab switching
+    document.querySelectorAll<HTMLElement>(".gallery-tab").forEach((tab) => {
+      tab.onclick = () => {
+        document.querySelectorAll(".gallery-tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        renderItems(tab.dataset.tab || "all");
+      };
+    });
+
+    // Tag switching
+    document.querySelectorAll<HTMLElement>(".g-tag").forEach((tag) => {
+      tag.onclick = () => {
+        document.querySelectorAll(".g-tag").forEach((t) => t.classList.remove("active"));
+        tag.classList.add("active");
+      };
+    });
+
+    // Load data
+    getPublicGallery()
+      .then((items) => {
+        allItems.current = items || [];
+        renderItems("all");
+      })
+      .catch(() => {
+        const grid = document.getElementById("gallery-grid");
+        if (grid) {
+          grid.innerHTML = `<div class="gallery-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Could not load gallery. Please try again later.</span>
+          </div>`;
+        }
+      });
+  }, [user, loading, router]);
+
+  function renderItems(typeFilter: string) {
+    const grid = document.getElementById("gallery-grid");
+    if (!grid) return;
+
+    const filtered = allItems.current.filter((item) => {
+      if (typeFilter === "all") return true;
+      return item.type?.toLowerCase() === typeFilter;
+    });
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="gallery-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>No items found in the gallery yet.</span>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map((item) =>
+      cardHtml({
+        type: item.type || "image",
+        url: item.output?.url || null,
+        creatorAvatar: item.user?.avatarUrl || null,
+      })
+    ).join("");
+  }
+
+  if (loading) return <div style={{ color: "#aaa", padding: 40 }}>Loading...</div>;
+  if (!user) return null;
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
+      <div className="gallery-content" dangerouslySetInnerHTML={{ __html: buildContent() }} />
+    </>
+  );
+}

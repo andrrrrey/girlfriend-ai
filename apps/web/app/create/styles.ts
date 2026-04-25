@@ -274,4 +274,46 @@ export const PAGE_CSS = `
     z-index: 200; font-size: 16px; color: #fff;
   }
   .create-error { color: #e36466; font-size: 12px; margin-top: 8px; text-align: center; }
+
+  /* Stage 09 */
+  .s9-header { display: flex; align-items: flex-start; width: 100%; flex-shrink: 0; }
+  .s9-sep { width: 100%; border-top: 1px solid #313131; flex-shrink: 0; }
+  .s9-body { display: flex; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
+  .s9-avatar-col { display: flex; flex-direction: column; gap: 8px; width: 205px; flex-shrink: 0; }
+  .s9-avatar-wrap { position: relative; flex: 1; background: #1e1e1e; border-radius: 8px; overflow: hidden; min-height: 280px; }
+  .s9-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+  .s9-spinner-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; }
+  .s9-spinner { width: 28px; height: 28px; border: 2px solid #313131; border-top-color: #f95bad; border-radius: 50%; animation: s9spin 0.8s linear infinite; }
+  @keyframes s9spin { to { transform: rotate(360deg); } }
+  .s9-spinner-txt { font-size: 10px; font-weight: 500; color: #969696; }
+  .s9-regen-btn { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(18,18,18,0.8); backdrop-filter: blur(4px); border: 1px solid #313131; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; }
+  .s9-regen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .s9-name-row, .s9-age-row { display: flex; gap: 6px; align-items: center; }
+  .s9-name { font-weight: 700; font-size: 18px; color: #fff; }
+  .s9-age { font-weight: 500; font-size: 14px; color: #969696; }
+  .s9-edit-btn { background: none; border: none; cursor: pointer; color: #969696; display: flex; align-items: center; padding: 2px; }
+  .s9-edit-btn:hover { color: #fff; }
+  .s9-manage-tags-btn { width: 100%; height: 30px; background: #121212; border: 1px solid #313131; border-radius: 4px; color: #fff; font-weight: 500; font-size: 12px; cursor: pointer; font-family: "Syne", sans-serif; }
+  .s9-attrs-col { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
+  .s9-tab-sep { width: 100%; border-top: 1px solid #313131; flex-shrink: 0; }
+  .s9-attr-grid { display: grid; grid-template-columns: repeat(3, 1fr) repeat(1, 120px); gap: 8px; }
+  .s9-tile { background: #1e1e1e; border: 1px solid #313131; border-radius: 8px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-height: 80px; cursor: default; position: relative; overflow: hidden; }
+  .s9-tile-icon { font-size: 20px; margin-bottom: 4px; }
+  .s9-tile-name { font-weight: 700; font-size: 13px; color: #fff; text-align: center; }
+  .s9-tile-label { font-size: 8px; font-weight: 500; color: #969696; text-transform: uppercase; letter-spacing: 0.5px; }
+  .s9-color-tiles { display: flex; flex-direction: column; gap: 8px; }
+  .s9-color-tile { background: #1e1e1e; border: 1px solid #313131; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .s9-color-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+  .s9-color-info { display: flex; flex-direction: column; gap: 2px; }
+  .s9-color-name { font-weight: 700; font-size: 13px; color: #fff; }
+  .s9-custom-textareas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .s9-custom-label { font-size: 10px; font-weight: 500; color: #fff; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+  .s9-custom-textarea { width: 100%; height: 80px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; padding: 8px 10px; font-family: "Syne", sans-serif; font-size: 10px; color: #969696; resize: none; outline: none; }
+  .s9-custom-textarea::placeholder { color: #5b5b5b; }
+  .s9-pers-list { display: flex; flex-direction: column; gap: 8px; }
+  .s9-pers-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e1e; }
+  .s9-pers-icon { font-size: 16px; flex-shrink: 0; }
+  .s9-pers-text { display: flex; flex-direction: column; gap: 2px; }
+  .s9-pers-label { font-size: 10px; font-weight: 500; color: #969696; }
+  .s9-pers-value { font-size: 12px; font-weight: 500; color: #fff; }
 `;

@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { characters } from "../lib/api";
+import type { Character } from "../lib/api";
 
 const PAGE_CSS = `
     /* ─── Content area ───────────────────────────── */
@@ -316,8 +320,10 @@ const PAGE_CSS = `
 
     /* Character cards */
     .cards-row {
-      height: 300px;
-      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      height: auto;
       width: 100%;
     }
 
@@ -327,8 +333,8 @@ const PAGE_CSS = `
       width: 220px;
       height: 300px;
       overflow: hidden;
-      position: absolute;
-      top: 0;
+      position: relative;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
@@ -368,10 +374,10 @@ const PAGE_CSS = `
     }
 
     .card-featured-wrap {
-      position: absolute;
-      top: 0;
+      position: relative;
       height: 300px;
       width: 220px;
+      flex-shrink: 0;
     }
     .card-featured-wrap:hover {
       z-index: 5;
@@ -409,13 +415,28 @@ const PAGE_CSS = `
       border-color: #313131;
     }
 
-    .card-featured-wrap .card-actions,
     .card-featured-wrap .card-progress {
       opacity: 0;
       transition: opacity 0.2s ease;
     }
-    .card-featured-wrap:hover .card-actions,
     .card-featured-wrap:hover .card-progress {
+      opacity: 1;
+    }
+
+    /* card-actions as direct child of card-featured-wrap */
+    .card-featured-wrap .card-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 10;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      display: flex;
+    }
+    .card-featured-wrap:hover .card-actions {
       opacity: 1;
     }
 
@@ -477,16 +498,6 @@ const PAGE_CSS = `
       z-index: 2;
     }
 
-    .card-actions {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 2px;
-      position: relative;
-      z-index: 2;
-      width: 100%;
-    }
     .card-action-btn {
       width: 28px;
       height: 28px;
@@ -513,7 +524,7 @@ const PAGE_CSS = `
     }
 `;
 
-const CONTENT_HTML = `
+const STATIC_HTML = `
       <!-- Hero Banner -->
       <div class="hero">
         <div class="hero-bg">
@@ -647,19 +658,10 @@ const CONTENT_HTML = `
           </div>
         </div>
 
-        <!-- Character cards -->
-        <div class="cards-row">
-          <!-- Card 1 -->
-          <div class="card" style="left:0;">
-            <div class="card-bg">
-              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
-              <div class="card-overlay"></div>
-            </div>
-            <div class="card-name">Diana, 29</div>
-          </div>
-
-          <!-- Card 2 - Featured -->
-          <div class="card-featured-wrap" style="left:238px;">
+        <!-- Character cards rendered by React -->
+        <div id="cards-row-dynamic" class="cards-row">
+          <!-- Card 2 - Featured (static) -->
+          <div class="card-featured-wrap">
             <div class="hover-panel">
               <div class="hover-tags">
                 <span class="hover-tag">Young</span>
@@ -686,21 +688,21 @@ const CONTENT_HTML = `
                 </div>
               </div>
             </div>
+            <div class="card-actions">
+              <div class="card-action-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="card-action-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="card-action-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
+              </div>
+            </div>
             <div class="card featured">
               <div class="card-bg">
                 <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
                 <div class="card-overlay"></div>
-              </div>
-              <div class="card-actions">
-                <div class="card-action-btn">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                <div class="card-action-btn">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                <div class="card-action-btn">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
-                </div>
               </div>
               <div class="card-name">Diana Smith, 29</div>
               <div class="card-progress">
@@ -716,41 +718,68 @@ const CONTENT_HTML = `
               </div>
             </div>
           </div>
-
-          <!-- Card 3 -->
-          <div class="card" style="left:476px;">
-            <div class="card-bg">
-              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
-              <div class="card-overlay"></div>
-            </div>
-            <div class="card-name">Diana, 29</div>
-          </div>
-
-          <!-- Card 4 -->
-          <div class="card" style="left:714px;">
-            <div class="card-bg">
-              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
-              <div class="card-overlay"></div>
-            </div>
-            <div class="card-name">Diana, 29</div>
-          </div>
-
-          <!-- Card 5 -->
-          <div class="card" style="left:952px;">
-            <div class="card-bg">
-              <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
-              <div class="card-overlay"></div>
-            </div>
-            <div class="card-name">Diana, 29</div>
-          </div>
         </div>
       </div>
 `;
 
+function buildDynamicCards(chars: Character[]): string {
+  if (!chars || chars.length === 0) return "";
+  return chars
+    .map((char) => {
+      const age =
+        char.personality && typeof char.personality === "object" && "age" in char.personality
+          ? ` ${char.personality.age}`
+          : "";
+      const label = `${char.name}${age}`;
+      const bgStyle = char.avatarUrl
+        ? `position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;`
+        : `position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;`;
+      const bgContent = char.avatarUrl
+        ? `<img src="${char.avatarUrl}" style="${bgStyle}" alt="${char.name}" />`
+        : `<div style="${bgStyle}"></div>`;
+      return `<div class="card">
+  <div class="card-bg">
+    ${bgContent}
+    <div class="card-overlay"></div>
+  </div>
+  <div class="card-name">${label}</div>
+</div>`;
+    })
+    .join("\n");
+}
+
 export default function HomePage() {
+  const [chars, setChars] = React.useState<Character[]>([]);
+
+  React.useEffect(() => {
+    characters
+      .listPublic()
+      .then((data) => setChars(data))
+      .catch(() => {
+        // silently fail — featured card remains visible
+      });
+  }, []);
+
+  const dynamicCardsHtml = buildDynamicCards(chars);
+
+  // Inject dynamic cards after the featured card
+  const fullHtml = `<style>${PAGE_CSS}</style><div class="content">${STATIC_HTML}</div>`;
+
+  React.useEffect(() => {
+    if (!dynamicCardsHtml) return;
+    const container = document.getElementById("cards-row-dynamic");
+    if (!container) return;
+    // Remove previously injected dynamic cards
+    container.querySelectorAll(".card-dynamic").forEach((el) => el.remove());
+    const temp = document.createElement("div");
+    temp.innerHTML = dynamicCardsHtml;
+    Array.from(temp.children).forEach((child) => {
+      (child as HTMLElement).classList.add("card-dynamic");
+      container.appendChild(child);
+    });
+  }, [dynamicCardsHtml]);
+
   return React.createElement("div", {
-    dangerouslySetInnerHTML: {
-      __html: `<style>${PAGE_CSS}</style><div class="content">${CONTENT_HTML}</div>`,
-    },
+    dangerouslySetInnerHTML: { __html: fullHtml },
   });
 }

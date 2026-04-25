@@ -50,7 +50,7 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
           <span className="label">Chat</span>
           <span className="nav-badge">3 <span className="badge-dot" style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block',boxShadow:'0 0 6px 2px rgba(74,222,128,0.6)'}}></span></span>
         </a>
-        <a className={navLinkClass("gallery")}>
+        <a href="/gallery" className={navLinkClass("gallery")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           <span className="label">Gallery</span>
         </a>
@@ -62,7 +62,7 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           <span className="label">Create Character</span>
         </a>
-        <a className={navLinkClass("my-ai")}>
+        <a href="/my-ai" className={navLinkClass("my-ai")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           <span className="label">My AI</span>
         </a>

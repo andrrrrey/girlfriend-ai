@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters } from "../../lib/api";
+import { characters, createImageJob, getJobStatus } from "../../lib/api";
 import { PAGE_CSS } from "./styles";
 import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
@@ -12,6 +12,11 @@ import {
   KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_NAMES, STAGE_ICONS,
   CHEVRON_SVG, GENERATE_BTN_SVG, VOICE_ICON_SVG, CHECK_SVG, LOADER_SVG, PREMIUM_BADGE_SVG,
 } from "./data";
+
+/* ── Module-level state for AI image generation ── */
+
+let previewImageUrl: string | null = null;
+let previewPollInterval: ReturnType<typeof setInterval> | null = null;
 
 /* ── HTML Builders ────────────────────────────── */
 
@@ -151,21 +156,48 @@ function stage08() {
 }
 
 function stage09() {
+  const editIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
   return `<div class="stage-content" id="stage-09-content">
-    <div class="form-header"><div class="stage-info"><div class="stage-label">Stage 09</div><div class="stage-title">Final preview</div></div></div>
-    <div class="form-sep"></div>
-    <div style="display:flex;gap:12px;align-items:center;flex-shrink:0">
-      <div style="font-weight:700;font-size:20px;color:#fff" id="preview-name">Character</div>
-      <div style="font-weight:500;font-size:16px;color:#969696" id="preview-age">25 yo</div>
+    <div class="s9-header">
+      <div class="stage-info"><div class="stage-label">Stage 09</div><div class="stage-title">Final preview</div></div>
     </div>
-    <div class="preview-tabs">
-      <div class="preview-tab active" data-tab="tab-appearance">Appearance</div>
-      <div class="preview-tab" data-tab="tab-personality">Personality</div>
-      <div class="preview-tab" data-tab="tab-memories">Memories</div>
+    <div class="s9-sep"></div>
+    <div class="s9-body">
+      <!-- LEFT: avatar card -->
+      <div class="s9-avatar-col">
+        <div class="s9-avatar-wrap">
+          <img id="s9-avatar-img" class="s9-avatar-img" src="" style="display:none">
+          <div id="s9-avatar-spinner" class="s9-spinner-wrap">
+            <div class="s9-spinner"></div>
+            <div class="s9-spinner-txt">Generating...</div>
+          </div>
+          <button class="s9-regen-btn" id="s9-regen-btn" title="Regenerate">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          </button>
+        </div>
+        <div class="s9-name-row">
+          <span id="preview-name" class="s9-name">Character</span>
+          <button class="s9-edit-btn" title="Edit name">${editIconSvg}</button>
+        </div>
+        <div class="s9-age-row">
+          <span id="preview-age" class="s9-age">25 yo</span>
+          <button class="s9-edit-btn" title="Edit age">${editIconSvg}</button>
+        </div>
+        <button class="s9-manage-tags-btn">Manage tags</button>
+      </div>
+      <!-- RIGHT: tabs + attribute grid -->
+      <div class="s9-attrs-col">
+        <div class="preview-tabs">
+          <div class="preview-tab active" data-tab="tab-appearance">Appearance</div>
+          <div class="preview-tab" data-tab="tab-personality">Personality</div>
+          <div class="preview-tab" data-tab="tab-memories">Memories</div>
+        </div>
+        <div class="s9-tab-sep"></div>
+        <div class="preview-tab-content active" id="tab-appearance"></div>
+        <div class="preview-tab-content" id="tab-personality"></div>
+        <div class="preview-tab-content" id="tab-memories"></div>
+      </div>
     </div>
-    <div class="preview-tab-content active" id="tab-appearance"></div>
-    <div class="preview-tab-content" id="tab-personality"></div>
-    <div class="preview-tab-content" id="tab-memories"></div>
     ${navButtons(8, "submit")}
   </div>`;
 }
@@ -256,6 +288,30 @@ function row(icon: string, label: string, value: string) {
   return `<div class="pers-row"><div class="pers-row-icon">${icon}</div><div class="pers-row-text"><span class="pers-row-label">${label}</span><span class="pers-row-value">${value || "Not set"}</span></div></div>`;
 }
 
+function colorNameToHex(name: string | undefined): string {
+  if (!name) return "#555";
+  const map: Record<string, string> = {
+    black: "#1a1a1a", brown: "#6b3a2a", blonde: "#f5d67b", red: "#c0392b",
+    auburn: "#8b2500", gray: "#888", white: "#eee", silver: "#ccc",
+    blue: "#2980b9", green: "#27ae60", hazel: "#7d6608", amber: "#d4a017",
+    violet: "#8e44ad", pink: "#e91e8c", purple: "#6c3483",
+  };
+  return map[name.toLowerCase()] ?? "#555";
+}
+
+function s9Tile(icon: string, name: string, label: string) {
+  return `<div class="s9-tile"><div class="s9-tile-icon">${icon}</div><div class="s9-tile-name">${name || "—"}</div><div class="s9-tile-label">${label}</div></div>`;
+}
+
+function s9ColorTile(color: string | undefined, label: string) {
+  const hex = colorNameToHex(color);
+  return `<div class="s9-color-tile"><div class="s9-color-dot" style="background:${hex}"></div><div class="s9-color-info"><div class="s9-color-name">${color || "—"}</div><div class="s9-tile-label">${label}</div></div></div>`;
+}
+
+function s9PersRow(icon: string, label: string, value: string) {
+  return `<div class="s9-pers-row"><div class="s9-pers-icon">${icon}</div><div class="s9-pers-text"><div class="s9-pers-label">${label}</div><div class="s9-pers-value">${value || "Not set"}</div></div></div>`;
+}
+
 function populatePreview() {
   const d = collectFormData();
   const nameEl = document.getElementById("preview-name");
@@ -263,29 +319,115 @@ function populatePreview() {
   if (nameEl) nameEl.textContent = d.surname ? `${d.name} ${d.surname}` : d.name;
   if (ageEl) ageEl.textContent = `${d.age} yo`;
 
+  // Appearance tab — tile grid + color tiles + custom textareas
   const app = document.getElementById("tab-appearance");
-  if (app) app.innerHTML = `<div class="pers-list">${row("\u{1F50A}", "Voice", d.voice || "")
-    }${row("\u{1F487}", "Hair Style", d.hairStyle || "")
-    }${row("\u{1F3A8}", "Hair Color", d.hairColor || "")
-    }${row("\u{1F441}", "Eye Color", d.eyeColor || "")
-    }${row("\u{1F3CB}", "Body Type", d.bodyType || "")
-    }${row("\u{1F30D}", "Ethnicity", d.ethnicity || "")
-    }${row("\u{1F459}", "Breast Size", d.breastSize || "")
-    }${row("\u{1F351}", "Butt Size", d.buttSize || "")}</div>`;
+  if (app) {
+    app.innerHTML = `
+      <div class="s9-attr-grid">
+        ${s9Tile("🔊", d.voice || "—", "VOICE")}
+        ${s9Tile("💇", d.hairStyle || "—", "HAIRSTYLE")}
+        ${s9Tile("🌍", d.ethnicity || "—", "ETHNICITY")}
+        <div class="s9-color-tiles">
+          ${s9ColorTile(d.eyeColor, "EYES")}
+          ${s9ColorTile(d.hairColor, "HAIR")}
+        </div>
+      </div>
+      <div class="s9-attr-grid" style="grid-template-columns:repeat(3,1fr)">
+        ${s9Tile("🏋️", d.bodyType || "—", "BODY TYPE")}
+        ${s9Tile("🌸", d.breastSize || "—", "BREAST SIZE")}
+        ${s9Tile("🍑", d.buttSize || "—", "BUTT SIZE")}
+      </div>
+      <div class="s9-custom-textareas">
+        <div>
+          <div class="s9-custom-label">Custom appearance details 💎</div>
+          <textarea class="s9-custom-textarea" placeholder="Add custom appearance details..."></textarea>
+        </div>
+        <div>
+          <div class="s9-custom-label">Custom face details 💎</div>
+          <textarea class="s9-custom-textarea" placeholder="Add custom face details..."></textarea>
+        </div>
+      </div>`;
+  }
 
+  // Personality tab — text rows
   const per = document.getElementById("tab-personality");
-  if (per) per.innerHTML = `<div class="pers-list">${row("\u{1F4AC}", "Personality", d.personality || "")
-    }${row("\u{1F3E0}", "Lifestyle", d.lifestyle || "")
-    }${row("\u{1F491}", "Relationship", d.relationshipType || "")
-    }${row("\u{1F46A}", "Family Status", d.familyStatus || "")
-    }${row("\u{1F4BC}", "Work", d.work?.join(", ") || "")
-    }${row("\u{1F3AF}", "Hobbies", d.hobbies?.join(", ") || "")
-    }${row("\u{1F525}", "Kinks", d.kinks?.join(", ") || "")}</div>`;
+  if (per) {
+    per.innerHTML = `<div class="s9-pers-list">
+      ${s9PersRow("💬", "Personality", d.personality || "")}
+      ${s9PersRow("🏠", "Lifestyle", d.lifestyle || "")}
+      ${s9PersRow("💑", "Relationship", d.relationshipType || "")}
+      ${s9PersRow("👨‍👩‍👧", "Family Status", d.familyStatus || "")}
+      ${s9PersRow("💼", "Work", d.work?.join(", ") || "")}
+      ${s9PersRow("🎯", "Hobbies", d.hobbies?.join(", ") || "")}
+      ${s9PersRow("🔥", "Kinks", d.kinks?.join(", ") || "")}
+    </div>`;
+  }
 
+  // Memories tab — text rows
   const mem = document.getElementById("tab-memories");
-  if (mem) mem.innerHTML = `<div class="pers-list">${row("\u{1F9D2}", "Childhood", d.childhoodMemory || "")
-    }${row("\u{1F4D6}", "Life Story", d.lifeStory || "")
-    }${row("\u{1F628}", "Phobias", d.phobias || "")}</div>`;
+  if (mem) {
+    mem.innerHTML = `<div class="s9-pers-list">
+      ${s9PersRow("🧒", "Childhood", d.childhoodMemory || "")}
+      ${s9PersRow("📖", "Life Story", d.lifeStory || "")}
+      ${s9PersRow("😨", "Phobias", d.phobias || "")}
+    </div>`;
+  }
+}
+
+/* ── AI Avatar generation ─────────────────────── */
+
+function buildAvatarPrompt(d: ReturnType<typeof collectFormData>): string {
+  const parts = [
+    d.style === "Anime" ? "anime style" : "photorealistic",
+    d.gender?.toLowerCase() ?? "female",
+    d.age ? `${d.age} years old` : "",
+    d.ethnicity ?? "",
+    d.hairColor ? `${d.hairColor} hair` : "",
+    d.hairStyle ? `${d.hairStyle} hairstyle` : "",
+    d.eyeColor ? `${d.eyeColor} eyes` : "",
+    d.bodyType ? `${d.bodyType} body` : "",
+    "portrait, beautiful, high quality, detailed",
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+async function startAvatarGeneration() {
+  const data = collectFormData();
+  const prompt = buildAvatarPrompt(data);
+
+  const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
+  const spinner = document.getElementById("s9-avatar-spinner");
+  const regenBtn = document.getElementById("s9-regen-btn");
+  if (img) { img.style.display = "none"; }
+  if (spinner) { spinner.style.display = "flex"; }
+  if (regenBtn) { regenBtn.setAttribute("disabled", "true"); }
+
+  if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
+
+  try {
+    const job = await createImageJob({ prompt });
+    previewPollInterval = setInterval(async () => {
+      try {
+        const status = await getJobStatus(job.jobId);
+        if (status.status === "completed" && (status.output as any)?.url) {
+          clearInterval(previewPollInterval!);
+          previewPollInterval = null;
+          previewImageUrl = (status.output as any).url;
+          if (img) { img.src = previewImageUrl!; img.style.display = "block"; }
+          if (spinner) spinner.style.display = "none";
+          if (regenBtn) regenBtn.removeAttribute("disabled");
+        } else if (status.status === "failed") {
+          clearInterval(previewPollInterval!);
+          previewPollInterval = null;
+          if (spinner) spinner.style.display = "none";
+          if (regenBtn) regenBtn.removeAttribute("disabled");
+        }
+      } catch { /* ignore poll errors */ }
+    }, 2500);
+  } catch {
+    if (spinner) spinner.style.display = "none";
+    if (regenBtn) regenBtn.removeAttribute("disabled");
+  }
 }
 
 /* ── Stage navigation logic ───────────────────── */
@@ -347,6 +489,7 @@ function goToStage(n: number) {
 
   initInteractive();
   if (n === 9) populatePreview();
+  if (n === 9) startAvatarGeneration();
 }
 
 /* ── Interactive handlers ─────────────────────── */
@@ -407,6 +550,11 @@ function initInteractive() {
       const id = tab.dataset.tab;
       if (id) document.getElementById(id)?.classList.add("active");
     };
+  });
+
+  // Regenerate avatar button
+  document.getElementById("s9-regen-btn")?.addEventListener("click", () => {
+    startAvatarGeneration();
   });
 }
 
@@ -487,7 +635,7 @@ export default function CreateCharacterPage() {
       submitBtn.textContent = "Creating...";
       try {
         const data = collectFormData();
-        await characters.create(data);
+        await characters.create({ ...data, avatarUrl: previewImageUrl ?? undefined });
         router.push("/chat");
       } catch (err: unknown) {
         submitBtn.classList.remove("disabled");

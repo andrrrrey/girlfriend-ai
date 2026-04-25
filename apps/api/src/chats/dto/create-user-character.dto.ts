@@ -116,4 +116,8 @@ export class CreateUserCharacterDto {
   @IsOptional()
   @IsString()
   phobias?: string;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 }

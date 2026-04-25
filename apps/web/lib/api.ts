@@ -647,6 +647,7 @@ export interface CreateCharacterFormData {
   childhoodMemory?: string;
   lifeStory?: string;
   phobias?: string;
+  avatarUrl?: string;
 }
 
 export const characters = {
@@ -1005,4 +1006,8 @@ export async function deleteGenerationJob(jobId: string) {
   return apiFetch<{ deleted: boolean }>(`/generation/jobs/${jobId}`, {
     method: "DELETE",
   });
+}
+
+export async function getPublicGallery() {
+  return apiFetch<any[]>("/generation/gallery");
 }

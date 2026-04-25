@@ -100,6 +100,7 @@ export class CharactersController {
         systemPrompt,
         personality: personalityJson as Prisma.InputJsonValue,
         tags,
+        avatarUrl: dto.avatarUrl,
         isPublic: false,
         createdBy: req.user.id,
       },

@@ -196,6 +196,30 @@ export class GenerationService {
     }));
   }
 
+  async getGallery(limit = 50) {
+    const jobs = await this.prisma.aiJob.findMany({
+      where: {
+        status: "completed",
+        type: { in: ["image", "video"] },
+        output: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    return jobs.map((job) => ({
+      jobId: job.id,
+      type: job.type,
+      output: job.output,
+      input: (() => {
+        const input = job.input as Record<string, unknown> | null;
+        if (!input) return {};
+        return { prompt: input["prompt"], model: input["model"] };
+      })(),
+      createdAt: job.createdAt,
+    }));
+  }
+
   async deleteJob(jobId: string, userId: string) {
     const job = await this.prisma.aiJob.findFirst({
       where: { id: jobId, userId },
