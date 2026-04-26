@@ -17,7 +17,6 @@ const PAGE_CSS = `
     gap: 20px;
   }
 
-  /* Title */
   .gallery-title-row {
     display: flex;
     align-items: center;
@@ -33,7 +32,6 @@ const PAGE_CSS = `
   .gallery-title .pink { color: #f95bad; }
   .gallery-title .white { color: #fff; }
 
-  /* Tabs */
   .gallery-tabs {
     display: flex;
     align-items: center;
@@ -58,7 +56,6 @@ const PAGE_CSS = `
     color: #fff;
   }
 
-  /* Filter row */
   .gallery-filter-row {
     display: flex;
     align-items: center;
@@ -80,7 +77,6 @@ const PAGE_CSS = `
   .filter-dropdown .muted { font-size: 10px; font-weight: 500; color: #969696; }
   .filter-dropdown .val { font-size: 10px; font-weight: 500; color: #fff; }
 
-  /* Tags */
   .gallery-tags {
     display: flex;
     align-items: center;
@@ -103,9 +99,7 @@ const PAGE_CSS = `
     align-items: center;
     position: relative;
   }
-  .g-tag.active {
-    background: #1e1e1e;
-  }
+  .g-tag.active { background: #1e1e1e; }
   .g-tag.active::after {
     content: '';
     position: absolute;
@@ -120,7 +114,6 @@ const PAGE_CSS = `
     z-index: 2;
   }
 
-  /* Grid */
   .gallery-grid {
     display: flex;
     flex-wrap: wrap;
@@ -138,7 +131,9 @@ const PAGE_CSS = `
     cursor: pointer;
     flex-shrink: 0;
     background: #1e1e1e;
+    transition: border-color 0.15s ease;
   }
+  .g-card:hover { border-color: #5b5b5b; }
 
   .g-card-thumb {
     position: absolute;
@@ -180,29 +175,7 @@ const PAGE_CSS = `
     white-space: nowrap;
   }
 
-  .g-card-creator {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .g-card-creator-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #313131;
-    border: 1.5px solid rgba(249,91,173,0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  /* Loading skeleton */
+  /* Skeleton */
   .g-card-skeleton {
     width: 160px;
     height: 220px;
@@ -224,7 +197,6 @@ const PAGE_CSS = `
     100% { transform: translateX(100%); }
   }
 
-  /* Empty / error state */
   .gallery-empty {
     display: flex;
     flex-direction: column;
@@ -237,6 +209,61 @@ const PAGE_CSS = `
     width: 100%;
   }
   .gallery-empty svg { opacity: 0.3; }
+
+  /* ── Lightbox ── */
+  .g-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .g-lightbox.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .g-lightbox-media {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    object-fit: contain;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+  .g-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+  }
+  .g-lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .gallery-content { padding: 16px 16px 40px; gap: 14px; }
+    .gallery-title { font-size: 22px; }
+    .gallery-filter-row { flex-wrap: wrap; }
+    .g-card { width: calc(50% - 6px); height: 180px; }
+    .g-card-skeleton { width: calc(50% - 6px); height: 180px; }
+  }
+  @media (max-width: 480px) {
+    .g-card { width: calc(50% - 6px); height: 160px; }
+    .g-card-skeleton { width: calc(50% - 6px); height: 160px; }
+  }
 `;
 
 /* ── SVGs ─────────────────────────────────────────── */
@@ -244,7 +271,6 @@ const PAGE_CSS = `
 const CHEVRON_SVG = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const IMAGE_ICON = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#fff" stroke-width="1.2"/><circle cx="5.5" cy="5.5" r="1" fill="#fff"/><path d="M2 11l3.5-3.5 2.5 2.5 2-2L14 11" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const VIDEO_ICON = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 5a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" stroke="#fff" stroke-width="1.2"/><path d="M12 6.5l3-2v7l-3-2V6.5z" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
-const PLUS_ICON = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 2v6M2 5h6" stroke="#f95bad" stroke-width="1.2" stroke-linecap="round"/></svg>`;
 
 const TAGS = ["All", "Group Chats", "Teen", "Asian", "Anime", "Blond", "Strong", "Lonely", "Young", "Latina", "Romantic", "Athletic"];
 
@@ -296,29 +322,32 @@ function buildContent() {
     <div class="gallery-grid" id="gallery-grid">
       ${[1,2,3,4,5,6,7,8,9,10].map(() => `<div class="g-card-skeleton"></div>`).join("")}
     </div>
+
+    <!-- Lightbox -->
+    <div class="g-lightbox" id="g-lightbox">
+      <div class="g-lightbox-close" id="g-lightbox-close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div id="g-lightbox-media-wrap"></div>
+    </div>
   `;
 }
 
-function cardHtml(item: { type: string; url?: string | null; creatorAvatar?: string | null }) {
+function cardHtml(item: { type: string; url?: string | null }) {
   const typeIcon = item.type === "video" ? VIDEO_ICON : IMAGE_ICON;
   const typeLabel = item.type === "video" ? "Video" : "Image";
   const bg = item.url;
   const bgStyle = bg ? `background: #1e1e1e;` : `background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);`;
+  const dataUrl = bg ? ` data-url="${bg}"` : "";
+  const dataType = ` data-type="${item.type}"`;
 
   return `
-    <div class="g-card">
+    <div class="g-card"${dataUrl}${dataType}>
       <div class="g-card-thumb-placeholder" style="${bgStyle}">
         ${bg ? `<img class="g-card-thumb" src="${bg}" alt="Generated" loading="lazy" />` : ""}
       </div>
       <div class="g-card-overlay"></div>
       <div class="g-card-type-badge">${typeIcon} ${typeLabel}</div>
-      <div class="g-card-creator">
-        <div class="g-card-creator-avatar">
-          ${item.creatorAvatar
-            ? `<img src="${item.creatorAvatar}" alt="creator" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-            : PLUS_ICON}
-        </div>
-      </div>
     </div>
   `;
 }
@@ -339,6 +368,33 @@ export default function GalleryPage() {
     }
     if (initRef.current) return;
     initRef.current = true;
+
+    // Lightbox helpers
+    function openLightbox(url: string, type: string) {
+      const lb = document.getElementById("g-lightbox");
+      const wrap = document.getElementById("g-lightbox-media-wrap");
+      if (!lb || !wrap) return;
+      if (type === "video") {
+        wrap.innerHTML = `<video class="g-lightbox-media" src="${url}" controls autoplay loop></video>`;
+      } else {
+        wrap.innerHTML = `<img class="g-lightbox-media" src="${url}" alt="Gallery" />`;
+      }
+      lb.classList.add("open");
+    }
+
+    function closeLightbox() {
+      const lb = document.getElementById("g-lightbox");
+      const wrap = document.getElementById("g-lightbox-media-wrap");
+      if (!lb || !wrap) return;
+      lb.classList.remove("open");
+      wrap.innerHTML = "";
+    }
+
+    document.getElementById("g-lightbox")?.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest(".g-lightbox-media")) return;
+      closeLightbox();
+    });
+    document.getElementById("g-lightbox-close")?.addEventListener("click", closeLightbox);
 
     // Tab switching
     document.querySelectorAll<HTMLElement>(".gallery-tab").forEach((tab) => {
@@ -372,33 +428,41 @@ export default function GalleryPage() {
           </div>`;
         }
       });
-  }, [user, loading, router]);
 
-  function renderItems(typeFilter: string) {
-    const grid = document.getElementById("gallery-grid");
-    if (!grid) return;
+    function renderItems(typeFilter: string) {
+      const grid = document.getElementById("gallery-grid");
+      if (!grid) return;
 
-    const filtered = allItems.current.filter((item) => {
-      if (typeFilter === "all") return true;
-      return item.type?.toLowerCase() === typeFilter;
-    });
+      const filtered = allItems.current.filter((item) => {
+        if (typeFilter === "all") return true;
+        return item.type?.toLowerCase() === typeFilter;
+      });
 
-    if (filtered.length === 0) {
-      grid.innerHTML = `<div class="gallery-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <span>No items found in the gallery yet.</span>
-      </div>`;
-      return;
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="gallery-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>No items found in the gallery yet.</span>
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map((item) =>
+        cardHtml({
+          type: item.type || "image",
+          url: item.output?.url || null,
+        })
+      ).join("");
+
+      // Attach lightbox click handlers to new cards
+      grid.querySelectorAll<HTMLElement>(".g-card").forEach((card) => {
+        card.onclick = () => {
+          const url = card.dataset.url;
+          const type = card.dataset.type || "image";
+          if (url) openLightbox(url, type);
+        };
+      });
     }
-
-    grid.innerHTML = filtered.map((item) =>
-      cardHtml({
-        type: item.type || "image",
-        url: item.output?.url || null,
-        creatorAvatar: item.user?.avatarUrl || null,
-      })
-    ).join("");
-  }
+  }, [user, loading, router]);
 
   if (loading) return <div style={{ color: "#aaa", padding: 40 }}>Loading...</div>;
   if (!user) return null;

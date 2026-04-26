@@ -522,6 +522,33 @@ const PAGE_CSS = `
       flex: 1;
       height: 2px;
     }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .characters-section { width: 100%; }
+    }
+    @media (max-width: 768px) {
+      .hero { margin: 0 16px; height: 120px; }
+      .hero-content { width: 100%; padding: 0 8px; }
+      .hero-title { font-size: 22px; white-space: normal; text-align: center; }
+      .stories-section { left: 16px; right: 16px; top: 160px; }
+      .story-avatar { width: 52px; height: 52px; }
+      .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
+      .chars-header { width: 100%; }
+      .chars-title { font-size: 22px; }
+      .cards-row { gap: 12px; }
+      .card { width: calc(50% - 6px); height: 220px; }
+      .card-featured-wrap { width: calc(50% - 6px); height: 220px; }
+      .hover-panel { width: 100%; height: 220px; }
+      .card-name { font-size: 15px; }
+      .search-and-sorting { flex-wrap: wrap; }
+      .sorting-buttons { flex-wrap: wrap; }
+    }
+    @media (max-width: 480px) {
+      .card { width: calc(50% - 6px); height: 180px; }
+      .card-featured-wrap { width: calc(50% - 6px); height: 180px; }
+      .hover-panel { width: 100%; height: 180px; }
+    }
 `;
 
 const STATIC_HTML = `
@@ -659,66 +686,7 @@ const STATIC_HTML = `
         </div>
 
         <!-- Character cards rendered by React -->
-        <div id="cards-row-dynamic" class="cards-row">
-          <!-- Card 2 - Featured (static) -->
-          <div class="card-featured-wrap">
-            <div class="hover-panel">
-              <div class="hover-tags">
-                <span class="hover-tag">Young</span>
-                <span class="hover-tag">Young</span>
-                <span class="hover-tag">Strong</span>
-                <span class="hover-tag">Young</span>
-                <span class="hover-tag">Romantic</span>
-                <span class="hover-tag">Asian</span>
-                <span class="hover-tag">Anime Girl</span>
-              </div>
-              <p class="hover-description">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn't like that. Mine is quieter. Mine is knowing... knowing that grief isn't that is dark; it is knowing that light is temporary. </p>
-              <div class="hover-stats">
-                <div class="hover-stat">
-                  <span class="hover-stat-value">54.2K</span>
-                  <span class="hover-stat-label">likes</span>
-                </div>
-                <div class="hover-stat">
-                  <span class="hover-stat-value">1.2K</span>
-                  <span class="hover-stat-label">comments</span>
-                </div>
-                <div class="hover-stat">
-                  <span class="hover-stat-value">600</span>
-                  <span class="hover-stat-label">generated</span>
-                </div>
-              </div>
-            </div>
-            <div class="card-actions">
-              <div class="card-action-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
-              <div class="card-action-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
-              <div class="card-action-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
-              </div>
-            </div>
-            <div class="card featured">
-              <div class="card-bg">
-                <div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;"></div>
-                <div class="card-overlay"></div>
-              </div>
-              <div class="card-name">Diana Smith, 29</div>
-              <div class="card-progress">
-                <div class="progress-bar active">
-                  <div class="progress-bar-glow">
-                                      </div>
-                  <div class="progress-bar-inner"></div>
-                </div>
-                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-                <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div id="cards-row-dynamic" class="cards-row"></div>
       </div>
 `;
 
@@ -726,23 +694,47 @@ function buildDynamicCards(chars: Character[]): string {
   if (!chars || chars.length === 0) return "";
   return chars
     .map((char) => {
-      const age =
-        char.personality && typeof char.personality === "object" && "age" in char.personality
-          ? ` ${char.personality.age}`
-          : "";
+      const p = (char.personality as Record<string, unknown> | null) || {};
+      const age = p["age"] ? ` ${p["age"]}` : "";
       const label = `${char.name}${age}`;
-      const bgStyle = char.avatarUrl
-        ? `position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;`
-        : `position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%);border-radius:8px;`;
+      const description = (p["description"] as string) || (p["bio"] as string) || "";
+      const rawTags = (p["tags"] as string[]) || (p["traits"] as string[]) || [];
+      const tagsHtml = rawTags.slice(0, 7)
+        .map((t) => `<span class="hover-tag">${t}</span>`)
+        .join("");
+      const descHtml = description
+        ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
+        : `<p class="hover-description" style="color:#969696;">No description yet.</p>`;
       const bgContent = char.avatarUrl
-        ? `<img src="${char.avatarUrl}" style="${bgStyle}" alt="${char.name}" />`
-        : `<div style="${bgStyle}"></div>`;
-      return `<div class="card">
-  <div class="card-bg">
-    ${bgContent}
-    <div class="card-overlay"></div>
+        ? `<img src="${char.avatarUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
+        : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
+
+      return `
+<div class="card-featured-wrap">
+  <div class="hover-panel">
+    <div class="hover-tags">${tagsHtml}</div>
+    ${descHtml}
+    <div class="hover-stats">
+      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">likes</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">comments</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">generated</span></div>
+    </div>
   </div>
-  <div class="card-name">${label}</div>
+  <div class="card-actions">
+    <div class="card-action-btn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.333A1.333 1.333 0 013.333 2h9.334A1.333 1.333 0 0114 3.333v6.334A1.333 1.333 0 0112.667 11H5.333L2 14V3.333z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="card-action-btn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="card-action-btn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg>
+    </div>
+  </div>
+  <div class="card featured">
+    <div class="card-bg">${bgContent}<div class="card-overlay"></div></div>
+    <div class="card-name">${label}</div>
+  </div>
 </div>`;
     })
     .join("\n");
@@ -766,17 +758,9 @@ export default function HomePage() {
   const fullHtml = `<style>${PAGE_CSS}</style><div class="content">${STATIC_HTML}</div>`;
 
   React.useEffect(() => {
-    if (!dynamicCardsHtml) return;
     const container = document.getElementById("cards-row-dynamic");
     if (!container) return;
-    // Remove previously injected dynamic cards
-    container.querySelectorAll(".card-dynamic").forEach((el) => el.remove());
-    const temp = document.createElement("div");
-    temp.innerHTML = dynamicCardsHtml;
-    Array.from(temp.children).forEach((child) => {
-      (child as HTMLElement).classList.add("card-dynamic");
-      container.appendChild(child);
-    });
+    container.innerHTML = dynamicCardsHtml;
   }, [dynamicCardsHtml]);
 
   return React.createElement("div", {

@@ -780,6 +780,57 @@ const CSS = `
   }
   .item-action-btn:hover { background: rgba(249,91,173,0.6); }
   .item-action-btn svg { width: 14px; height: 14px; }
+
+  /* ── Lightbox ── */
+  .gen-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+  }
+  .gen-lightbox-media {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    object-fit: contain;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+  .gen-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+  }
+  .gen-lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .generate-content { left: 0; width: 100%; padding: 0 20px; }
+    .seg-tabs { width: 100%; }
+    .chips-row { width: 100%; flex-wrap: wrap; }
+  }
+  @media (max-width: 768px) {
+    .generate-content { left: 0; width: 100%; padding: 0 16px; top: 10px; }
+    .page-label { left: 16px; }
+    .seg-tabs { width: 100%; }
+    .editor-row { flex-wrap: wrap; }
+    .editor-card { min-width: calc(50% - 5px); height: 160px; }
+    .chips-row { width: 100%; flex-wrap: wrap; }
+    .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
 `;
 
 const CHEVRON_DOWN = `<svg viewBox="0 0 9 5" fill="none"><path d="M0.5 0.5L4.5 4.5L8.5 0.5" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -823,6 +874,7 @@ export default function GenerationPage() {
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
   const [gallerySearch, setGallerySearch] = useState("");
   const [activeTag, setActiveTag] = useState("All");
+  const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1384,6 +1436,7 @@ export default function GenerationPage() {
                     <div
                       key={item.jobId}
                       className={`gallery-item ${isSelected ? "selected" : ""}`}
+                      onClick={() => { if (url) setLightbox({ url, type: isVideo ? "video" : "image" }); }}
                     >
                       {/* Type badge */}
                       <div className="item-badge">
@@ -1425,6 +1478,32 @@ export default function GenerationPage() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="gen-lightbox" onClick={() => setLightbox(null)}>
+          <div className="gen-lightbox-close" onClick={(e) => { e.stopPropagation(); setLightbox(null); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </div>
+          {lightbox.type === "video" ? (
+            <video
+              className="gen-lightbox-media"
+              src={lightbox.url}
+              controls
+              autoPlay
+              loop
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              className="gen-lightbox-media"
+              src={lightbox.url}
+              alt="Generated"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </div>
+      )}
     </>
   );
 }
