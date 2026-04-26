@@ -201,7 +201,6 @@ export class GenerationService {
       where: {
         status: "completed",
         type: { in: ["image", "video"] },
-        output: { not: null },
       },
       orderBy: { createdAt: "desc" },
       take: limit,
