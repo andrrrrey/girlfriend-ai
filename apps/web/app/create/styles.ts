@@ -316,4 +316,18 @@ export const PAGE_CSS = `
   .s9-pers-text { display: flex; flex-direction: column; gap: 2px; }
   .s9-pers-label { font-size: 10px; font-weight: 500; color: #969696; }
   .s9-pers-value { font-size: 12px; font-weight: 500; color: #fff; }
+
+  @media (max-width: 900px) {
+    .stages-panel { display: none; }
+    .page-title { left: 16px; right: 16px; width: auto; font-size: 22px; }
+    .form-card { left: 16px; right: 16px; width: auto; top: 70px; }
+    .breadcrumb { left: 16px; }
+  }
+  @media (max-width: 600px) {
+    .s9-body { flex-direction: column; }
+    .s9-avatar-col { width: 100%; }
+    .s9-attrs-col { width: 100%; }
+    .s9-custom-textareas { grid-template-columns: 1fr; }
+    .dropdown-row { flex-direction: column; gap: 8px; }
+  }
 `;

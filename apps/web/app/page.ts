@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { characters } from "../lib/api";
+import { characters, auth } from "../lib/api";
 import type { Character } from "../lib/api";
 
 const PAGE_CSS = `
@@ -744,11 +744,17 @@ export default function HomePage() {
   const [chars, setChars] = React.useState<Character[]>([]);
 
   React.useEffect(() => {
-    characters
-      .listPublic()
-      .then((data) => setChars(data))
+    const isLoggedIn = auth.isAuthenticated();
+    const fetches: Promise<Character[]>[] = [characters.listPublic()];
+    if (isLoggedIn) fetches.push(characters.listMy());
+
+    Promise.all(fetches)
+      .then(([pub, my = []]) => {
+        const myIds = new Set(my.map((c) => c.id));
+        setChars([...my, ...pub.filter((c) => !myIds.has(c.id))]);
+      })
       .catch(() => {
-        // silently fail — featured card remains visible
+        characters.listPublic().then((data) => setChars(data)).catch(() => {});
       });
   }, []);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
@@ -24,6 +24,7 @@ function getActivePage(pathname: string): ActivePage | undefined {
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const noShell = NO_SHELL_ROUTES.some((r) => pathname.startsWith(r));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (noShell) {
     return <>{children}</>;
@@ -31,9 +32,17 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   return (
     <div className="layout">
-      <Sidebar activePage={getActivePage(pathname)} />
+      <div
+        className={`mobile-overlay${sidebarOpen ? " visible" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <Sidebar
+        activePage={getActivePage(pathname)}
+        mobileOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main">
-        <TopNav />
+        <TopNav onMenuToggle={() => setSidebarOpen((v) => !v)} />
         {children}
       </div>
     </div>

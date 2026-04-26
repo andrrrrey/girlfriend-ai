@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, createImageJob, getJobStatus } from "../../lib/api";
+import { characters, chats, createImageJob, getJobStatus } from "../../lib/api";
 import { PAGE_CSS } from "./styles";
 import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
@@ -635,8 +635,9 @@ export default function CreateCharacterPage() {
       submitBtn.textContent = "Creating...";
       try {
         const data = collectFormData();
-        await characters.create({ ...data, avatarUrl: previewImageUrl ?? undefined });
-        router.push("/chat");
+        const newChar = await characters.create({ ...data, avatarUrl: previewImageUrl ?? undefined });
+        const newChat = await chats.create(newChar.id);
+        router.push(`/chat?sessionId=${newChat.id}`);
       } catch (err: unknown) {
         submitBtn.classList.remove("disabled");
         submitBtn.textContent = "Bring to Life";

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
   chats,
@@ -20,6 +21,7 @@ const DEMO_MESSAGE_LIMIT = 20;
 export default function ChatPage() {
   const { user, loading } = useAuth();
   const isDemo = !user || user.subscription === "free";
+  const searchParams = useSearchParams();
 
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -73,7 +75,23 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      loadChats();
+      const sessionId = searchParams?.get("sessionId");
+      const characterId = searchParams?.get("characterId");
+
+      loadChats().then(async () => {
+        if (sessionId) {
+          setActiveChat(sessionId);
+        } else if (characterId) {
+          try {
+            const newChat = await chats.create(characterId);
+            await loadChats();
+            setActiveChat(newChat.id);
+          } catch {
+            // chat may already exist — find existing
+          }
+        }
+      });
+
       Promise.all([charactersApi.listPublic(), charactersApi.listMy()])
         .then(([pub, my]) => {
           const myIds = new Set(my.map((c: Character) => c.id));
@@ -81,11 +99,18 @@ export default function ChatPage() {
         })
         .catch(() => {});
     }
-  }, [loading, user, loadChats]);
+  }, [loading, user, loadChats, searchParams]);
 
   useEffect(() => {
-    if (activeChat) loadMessages(activeChat);
-  }, [activeChat, loadMessages]);
+    if (activeChat) {
+      loadMessages(activeChat);
+      // Mark chat as read
+      const chat = chatList.find((c) => c.id === activeChat);
+      if (chat?.lastMessage) {
+        localStorage.setItem(`chat-read-${activeChat}`, chat.lastMessage.createdAt);
+      }
+    }
+  }, [activeChat, loadMessages, chatList]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -465,6 +490,8 @@ export default function ChatPage() {
   };
 
   const activeChatData = chatList.find((c) => c.id === activeChat);
+  const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
+  const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
 
   return (
     <div className="chat-content">
@@ -548,6 +575,13 @@ export default function ChatPage() {
 .info-card-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .info-card-label { font-size: 7px; font-weight: 500; text-transform: uppercase; color: #848484; line-height: 1.2; }
 .info-card-value { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
+@media (max-width: 1024px) { .right-panel { display: none; } }
+@media (max-width: 768px) {
+  .chat-content { flex-direction: column; }
+  .chats-panel { width: 100%; height: auto; max-height: 220px; flex-shrink: 0; }
+  .chat-center { padding: 0 8px; }
+  .chat-center-inner { height: calc(100vh - 266px); }
+}
       `}</style>
 
       {/* Chats Panel */}
@@ -571,7 +605,9 @@ export default function ChatPage() {
                 onClick={() => handleNewChat(c.id)}
                 className="char-option"
               >
-                <div className="char-avatar" />
+                <div className="char-avatar" style={{overflow:'hidden'}}>
+                  {c.avatarUrl && <img src={c.avatarUrl} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:4}} />}
+                </div>
                 <div>
                   <div style={{ color: "#fff", fontSize: 13 }}>{c.name}</div>
                   <div style={{ color: "#848484", fontSize: 11 }}>
@@ -593,7 +629,11 @@ export default function ChatPage() {
               onClick={() => setActiveChat(c.id)}
               className={`chat-item${c.id === activeChat ? " active" : ""}`}
             >
-              <div className="chat-item-avatar" />
+              <div className="chat-item-avatar" style={{overflow:'hidden',borderRadius:4}}>
+                {c.character?.avatarUrl && (
+                  <img src={c.character.avatarUrl} alt={c.character.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                )}
+              </div>
               <div className="chat-item-message">
                 <div className="chat-item-name">
                   {c.character?.name || "Неизвестный"}
@@ -622,7 +662,11 @@ export default function ChatPage() {
         {activeChat ? (
           <div className="chat-center-inner">
             <div className="chat-header">
-              <div className="chat-header-avatar" />
+              <div className="chat-header-avatar" style={{overflow:'hidden'}}>
+                {activeChatData?.character?.avatarUrl && (
+                  <img src={activeChatData.character.avatarUrl} alt={activeChatData.character.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />
+                )}
+              </div>
               <span className="chat-header-name">
                 {activeChatData?.character?.name || "Чат"}
               </span>
@@ -840,11 +884,15 @@ export default function ChatPage() {
       {activeChat && (
         <aside className="right-panel">
           {/* Profile Gallery */}
-          <div className="profile-gallery">
-            <div className="gallery-bg">
+          <div className="profile-gallery" style={activeChatData?.character?.avatarUrl ? {backgroundImage:`url(${activeChatData.character.avatarUrl})`,backgroundSize:'cover',backgroundPosition:'center'} : {}}>
+            <div className="gallery-bg" style={activeChatData?.character?.avatarUrl ? {display:'none'} : {}}>
               <div className="gallery-bg-overlay" />
             </div>
-            <div className="small-avatar" style={{zIndex:2, position:'relative', background:'#313131'}}>
+            {activeChatData?.character?.avatarUrl && <div className="gallery-bg-overlay" style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8))',borderRadius:8}} />}
+            <div className="small-avatar" style={{zIndex:2, position:'relative', background:'#313131', overflow:'hidden'}}>
+              {activeChatData?.character?.avatarUrl && (
+                <img src={activeChatData.character.avatarUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+              )}
               <div className="link-badge">
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3.4 4.6l-0.6 0.6a1.1 1.1 0 01-1.6-1.6l1.2-1.2a1.1 1.1 0 011.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M4.6 3.4l0.6-0.6a1.1 1.1 0 011.6 1.6l-1.2 1.2a1.1 1.1 0 01-1.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
@@ -866,8 +914,15 @@ export default function ChatPage() {
 
           {/* Profile Text */}
           <div className="profile-text">
-            <div className="profile-name">{activeChatData?.character?.name || "Character"}</div>
-            <div className="profile-bio">People often think grief is loud. That it announces itself with tears... shattered voices... dark rooms where no light enters. Mine isn&apos;t like that. Mine is quieter.</div>
+            <div className="profile-name">
+              {activeChatData?.character?.name || "Character"}
+              {activeCharPersonality["age"] ? `, ${activeCharPersonality["age"]}` : ""}
+            </div>
+            <div className="profile-bio">
+              {(activeCharPersonality["description"] as string) ||
+               (activeCharPersonality["bio"] as string) ||
+               "No description available."}
+            </div>
           </div>
 
           <div className="profile-separator" />
@@ -881,36 +936,67 @@ export default function ChatPage() {
               </div>
               <div className="info-card-text">
                 <div className="info-card-label">AGE</div>
-                <div className="info-card-value">29 years old</div>
+                <div className="info-card-value">
+                  {activeCharPersonality["age"] ? `${activeCharPersonality["age"]} years old` : "—"}
+                </div>
               </div>
             </div>
-            <div className="info-card">
-              <div className="info-card-icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+            {!!(activeCharPersonality["work"] || activeCharPersonality["occupation"]) && (
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="info-card-text">
+                  <div className="info-card-label">OCCUPATION</div>
+                  <div className="info-card-value">
+                    {(activeCharPersonality["work"] as string[] | string | undefined)
+                      ? Array.isArray(activeCharPersonality["work"])
+                        ? (activeCharPersonality["work"] as string[]).join(", ")
+                        : String(activeCharPersonality["work"])
+                      : String(activeCharPersonality["occupation"] || "—")}
+                  </div>
+                </div>
               </div>
-              <div className="info-card-text">
-                <div className="info-card-label">OCCUPATION</div>
-                <div className="info-card-value">Model</div>
+            )}
+            {!!(activeCharPersonality["nationality"] || activeCharPersonality["ethnicity"]) && (
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="#fff" strokeWidth="1.2"/><circle cx="8" cy="7" r="1.5" stroke="#fff" strokeWidth="1.2"/></svg>
+                </div>
+                <div className="info-card-text">
+                  <div className="info-card-label">NATIONALITY</div>
+                  <div className="info-card-value">
+                    {String(activeCharPersonality["nationality"] || activeCharPersonality["ethnicity"] || "—")}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="info-card">
-              <div className="info-card-icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="#fff" strokeWidth="1.2"/><circle cx="8" cy="7" r="1.5" stroke="#fff" strokeWidth="1.2"/></svg>
+            )}
+            {!!activeCharPersonality["relationshipType"] && (
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="info-card-text">
+                  <div className="info-card-label">RELATIONSHIP</div>
+                  <div className="info-card-value">
+                    {String(activeCharPersonality["relationshipType"] || "—")}
+                  </div>
+                </div>
               </div>
-              <div className="info-card-text">
-                <div className="info-card-label">LOCATION</div>
-                <div className="info-card-value">Los Angeles, CA</div>
+            )}
+            {!!activeCharPersonality["personality"] && (
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14A6 6 0 108 2a6 6 0 000 12z" stroke="#fff" strokeWidth="1.2"/><path d="M6 6s0-2 2-2 2 2 2 2-1 1-2 1-2 1-2 2v1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="11" r="0.6" fill="#fff"/></svg>
+                </div>
+                <div className="info-card-text">
+                  <div className="info-card-label">PERSONALITY</div>
+                  <div className="info-card-value">
+                    {String(activeCharPersonality["personality"] || "—")}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="info-card">
-              <div className="info-card-icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
-              <div className="info-card-text">
-                <div className="info-card-label">RELATIONSHIP</div>
-                <div className="info-card-value">Single</div>
-              </div>
-            </div>
+            )}
           </div>
         </aside>
       )}

@@ -293,3 +293,56 @@ body {
   height: 16px;
   flex-shrink: 0;
 }
+
+/* ─── Mobile hamburger & overlay ─────────────── */
+.hamburger-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 150;
+}
+.mobile-overlay.visible { display: block; }
+
+/* ─── Responsive breakpoints ─────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 200;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .main {
+    margin-left: 0;
+  }
+  .hamburger-btn {
+    display: flex;
+  }
+  .topnav {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .topnav-links {
+    display: none;
+  }
+  .search-box {
+    display: none;
+  }
+  .topnav-buttons .btn-primary {
+    display: none;
+  }
+}

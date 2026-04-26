@@ -505,6 +505,7 @@ function buildContent() {
 }
 
 function cardHtml(item: {
+  id?: string;
   type: string;
   name: string;
   age?: number;
@@ -541,7 +542,7 @@ function cardHtml(item: {
 
   const hoverActions = isCharacter
     ? `<div class="ai-hover-actions">
-        <div class="ai-hover-btn primary">${CHAT_ICON} Chat now</div>
+        <div class="ai-hover-btn primary" data-char-id="${item.id || ""}">${CHAT_ICON} Chat now</div>
         <div class="ai-hover-btn secondary">${DOWNLOAD_ICON} Save</div>
       </div>`
     : `<div class="ai-hover-actions">
@@ -628,6 +629,7 @@ export default function MyAIPage() {
       getGenerationHistory().catch(() => []),
     ]).then(([myChars, history]) => {
       type GridItem = {
+        id?: string;
         type: string;
         name: string;
         age?: number;
@@ -643,6 +645,7 @@ export default function MyAIPage() {
         ...myChars.map((c) => {
           const p = (c.personality as Record<string, unknown> | null) || {};
           return {
+            id: c.id,
             type: "Character",
             name: c.name,
             age: p["age"] as number | undefined,
@@ -676,6 +679,17 @@ export default function MyAIPage() {
       }
 
       grid.innerHTML = items.map((item) => cardHtml(item)).join("");
+
+      // Attach "Chat now" click handlers
+      grid.querySelectorAll<HTMLElement>('.ai-hover-btn.primary[data-char-id]').forEach((btn) => {
+        const charId = btn.dataset.charId;
+        if (charId) {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            window.location.href = `/chat?characterId=${charId}`;
+          };
+        }
+      });
     });
   }
 

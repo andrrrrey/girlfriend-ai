@@ -1,18 +1,41 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth";
+import { chats } from "../../lib/api";
 
 type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "admin";
 
-export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
+export default function Sidebar({
+  activePage,
+  mobileOpen,
+  onClose,
+}: {
+  activePage?: ActivePage;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const { user, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    chats.list().then((res) => {
+      const count = res.items.filter((c) => {
+        if (!c.lastMessage || c.lastMessage.role !== "assistant") return false;
+        const lastRead = localStorage.getItem(`chat-read-${c.id}`);
+        if (!lastRead) return true;
+        return c.lastMessage.createdAt > lastRead;
+      }).length;
+      setUnreadCount(count);
+    }).catch(() => {});
+  }, [user]);
 
   const navLinkClass = (page: ActivePage) =>
     `nav-link${activePage === page ? " active" : ""}`;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${mobileOpen ? " mobile-open" : ""}`}>
       <div className="sidebar-logo">
         <svg width="172" height="22" viewBox="0 0 172 22" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
           <path d="M31.5811 7.79102C31.581 7.26023 31.4766 6.73451 31.2734 6.24414C31.0957 5.81514 30.8454 5.42049 30.5342 5.07715L30.3965 4.93262C30.0212 4.55711 29.5754 4.2589 29.085 4.05566C28.5946 3.85248 28.0689 3.74809 27.5381 3.74805C27.0072 3.74805 26.4807 3.85243 25.9902 4.05566C25.4999 4.25886 25.0549 4.55727 24.6797 4.93262L23 6.61133L21.3213 4.93262C20.5631 4.17454 19.535 3.74905 18.4629 3.74902C17.3908 3.74902 16.3626 4.17459 15.6045 4.93262C14.8464 5.69071 14.42 6.71892 14.4199 7.79102C14.4199 8.86325 14.8463 9.89221 15.6045 10.6504L14.1895 12.0645C13.0563 10.9312 12.4199 9.39362 12.4199 7.79102C12.42 6.1886 13.0564 4.6517 14.1895 3.51855C15.3227 2.3853 16.8602 1.74902 18.4629 1.74902C20.0655 1.74906 21.6021 2.38541 22.7354 3.51855L23 3.7832L23.2646 3.51855L23.4795 3.31348C23.9928 2.84806 24.5831 2.47385 25.2246 2.20801C25.9578 1.90421 26.7444 1.74805 27.5381 1.74805C28.3316 1.74809 29.1175 1.90425 29.8506 2.20801C30.5837 2.51177 31.2495 2.95733 31.8105 3.51855L32.0156 3.7334C32.481 4.24678 32.8553 4.83699 33.1211 5.47852C33.4248 6.21159 33.581 6.9975 33.5811 7.79102C33.5811 8.58466 33.4249 9.3713 33.1211 10.1045C32.8552 10.746 32.481 11.3363 32.0156 11.8496L31.8105 12.0645L23.707 20.168L22.293 18.7539L30.3965 10.6504C30.7719 10.2751 31.0702 9.82925 31.2734 9.33887C31.4767 8.84838 31.5811 8.32193 31.5811 7.79102Z" fill="white"/>
@@ -48,7 +71,9 @@ export default function Sidebar({ activePage }: { activePage?: ActivePage }) {
         <a href="/chat" className={navLinkClass("chat")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><circle cx="8" cy="10" r="0.5" fill="currentColor"/><circle cx="12" cy="10" r="0.5" fill="currentColor"/><circle cx="16" cy="10" r="0.5" fill="currentColor"/></svg>
           <span className="label">Chat</span>
-          <span className="nav-badge">3 <span className="badge-dot" style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block',boxShadow:'0 0 6px 2px rgba(74,222,128,0.6)'}}></span></span>
+          {unreadCount > 0 && (
+            <span className="nav-badge">{unreadCount} <span className="badge-dot" style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block',boxShadow:'0 0 6px 2px rgba(74,222,128,0.6)'}}></span></span>
+          )}
         </a>
         <a href="/gallery" className={navLinkClass("gallery")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
