@@ -528,26 +528,37 @@ const PAGE_CSS = `
       .characters-section { width: 100%; }
     }
     @media (max-width: 768px) {
-      .hero { margin: 0 16px; height: 120px; }
+      .content { padding-bottom: 24px; }
+      .hero { margin: 0 16px; height: 130px; top: 8px; }
       .hero-content { width: 100%; padding: 0 8px; }
-      .hero-title { font-size: 22px; white-space: normal; text-align: center; }
-      .stories-section { left: 16px; right: 16px; top: 160px; }
-      .story-avatar { width: 52px; height: 52px; }
-      .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
+      .hero-title { font-size: 20px; white-space: normal; text-align: center; }
+      .stories-section { left: 16px; right: 16px; top: 168px; }
+      .stories-row { justify-content: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .stories-row::-webkit-scrollbar { display: none; }
+      .stories-arrow { display: none; }
+      .story-avatar { width: 52px; height: 52px; flex-shrink: 0; }
+      .characters-section { left: 16px; top: 280px; width: calc(100% - 32px); }
       .chars-header { width: 100%; }
-      .chars-title { font-size: 22px; }
-      .cards-row { gap: 12px; }
-      .card { width: calc(50% - 6px); height: 220px; }
-      .card-featured-wrap { width: calc(50% - 6px); height: 220px; }
-      .hover-panel { width: 100%; height: 220px; }
+      .chars-title { font-size: 20px; }
+      .cards-row { gap: 10px; }
+      .card { width: calc(50% - 5px); height: 230px; }
+      .card-featured-wrap { width: calc(50% - 5px); height: 230px; }
+      .hover-panel { width: 100%; height: 230px; }
       .card-name { font-size: 15px; }
-      .search-and-sorting { flex-wrap: wrap; }
-      .sorting-buttons { flex-wrap: wrap; }
+      .search-and-sorting { flex-wrap: wrap; gap: 8px; }
+      .filter-search-wrap { flex: 1; min-width: 0; }
+      .filter-separator { display: none; }
+      .sorting-buttons { width: 100%; gap: 6px; }
+      .sorting-btn { flex: 1; min-width: 0; }
+      .tags-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .tags-row::-webkit-scrollbar { display: none; }
+      .tags-arrow { display: none; }
     }
     @media (max-width: 480px) {
-      .card { width: calc(50% - 6px); height: 180px; }
-      .card-featured-wrap { width: calc(50% - 6px); height: 180px; }
-      .hover-panel { width: 100%; height: 180px; }
+      .card { width: calc(50% - 5px); height: 190px; }
+      .card-featured-wrap { width: calc(50% - 5px); height: 190px; }
+      .hover-panel { width: 100%; height: 190px; }
+      .hero-title { font-size: 18px; }
     }
 `;
 

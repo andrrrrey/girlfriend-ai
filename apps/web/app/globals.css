@@ -307,6 +307,27 @@ body {
   justify-content: center;
 }
 
+.topnav-logo-mobile {
+  display: none;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+}
+
+.topnav-search-icon-btn {
+  display: none;
+  background: #121212;
+  border: 1px solid #313131;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: #848484;
+}
+
 .mobile-overlay {
   display: none;
   position: fixed;
@@ -316,18 +337,69 @@ body {
 }
 .mobile-overlay.visible { display: block; }
 
+/* ─── Bottom bar (mobile only) ───────────────── */
+.bottom-bar-mobile {
+  display: none;
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 360px;
+  background: rgba(18, 18, 18, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #313131;
+  border-radius: 16px;
+  padding: 8px 4px;
+  z-index: 300;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.bb-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 12px;
+  color: #646464;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: color 0.15s;
+  min-width: 52px;
+}
+
+.bb-tab.bb-active {
+  color: #f95bad;
+}
+
+.bb-tab-create {
+  color: #fff;
+}
+
+.bb-create-btn {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #f95bad, #ff0084);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
 /* ─── Responsive breakpoints ─────────────────── */
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    z-index: 200;
-  }
-  .sidebar.mobile-open {
-    transform: translateX(0);
+    display: none;
   }
   .main {
     margin-left: 0;
+    padding-bottom: 90px;
   }
   .hamburger-btn {
     display: flex;
@@ -335,6 +407,10 @@ body {
   .topnav {
     gap: 8px;
     padding: 8px 12px;
+    height: 52px;
+  }
+  .topnav-logo-mobile {
+    display: flex;
   }
   .topnav-links {
     display: none;
@@ -342,7 +418,22 @@ body {
   .search-box {
     display: none;
   }
+  .topnav-buttons {
+    gap: 6px;
+  }
   .topnav-buttons .btn-primary {
+    padding: 6px 10px;
+    font-size: 11px;
+    height: 28px;
+  }
+  .topnav-buttons .btn-secondary {
     display: none;
   }
+  .topnav-search-icon-btn {
+    display: flex;
+  }
+  .bottom-bar-mobile {
+    display: flex;
+  }
+  .mobile-overlay.visible { display: block; }
 }

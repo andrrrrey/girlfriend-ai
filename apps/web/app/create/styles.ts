@@ -317,11 +317,47 @@ export const PAGE_CSS = `
   .s9-pers-label { font-size: 10px; font-weight: 500; color: #969696; }
   .s9-pers-value { font-size: 12px; font-weight: 500; color: #fff; }
 
+  /* Mobile dots progress */
+  .mobile-progress-dots {
+    display: none;
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 60px;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    z-index: 5;
+  }
+  .mobile-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #313131;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .mobile-dot.active {
+    background: #f95bad;
+    transform: scale(1.25);
+    box-shadow: 0 0 8px rgba(249, 91, 173, 0.6);
+  }
+  .mobile-dot.done {
+    background: #c1f0aa;
+  }
+  .mobile-dot-line {
+    flex: 1;
+    height: 1px;
+    background: #313131;
+    min-width: 4px;
+  }
+
   @media (max-width: 900px) {
     .stages-panel { display: none; }
     .page-title { left: 16px; right: 16px; width: auto; font-size: 22px; }
-    .form-card { left: 16px; right: 16px; width: auto; top: 70px; }
+    .form-card { left: 16px; right: 16px; width: auto; top: 90px; }
     .breadcrumb { left: 16px; }
+    .mobile-progress-dots { display: flex; }
   }
   @media (max-width: 600px) {
     .s9-body { flex-direction: column; }

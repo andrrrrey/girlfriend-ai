@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
+import BottomBarMobile from "./BottomBarMobile";
 
 const NO_SHELL_ROUTES = ["/login", "/register"];
 
@@ -45,6 +46,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
         <TopNav onMenuToggle={() => setSidebarOpen((v) => !v)} />
         {children}
       </div>
+      <BottomBarMobile />
     </div>
   );
 }

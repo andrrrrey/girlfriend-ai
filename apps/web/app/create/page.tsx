@@ -235,9 +235,18 @@ function stagesPanel() {
 
 /* ── Full page content ────────────────────────── */
 
+function mobileDots() {
+  const dots = Array.from({ length: 9 }, (_, i) => {
+    const n = i + 1;
+    return `<div class="mobile-dot${n === 1 ? " active" : ""}" id="mdot-${pad(n)}"></div>${n < 9 ? '<div class="mobile-dot-line"></div>' : ""}`;
+  }).join("");
+  return `<div class="mobile-progress-dots">${dots}</div>`;
+}
+
 function buildContent() {
   return `<div class="breadcrumb">Create Character</div>
     <div class="page-title"><span class="pink">Create </span>Your Character</div>
+    ${mobileDots()}
     <div class="form-card">${stage01()}${stage02()}${stage03()}${stage04()}${stage05()}${stage06()}${stage07()}${stage08()}${stage09()}</div>
     ${stagesPanel()}`;
 }
@@ -485,6 +494,13 @@ function goToStage(n: number) {
   for (let i = 1; i < 9; i++) {
     const sep = document.getElementById(`sep-${pad(i)}-${pad(i + 1)}`);
     if (sep) sep.innerHTML = n > i ? '<div class="stage-sep-line pink"></div>' : '<div class="stage-sep-line gray"></div>';
+  }
+
+  // Update mobile dots
+  for (let i = 1; i <= 9; i++) {
+    const dot = document.getElementById(`mdot-${pad(i)}`);
+    if (!dot) continue;
+    dot.className = `mobile-dot${i === n ? " active" : i < n ? " done" : ""}`;
   }
 
   initInteractive();
