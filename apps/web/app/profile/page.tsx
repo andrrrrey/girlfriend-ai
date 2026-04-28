@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../../context/auth";
 import { users } from "../../lib/api";
 
@@ -563,6 +563,7 @@ function SubscriptionTab() {
 
 function AccountTab() {
   const { user, refreshProfile } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl]   = useState(user?.avatarUrl ?? "");
   const [nickname, setNickname]     = useState(user?.nickname ?? "");
   const [bio, setBio]               = useState(() =>
@@ -631,9 +632,22 @@ function AccountTab() {
               </div>
               <div className="pp-avatar-right">
                 <div className="pp-avatar-btns">
-                  <button className="pp-btn-sm" onClick={() => {
-                    const url = prompt("Enter image URL:"); if (url) setAvatarUrl(url);
-                  }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 10 * 1024 * 1024) { alert("File must be under 10 MB"); return; }
+                      const reader = new FileReader();
+                      reader.onload = (ev) => { if (ev.target?.result) setAvatarUrl(ev.target.result as string); };
+                      reader.readAsDataURL(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button className="pp-btn-sm" onClick={() => fileInputRef.current?.click()}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     Replace picture
                   </button>
