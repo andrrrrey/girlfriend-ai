@@ -15,7 +15,13 @@ export default function Sidebar({
   mobileOpen?: boolean;
   onClose?: () => void;
 }) {
-  const { user, loading, logout } = useAuth();
+  const { user, logout } = useAuth();
+  // Read token synchronously so the label is correct on the very first render
+  // (avoids flicker while useAuth's async profile fetch is in-flight)
+  const [hasToken] = useState(() =>
+    typeof window !== "undefined" && !!localStorage.getItem("accessToken")
+  );
+  const isLoggedIn = user != null || hasToken;
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -102,9 +108,9 @@ export default function Sidebar({
       {/* Settings nav */}
       <nav className="nav-section settings-nav">
         <div className="nav-title">Settings</div>
-        <a href="/profile" className={navLinkClass(!loading && user ? "profile" : "admin")}>
+        <a href="/profile" className={navLinkClass(isLoggedIn ? "profile" : "admin")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="9" r="3"/><path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855"/></svg>
-          <span className="label">{loading ? " " : user ? "My account" : "Creator account"}</span>
+          <span className="label">{isLoggedIn ? "My account" : "Creator account"}</span>
         </a>
         <a className="nav-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
