@@ -29,7 +29,7 @@ import type { HealthResponse } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
 import { translate as googleTranslate } from "@vitalets/google-translate-api";
-import { S3Client, PutObjectCommand, CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 // Загружаем и валидируем переменные окружения
@@ -100,48 +100,6 @@ function createS3Client(): S3Client | null {
  * @param s3 — настроенный S3Client
  * @param bucket — название бакета
  */
-// Бакеты, для которых уже выставлена публичная политика чтения (кеш на время жизни процесса).
-// Позволяет не вызывать PutBucketPolicy на каждый запрос — достаточно один раз.
-const configuredBuckets = new Set<string>();
-
-async function ensureBucketExists(s3: S3Client, bucket: string): Promise<void> {
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: bucket }));
-    // Бакет существует и доступен
-  } catch (err: any) {
-    const status = err?.$metadata?.httpStatusCode;
-    if (status === 404 || err.name === "NoSuchBucket" || err.name === "NotFound") {
-      // Бакет не существует — создаём его
-      await s3.send(new CreateBucketCommand({ Bucket: bucket }));
-      logger.info({ bucket }, "s3_bucket_created");
-    } else if (status === 403) {
-      // Бакет существует но доступ запрещён — пробрасываем ошибку
-      throw err;
-    } else {
-      throw err;
-    }
-  }
-
-  // Ставим публичную политику чтения один раз за время жизни процесса.
-  // Это гарантирует что URL вида {endpoint}/{bucket}/{key} реально доступны
-  // для HTTP-запросов без подписи (в т.ч. от API-сервиса).
-  if (!configuredBuckets.has(bucket)) {
-    await s3.send(new PutBucketPolicyCommand({
-      Bucket: bucket,
-      Policy: JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [{
-          Effect: "Allow",
-          Principal: { AWS: ["*"] },
-          Action: ["s3:GetObject"],
-          Resource: [`arn:aws:s3:::${bucket}/*`],
-        }],
-      }),
-    }));
-    configuredBuckets.add(bucket);
-    logger.info({ bucket }, "s3_bucket_policy_set_public_read");
-  }
-}
 
 /**
  * Загружает файл в S3/MinIO и возвращает публичный URL.
@@ -161,7 +119,6 @@ async function uploadToS3(
   body: Buffer,
   contentType: string,
 ): Promise<string> {
-  await ensureBucketExists(s3, bucket);
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
