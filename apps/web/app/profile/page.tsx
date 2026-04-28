@@ -63,9 +63,9 @@ const CSS = `
 .pp-hero-logout:hover { border-color: #E36466; }
 
 /* ── Tabs ── */
-.pp-tabs { display: flex; gap: 2px; width: 100%; margin-bottom: 24px; }
+.pp-tabs { display: flex; width: 100%; margin-bottom: 24px; }
 .pp-tab {
-  flex: 1 0 0; min-width: 1px;
+  flex: 1 1 0%; min-width: 0; width: 0;
   display: flex; flex-direction: column; gap: 12px; align-items: center;
   cursor: pointer;
 }
