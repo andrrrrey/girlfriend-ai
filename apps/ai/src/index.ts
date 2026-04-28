@@ -127,9 +127,10 @@ async function uploadToS3(
       ContentType: contentType,
     }),
   );
-  // Формируем публичный URL (MinIO path-style: endpoint/bucket/key)
-  const endpoint = env.S3_ENDPOINT!.replace(/\/$/, "");
-  return `${endpoint}/${bucket}/${key}`;
+  // S3_PUBLIC_URL — публичный адрес MinIO/S3 для браузера (может отличаться от S3_ENDPOINT,
+  // если S3_ENDPOINT — внутренний docker-адрес типа http://minio:9000)
+  const publicBase = (env.S3_PUBLIC_URL || env.S3_ENDPOINT)!.replace(/\/$/, "");
+  return `${publicBase}/${bucket}/${key}`;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -958,10 +959,12 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
   }
   const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
 
+  // Загружаем в S3 только если задан S3_PUBLIC_URL — иначе URL будет внутренним docker-адресом
+  // и браузер не сможет воспроизвести видео. S3_PUBLIC_URL = публичный адрес MinIO/S3 для браузера.
   const s3 = createS3Client();
   const bucket = env.S3_BUCKET || "media";
 
-  if (s3) {
+  if (s3 && env.S3_PUBLIC_URL) {
     const key = `videos/${randomUUID()}.mp4`;
     try {
       const url = await uploadToS3(s3, bucket, key, videoBuffer, "video/mp4");

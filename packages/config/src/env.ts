@@ -61,6 +61,9 @@ const EnvSchema = z.object({
   S3_SECRET_KEY: z.string().optional(),
   /** Название бакета для медиафайлов (по умолчанию "media" в коде ai/index.ts) */
   S3_BUCKET: z.string().optional(),
+  /** Публичный базовый URL для отдачи файлов браузеру (если отличается от S3_ENDPOINT,
+   *  например S3_ENDPOINT=http://minio:9000 внутри docker, а S3_PUBLIC_URL=https://media.example.com) */
+  S3_PUBLIC_URL: z.string().optional(),
 
   // ─── JWT Auth ───────────────────────────────────────────────────────────────
   /** Секретный ключ HMAC для подписи JWT access-токенов (обязателен) */
