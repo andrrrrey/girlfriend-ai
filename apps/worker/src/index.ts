@@ -124,6 +124,24 @@ async function logUsage(userId: string, action: string, tokensUsed?: number) {
   }
 }
 
+// ─── Helpers ──────────────────────────────────────────────────
+
+/**
+ * Проверяет HTTP-ответ. Если 429 — бросает Error с полем retryAfter (мс),
+ * чтобы BullMQ custom backoff мог учесть Retry-After заголовок от OpenAI.
+ */
+function assertOk(response: Response, label: string): void {
+  if (response.status === 429) {
+    const retryAfterSec = Number(response.headers.get("retry-after") ?? 60);
+    const err = new Error(`${label} rate limited (429)`);
+    (err as any).retryAfter = retryAfterSec * 1000;
+    throw err;
+  }
+  if (!response.ok) {
+    throw new Error(`${label} returned ${response.status}`);
+  }
+}
+
 // ─── Job Handlers ─────────────────────────────────────────────
 
 /**
@@ -152,9 +170,7 @@ async function handleChatJob(job: Job): Promise<void> {
     body: JSON.stringify({ messages, characterId }),
   });
 
-  if (!response.ok) {
-    throw new Error(`AI service returned ${response.status}`);
-  }
+  assertOk(response, "AI chat service");
 
   // Collect streaming response — читаем SSE-поток и собираем полный ответ
   let fullContent = "";
@@ -221,9 +237,7 @@ async function handleSttJob(job: Job): Promise<void> {
     body: formData,
   });
 
-  if (!response.ok) {
-    throw new Error(`STT service returned ${response.status}`);
-  }
+  assertOk(response, "AI STT service");
 
   const { text } = (await response.json()) as { text: string };
 
@@ -258,9 +272,7 @@ async function handleTtsJob(job: Job): Promise<void> {
     body: JSON.stringify({ text, voiceId }),
   });
 
-  if (!response.ok) {
-    throw new Error(`TTS service returned ${response.status}`);
-  }
+  assertOk(response, "AI TTS service");
 
   const result = await response.json() as { url?: string; key?: string };
 
@@ -374,7 +386,7 @@ async function handleVideoJob(job: Job): Promise<void> {
  * - Вызывается после исчерпания всех попыток
  * - Обновляет AiJob.status = "failed", сохраняет сообщение ошибки
  */
-new Worker(
+const worker = new Worker(
   QUEUE_NAME,
   async (job: Job) => {
     logger.info({ job_id: job.id, name: job.name }, "job_started");
@@ -404,16 +416,30 @@ new Worker(
   },
   {
     connection,
-    // Retry strategy: 3 attempts with exponential backoff
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 2000, // 2s, 4s, 8s
+    // Custom backoff: учитывает Retry-After от OpenAI, иначе экспоненциальный 2s/4s/8s
+    settings: {
+      backoffStrategy: (attempts: number, _type: string, err: Error) => {
+        const retryAfter = (err as any).retryAfter;
+        if (retryAfter) return retryAfter;
+        return 2000 * Math.pow(2, attempts - 1);
       },
     },
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "custom" },
+    },
   },
-).on("failed", async (job, err) => {
+);
+
+// Graceful shutdown: дожидаемся текущего job перед остановкой контейнера
+process.on("SIGTERM", async () => {
+  logger.info("SIGTERM received, closing worker...");
+  await worker.close();
+  await connection.quit();
+  process.exit(0);
+});
+
+worker.on("failed", async (job, err) => {
   // Обработчик вызывается после последней неудачной попытки
   if (!job) return;
   logger.error({ job_id: job.id, name: job.name, err: err.message }, "job_failed");

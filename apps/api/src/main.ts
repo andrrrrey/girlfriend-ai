@@ -15,6 +15,7 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
@@ -23,6 +24,11 @@ import { getRequestId, setResponseRequestId } from "@repo/logger";
 async function bootstrap() {
   // Загружаем и валидируем переменные окружения (выбросит ZodError если чего-то не хватает)
   const env = loadEnv();
+
+  if (env.JWT_SECRET.length < 32 || env.JWT_SECRET === "dev_secret_change_me") {
+    // eslint-disable-next-line no-console
+    console.warn("[SECURITY] JWT_SECRET is weak or uses the default value — generate a strong secret before production use: openssl rand -hex 32");
+  }
 
   // Создаём Pino-логгер для этого сервиса
   const logger = createLogger({ service: "api", env: env.ENV, level: env.LOG_LEVEL });
@@ -64,8 +70,12 @@ async function bootstrap() {
     next();
   });
 
+  // ─── Helmet (security headers) ──────────────────────────────────────────────
+  // contentSecurityPolicy: false — отключаем CSP чтобы не блокировать Swagger UI в dev
+  app.use(helmet({ contentSecurityPolicy: false }));
+
   // ─── CORS ───────────────────────────────────────────────────────────────────
-  // origin: true — разрешает любой origin (в production заменить на список доменов)
+  // origin: true — разрешает любой origin (whitelist настроим отдельно)
   // credentials: true — разрешает передачу cookie/Authorization заголовков
   app.enableCors({ origin: true, credentials: true });
 
@@ -77,16 +87,17 @@ async function bootstrap() {
   );
 
   // ─── Swagger (OpenAPI) ──────────────────────────────────────────────────────
-  // Документация доступна по: GET /api/docs
-  // В production можно отключить условием: if (env.ENV !== "production")
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("Girlfriend AI API")
-    .setDescription("REST API for the Girlfriend AI platform")
-    .setVersion("1.0")
-    .addBearerAuth() // Добавляет поле для JWT-токена в Swagger UI
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup("api/docs", app, document);
+  // Документация доступна по: GET /api/docs только вне production
+  if (env.ENV !== "production") {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle("Girlfriend AI API")
+      .setDescription("REST API for the Girlfriend AI platform")
+      .setVersion("1.0")
+      .addBearerAuth() // Добавляет поле для JWT-токена в Swagger UI
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup("api/docs", app, document);
+  }
 
   // ─── Запуск сервера ─────────────────────────────────────────────────────────
   // 0.0.0.0 — слушаем на всех интерфейсах (обязательно для Docker/контейнеров)

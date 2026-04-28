@@ -20,6 +20,7 @@ import {
   Post,
   Req,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
@@ -32,6 +33,8 @@ import { Request } from "express";
  * Все эндпоинты публичны (без @UseGuards) — аутентификация не требуется.
  * Тег "auth" группирует эндпоинты в Swagger UI.
  */
+// Жёсткий лимит для auth: 10 запросов в минуту с одного IP (защита от brute-force)
+@Throttle({ default: { ttl: 60_000, limit: 10 } })
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {

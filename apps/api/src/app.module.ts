@@ -16,6 +16,8 @@
  */
 
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { HealthController } from "./health.controller";
 import { PrismaService } from "./prisma.service";
 import { AuthModule } from "./auth/auth.module";
@@ -29,6 +31,8 @@ import { GenerationModule } from "./generation/generation.module";
 
 @Module({
   imports: [
+    // 120 запросов в минуту с одного IP по умолчанию
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     QueueModule,    // Глобальный модуль BullMQ-очереди (регистрирует AI_QUEUE токен)
     AuthModule,     // JWT-аутентификация и управление сессиями
     UsersModule,    // Операции с профилем текущего пользователя
@@ -39,6 +43,9 @@ import { GenerationModule } from "./generation/generation.module";
     CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
-  providers: [PrismaService],       // Prisma-клиент для подключения к PostgreSQL
+  providers: [
+    PrismaService,                             // Prisma-клиент для подключения к PostgreSQL
+    { provide: APP_GUARD, useClass: ThrottlerGuard }, // Глобальный rate-limit guard
+  ],
 })
 export class AppModule {}

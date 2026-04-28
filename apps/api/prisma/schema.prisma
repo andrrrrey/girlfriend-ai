@@ -123,7 +123,8 @@ model ChatSession {
   character Character @relation(fields: [characterId], references: [id])
   messages  Message[]
 
-  @@index([userId])
+  // Составной индекс для листа чатов: фильтр по userId + deletedAt, сортировка по lastMessageAt DESC
+  @@index([userId, deletedAt, lastMessageAt(sort: Desc)])
   @@index([characterId])
   @@map("chat_sessions")
 }
