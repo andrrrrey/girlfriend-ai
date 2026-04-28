@@ -14,6 +14,9 @@ const CSS = `
 .pp-wrap {
   padding: 24px 32px;
   max-width: 1200px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   font-family: 'Syne', sans-serif;
   color: #fff;
@@ -162,9 +165,7 @@ const CSS = `
   display: flex; flex-direction: column; gap: 6px;
 }
 .pp-cmp-head {
-  border: 1px solid #313131; border-radius: 4px; overflow: hidden; height: 46px;
-  background: #1e1e1e; display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 600; color: #969696; font-family: 'Syne', sans-serif;
+  height: 46px; visibility: hidden; /* invisible placeholder — mirrors first .pp-feat-card height */
 }
 .pp-cmp-cell {
   background: #1e1e1e; border: 1px solid #313131; border-radius: 4px;
@@ -555,7 +556,6 @@ function SubscriptionTab() {
           ))}
         </div>
         <div className="pp-cmp-col">
-          <div className="pp-cmp-head">Pro</div>
           {FEATURES.map((f) => (
             <div className="pp-cmp-cell" key={f.label}>
               {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
