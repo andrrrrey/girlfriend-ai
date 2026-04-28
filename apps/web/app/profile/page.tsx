@@ -93,7 +93,7 @@ const CSS = `
 .pp-admin-link:hover { border-color: #f95bad; }
 
 /* ── Subscription ── */
-.pp-sub { display: flex; gap: 8px; align-items: flex-start; max-width: 900px; }
+.pp-sub { display: flex; gap: 8px; align-items: flex-start; }
 .pp-sub-card {
   flex: 0 0 300px; width: 300px; min-height: 416px;
   border: 1px solid rgba(255,153,206,0.6); border-radius: 4px;
@@ -158,32 +158,22 @@ const CSS = `
   display: flex; align-items: center; justify-content: center; font-size: 13px;
 }
 .pp-cmp-col {
-  width: 90px; flex-shrink: 0;
+  width: 80px; flex-shrink: 0;
   display: flex; flex-direction: column; gap: 6px;
 }
 .pp-cmp-head {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
   border: 1px solid #313131; border-radius: 4px; overflow: hidden; height: 46px;
-}
-.pp-cmp-head span {
-  display: flex; align-items: center; justify-content: center;
+  background: #1e1e1e; display: flex; align-items: center; justify-content: center;
   font-size: 9px; font-weight: 600; color: #969696; font-family: 'Syne', sans-serif;
-  background: #1e1e1e;
 }
-.pp-cmp-head span:first-child { border-right: 1px solid #313131; }
 .pp-cmp-cell {
-  display: grid; grid-template-columns: 1fr 1fr;
   background: #1e1e1e; border: 1px solid #313131; border-radius: 4px;
-  height: 46px; /* matches .pp-feat-card height ~46px */
-}
-.pp-cmp-cell span {
+  height: 46px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-family: 'Syne', sans-serif;
 }
-.pp-cmp-cell span:first-child { border-right: 1px solid #313131; color: #848484; }
-.pp-cmp-cell span:last-child { color: #d0d0d0; }
-.pp-chk { color: #C1F0AA; font-size: 13px; }
-.pp-x { color: #E36466; font-size: 13px; }
+.pp-cmp-val {
+  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #d0d0d0;
+}
 
 /* ── Shared form primitives ── */
 .pp-field { display: flex; flex-direction: column; gap: 8px; }
@@ -309,7 +299,7 @@ const CSS = `
 }
 
 /* ── Preferences ── */
-.pp-pref { display: flex; flex-direction: column; gap: 24px; max-width: 800px; }
+.pp-pref { display: flex; flex-direction: column; gap: 24px; }
 .pp-section { display: flex; flex-direction: column; gap: 12px; }
 .pp-section-lbl {
   font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
@@ -356,7 +346,7 @@ const CSS = `
 }
 
 /* ── Chat Profiles ── */
-.pp-chats { display: flex; flex-direction: column; gap: 8px; max-width: 600px; }
+.pp-chats { display: flex; flex-direction: column; gap: 8px; }
 .pp-chat-card {
   display: flex; gap: 8px; align-items: flex-start;
   background: #252525; padding: 6px; border-radius: 8px;
@@ -516,6 +506,24 @@ function IcoPlus() {
   );
 }
 
+function IcoCheckCircle() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9.5" stroke="#C1F0AA" strokeWidth="1.4"/>
+      <path d="M8 12l3 3 5-5" stroke="#C1F0AA" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IcoXCircle() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9.5" stroke="#848484" strokeWidth="1.4"/>
+      <path d="M15 9l-6 6M9 9l6 6" stroke="#848484" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 /* ═══════════════════════════════════════
    Tabs
 ═══════════════════════════════════════ */
@@ -547,13 +555,10 @@ function SubscriptionTab() {
           ))}
         </div>
         <div className="pp-cmp-col">
-          <div className="pp-cmp-head">
-            <span>Free</span><span>Pro</span>
-          </div>
+          <div className="pp-cmp-head">Pro</div>
           {FEATURES.map((f) => (
             <div className="pp-cmp-cell" key={f.label}>
-              <span className={f.free === "✗" ? "pp-x" : f.free === "✓" ? "pp-chk" : ""}>{f.free}</span>
-              <span className={f.pro === "✓" ? "pp-chk" : f.pro === "✗" ? "pp-x" : ""}>{f.pro}</span>
+              {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
             </div>
           ))}
         </div>
