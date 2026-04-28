@@ -1460,7 +1460,7 @@ export default function GenerationPage() {
 
                       {/* Content */}
                       {isVideo ? (
-                        <video src={url} muted loop playsInline onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} />
+                        <video src={url} muted loop playsInline preload="metadata" onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} />
                       ) : (
                         <img src={url} alt={item.input?.prompt || "Generated"} loading="lazy" />
                       )}
