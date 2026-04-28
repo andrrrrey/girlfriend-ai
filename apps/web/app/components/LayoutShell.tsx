@@ -8,14 +8,14 @@ import BottomBarMobile from "./BottomBarMobile";
 
 const NO_SHELL_ROUTES = ["/login", "/register"];
 
-type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "admin";
+type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "admin" | "profile";
 
 function getActivePage(pathname: string): ActivePage | undefined {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/chat")) return "chat";
   if (pathname.startsWith("/create")) return "create-character";
   if (pathname.startsWith("/admin")) return "admin";
-  if (pathname.startsWith("/profile")) return "admin";
+  if (pathname.startsWith("/profile")) return "profile";
   if (pathname.startsWith("/generation")) return "generate";
   if (pathname.startsWith("/gallery")) return "gallery";
   if (pathname.startsWith("/shorts")) return "shorts";

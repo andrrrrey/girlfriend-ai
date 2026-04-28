@@ -2,481 +2,777 @@
 
 import { useState } from "react";
 import { useAuth } from "../../context/auth";
-import type { UserProfile } from "../../lib/api";
+import { users } from "../../lib/api";
 
 const CSS = `
-  :root {
-    --bg-dark: #0b0512;
-    --sidebar-bg: #120a1d;
-    --accent-purple: #8e44ad;
-    --active-violet: #6c5ce7;
-    --text-main: #ffffff;
-    --text-dim: #a0a0a0;
-    --card-bg: #1c1427;
-    --tag-border: #3d2b55;
-    --coral: #ff7675;
+  .profile-page {
+    padding: 24px 32px;
+    min-height: calc(100vh - 56px);
+    font-family: 'Syne', sans-serif;
+    color: #fff;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
+
+  /* ── Tab nav ── */
+  .profile-tabs {
     display: flex;
-    height: 100vh;
+    border-bottom: 1px solid #252525;
+    margin-bottom: 28px;
+    gap: 0;
+  }
+  .profile-tab {
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #848484;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .profile-tab.active {
+    color: #fff;
+    border-bottom: 2px solid #F95BAD;
+    box-shadow: 0 2px 5px 1px rgba(228,0,120,0.4);
+  }
+  .profile-tab:hover:not(.active) { color: #D0D0D0; }
+
+  /* ── Subscription tab ── */
+  .sub-layout {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  @media (max-width: 768px) {
+    .sub-layout { flex-direction: column; }
+    .sub-features { display: none !important; }
+    .sub-comparison { display: none !important; }
+  }
+  .sub-card {
+    flex: 1;
+    background: #090909;
+    border: 1px solid rgba(255,153,206,0.6);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 200px;
+  }
+  .sub-card-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .sub-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .sub-price-amount { font-size: 32px; font-weight: 700; }
+  .sub-price-period { font-size: 12px; color: #848484; }
+  .sub-badge {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid #313131;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: #969696;
+    margin-bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sub-btn-gradient {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(90deg, #F95BAD, #FF0084);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 8px;
+    font-family: 'Syne', sans-serif;
+  }
+  .sub-btn-outline {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #121212;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    color: #848484;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+  }
+  .sub-features {
+    width: 222px;
+    flex-shrink: 0;
+    background: #090909;
+    border: 1px solid #252525;
+    border-radius: 8px;
     overflow: hidden;
   }
-  .sidebar {
-    width: 200px;
-    background-color: var(--sidebar-bg);
-    border-right: 1px solid var(--tag-border);
+  .sub-feature-row {
     display: flex;
-    flex-direction: column;
-    padding: 20px 15px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #252525;
+    font-size: 12px;
+  }
+  .sub-feature-row:last-child { border-bottom: none; }
+  .sub-feature-icon {
+    width: 22px;
+    height: 22px;
+    background: rgba(48,39,43,0.4);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
     flex-shrink: 0;
   }
-  .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; margin-bottom: 30px; }
-  .logo-box { width: 30px; height: 30px; background: linear-gradient(135deg, #a29bfe, #6c5ce7); border-radius: 6px; }
-  .menu-item {
-    display: flex; align-items: center; gap: 12px; padding: 10px 15px;
-    color: var(--text-dim); text-decoration: none; border-radius: 8px; font-size: 14px; margin-bottom: 4px;
-    transition: all 0.2s ease;
+  .sub-comparison {
+    width: 150px;
+    flex-shrink: 0;
+    background: #090909;
+    border: 1px solid #252525;
+    border-radius: 8px;
+    overflow: hidden;
   }
-  .menu-item:hover { color: white; background-color: rgba(255,255,255,0.05); transform: translateX(5px); }
-  .menu-item.active { background-color: var(--active-violet); color: white; }
-  .btn-footer {
-    display: block; width: 100%; padding: 10px; margin-top: 8px;
-    border: 1px solid var(--tag-border); background: transparent; color: white;
-    border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px;
+  .sub-cmp-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid #252525;
+    font-size: 10px;
+    font-weight: 600;
+    color: #969696;
+    text-align: center;
   }
-  .content { flex-grow: 1; overflow-y: auto; padding: 20px 40px; }
-  .top-nav { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 25px; }
-  .nav-btn {
-    background: var(--card-bg); border: 1px solid var(--tag-border); color: white;
-    padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
-    text-decoration: none; display: inline-block; transition: border-color 0.2s;
+  .sub-cmp-header span { padding: 8px 4px; }
+  .sub-cmp-header span:first-child { border-right: 1px solid #252525; }
+  .sub-cmp-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid #252525;
+    font-size: 11px;
+    text-align: center;
   }
-  .nav-btn:hover { border-color: var(--active-violet); }
+  .sub-cmp-row:last-child { border-bottom: none; }
+  .sub-cmp-row span {
+    padding: 10px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sub-cmp-row span:first-child { border-right: 1px solid #252525; color: #848484; }
+  .check { color: #C1F0AA; font-size: 13px; }
+  .cross { color: #E36466; font-size: 13px; }
 
-  /* Unauthenticated */
-  .unauth-box {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: calc(100vh - 120px); gap: 24px; text-align: center;
+  /* ── Account Info tab ── */
+  .acc-layout { max-width: 560px; }
+  .acc-section { margin-bottom: 24px; }
+  .acc-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #969696;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
-  .unauth-icon { font-size: 72px; opacity: 0.4; }
-  .unauth-title { font-size: 26px; font-weight: 600; }
-  .unauth-subtitle { font-size: 15px; color: var(--text-dim); max-width: 360px; line-height: 1.6; }
-  .unauth-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
-  .btn-primary {
-    background: var(--active-violet); border: none; color: white;
-    padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
-    cursor: pointer; text-decoration: none; display: inline-block;
+  .acc-verified {
+    background: rgba(193,240,170,0.15);
+    border: 1px solid #C1F0AA;
+    color: #C1F0AA;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 9px;
   }
-  .btn-secondary {
-    background: transparent; border: 1px solid var(--tag-border); color: white;
-    padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
-    cursor: pointer; text-decoration: none; display: inline-block;
+  .acc-avatar-wrap {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    border-radius: 8px;
+    border: 1px solid #313131;
+    overflow: hidden;
+    background: #1E1E1E;
+    margin-bottom: 10px;
+  }
+  .acc-avatar-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .acc-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #848484;
+    font-size: 40px;
+  }
+  .acc-avatar-btns { display: flex; gap: 8px; }
+  .acc-btn-sm {
+    padding: 6px 12px;
+    background: #252525;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    color: #D0D0D0;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    transition: border-color 0.2s;
+  }
+  .acc-btn-sm:hover { border-color: #F95BAD; }
+  .acc-btn-sm.danger { color: #E36466; }
+  .acc-input {
+    width: 100%;
+    height: 36px;
+    background: #252525;
+    border: 1px solid #313131;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    padding: 0 12px;
+    outline: none;
+    font-family: 'Syne', sans-serif;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .acc-input:focus { border-color: #F95BAD; }
+  .acc-input:disabled { color: #848484; cursor: not-allowed; }
+  .acc-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) { .acc-grid-2 { grid-template-columns: 1fr; } }
+  .acc-btn-save {
+    padding: 8px 20px;
+    background: linear-gradient(90deg, #F95BAD, #FF0084);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    margin-top: 8px;
+  }
+  .acc-feedback {
+    font-size: 11px;
+    margin-top: 6px;
+    min-height: 16px;
+  }
+  .acc-feedback.ok { color: #C1F0AA; }
+  .acc-feedback.err { color: #E36466; }
+
+  /* ── Preferences tab ── */
+  .pref-layout { max-width: 680px; }
+  .pref-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .pref-style-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 600px) { .pref-style-grid { grid-template-columns: repeat(2, 1fr); } }
+  .pref-style-card {
+    height: 120px;
+    border-radius: 8px;
+    border: 2px solid #313131;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background: #1E1E1E;
+    transition: border-color 0.2s;
+    display: flex;
+    align-items: flex-end;
+  }
+  .pref-style-card.active { border-color: #F95BAD; }
+  .pref-style-card-label {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+    text-align: center;
+  }
+  .pref-style-card-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.6;
+  }
+  .pref-select-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .pref-select-label { font-size: 10px; color: #969696; min-width: 120px; }
+  .pref-select {
+    flex: 1;
+    max-width: 200px;
+    height: 30px;
+    background: #1E1E1E;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 10px;
+    padding: 0 10px;
+    outline: none;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer;
   }
 
-  /* Profile layout */
-  .profile-container {
-    display: flex; gap: 30px;
-    border: 1px solid var(--tag-border); border-radius: 12px;
-    padding: 25px; min-height: 500px;
+  /* ── Chat Profiles tab ── */
+  .chat-profiles-list { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+  .chat-profile-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #252525;
+    border: 1px solid #313131;
+    border-radius: 8px;
+    padding: 12px;
   }
-  .profile-nav { width: 220px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
-  .sub-nav-item {
-    padding: 12px 15px; border-radius: 8px; color: var(--text-dim);
-    cursor: pointer; font-size: 14px; border: 1px solid var(--tag-border);
-    transition: 0.3s; text-align: center; user-select: none;
+  .chat-profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: #313131;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #848484;
+    overflow: hidden;
   }
-  .sub-nav-item.active { background-color: var(--active-violet); color: white; border-color: var(--active-violet); }
-  .tab-content { display: none; flex-grow: 1; }
-  .tab-content.active { display: block; }
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-  .btn-danger { background: var(--coral); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .chat-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .chat-profile-info { flex: 1; }
+  .chat-profile-name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .chat-profile-bio { font-size: 10px; color: #848484; line-height: 1.5; }
+  .chat-profile-actions { display: flex; gap: 6px; }
+  .chat-action-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #313131;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #848484;
+    font-size: 12px;
+    transition: border-color 0.2s;
+  }
+  .chat-action-btn:hover { border-color: #F95BAD; color: #fff; }
+  .chat-create-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 36px;
+    background: #121212;
+    border: 1px solid #313131;
+    border-radius: 6px;
+    color: #848484;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    margin-top: 4px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .chat-create-btn:hover { border-color: #F95BAD; color: #fff; }
 
-  /* Form */
-  .form-group { margin-bottom: 20px; }
-  .label { display: block; color: var(--text-dim); font-size: 12px; margin-bottom: 8px; }
-  .input-wrapper {
-    background: rgba(0,0,0,0.2); border: 1px solid var(--tag-border);
-    border-radius: 8px; display: flex; align-items: center; padding: 0 15px; height: 45px;
+  /* ── Unauth ── */
+  .profile-unauth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 200px);
+    gap: 20px;
+    text-align: center;
   }
-  .input-wrapper input {
-    background: transparent; border: none; color: white; flex-grow: 1;
-    font-size: 14px; outline: none;
+  .profile-unauth-icon { font-size: 64px; opacity: 0.3; }
+  .profile-unauth-title { font-size: 22px; font-weight: 700; }
+  .profile-unauth-sub { font-size: 13px; color: #848484; max-width: 320px; line-height: 1.6; }
+  .profile-unauth-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .profile-unauth-btn-primary {
+    padding: 10px 24px;
+    background: linear-gradient(90deg, #F95BAD, #FF0084);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: 'Syne', sans-serif;
   }
-  .icon-btn { color: var(--text-dim); cursor: pointer; font-size: 14px; margin-left: 10px; }
-  .social-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-  .social-box { display: flex; align-items: center; gap: 10px; }
-  .social-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: bold; color: white; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .btn-settings { background: var(--active-violet); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; }
-
-  /* Subscription */
-  .subscription-card {
-    background: rgba(255,255,255,0.02); border: 1px solid var(--tag-border);
-    border-radius: 15px; padding: 25px; display: flex; gap: 40px;
+  .profile-unauth-btn-secondary {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid #313131;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: 'Syne', sans-serif;
   }
-  .plan-info { background: rgba(0,0,0,0.2); border: 1px solid var(--tag-border); border-radius: 12px; padding: 20px; min-width: 220px; }
-  .plan-header { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: bold; margin-bottom: 15px; }
-  .plan-icon { background: var(--active-violet); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .plan-list { list-style: none; font-size: 13px; color: var(--text-dim); line-height: 1.8; }
-  .plan-list li::before { content: "•"; margin-right: 8px; color: var(--active-violet); }
-  .toggle { width: 40px; height: 20px; background: #3d2b55; border-radius: 10px; position: relative; cursor: pointer; transition: 0.3s; }
-  .toggle::after { content: ""; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
-  .toggle.on { background: var(--active-violet); }
-  .toggle.on::after { left: 22px; }
-
-  /* Preferences */
-  .grid-images { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 30px; }
-  .image-card {
-    border: 1px solid var(--tag-border); border-radius: 10px; overflow: hidden;
-    aspect-ratio: 1/1; cursor: pointer; transition: 0.2s; background: var(--card-bg);
-  }
-  .image-card.active { border: 2px solid var(--active-violet); }
-  .image-card img { width: 100%; height: 100%; object-fit: cover; }
-  .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .tag {
-    background: rgba(255,255,255,0.05); border: 1px solid var(--tag-border);
-    color: var(--text-dim); padding: 6px 14px; border-radius: 20px;
-    font-size: 12px; cursor: pointer; transition: 0.2s;
-  }
-  .tag.active { background: var(--active-violet); color: white; border-color: var(--active-violet); }
-
-  /* Chat profiles */
-  .profile-card {
-    width: 280px; background: rgba(255,255,255,0.02);
-    border: 1px solid var(--tag-border); border-radius: 12px; padding: 20px;
-  }
-  .profile-card-add {
-    width: 280px; border: 2px dashed var(--tag-border); border-radius: 12px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.3s; color: var(--text-dim); min-height: 160px;
-  }
-  .profile-card-add:hover { border-color: var(--active-violet); color: white; }
 `;
 
-const TABS = ["subscription", "account", "prefs", "chat-profiles"] as const;
-type Tab = (typeof TABS)[number];
+type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
 
-function ToggleSwitch() {
-  const [on, setOn] = useState(true);
-  return <div className={`toggle${on ? " on" : ""}`} onClick={() => setOn(!on)} />;
-}
+const FEATURES = [
+  { icon: "💬", label: "Messages per day", free: "10", pro: "∞" },
+  { icon: "🖼️", label: "Image generations", free: "10", pro: "∞" },
+  { icon: "🎬", label: "Video content", free: "✗", pro: "✓" },
+  { icon: "❤️", label: "AI relationships", free: "1", pro: "∞" },
+  { icon: "🌟", label: "Premium characters", free: "✗", pro: "✓" },
+  { icon: "🎭", label: "Custom personas", free: "✗", pro: "✓" },
+  { icon: "📷", label: "NSFW content", free: "✗", pro: "✓" },
+  { icon: "⚡", label: "Priority responses", free: "✗", pro: "✓" },
+];
 
-function TagItem({ label, defaultActive }: { label: string; defaultActive?: boolean }) {
-  const [active, setActive] = useState(!!defaultActive);
+function SubscriptionTab() {
   return (
-    <div className={`tag${active ? " active" : ""}`} onClick={() => setActive(!active)}>
-      {label}
+    <div className="sub-layout">
+      <div className="sub-card">
+        <div className="sub-card-title">Pro</div>
+        <div className="sub-price">
+          <span className="sub-price-amount">$25</span>
+          <span className="sub-price-period">/ 6 month</span>
+        </div>
+        <div className="sub-badge">
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C1F0AA", display: "inline-block" }} />
+          Next charge: 18.02.2027
+        </div>
+        <button className="sub-btn-gradient">Get Pro</button>
+        <button className="sub-btn-outline">Cancel subscription</button>
+      </div>
+
+      <div className="sub-features">
+        {FEATURES.map((f) => (
+          <div className="sub-feature-row" key={f.label}>
+            <div className="sub-feature-icon">{f.icon}</div>
+            <span style={{ fontSize: 12 }}>{f.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="sub-comparison">
+        <div className="sub-cmp-header">
+          <span>Free</span>
+          <span>Pro</span>
+        </div>
+        {FEATURES.map((f) => (
+          <div className="sub-cmp-row" key={f.label}>
+            <span className={f.free === "✗" ? "cross" : f.free === "✓" ? "check" : ""}>{f.free}</span>
+            <span className={f.pro === "✗" ? "cross" : f.pro === "✓" ? "check" : ""}>{f.pro}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function ImageCard({ src, defaultActive }: { src: string; defaultActive?: boolean }) {
-  const [active, setActive] = useState(!!defaultActive);
+function AccountTab() {
+  const { user, refreshProfile } = useAuth();
+  const [nickname, setNickname] = useState(user?.nickname ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? "");
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [profileMsg, setProfileMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [pwdMsg, setPwdMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savingPwd, setSavingPwd] = useState(false);
+
+  async function handleSaveProfile() {
+    setSaving(true);
+    setProfileMsg(null);
+    try {
+      await users.updateProfile({ nickname: nickname || null, avatarUrl: avatarUrl || null });
+      await refreshProfile();
+      setProfileMsg({ text: "Profile saved successfully", ok: true });
+    } catch {
+      setProfileMsg({ text: "Failed to save profile", ok: false });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!newPwd || !currentPwd) {
+      setPwdMsg({ text: "Fill in both password fields", ok: false });
+      return;
+    }
+    setSavingPwd(true);
+    setPwdMsg(null);
+    try {
+      await users.changePassword(currentPwd, newPwd);
+      setPwdMsg({ text: "Password changed successfully", ok: true });
+      setCurrentPwd("");
+      setNewPwd("");
+    } catch {
+      setPwdMsg({ text: "Incorrect current password", ok: false });
+    } finally {
+      setSavingPwd(false);
+    }
+  }
+
   return (
-    <div className={`image-card${active ? " active" : ""}`} onClick={() => setActive(!active)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="Style" />
+    <div className="acc-layout">
+      {/* Avatar */}
+      <div className="acc-section">
+        <div className="acc-label">Profile picture</div>
+        <div className="acc-avatar-wrap">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="avatar" />
+          ) : (
+            <div className="acc-avatar-placeholder">👤</div>
+          )}
+        </div>
+        <div className="acc-avatar-btns">
+          <button className="acc-btn-sm" onClick={() => {
+            const url = prompt("Enter image URL:");
+            if (url) setAvatarUrl(url);
+          }}>Replace picture</button>
+          <button className="acc-btn-sm danger" onClick={() => setAvatarUrl("")}>Remove</button>
+        </div>
+      </div>
+
+      {/* Nickname */}
+      <div className="acc-section">
+        <div className="acc-label">Nickname</div>
+        <input
+          className="acc-input"
+          type="text"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="Your nickname"
+        />
+        <button className="acc-btn-save" onClick={handleSaveProfile} disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {profileMsg && (
+          <div className={`acc-feedback ${profileMsg.ok ? "ok" : "err"}`}>{profileMsg.text}</div>
+        )}
+      </div>
+
+      {/* Email */}
+      <div className="acc-section">
+        <div className="acc-label">
+          Email
+          <span className="acc-verified">Verified</span>
+        </div>
+        <input className="acc-input" type="text" value={user?.email ?? ""} disabled />
+      </div>
+
+      {/* Password */}
+      <div className="acc-section">
+        <div className="acc-label">Change password</div>
+        <div className="acc-grid-2" style={{ marginBottom: 8 }}>
+          <input
+            className="acc-input"
+            type="password"
+            placeholder="Current password"
+            value={currentPwd}
+            onChange={(e) => setCurrentPwd(e.target.value)}
+          />
+          <input
+            className="acc-input"
+            type="password"
+            placeholder="New password"
+            value={newPwd}
+            onChange={(e) => setNewPwd(e.target.value)}
+          />
+        </div>
+        <button className="acc-btn-save" onClick={handleChangePassword} disabled={savingPwd}>
+          {savingPwd ? "Saving…" : "Change password"}
+        </button>
+        {pwdMsg && (
+          <div className={`acc-feedback ${pwdMsg.ok ? "ok" : "err"}`}>{pwdMsg.text}</div>
+        )}
+      </div>
     </div>
   );
 }
 
-function SubscriptionTab({ user }: { user: UserProfile }) {
-  const planName = user.subscription === "premium" ? "Премиум" : "Базовый";
+function PreferencesTab() {
+  const [style, setStyle] = useState("Realistic");
+  const [gender, setGender] = useState("Female");
+
+  const styles = [
+    { label: "Realistic", bg: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=200&fit=crop" },
+    { label: "Semi-real", bg: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=200&fit=crop" },
+    { label: "Anime", bg: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&h=200&fit=crop" },
+    { label: "2D", bg: "https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=300&h=200&fit=crop" },
+  ];
+
   return (
-    <>
-      <div className="section-header"><h2>Подписка</h2></div>
-      <div className="subscription-card">
-        <div className="plan-info">
-          <div className="plan-header">
-            <div className="plan-icon">🚀</div>
-            <span>{planName}</span>
+    <div className="pref-layout">
+      <div className="pref-section-title">Art style</div>
+      <div className="pref-style-grid">
+        {styles.map((s) => (
+          <div
+            key={s.label}
+            className={`pref-style-card${style === s.label ? " active" : ""}`}
+            onClick={() => setStyle(s.label)}
+          >
+            <div className="pref-style-card-bg" style={{ backgroundImage: `url(${s.bg})` }} />
+            <div className="pref-style-card-label">{s.label}</div>
           </div>
-          <ul className="plan-list">
-            <li>10 сообщений</li>
-            <li>10 генераций</li>
-            <li>Фото и видео</li>
-            <li>100 жизней</li>
-          </ul>
-        </div>
-        <div style={{ flexGrow: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--tag-border)", paddingBottom: 10 }}>
-            <span>Автоматическое продление</span>
-            <ToggleSwitch />
-          </div>
-          <p style={{ marginTop: 15, fontSize: 13, color: "var(--text-dim)" }}>
-            Дата следующего списания: 18.02.2026
-          </p>
-          <button className="btn-settings">⚙️ Настройки подписки</button>
-        </div>
+        ))}
       </div>
-    </>
+
+      <div className="pref-section-title">Preferences</div>
+      <div className="pref-select-row">
+        <span className="pref-select-label">Preferred gender:</span>
+        <select className="pref-select" value={gender} onChange={(e) => setGender(e.target.value)}>
+          <option>Female</option>
+          <option>Male</option>
+          <option>All</option>
+        </select>
+      </div>
+      <div className="pref-select-row">
+        <span className="pref-select-label">Age range:</span>
+        <select className="pref-select">
+          <option>18–25</option>
+          <option>25–35</option>
+          <option>35+</option>
+          <option>Any</option>
+        </select>
+      </div>
+      <div className="pref-select-row">
+        <span className="pref-select-label">Content type:</span>
+        <select className="pref-select">
+          <option>All</option>
+          <option>SFW only</option>
+          <option>NSFW only</option>
+        </select>
+      </div>
+    </div>
   );
 }
 
-function AccountTab({ user }: { user: UserProfile }) {
-  const vkLink = user.socialLinks?.find((l) => l.provider === "vk")?.url ?? "";
-  const igLink = user.socialLinks?.find((l) => l.provider === "instagram")?.url ?? "";
-  const xLink = user.socialLinks?.find((l) => l.provider === "twitter")?.url ?? "";
-
-  return (
-    <>
-      <div className="section-header">
-        <h2>Аккаунт</h2>
-        <button className="btn-danger">🗑️ Удалить аккаунт</button>
-      </div>
-      <div className="form-group">
-        <span className="label">Никнейм</span>
-        <div className="input-wrapper">
-          <input type="text" defaultValue={user.nickname ?? ""} placeholder="Mynickname" />
-          <span className="icon-btn">📝</span>
-        </div>
-      </div>
-      <span className="label">Ссылки на соцсети</span>
-      <div className="social-grid">
-        <div className="social-box">
-          <div className="social-icon" style={{ background: "#0077FF" }}>VK</div>
-          <div className="input-wrapper" style={{ flexGrow: 1 }}>
-            <input type="text" defaultValue={vkLink} placeholder="https://vk.com/feed" />
-            <span className="icon-btn">🗑️</span>
-          </div>
-        </div>
-        <div className="social-box">
-          <div className="social-icon" style={{ background: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" }}>IG</div>
-          <div className="input-wrapper" style={{ flexGrow: 1 }}>
-            <input type="text" defaultValue={igLink} placeholder="http://instagram.com/" />
-            <span className="icon-btn">🗑️</span>
-          </div>
-        </div>
-        <div className="social-box">
-          <div className="social-icon" style={{ background: "#000" }}>X</div>
-          <div className="input-wrapper" style={{ flexGrow: 1 }}>
-            <input type="text" defaultValue={xLink} placeholder="http://x.com/" />
-            <span className="icon-btn">🗑️</span>
-          </div>
-        </div>
-      </div>
-      <div className="grid-2">
-        <div className="form-group">
-          <span className="label">Email</span>
-          <div className="input-wrapper">
-            <input type="text" defaultValue={user.email} placeholder="mail@mail.ru" />
-            <span className="icon-btn">📝</span>
-            <span className="icon-btn">🗑️</span>
-          </div>
-        </div>
-        <div className="form-group">
-          <span className="label">Дополнительный Email</span>
-          <div className="input-wrapper">
-            <input type="text" placeholder="mail@mail.ru" />
-            <span className="icon-btn">📝</span>
-            <span className="icon-btn">🗑️</span>
-          </div>
-        </div>
-      </div>
-      <span className="label">Изменить пароль</span>
-      <div className="grid-2" style={{ marginBottom: 15 }}>
-        <div className="input-wrapper"><input type="password" placeholder="Старый пароль" /></div>
-        <div className="input-wrapper"><input type="password" placeholder="Повторите пароль" /></div>
-      </div>
-      <button className="btn-settings" style={{ marginTop: 0 }}>Сохранить новый пароль</button>
-    </>
-  );
-}
-
-function PrefsTab() {
-  return (
-    <>
-      <div className="section-header"><h2>Выбор пола, стиля графики</h2></div>
-      <div className="grid-images">
-        <ImageCard src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop" defaultActive />
-        <ImageCard src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" />
-        <ImageCard src="https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=200&h=200&fit=crop" />
-        <ImageCard src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" />
-        <ImageCard src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop" />
-      </div>
-      <div className="section-header" style={{ marginBottom: 10 }}><h2>Теги характеристик</h2></div>
-      <div className="form-group">
-        <span className="label">Внешность</span>
-        <div className="tag-group">
-          <TagItem label="Romantic" defaultActive />
-          <TagItem label="Athletic" defaultActive />
-          <TagItem label="Caring" defaultActive />
-          <TagItem label="Virgin" />
-          <TagItem label="College Student" />
-          <TagItem label="Anime" />
-          <TagItem label="Vintage" />
-        </div>
-      </div>
-      <div className="form-group">
-        <span className="label">Хобби</span>
-        <div className="tag-group">
-          <TagItem label="Gaming" defaultActive />
-          <TagItem label="Fitness" defaultActive />
-          <TagItem label="Travel" />
-          <TagItem label="Music" />
-          <TagItem label="Cooking" />
-          <TagItem label="Art" />
-        </div>
-      </div>
-    </>
-  );
-}
+const CHAT_PROFILES = [
+  { name: "Aduard", bio: "23 years old. Romantic and caring companion who loves long walks and deep conversations.", avatar: "" },
+  { name: "Boris", bio: "40 years old. Experienced and thoughtful. Great listener with a dry sense of humor.", avatar: "" },
+];
 
 function ChatProfilesTab() {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
-      <div className="profile-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
-          <h3 style={{ fontSize: 18, fontWeight: "bold" }}>Aduard</h3>
-          <div style={{ display: "flex", gap: 10 }}>
-            <span style={{ cursor: "pointer", opacity: 0.7 }}>📝</span>
-            <span style={{ cursor: "pointer", color: "var(--coral)" }}>🗑️</span>
+    <div>
+      <div className="chat-profiles-list">
+        {CHAT_PROFILES.map((p) => (
+          <div className="chat-profile-card" key={p.name}>
+            <div className="chat-profile-avatar">
+              {p.avatar ? <img src={p.avatar} alt={p.name} /> : "👤"}
+            </div>
+            <div className="chat-profile-info">
+              <div className="chat-profile-name">{p.name}</div>
+              <div className="chat-profile-bio">{p.bio}</div>
+            </div>
+            <div className="chat-profile-actions">
+              <button className="chat-action-btn" title="Edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button className="chat-action-btn" title="Delete" style={{ color: "#E36466" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              </button>
+            </div>
           </div>
-        </div>
-        <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 15 }}>23 года</p>
-        <p style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-dim)" }}>
-          Lorem ipsum dolor sit amet consectetur. Adipiscing augue dolor libero sem quis quis ac viverra.
-        </p>
-      </div>
-      <div className="profile-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
-          <h3 style={{ fontSize: 18, fontWeight: "bold" }}>Boris</h3>
-          <div style={{ display: "flex", gap: 10 }}>
-            <span style={{ cursor: "pointer", opacity: 0.7 }}>📝</span>
-            <span style={{ cursor: "pointer", color: "var(--coral)" }}>🗑️</span>
-          </div>
-        </div>
-        <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 15 }}>40 лет</p>
-        <p style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-dim)" }}>
-          Lorem ipsum dolor sit amet consectetur. Adipiscing augue dolor libero sem quis quis ac viverra.
-        </p>
-      </div>
-      <div className="profile-card-add">
-        <span style={{ fontSize: 24, marginBottom: 8 }}>👤⁺</span>
-        <span style={{ fontSize: 14 }}>Добавить профиль чата</span>
+        ))}
+        <button className="chat-create-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Create New
+        </button>
       </div>
     </div>
-  );
-}
-
-function ProfileContent({ user, onLogout }: { user: UserProfile; onLogout: () => void }) {
-  const [activeTab, setActiveTab] = useState<Tab>("account");
-  const isAdmin = user.role === "admin";
-
-  return (
-    <>
-      <header className="top-nav">
-        {isAdmin && (
-          <a href="/admin" className="nav-btn">⚙️ Админ</a>
-        )}
-        <button className="nav-btn" onClick={onLogout}>👤 Выйти</button>
-        <button className="nav-btn">🌐 Русский</button>
-      </header>
-      <div className="profile-container">
-        <div className="profile-nav">
-          <div
-            className={`sub-nav-item${activeTab === "subscription" ? " active" : ""}`}
-            onClick={() => setActiveTab("subscription")}
-          >
-            Подписка
-          </div>
-          <div
-            className={`sub-nav-item${activeTab === "account" ? " active" : ""}`}
-            onClick={() => setActiveTab("account")}
-          >
-            Аккаунт
-          </div>
-          <div
-            className={`sub-nav-item${activeTab === "prefs" ? " active" : ""}`}
-            onClick={() => setActiveTab("prefs")}
-          >
-            Предпочтения
-          </div>
-          <div
-            className={`sub-nav-item${activeTab === "chat-profiles" ? " active" : ""}`}
-            onClick={() => setActiveTab("chat-profiles")}
-          >
-            Профили для чатов
-          </div>
-        </div>
-        <div className="tab-content active" style={{ display: "block", flexGrow: 1 }}>
-          {activeTab === "subscription" && <SubscriptionTab user={user} />}
-          {activeTab === "account" && <AccountTab user={user} />}
-          {activeTab === "prefs" && <PrefsTab />}
-          {activeTab === "chat-profiles" && <ChatProfilesTab />}
-        </div>
-      </div>
-    </>
   );
 }
 
 function UnauthContent() {
   return (
-    <>
-      <header className="top-nav">
-        <a href="/login" className="nav-btn">👤 Профиль</a>
-        <button className="nav-btn">🌐 Русский</button>
-      </header>
-      <div className="unauth-box">
-        <div className="unauth-icon">🔒</div>
-        <div>
-          <div className="unauth-title">Вы не вошли в профиль</div>
-          <div className="unauth-subtitle">
-            Войдите в аккаунт или создайте новый, чтобы получить доступ к профилю и персональным настройкам.
-          </div>
-        </div>
-        <div className="unauth-actions">
-          <a href="/login" className="btn-primary">Авторизоваться</a>
-          <a href="/register" className="btn-secondary">Создать аккаунт</a>
+    <div className="profile-unauth">
+      <div className="profile-unauth-icon">🔒</div>
+      <div>
+        <div className="profile-unauth-title">You&apos;re not logged in</div>
+        <div className="profile-unauth-sub">
+          Sign in or create an account to access your profile and personal settings.
         </div>
       </div>
+      <div className="profile-unauth-btns">
+        <a href="/login" className="profile-unauth-btn-primary">Sign in</a>
+        <a href="/register" className="profile-unauth-btn-secondary">Create account</a>
+      </div>
+    </div>
+  );
+}
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "subscription", label: "Subscription" },
+  { id: "account", label: "Account Info" },
+  { id: "preferences", label: "Preferences" },
+  { id: "chat-profiles", label: "Chat Profiles" },
+];
+
+function ProfileContent() {
+  const [activeTab, setActiveTab] = useState<Tab>("subscription");
+
+  return (
+    <>
+      <div className="profile-tabs">
+        {TABS.map((t) => (
+          <div
+            key={t.id}
+            className={`profile-tab${activeTab === t.id ? " active" : ""}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+          </div>
+        ))}
+      </div>
+      {activeTab === "subscription" && <SubscriptionTab />}
+      {activeTab === "account" && <AccountTab />}
+      {activeTab === "preferences" && <PreferencesTab />}
+      {activeTab === "chat-profiles" && <ChatProfilesTab />}
     </>
   );
 }
 
 export default function ProfilePage() {
-  const { user, loading, logout } = useAuth();
-
-  async function handleLogout() {
-    await logout();
-    window.location.href = "/login";
-  }
+  const { user, loading } = useAuth();
 
   if (loading) return null;
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <aside className="sidebar">
-        <div className="logo">
-          <div className="logo-box"></div>
-          <span>Leonardo.Ai</span>
-        </div>
-        <nav>
-          <a href="/" className="menu-item">🏠 Главная</a>
-          <a href="#" className="menu-item">📱 Шортсы</a>
-          <a href="/generation" className="menu-item">📸 Фото/видео</a>
-          <a href="#" className="menu-item">👤 Мой AI</a>
-          <a href="#" className="menu-item">🖼️ Галерея</a>
-          <a href="#" className="menu-item">✨ Персонаж</a>
-          <a href="/chat" className="menu-item">💬 Чат</a>
-        </nav>
-        <div style={{ marginTop: "auto" }}>
-          <button className="btn-footer">👑 Премиум</button>
-          <button className="btn-footer">📘 Гайд</button>
-        </div>
-      </aside>
-      <main className="content">
-        {user ? (
-          <ProfileContent user={user} onLogout={handleLogout} />
-        ) : (
-          <UnauthContent />
-        )}
-      </main>
+      <div className="profile-page">
+        {user ? <ProfileContent /> : <UnauthContent />}
+      </div>
     </>
   );
 }
