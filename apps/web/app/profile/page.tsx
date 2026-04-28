@@ -13,7 +13,7 @@ const CSS = `
 /* ── Page wrapper ── */
 .pp-wrap {
   padding: 24px 32px;
-  max-width: 1200px;
+  max-width: 900px;
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
@@ -147,9 +147,13 @@ const CSS = `
   font-size: 14px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
 }
 
-/* Feature cards + comparison */
-.pp-sub-right { flex: 1; min-width: 0; display: flex; gap: 8px; }
-.pp-feat-list { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+/* Feature cards + comparison — single grid so rows always align */
+.pp-sub-right { flex: 1; min-width: 0; }
+.pp-feat-table {
+  display: grid;
+  grid-template-columns: 1fr 76px;
+  gap: 6px;
+}
 .pp-feat-card {
   background: #252525; border: 1px solid #313131; border-radius: 4px;
   padding: 10px 12px; display: flex; gap: 10px; align-items: center;
@@ -160,16 +164,8 @@ const CSS = `
   background: rgba(48,39,43,0.5); border-radius: 4px;
   display: flex; align-items: center; justify-content: center; font-size: 13px;
 }
-.pp-cmp-col {
-  width: 80px; flex-shrink: 0;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.pp-cmp-head {
-  height: 46px; visibility: hidden; /* invisible placeholder — mirrors first .pp-feat-card height */
-}
 .pp-cmp-cell {
   background: #1e1e1e; border: 1px solid #313131; border-radius: 4px;
-  height: 46px;
   display: flex; align-items: center; justify-content: center;
 }
 .pp-cmp-val {
@@ -547,19 +543,17 @@ function SubscriptionTab() {
       </div>
 
       <div className="pp-sub-right">
-        <div className="pp-feat-list">
+        <div className="pp-feat-table">
           {FEATURES.map((f) => (
-            <div className="pp-feat-card" key={f.label}>
-              <div className="pp-feat-ico">{f.icon}</div>
-              {f.label}
-            </div>
-          ))}
-        </div>
-        <div className="pp-cmp-col">
-          {FEATURES.map((f) => (
-            <div className="pp-cmp-cell" key={f.label}>
-              {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
-            </div>
+            <>
+              <div className="pp-feat-card" key={`${f.label}-card`}>
+                <div className="pp-feat-ico">{f.icon}</div>
+                {f.label}
+              </div>
+              <div className="pp-cmp-cell" key={`${f.label}-cmp`}>
+                {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
+              </div>
+            </>
           ))}
         </div>
       </div>
