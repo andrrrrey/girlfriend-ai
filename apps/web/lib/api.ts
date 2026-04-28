@@ -1011,3 +1011,7 @@ export async function deleteGenerationJob(jobId: string) {
 export async function getPublicGallery() {
   return apiFetch<any[]>("/generation/gallery");
 }
+
+export async function getPublicShorts() {
+  return apiFetch<any[]>("/generation/gallery?type=video");
+}

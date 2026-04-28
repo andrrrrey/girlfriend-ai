@@ -18,6 +18,7 @@ function getActivePage(pathname: string): ActivePage | undefined {
   if (pathname.startsWith("/profile")) return "admin";
   if (pathname.startsWith("/generation")) return "generate";
   if (pathname.startsWith("/gallery")) return "gallery";
+  if (pathname.startsWith("/shorts")) return "shorts";
   if (pathname.startsWith("/my-ai")) return "my-ai";
   return undefined;
 }

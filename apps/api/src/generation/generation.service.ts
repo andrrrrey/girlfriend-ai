@@ -196,11 +196,15 @@ export class GenerationService {
     }));
   }
 
-  async getGallery(limit = 50) {
+  async getGallery(limit = 50, type?: string) {
+    const typeFilter = type === "image" || type === "video"
+      ? type
+      : { in: ["image", "video"] as string[] };
+
     const jobs = await this.prisma.aiJob.findMany({
       where: {
         status: "completed",
-        type: { in: ["image", "video"] },
+        type: typeFilter,
       },
       orderBy: { createdAt: "desc" },
       take: limit,

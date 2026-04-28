@@ -341,10 +341,16 @@ function cardHtml(item: { type: string; url?: string | null }) {
   const dataUrl = bg ? ` data-url="${bg}"` : "";
   const dataType = ` data-type="${item.type}"`;
 
+  const mediaEl = bg
+    ? item.type === "video"
+      ? `<video class="g-card-thumb" src="${bg}" muted loop preload="metadata" playsinline></video>`
+      : `<img class="g-card-thumb" src="${bg}" alt="Generated" loading="lazy" />`
+    : "";
+
   return `
     <div class="g-card"${dataUrl}${dataType}>
       <div class="g-card-thumb-placeholder" style="${bgStyle}">
-        ${bg ? `<img class="g-card-thumb" src="${bg}" alt="Generated" loading="lazy" />` : ""}
+        ${mediaEl}
       </div>
       <div class="g-card-overlay"></div>
       <div class="g-card-type-badge">${typeIcon} ${typeLabel}</div>

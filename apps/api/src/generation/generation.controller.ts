@@ -65,8 +65,8 @@ export class GenerationController {
   }
 
   @Get("gallery")
-  async getGallery() {
-    return this.generationService.getGallery();
+  async getGallery(@Query("type") type?: string) {
+    return this.generationService.getGallery(50, type);
   }
 
   @Get("history")
