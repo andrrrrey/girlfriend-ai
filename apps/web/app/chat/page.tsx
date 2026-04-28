@@ -58,8 +58,9 @@ export default function ChatPage() {
     try {
       const res = await chats.list();
       setChatList(res.items);
+      return res.items;
     } catch {
-      // not authenticated or error
+      return [] as ChatSession[];
     }
   }, []);
 
@@ -78,16 +79,19 @@ export default function ChatPage() {
       const sessionId = searchParams?.get("sessionId");
       const characterId = searchParams?.get("characterId");
 
-      loadChats().then(async () => {
+      loadChats().then(async (items) => {
         if (sessionId) {
           setActiveChat(sessionId);
         } else if (characterId) {
-          try {
-            const newChat = await chats.create(characterId);
-            await loadChats();
-            setActiveChat(newChat.id);
-          } catch {
-            // chat may already exist — find existing
+          const existing = items.find((c) => c.character?.id === characterId);
+          if (existing) {
+            setActiveChat(existing.id);
+          } else {
+            try {
+              const newChat = await chats.create(characterId);
+              await loadChats();
+              setActiveChat(newChat.id);
+            } catch {}
           }
         }
       });

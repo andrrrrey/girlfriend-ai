@@ -117,13 +117,13 @@ const PAGE_CSS = `
   .gallery-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 18px;
     width: 100%;
   }
 
   .g-card {
-    width: 160px;
-    height: 220px;
+    width: 220px;
+    height: 300px;
     border-radius: 8px;
     border: 1px solid #313131;
     overflow: hidden;
@@ -177,8 +177,8 @@ const PAGE_CSS = `
 
   /* Skeleton */
   .g-card-skeleton {
-    width: 160px;
-    height: 220px;
+    width: 220px;
+    height: 300px;
     border-radius: 8px;
     background: #1e1e1e;
     position: relative;
@@ -257,12 +257,12 @@ const PAGE_CSS = `
     .gallery-content { padding: 16px 16px 40px; gap: 14px; }
     .gallery-title { font-size: 22px; }
     .gallery-filter-row { flex-wrap: wrap; }
-    .g-card { width: calc(50% - 6px); height: 180px; }
-    .g-card-skeleton { width: calc(50% - 6px); height: 180px; }
+    .g-card { width: calc(50% - 9px); height: 220px; }
+    .g-card-skeleton { width: calc(50% - 9px); height: 220px; }
   }
   @media (max-width: 480px) {
-    .g-card { width: calc(50% - 6px); height: 160px; }
-    .g-card-skeleton { width: calc(50% - 6px); height: 160px; }
+    .g-card { width: calc(50% - 9px); height: 220px; }
+    .g-card-skeleton { width: calc(50% - 9px); height: 220px; }
   }
 `;
 
