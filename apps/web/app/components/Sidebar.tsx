@@ -102,7 +102,7 @@ export default function Sidebar({
       {/* Settings nav */}
       <nav className="nav-section settings-nav">
         <div className="nav-title">Settings</div>
-        <a href={user?.role === "admin" ? "/admin" : "/profile"} className={navLinkClass(user ? "profile" : "admin")}>
+        <a href="/profile" className={navLinkClass(user ? "profile" : "admin")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="9" r="3"/><path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855"/></svg>
           <span className="label">{user ? "My account" : "Creator account"}</span>
         </a>
