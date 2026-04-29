@@ -10,7 +10,10 @@ import {
   getVideoStyles,
   getGenerationHistory,
   deleteGenerationJob,
+  getCharacterOptions,
+  type CharacterOption,
 } from "../../lib/api";
+import CharacterModal, { type CharacterSelections, DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -143,18 +146,13 @@ const CSS = `
 
   /* ── Editor cards ── */
   .editor-section {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     width: 100%;
   }
-  .editor-row {
-    display: flex;
-    gap: 10px;
-  }
   .editor-card {
-    flex: 1;
-    height: 319px;
+    height: 220px;
     background: #090909;
     border: 1px dashed #969696;
     border-radius: 8px;
@@ -168,6 +166,7 @@ const CSS = `
     overflow: hidden;
     position: relative;
   }
+  .editor-card.active { border: 1px solid #f95bad; }
   .editor-card:hover { border-color: #f95bad; }
   .editor-card .card-content {
     position: relative;
@@ -176,6 +175,7 @@ const CSS = `
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    width: 100%;
   }
   .editor-icon {
     width: 36px;
@@ -188,6 +188,7 @@ const CSS = `
     justify-content: center;
     flex-shrink: 0;
   }
+  .editor-icon.premium { background: rgba(249, 91, 173, 0.3); }
   .editor-icon svg { width: 20px; height: 20px; }
   .editor-text { text-align: center; width: 100%; }
   .editor-text .name {
@@ -204,6 +205,24 @@ const CSS = `
     margin-top: 4px;
   }
   .editor-text .sub.required { color: #c1f0aa; }
+  .editor-text .sub.premium-label { color: #f95bad; }
+  .editor-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    width: 100%;
+    padding: 0 4px;
+  }
+  .editor-tag {
+    background: rgba(249, 91, 173, 0.2);
+    color: #f95bad;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
 
   /* ── Custom Prompt ── */
   .custom-prompt-card {
@@ -826,8 +845,8 @@ const CSS = `
     .generate-content { left: 0; width: 100%; padding: 0 16px; top: 10px; }
     .page-label { left: 16px; }
     .seg-tabs { width: 100%; }
-    .editor-row { flex-wrap: wrap; }
-    .editor-card { min-width: calc(50% - 5px); height: 160px; }
+    .editor-section { grid-template-columns: repeat(2, 1fr); }
+    .editor-card { height: 160px; }
     .chips-row { width: 100%; flex-wrap: wrap; }
     .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   }
@@ -867,6 +886,9 @@ export default function GenerationPage() {
   const [selectedVideoModel, setSelectedVideoModel] = useState("wan2.1");
   const [imageModels, setImageModels] = useState<GenModel[]>([]);
   const [videoModels, setVideoModels] = useState<GenModel[]>([]);
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [characterSelections, setCharacterSelections] = useState<CharacterSelections>(DEFAULT_CHARACTER_SELECTIONS);
+  const [characterOptions, setCharacterOptions] = useState<CharacterOption[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -882,6 +904,7 @@ export default function GenerationPage() {
     getImageStyles().then(setImageModels).catch(() => {});
     getVideoStyles().then(setVideoModels).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
+    getCharacterOptions().then(setCharacterOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1100,108 +1123,112 @@ export default function GenerationPage() {
             </div>
           </div>
 
-          {/* Editor cards */}
+          {/* Editor cards — 3×2 grid */}
           <div className="editor-section">
-            {/* Row 1: Character, Pose, Action (video) or Character, Pose, Background (image) */}
-            <div className="editor-row">
-              <div className="editor-card">
-                <div className="card-content">
-                  <div className="editor-icon">
-                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
-                  </div>
-                  <div className="editor-text">
-                    <div className="name">Character</div>
-                    <div className="sub required">required</div>
-                  </div>
-                </div>
-              </div>
-              <div className="editor-card">
-                <div className="card-content">
-                  <div className="editor-icon">
-                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="5" r="2.5" stroke="#fff" strokeWidth="1.2"/><path d="M7 10c-1 2-1 5 0 7M13 10c1 2 1 5 0 7M10 8v9" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  </div>
-                  <div className="editor-text">
-                    <div className="name">Pose</div>
-                    <div className="sub required">required</div>
-                  </div>
-                </div>
-              </div>
-              {activeTab === "video" ? (
-                <div className="editor-card">
+            {/* Character */}
+            {(() => {
+              const tags: string[] = [];
+              if (characterSelections.style) tags.push(characterSelections.style);
+              if (characterSelections.gender) tags.push(characterSelections.gender);
+              if (characterSelections.humanRace) tags.push(characterSelections.humanRace);
+              if (characterSelections.fantasyRace) tags.push(characterSelections.fantasyRace);
+              if (characterSelections.eyeColor) tags.push(characterSelections.eyeColor);
+              if (characterSelections.hairStyle) tags.push(characterSelections.hairStyle);
+              if (characterSelections.hairColor) tags.push(characterSelections.hairColor);
+              if (characterSelections.bodyType) tags.push(characterSelections.bodyType);
+              tags.push(...characterSelections.eyeFeatures, ...characterSelections.faceFeatures);
+              const visibleTags = tags.slice(0, 5);
+              const extra = tags.length > 5 ? tags.length - 5 : 0;
+              const hasSelections = tags.length > 0;
+              return (
+                <div className={`editor-card${hasSelections ? " active" : ""}`} onClick={() => setCharacterOpen(true)}>
                   <div className="card-content">
                     <div className="editor-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l2.5 3H14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1.5L10 2z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11l3-3 3 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/><path d="M12.5 7.5c.5-.3 1-.2 1.2.3" stroke="#f95bad" strokeWidth="1" strokeLinecap="round"/></svg>
                     </div>
                     <div className="editor-text">
-                      <div className="name">Action</div>
+                      <div className="name">Character</div>
                       <div className="sub required">required</div>
                     </div>
+                    {hasSelections && (
+                      <div className="editor-tags">
+                        {visibleTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                        {extra > 0 && <span className="editor-tag">+{extra}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="editor-card">
-                  <div className="card-content">
-                    <div className="editor-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 14l4-4 3 3 4-4 5 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="editor-text">
-                      <div className="name">Background</div>
-                      <div className="sub">optional</div>
-                    </div>
-                  </div>
+              );
+            })()}
+
+            {/* Appearance */}
+            <div className="editor-card">
+              <div className="card-content">
+                <div className="editor-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M7 3h6a2 2 0 0 1 2 2v1H5V5a2 2 0 0 1 2-2zM5 6h10l-1 11H6L5 6z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M8 9v5M12 9v5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>
-              )}
+                <div className="editor-text">
+                  <div className="name">Appearance</div>
+                  <div className="sub">optional</div>
+                </div>
+              </div>
             </div>
 
-            {/* Row 2: 4 cards for video, 3 cards for image */}
-            <div className="editor-row">
-              {activeTab === "video" && (
-                <div className="editor-card">
-                  <div className="card-content">
-                    <div className="editor-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 14l4-4 3 3 4-4 5 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <div className="editor-text">
-                      <div className="name">Background</div>
-                      <div className="sub">optional</div>
-                    </div>
-                  </div>
+            {/* Pose */}
+            <div className="editor-card">
+              <div className="card-content">
+                <div className="editor-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M10 3a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 5c-2.5 0-4 1.5-4 3.5V12l1.5 5h5L14 12V8.5C14 6.5 12.5 5 10 5z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M6 10l-2 1M14 10l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>
-              )}
-              <div className="editor-card">
-                <div className="card-content">
-                  <div className="editor-icon">
-                    <svg viewBox="0 0 20 20" fill="none"><path d="M6 3h8l2 4H4l2-4zM4 7h12v2a6 6 0 0 1-12 0V7z" stroke="#fff" strokeWidth="1.2"/><path d="M10 15v3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  </div>
-                  <div className="editor-text">
-                    <div className="name">Outfit</div>
-                    <div className="sub">optional</div>
-                  </div>
-                </div>
-              </div>
-              <div className="editor-card">
-                <div className="card-content">
-                  <div className="editor-icon">
-                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" stroke="#fff" strokeWidth="1.2"/><path d="M10 11v4M7 18h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="10" cy="8" r="1" fill="#fff"/></svg>
-                  </div>
-                  <div className="editor-text">
-                    <div className="name">Jewelry</div>
-                    <div className="sub">optional</div>
-                  </div>
-                </div>
-              </div>
-              <div className="editor-card">
-                <div className="card-content">
-                  <div className="editor-icon">
-                    <svg viewBox="0 0 20 20" fill="none"><path d="M8 6c1-2 3-2 4 0s0 4-2 5c-2-1-3-3-2-5z" stroke="#fff" strokeWidth="1.2"/><path d="M6 12c1.5 0 3 1 3 3s-1.5 3-3 3" stroke="#fff" strokeWidth="1.2"/></svg>
-                  </div>
-                  <div className="editor-text">
-                    <div className="name">Body Marks</div>
-                    <div className="sub">optional</div>
-                  </div>
+                <div className="editor-text">
+                  <div className="name">Pose</div>
+                  <div className="sub required">required</div>
                 </div>
               </div>
             </div>
+
+            {/* Scene */}
+            <div className="editor-card">
+              <div className="card-content">
+                <div className="editor-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 13l4-4 3 3 4-4 5 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="6.5" cy="8.5" r="1.5" fill="#fff"/></svg>
+                </div>
+                <div className="editor-text">
+                  <div className="name">Scene</div>
+                  <div className="sub">optional</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Camera */}
+            <div className="editor-card">
+              <div className="card-content">
+                <div className="editor-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 7h2l2-3h8l2 3h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><circle cx="10" cy="12" r="3" stroke="#fff" strokeWidth="1.2"/></svg>
+                </div>
+                <div className="editor-text">
+                  <div className="name">Camera</div>
+                  <div className="sub">optional</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt Details (Premium) */}
+            <div className="editor-card">
+              <div className="card-content">
+                <div className="editor-icon premium">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="editor-text">
+                  <div className="name" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    Prompt Details
+                    <span dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+                  </div>
+                  <div className="sub premium-label">premium feature</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
             {/* Custom Prompt */}
             {!promptOpen ? (
@@ -1504,6 +1531,14 @@ export default function GenerationPage() {
           )}
         </div>
       )}
+
+      <CharacterModal
+        open={characterOpen}
+        onClose={() => setCharacterOpen(false)}
+        selections={characterSelections}
+        onSave={(s) => setCharacterSelections(s)}
+        options={characterOptions}
+      />
     </>
   );
 }

@@ -307,6 +307,21 @@ export const users = {
   },
 };
 
+// ─── Character Options ───────────────────────────────────────
+
+export interface CharacterOption {
+  id: string;
+  category: string;
+  name: string;
+  imageUrl?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export async function getCharacterOptions(): Promise<CharacterOption[]> {
+  return apiFetch<CharacterOption[]>("/generation/character-options");
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -436,6 +451,29 @@ export const admin = {
    */
   async resetUserLimits(id: string): Promise<void> {
     return apiFetch(`/admin/users/${id}/limits`, { method: "DELETE" });
+  },
+
+  async getCharacterOptions(category?: string): Promise<CharacterOption[]> {
+    const q = category ? `?category=${category}` : "";
+    return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
+  },
+
+  async createCharacterOption(data: { category: string; name: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+    return apiFetch<CharacterOption>("/admin/character-options", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+    return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCharacterOption(id: string): Promise<void> {
+    return apiFetch(`/admin/character-options/${id}`, { method: "DELETE" });
   },
 };
 

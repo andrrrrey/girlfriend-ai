@@ -59,6 +59,11 @@ export class GenerationController {
     return this.generationService.getImageStyles();
   }
 
+  @Get("character-options")
+  async getCharacterOptions(@Query("category") category?: string) {
+    return this.generationService.getCharacterOptions(category);
+  }
+
   @Get("video/styles")
   getVideoStyles() {
     return this.generationService.getVideoStyles();

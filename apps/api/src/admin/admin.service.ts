@@ -360,4 +360,36 @@ export class AdminService {
     await this.getUser(id);
     await this.prisma.usageCounter.deleteMany({ where: { userId: id } });
   }
+
+  // ─── Character Options ─────────────────────────────────────
+
+  async getCharacterOptions(category?: string) {
+    return this.prisma.characterOption.findMany({
+      where: category ? { category } : undefined,
+      orderBy: [{ category: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createCharacterOption(dto: { category: string; name: string; imageUrl?: string; order?: number }) {
+    return this.prisma.characterOption.create({
+      data: {
+        category: dto.category,
+        name: dto.name,
+        imageUrl: dto.imageUrl,
+        order: dto.order ?? 0,
+      },
+    });
+  }
+
+  async updateCharacterOption(id: string, dto: { category?: string; name?: string; imageUrl?: string; order?: number }) {
+    const existing = await this.prisma.characterOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
+    return this.prisma.characterOption.update({ where: { id }, data: dto });
+  }
+
+  async deleteCharacterOption(id: string) {
+    const existing = await this.prisma.characterOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
+    await this.prisma.characterOption.delete({ where: { id } });
+  }
 }

@@ -251,6 +251,7 @@ export default function AdminUsersPage() {
           <a href="/admin" style={adminStyles.tab}>Настройки</a>
           <a href="/admin/characters" style={adminStyles.tab}>Персонажи</a>
           <a href="/admin/users" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Пользователи</a>
+          <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
         </div>
 
         {error && (

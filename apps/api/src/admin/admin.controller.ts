@@ -39,6 +39,8 @@ import { UpsertSettingsDto } from "./dto/upsert-settings.dto";
 import { CreateCharacterDto } from "./dto/create-character.dto";
 import { UpdateCharacterDto } from "./dto/update-character.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
+import { CreateCharacterOptionDto } from "./dto/create-character-option.dto";
+import { UpdateCharacterOptionDto } from "./dto/update-character-option.dto";
 
 /**
  * Контроллер административного раздела.
@@ -256,5 +258,31 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetUserLimits(@Param("id") id: string) {
     await this.adminService.resetUserLimits(id);
+  }
+
+  // ─── Character Options ─────────────────────────────────────
+
+  @Get("character-options")
+  async getCharacterOptions(@Query("category") category?: string) {
+    return this.adminService.getCharacterOptions(category);
+  }
+
+  @Post("character-options")
+  async createCharacterOption(@Body() dto: CreateCharacterOptionDto) {
+    return this.adminService.createCharacterOption(dto);
+  }
+
+  @Patch("character-options/:id")
+  async updateCharacterOption(
+    @Param("id") id: string,
+    @Body() dto: UpdateCharacterOptionDto,
+  ) {
+    return this.adminService.updateCharacterOption(id, dto);
+  }
+
+  @Delete("character-options/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCharacterOption(@Param("id") id: string) {
+    await this.adminService.deleteCharacterOption(id);
   }
 }

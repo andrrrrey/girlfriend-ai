@@ -184,6 +184,20 @@ model UsageLog {
   @@map("usage_logs")
 }
 
+// ─── Character Options (image generation) ────────────────────
+
+model CharacterOption {
+  id        String   @id @default(cuid())
+  category  String   // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
+  name      String
+  imageUrl  String?  @map("image_url")
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("character_options")
+}
+
 // ─── Message Copy Audit ───────────────────────────────────────
 
 model MessageCopyAudit {

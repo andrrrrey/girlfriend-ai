@@ -120,6 +120,13 @@ export class GenerationService {
     return IMAGE_MODELS;
   }
 
+  async getCharacterOptions(category?: string) {
+    return this.prisma.characterOption.findMany({
+      where: category ? { category } : undefined,
+      orderBy: [{ category: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
   async createVideoJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
