@@ -1027,6 +1027,20 @@ export default function GenerationPage() {
 
   if (loading) return null;
 
+  const charTags: string[] = [];
+  if (characterSelections.style) charTags.push(characterSelections.style);
+  if (characterSelections.gender) charTags.push(characterSelections.gender);
+  if (characterSelections.humanRace) charTags.push(characterSelections.humanRace);
+  if (characterSelections.fantasyRace) charTags.push(characterSelections.fantasyRace);
+  if (characterSelections.eyeColor) charTags.push(characterSelections.eyeColor);
+  if (characterSelections.hairStyle) charTags.push(characterSelections.hairStyle);
+  if (characterSelections.hairColor) charTags.push(characterSelections.hairColor);
+  if (characterSelections.bodyType) charTags.push(characterSelections.bodyType);
+  charTags.push(...characterSelections.eyeFeatures, ...characterSelections.faceFeatures);
+  const visibleCharTags = charTags.slice(0, 5);
+  const extraCharTags = charTags.length > 5 ? charTags.length - 5 : 0;
+  const hasCharSelections = charTags.length > 0;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -1126,40 +1140,23 @@ export default function GenerationPage() {
           {/* Editor cards — 3×2 grid */}
           <div className="editor-section">
             {/* Character */}
-            {(() => {
-              const tags: string[] = [];
-              if (characterSelections.style) tags.push(characterSelections.style);
-              if (characterSelections.gender) tags.push(characterSelections.gender);
-              if (characterSelections.humanRace) tags.push(characterSelections.humanRace);
-              if (characterSelections.fantasyRace) tags.push(characterSelections.fantasyRace);
-              if (characterSelections.eyeColor) tags.push(characterSelections.eyeColor);
-              if (characterSelections.hairStyle) tags.push(characterSelections.hairStyle);
-              if (characterSelections.hairColor) tags.push(characterSelections.hairColor);
-              if (characterSelections.bodyType) tags.push(characterSelections.bodyType);
-              tags.push(...characterSelections.eyeFeatures, ...characterSelections.faceFeatures);
-              const visibleTags = tags.slice(0, 5);
-              const extra = tags.length > 5 ? tags.length - 5 : 0;
-              const hasSelections = tags.length > 0;
-              return (
-                <div className={`editor-card${hasSelections ? " active" : ""}`} onClick={() => setCharacterOpen(true)}>
-                  <div className="card-content">
-                    <div className="editor-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/><path d="M12.5 7.5c.5-.3 1-.2 1.2.3" stroke="#f95bad" strokeWidth="1" strokeLinecap="round"/></svg>
-                    </div>
-                    <div className="editor-text">
-                      <div className="name">Character</div>
-                      <div className="sub required">required</div>
-                    </div>
-                    {hasSelections && (
-                      <div className="editor-tags">
-                        {visibleTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
-                        {extra > 0 && <span className="editor-tag">+{extra}</span>}
-                      </div>
-                    )}
-                  </div>
+            <div className={`editor-card${hasCharSelections ? " active" : ""}`} onClick={() => setCharacterOpen(true)}>
+              <div className="card-content">
+                <div className="editor-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
                 </div>
-              );
-            })()}
+                <div className="editor-text">
+                  <div className="name">Character</div>
+                  <div className="sub required">required</div>
+                </div>
+                {hasCharSelections && (
+                  <div className="editor-tags">
+                    {visibleCharTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {extraCharTags > 0 && <span className="editor-tag">+{extraCharTags}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Appearance */}
             <div className="editor-card">
