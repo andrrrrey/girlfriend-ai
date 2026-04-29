@@ -1228,7 +1228,7 @@ export default function GenerationPage() {
             </div>
           </div>
 
-            {/* Custom Prompt */}
+          {/* Custom Prompt */}
             {!promptOpen ? (
               <div
                 className="custom-prompt-card"
@@ -1283,7 +1283,6 @@ export default function GenerationPage() {
                 </div>
               </div>
             )}
-          </div>
 
           {/* Separator */}
           <div className="sep" />
