@@ -11,9 +11,10 @@ import {
   getGenerationHistory,
   deleteGenerationJob,
   getCharacterOptions,
-  type CharacterOption,
 } from "../../lib/api";
-import CharacterModal, { type CharacterSelections, DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
+import type { CharacterOption } from "../../lib/api";
+import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
+import type { CharacterSelections } from "../components/CharacterModal";
 
 const CSS = `
   /* ── Page content ── */
