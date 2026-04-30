@@ -351,7 +351,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
           -webkit-appearance: none;
           width: 100%;
           height: 4px;
-          background: linear-gradient(to right, #f95bad ${((selections.age - 18) / 82) * 100}%, #3a3a3a ${((selections.age - 18) / 82) * 100}%);
+          background: linear-gradient(to right, #f95bad ${((draft.age - 18) / 82) * 100}%, #3a3a3a ${((draft.age - 18) / 82) * 100}%);
           border-radius: 2px;
           outline: none;
           cursor: pointer;

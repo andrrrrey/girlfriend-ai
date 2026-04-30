@@ -1228,62 +1228,6 @@ export default function GenerationPage() {
             </div>
           </div>
 
-          {/* Custom Prompt */}
-            {!promptOpen ? (
-              <div
-                className="custom-prompt-card"
-                onClick={() => setPromptOpen(true)}
-              >
-                <div className="custom-prompt-icon">
-                  <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <div className="heading">
-                  <span>Custom Promt</span>
-                  <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-                </div>
-                <div className="premium-label">premium feature</div>
-              </div>
-            ) : (
-              <div className="custom-prompt-card expanded">
-                <textarea
-                  className="prompt-textarea"
-                  placeholder={activeTab === "video"
-                    ? "Describe the video you want to generate..."
-                    : "Describe the image you want to generate..."
-                  }
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  autoFocus
-                />
-                <div className="model-selector">
-                  <label>AI model:</label>
-                  {activeTab === "video" ? (
-                    <select
-                      value={selectedVideoModel}
-                      onChange={(e) => setSelectedVideoModel(e.target.value)}
-                    >
-                      {videoModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} — {m.description}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                    >
-                      {imageModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} — {m.description}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            )}
-
           {/* Separator */}
           <div className="sep" />
 
