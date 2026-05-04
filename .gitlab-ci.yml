@@ -95,17 +95,92 @@ rollback_staging_worker:
   when: manual
   allow_failure: true
 
-# build_tag:
-#   extends: .build_image_tag
-#   parallel:
-#     matrix:
-#       - SERVICE_NAME: "ai"
-#         DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
-#       - SERVICE_NAME: "api"
-#         DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
-#       - SERVICE_NAME: "migrator"
-#         DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
-#       - SERVICE_NAME: "web"
-#         DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
-#       - SERVICE_NAME: "worker"
-#         DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
+# тэги (tag: tagname)
+# build_tag for every service, deploy/rollout/rollback for all services in parallel
+build_tag_ai:
+  extends: .build_image_tag
+  variables:
+    SERVICE_NAME: "ai"
+    DOCKERFILE_PATH: "infra/docker/ai.Dockerfile"
+build_tag_api:
+  extends: .build_image_tag
+  variables:
+    SERVICE_NAME: "api"
+    DOCKERFILE_PATH: "infra/docker/api.Dockerfile"
+build_tag_migrator:
+  extends: .build_image_tag
+  variables:
+    SERVICE_NAME: "migrator"
+    DOCKERFILE_PATH: "infra/docker/migrator.Dockerfile"
+build_tag_web:
+  extends: .build_image_tag
+  variables:
+    SERVICE_NAME: "web"
+    DOCKERFILE_PATH: "infra/docker/web.Dockerfile"
+build_tag_worker:
+  extends: .build_image_tag
+  variables:
+    SERVICE_NAME: "worker"
+    DOCKERFILE_PATH: "infra/docker/worker.Dockerfile"
+
+deploy_prod_ai:
+  extends: .deploy_production
+  variables:
+    SERVICE_NAME: "ai"
+  needs: ["build_tag_ai"]
+deploy_prod_api:
+  extends: .deploy_production
+  variables:
+    SERVICE_NAME: "api"
+  needs: ["build_tag_api"]
+deploy_prod_migrator:
+  extends: .deploy_production
+  variables:
+    SERVICE_NAME: "migrator"
+  needs: ["build_tag_migrator"]
+deploy_prod_web:
+  extends: .deploy_production
+  variables:
+    SERVICE_NAME: "web"
+  needs: ["build_tag_web"]
+deploy_prod_worker:
+  extends: .deploy_production
+  variables:
+    SERVICE_NAME: "worker"
+  needs: ["build_tag_worker"]
+
+rollback_prod_ai:
+  extends: .rollback_production
+  variables:
+    SERVICE_NAME: "ai"
+  needs: ["deploy_prod_ai"]
+  when: manual
+  allow_failure: true
+rollback_prod_api:
+  extends: .rollback_production
+  variables:
+    SERVICE_NAME: "api"
+  needs: ["deploy_prod_api"]
+  when: manual
+  allow_failure: true
+rollback_prod_migrator:
+  extends: .rollback_production
+  variables:
+    SERVICE_NAME: "migrator"
+  needs: ["deploy_prod_migrator"]
+  when: manual
+  allow_failure: true
+rollback_prod_web:
+  extends: .rollback_production
+  variables:
+    SERVICE_NAME: "web"
+  needs: ["deploy_prod_web"]
+  when: manual
+  allow_failure: true
+rollback_prod_worker:
+  extends: .rollback_production
+  variables:
+    SERVICE_NAME: "worker"
+  needs: ["deploy_prod_worker"]
+  when: manual
+  allow_failure: true
