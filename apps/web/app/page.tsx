@@ -791,11 +791,13 @@ export default function HomePage() {
 
   useEffect(() => {
     const container = document.getElementById("cards-row-dynamic");
-    if (!container) return;
+    if (!container || !dynamicCardsHtml) return;
     container.innerHTML = dynamicCardsHtml;
     container.addEventListener("click", handleCardClick as EventListener);
     return () => container.removeEventListener("click", handleCardClick as EventListener);
-  }, [dynamicCardsHtml, handleCardClick]);
+  // Re-run when popup closes (selectedChar→null) to restore cards if React reset innerHTML
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicCardsHtml, handleCardClick, selectedChar]);
 
   return (
     <>
