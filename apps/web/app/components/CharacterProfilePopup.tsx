@@ -44,11 +44,19 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
   const name = character.name;
   const description = (p.description as string) || (p.bio as string) || "";
   const rawTags = (p.tags as string[]) || (p.traits as string[]) || character.tags || [];
-  const personality = Array.isArray(p.personality) ? (p.personality as string[]).join(", ") : (p.personalityType as string) || "";
-  const lifestyle = (p.lifestyle as string) || "";
+  const personality = Array.isArray(p.personality)
+    ? (p.personality as string[]).join(", ")
+    : (p.personalityType as string) || (p.personality as string) || "";
+  const lifestyle = Array.isArray(p.lifestyle)
+    ? (p.lifestyle as string[]).join(", ")
+    : (p.lifestyle as string) || "";
   const relationships = (p.relationshipType as string) || (p.familyStatus as string) || "";
-  const kinks = Array.isArray(p.kinks) ? (p.kinks as string[]).join(", ") : (p.kinks as string) || "";
-  const hobbies = Array.isArray(p.hobbies) ? (p.hobbies as string[]).join(", ") : (p.hobbies as string) || "";
+  const kinks = Array.isArray(p.kinks)
+    ? (p.kinks as string[]).join(", ")
+    : (p.kinks as string) || "";
+  const hobbies = Array.isArray(p.hobbies)
+    ? (p.hobbies as string[]).join(", ")
+    : (p.hobbies as string) || "";
 
   const handleStartChat = () => {
     router.push(`/chat?characterId=${character.id}`);
@@ -56,84 +64,110 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
   };
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div className="cpp-modal" style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Left: Avatar */}
-        <div className="cpp-left" style={styles.left}>
-          {character.avatarUrl ? (
-            <img src={character.avatarUrl} alt={name} style={styles.avatar} />
-          ) : (
-            <div style={styles.avatarPlaceholder} />
-          )}
-          <div style={styles.progressBar}>
-            <div style={styles.progressActive} />
-            <div style={styles.progressInactive} />
-            <div style={styles.progressInactive} />
+    <div style={s.overlay} onClick={onClose}>
+      <div className="cpp-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
+
+        {/* ── Left: Avatar + stats ── */}
+        <div className="cpp-left" style={s.left}>
+          {/* Image area */}
+          <div style={s.imgWrap}>
+            {character.avatarUrl
+              ? <img src={character.avatarUrl} alt={name} style={s.avatar} />
+              : <div style={s.avatarPlaceholder} />
+            }
+            {/* Progress bar inside image, near bottom */}
+            <div style={s.progressBar}>
+              <div style={s.progressActive} />
+              <div style={s.progressInactive} />
+              <div style={s.progressInactive} />
+            </div>
           </div>
-          <div style={styles.statsOverlay}>
-            <div style={styles.statItem}>
-              <span style={styles.statValue}>54.2K</span>
-              <span style={styles.statLabel}>LIKES</span>
+
+          {/* Stats row — below image, not overlay */}
+          <div style={s.statsRow}>
+            <div style={s.statItem}>
+              <span style={s.statValue}>54.2K</span>
+              <span style={s.statLabel}>LIKES</span>
             </div>
-            <div style={styles.statItem}>
-              <span style={styles.statValue}>1.2K</span>
-              <span style={styles.statLabel}>COMMENTS</span>
+            <div style={s.statDivider} />
+            <div style={s.statItem}>
+              <span style={s.statValue}>1.2K</span>
+              <span style={s.statLabel}>COMMENTS</span>
             </div>
-            <div style={styles.statItem}>
-              <span style={styles.statValue}>600</span>
-              <span style={styles.statLabel}>GENERATED</span>
+            <div style={s.statDivider} />
+            <div style={s.statItem}>
+              <span style={s.statValue}>600</span>
+              <span style={s.statLabel}>GENERATED</span>
             </div>
           </div>
         </div>
 
-        {/* Right: Content */}
-        <div className="cpp-right" style={styles.right}>
+        {/* ── Right: Content ── */}
+        <div className="cpp-right" style={s.right}>
           {/* Close button */}
-          <button style={styles.closeBtn} onClick={onClose}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          <button style={s.closeBtn} onClick={onClose} aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
 
-          {/* Name */}
-          <h2 style={styles.name}>{name}{age ? `, ${age}` : ""}</h2>
-
-          {/* Tags */}
-          <div style={styles.tagsRow}>
-            {rawTags.slice(0, 9).map((t, i) => (
-              <span key={i} style={styles.tagPill}>{String(t)}</span>
-            ))}
+          {/* Name + tags */}
+          <div style={s.header}>
+            <h2 style={s.name}>{name}{age ? `, ${age}` : ""}</h2>
+            <div style={s.tagsRow}>
+              {rawTags.slice(0, 9).map((t, i) => (
+                <span key={i} style={s.tagPill}>{String(t)}</span>
+              ))}
+            </div>
           </div>
 
           {/* Tabs */}
-          <div style={styles.tabsRow}>
+          <div style={s.tabsRow}>
             {(["about", "gallery", "comments"] as Tab[]).map((t) => (
               <button
                 key={t}
-                style={{ ...styles.tabBtn, ...(tab === t ? styles.tabBtnActive : {}) }}
+                style={{ ...s.tabBtn, ...(tab === t ? s.tabBtnActive : {}) }}
                 onClick={() => setTab(t)}
               >
                 {t === "about" ? "About me" : t === "gallery" ? "Gallery" : "Comments"}
-                {tab === t && <div style={styles.tabUnderline} />}
+                {tab === t && <div style={s.tabUnderline} />}
               </button>
             ))}
           </div>
 
-          {/* Content */}
-          <div className="cpp-scroll" style={styles.content}>
-            {tab === "about" && <AboutTab description={description} age={age} personality={personality} lifestyle={lifestyle} relationships={relationships} kinks={kinks} hobbies={hobbies} />}
+          {/* Scrollable content — fixed height via parent flex */}
+          <div className="cpp-scroll" style={s.content}>
+            {tab === "about" && (
+              <AboutTab
+                description={description}
+                age={age}
+                personality={personality}
+                lifestyle={lifestyle}
+                relationships={relationships}
+                kinks={kinks}
+                hobbies={hobbies}
+              />
+            )}
             {tab === "gallery" && <GalleryTab avatarUrl={character.avatarUrl} />}
             {tab === "comments" && <CommentsTab />}
           </div>
 
           {/* Footer */}
-          <div className="cpp-footer" style={styles.footer}>
-            <button style={styles.likeBtn}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 21S3 14.5 3 8.5a4.5 4.5 0 019-1.5 4.5 4.5 0 019 1.5C21 14.5 12 21 12 21z" /></svg>
+          <div style={s.footer}>
+            <button style={s.likeBtn}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">
+                <path d="M12 21S3 14.5 3 8.5a4.5 4.5 0 019-1.5 4.5 4.5 0 019 1.5C21 14.5 12 21 12 21z" />
+              </svg>
             </button>
-            <button style={styles.generateBtn}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+            <button style={s.generateBtn}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
               <span>Generate</span>
             </button>
-            <button style={styles.chatBtn} onClick={handleStartChat}>Start Chatting</button>
+            <button style={s.chatBtn} onClick={handleStartChat}>Start Chatting</button>
           </div>
         </div>
       </div>
@@ -141,45 +175,60 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
       <style>{`
         .cpp-scroll::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
-          .cpp-modal { flex-direction: column !important; width: 100vw !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; }
-          .cpp-left { width: 100% !important; height: 240px !important; flex-shrink: 0 !important; border-radius: 0 !important; }
-          .cpp-right { border-radius: 0 !important; }
-          .cpp-footer { padding: 12px 16px !important; }
+          .cpp-modal {
+            flex-direction: column !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+          }
+          .cpp-left {
+            width: 100% !important;
+            height: 260px !important;
+            flex-shrink: 0 !important;
+            flex-direction: row !important;
+          }
+          .cpp-right { border-radius: 0 !important; min-height: 0 !important; flex: 1 !important; }
         }
       `}</style>
     </div>
   );
 }
 
-/* ── Sub-components ── */
+/* ── Sub-components ─────────────────────────────── */
 
 function AboutTab({ description, age, personality, lifestyle, relationships, kinks, hobbies }: {
-  description: string; age: string; personality: string; lifestyle: string; relationships: string; kinks: string; hobbies: string;
+  description: string; age: string; personality: string; lifestyle: string;
+  relationships: string; kinks: string; hobbies: string;
 }) {
   const items: { icon: string; label: string; value: string }[] = [
-    { icon: "age", label: "AGE", value: age },
-    { icon: "personality", label: "PERSONALITY", value: personality },
-    { icon: "lifestyle", label: "LIFESTYLE", value: lifestyle },
+    { icon: "age",           label: "AGE",           value: age },
+    { icon: "personality",   label: "PERSONALITY",   value: personality },
+    { icon: "lifestyle",     label: "LIFESTYLE",     value: lifestyle },
     { icon: "relationships", label: "RELATIONSHIPS", value: relationships },
-    { icon: "kinks", label: "KINKS", value: kinks },
-    { icon: "hobbies", label: "HOBBIES", value: hobbies },
+    { icon: "kinks",         label: "KINKS",         value: kinks },
+    { icon: "hobbies",       label: "HOBBIES",       value: hobbies },
   ].filter((x) => x.value);
 
   return (
     <div>
-      <div style={styles.sectionLabel}>DESCRIPTION</div>
-      <p style={styles.descText}>{description || "No description yet."}</p>
+      {description && (
+        <>
+          <div style={s.sectionLabel}>DESCRIPTION</div>
+          <p style={s.descText}>{description}</p>
+        </>
+      )}
 
       {items.length > 0 && (
         <>
-          <div style={{ ...styles.sectionLabel, marginTop: 24 }}>ABOUT ME</div>
-          <div style={styles.aboutGrid}>
+          <div style={{ ...s.sectionLabel, marginTop: description ? 24 : 0 }}>ABOUT ME</div>
+          <div style={s.aboutGrid}>
             {items.map((item, i) => (
-              <div key={i} style={styles.aboutItem}>
-                <div style={styles.aboutIcon}>{aboutIcon(item.icon)}</div>
+              <div key={i} style={s.aboutItem}>
+                <div style={s.aboutIcon}>{AboutIcon(item.icon)}</div>
                 <div>
-                  <div style={styles.aboutLabel}>{item.label}</div>
-                  <div style={styles.aboutValue}>{item.value}</div>
+                  <div style={s.aboutLabel}>{item.label}</div>
+                  <div style={s.aboutValue}>{item.value}</div>
                 </div>
               </div>
             ))}
@@ -187,50 +236,51 @@ function AboutTab({ description, age, personality, lifestyle, relationships, kin
         </>
       )}
 
-      <div style={{ ...styles.sectionLabel, marginTop: 24 }}>CREATOR</div>
-      <div style={styles.creatorRow}>
-        <div style={styles.creatorAvatar} />
+      <div style={{ ...s.sectionLabel, marginTop: 24 }}>CREATOR</div>
+      <div style={s.creatorRow}>
+        <div style={s.creatorAvatar} />
         <div>
-          <div style={styles.creatorName}>@helloimjack17499</div>
-          <div style={styles.creatorStats}>
-            <span style={{ color: "#c1f0aa" }}>34K 💚</span>
-            <span style={{ color: "#969696", marginLeft: 12 }}>12K 👥</span>
+          <div style={s.creatorName}>@helloimjack17499</div>
+          <div style={s.creatorMeta}>
+            <span style={{ color: "#c1f0aa", fontSize: 12 }}>34K ♥</span>
+            <span style={{ color: "#969696", fontSize: 12, marginLeft: 10 }}>12K 👥</span>
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <button style={styles.moreCharsBtn}>More Characters</button>
-        <button style={styles.followBtn}>Follow 🟢</button>
+        <button style={s.outlineBtn}>More Characters</button>
+        <button style={s.outlineBtn}>Follow 🟢</button>
       </div>
     </div>
   );
 }
 
 function GalleryTab({ avatarUrl }: { avatarUrl: string | null }) {
-  const placeholders = Array.from({ length: 8 });
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={styles.sectionLabel}>GENERATED CONTENT</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={s.sectionLabel}>GENERATED CONTENT</div>
         <span style={{ color: "#f95bad", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>VIEW ALL (600)</span>
       </div>
-      <div style={styles.galleryGrid}>
-        {placeholders.map((_, i) => {
-          const isPremium = i >= 5;
+      <div style={s.galleryGrid}>
+        {Array.from({ length: 9 }).map((_, i) => {
+          const isPremium = i === 5;
           return (
-            <div key={i} style={styles.galleryCard}>
-              {avatarUrl && i < 2 ? (
-                <img src={avatarUrl} alt="" style={styles.galleryImg} />
-              ) : (
-                <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${135 + i * 20}deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)` }} />
-              )}
+            <div key={i} style={s.galleryCard}>
+              {avatarUrl && i < 2
+                ? <img src={avatarUrl} alt="" style={s.galleryImg} />
+                : <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${130 + i * 18}deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)` }} />
+              }
               {isPremium && (
-                <div style={styles.premiumOverlay}>
-                  <div style={styles.lockIcon}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                <div style={s.premiumOverlay}>
+                  <div style={s.lockCircle}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" />
+                      <path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>More Photos 💎</div>
-                  <div style={{ fontSize: 10, color: "#f95bad", textTransform: "uppercase" as const, fontWeight: 600 }}>PREMIUM FEATURE</div>
-                  <button style={styles.premiumBtn}>Become Premium</button>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", textAlign: "center" as const }}>More Photos 💎</div>
+                  <div style={{ fontSize: 9, color: "#f95bad", textTransform: "uppercase" as const, fontWeight: 600, letterSpacing: "0.05em" }}>PREMIUM FEATURE</div>
+                  <button style={s.premiumBtn}>Become Premium</button>
                 </div>
               )}
             </div>
@@ -243,66 +293,68 @@ function GalleryTab({ avatarUrl }: { avatarUrl: string | null }) {
 
 function CommentsTab() {
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={styles.sectionLabel}>COMMENTS</div>
+    <div style={{ display: "flex", flexDirection: "column" as const, height: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <div style={s.sectionLabel}>COMMENTS</div>
         <span style={{ color: "#f95bad", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>VIEW ALL (600)</span>
       </div>
-      <div style={styles.commentsList}>
+      <div>
         {MOCK_COMMENTS.map((c, i) => (
-          <div key={i} style={styles.commentItem}>
+          <div key={i} style={s.commentItem}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={styles.commentUser}>{c.user}</span>
-                <span style={styles.commentDate}>{c.date}</span>
+                <span style={s.commentUser}>{c.user}</span>
+                <span style={s.commentDate}>{c.date}</span>
               </div>
-              <p style={styles.commentText}>{c.text}</p>
+              <p style={s.commentText}>{c.text}</p>
             </div>
             {c.likes > 0 && (
-              <div style={{ ...styles.commentLikes, background: c.liked ? "#2a4d2a" : "#2a2a2a" }}>
-                {c.likes} {c.liked ? "💚" : "🤍"}
+              <div style={{ ...s.commentLikes, background: c.liked ? "rgba(193,240,170,0.15)" : "#2a2a2a", color: c.liked ? "#c1f0aa" : "#fff" }}>
+                {c.likes} ♥
               </div>
             )}
           </div>
         ))}
       </div>
-      <div style={styles.commentInputRow}>
-        <input style={styles.commentInput} placeholder="Leave a comment..." />
-        <button style={styles.commentSendBtn}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+      <div style={s.commentInputRow}>
+        <input style={s.commentInput} placeholder="Leave a comment..." />
+        <button style={s.commentSendBtn}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
         </button>
       </div>
     </div>
   );
 }
 
-function aboutIcon(type: string) {
-  const s = { width: 20, height: 20, color: "#969696" };
+function AboutIcon(type: string) {
+  const c = "#848484";
   switch (type) {
     case "age":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><path d="M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2" /><circle cx="10" cy="7" r="4" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>;
     case "personality":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>;
     case "lifestyle":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
     case "relationships":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
     case "kinks":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg>;
     case "hobbies":
-      return <svg width={s.width} height={s.height} viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="1.5"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>;
+      return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>;
     default:
       return null;
   }
 }
 
-/* ── Styles ── */
+/* ── Styles ─────────────────────────────────────── */
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.75)",
+    background: "rgba(0,0,0,0.8)",
     zIndex: 1000,
     display: "flex",
     alignItems: "center",
@@ -310,29 +362,36 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modal: {
     background: "#111",
-    borderRadius: 16,
-    width: "min(940px, 95vw)",
-    maxHeight: "90vh",
+    borderRadius: 12,
+    width: "min(960px, 96vw)",
+    height: "min(88vh, 720px)",
     display: "flex",
     flexDirection: "row" as const,
     overflow: "hidden",
     border: "1px solid #2a2a2a",
-    position: "relative",
+    position: "relative" as const,
   },
+
+  /* ── Left column ── */
   left: {
-    width: "38%",
-    position: "relative",
-    overflow: "hidden",
+    width: "37%",
+    flexShrink: 0,
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column" as const,
     background: "#0a0a0a",
+    overflow: "hidden",
+  },
+  imgWrap: {
+    flex: 1,
+    position: "relative" as const,
+    overflow: "hidden",
   },
   avatar: {
+    position: "absolute" as const,
+    inset: 0,
     width: "100%",
     height: "100%",
     objectFit: "cover" as const,
-    position: "absolute" as const,
-    inset: 0,
   },
   avatarPlaceholder: {
     position: "absolute" as const,
@@ -341,12 +400,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   progressBar: {
     position: "absolute" as const,
-    bottom: 80,
+    bottom: 12,
     left: 12,
     right: 12,
     display: "flex",
     gap: 4,
-    zIndex: 3,
+    zIndex: 2,
   },
   progressActive: {
     flex: 1,
@@ -360,102 +419,114 @@ const styles: Record<string, React.CSSProperties> = {
     height: 2,
     background: "#46383e",
     borderRadius: 1,
-    opacity: 0.7,
+    opacity: 0.6,
   },
-  statsOverlay: {
-    position: "absolute" as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
+  statsRow: {
+    flexShrink: 0,
     display: "flex",
+    alignItems: "center",
     justifyContent: "space-around",
-    padding: "16px 8px",
-    background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
-    zIndex: 3,
+    padding: "14px 8px",
+    background: "#111",
+    borderTop: "1px solid #1e1e1e",
   },
   statItem: {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    gap: 2,
+    gap: 3,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 800,
     color: "#fff",
     fontFamily: "'Syne', sans-serif",
+    lineHeight: 1,
   },
   statLabel: {
     fontSize: 8,
     fontWeight: 500,
-    color: "#969696",
+    color: "#848484",
     textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
+    letterSpacing: "0.06em",
   },
+  statDivider: {
+    width: 1,
+    height: 28,
+    background: "#2a2a2a",
+    flexShrink: 0,
+  },
+
+  /* ── Right column ── */
   right: {
     flex: 1,
     display: "flex",
     flexDirection: "column" as const,
     overflow: "hidden",
     position: "relative" as const,
+    minWidth: 0,
   },
   closeBtn: {
     position: "absolute" as const,
-    top: 16,
-    right: 16,
-    width: 36,
-    height: 36,
+    top: 14,
+    right: 14,
+    width: 32,
+    height: 32,
     borderRadius: "50%",
-    border: "none",
-    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.07)",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 5,
   },
+  header: {
+    padding: "20px 28px 0",
+    flexShrink: 0,
+  },
   name: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 700,
     color: "#fff",
-    padding: "20px 24px 0",
-    margin: 0,
+    margin: "0 0 12px",
     fontFamily: "'Syne', sans-serif",
+    paddingRight: 48,
   },
   tagsRow: {
     display: "flex",
     flexWrap: "wrap" as const,
     gap: 6,
-    padding: "12px 24px 0",
   },
   tagPill: {
     background: "#1e1e1e",
-    border: "1px solid #313131",
-    borderRadius: 4,
+    border: "1px solid #2a2a2a",
+    borderRadius: 6,
     padding: "5px 12px",
     fontSize: 11,
     fontWeight: 500,
-    color: "#fff",
+    color: "#ccc",
     whiteSpace: "nowrap" as const,
   },
   tabsRow: {
     display: "flex",
-    borderBottom: "1px solid #2a2a2a",
-    padding: "0 24px",
+    borderBottom: "1px solid #252525",
+    padding: "0 28px",
     marginTop: 16,
     flexShrink: 0,
   },
   tabBtn: {
     position: "relative" as const,
-    padding: "14px 24px",
+    flex: 1,
+    padding: "14px 0",
     background: "transparent",
     border: "none",
     color: "#848484",
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
-    whiteSpace: "nowrap" as const,
     fontFamily: "'Syne', sans-serif",
+    textAlign: "center" as const,
   },
   tabBtnActive: {
     color: "#fff",
@@ -468,20 +539,20 @@ const styles: Record<string, React.CSSProperties> = {
     height: 3,
     background: "#f95bad",
     borderRadius: "2px 2px 0 0",
-    boxShadow: "0 0 8px 1px rgba(249,91,173,0.5)",
+    boxShadow: "0 0 8px rgba(249,91,173,0.6)",
   },
   content: {
     flex: 1,
     overflowY: "auto" as const,
-    padding: "20px 24px",
+    padding: "20px 28px",
     scrollbarWidth: "none" as const,
   },
   footer: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "14px 24px",
-    borderTop: "1px solid #2a2a2a",
+    padding: "14px 28px",
+    borderTop: "1px solid #252525",
     flexShrink: 0,
     background: "#111",
   },
@@ -489,7 +560,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: 8,
-    border: "1px solid #313131",
+    border: "1px solid #2a2a2a",
     background: "transparent",
     cursor: "pointer",
     display: "flex",
@@ -500,7 +571,7 @@ const styles: Record<string, React.CSSProperties> = {
   generateBtn: {
     height: 44,
     borderRadius: 8,
-    border: "1px solid #313131",
+    border: "1px solid #2a2a2a",
     background: "transparent",
     color: "#fff",
     fontSize: 13,
@@ -510,8 +581,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    padding: "0 18px",
+    padding: "0 20px",
     fontFamily: "'Syne', sans-serif",
+    flexShrink: 0,
   },
   chatBtn: {
     flex: 1,
@@ -525,6 +597,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "'Syne', sans-serif",
   },
+
+  /* ── About tab ── */
   sectionLabel: {
     fontSize: 10,
     fontWeight: 500,
@@ -535,49 +609,49 @@ const styles: Record<string, React.CSSProperties> = {
   },
   descText: {
     fontSize: 13,
-    fontWeight: 400,
-    color: "#ccc",
-    lineHeight: 1.6,
+    color: "#bbb",
+    lineHeight: 1.65,
     margin: 0,
   },
   aboutGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 16,
+    gap: 14,
   },
   aboutItem: {
     display: "flex",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
   },
   aboutIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     background: "#1a1a1a",
+    border: "1px solid #252525",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   aboutLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 500,
     color: "#848484",
     textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    marginBottom: 2,
+    letterSpacing: "0.06em",
+    marginBottom: 3,
   },
   aboutValue: {
     fontSize: 13,
     fontWeight: 600,
     color: "#fff",
+    lineHeight: 1.3,
   },
   creatorRow: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    padding: "12px 0",
   },
   creatorAvatar: {
     width: 40,
@@ -585,51 +659,43 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "50%",
     background: "linear-gradient(135deg, #2d1b3d, #1a0a2e)",
     flexShrink: 0,
+    border: "1px solid #2a2a2a",
   },
   creatorName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     color: "#fff",
+    marginBottom: 2,
   },
-  creatorStats: {
-    fontSize: 12,
-    marginTop: 2,
+  creatorMeta: {
+    display: "flex",
+    gap: 4,
   },
-  moreCharsBtn: {
-    padding: "8px 16px",
+  outlineBtn: {
+    padding: "7px 14px",
     borderRadius: 8,
-    border: "1px solid #313131",
+    border: "1px solid #2a2a2a",
     background: "transparent",
     color: "#fff",
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: "pointer",
     whiteSpace: "nowrap" as const,
     fontFamily: "'Syne', sans-serif",
   },
-  followBtn: {
-    padding: "8px 16px",
-    borderRadius: 8,
-    border: "1px solid #313131",
-    background: "transparent",
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    whiteSpace: "nowrap" as const,
-    fontFamily: "'Syne', sans-serif",
-  },
+
+  /* ── Gallery tab ── */
   galleryGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 10,
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 8,
   },
   galleryCard: {
-    aspectRatio: "3/4",
+    aspectRatio: "2/3",
     borderRadius: 8,
     overflow: "hidden",
     position: "relative" as const,
-    border: "1px solid #313131",
+    border: "1px solid #252525",
     background: "#1a1a1a",
     cursor: "pointer",
   },
@@ -643,28 +709,30 @@ const styles: Record<string, React.CSSProperties> = {
   premiumOverlay: {
     position: "absolute" as const,
     inset: 0,
-    background: "rgba(0,0,0,0.7)",
-    backdropFilter: "blur(8px)",
+    background: "rgba(9,9,9,0.65)",
+    backdropFilter: "blur(10px)",
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     zIndex: 2,
+    padding: "8px",
   },
-  lockIcon: {
-    width: 40,
-    height: 40,
+  lockCircle: {
+    width: 44,
+    height: 44,
     borderRadius: "50%",
-    background: "rgba(249,91,173,0.2)",
+    background: "rgba(249,91,173,0.15)",
+    border: "1px solid rgba(249,91,173,0.3)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   premiumBtn: {
-    marginTop: 8,
-    padding: "8px 20px",
+    marginTop: 6,
+    padding: "8px 18px",
     borderRadius: 6,
     border: "none",
     background: "#f95bad",
@@ -674,16 +742,13 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "'Syne', sans-serif",
   },
-  commentsList: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 0,
-  },
+
+  /* ── Comments tab ── */
   commentItem: {
     display: "flex",
     alignItems: "flex-start",
     gap: 12,
-    padding: "16px 0",
+    padding: "14px 0",
     borderBottom: "1px solid #1e1e1e",
   },
   commentUser: {
@@ -693,12 +758,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   commentDate: {
     fontSize: 11,
-    color: "#969696",
+    color: "#848484",
   },
   commentText: {
     fontSize: 13,
-    color: "#ccc",
-    margin: "6px 0 0",
+    color: "#bbb",
+    margin: "5px 0 0",
     lineHeight: 1.4,
   },
   commentLikes: {
@@ -706,22 +771,21 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "4px 10px",
     fontSize: 12,
     fontWeight: 600,
-    color: "#fff",
     display: "flex",
     alignItems: "center",
     gap: 4,
     flexShrink: 0,
-    marginTop: 4,
+    marginTop: 2,
   },
   commentInputRow: {
     display: "flex",
     alignItems: "center",
     gap: 8,
     marginTop: 16,
-    padding: "12px 16px",
+    padding: "10px 14px",
     background: "#1a1a1a",
     borderRadius: 8,
-    border: "1px solid #2a2a2a",
+    border: "1px solid #252525",
   },
   commentInput: {
     flex: 1,
@@ -733,8 +797,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Syne', sans-serif",
   },
   commentSendBtn: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 6,
     border: "none",
     background: "transparent",

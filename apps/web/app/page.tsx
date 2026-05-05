@@ -702,6 +702,8 @@ const STATIC_HTML = `
       </div>
 `;
 
+const FULL_HTML = `<style>${PAGE_CSS}</style><div class="content">${STATIC_HTML}</div>`;
+
 function buildDynamicCards(chars: Character[]): string {
   if (!chars || chars.length === 0) return "";
   return chars
@@ -772,7 +774,6 @@ export default function HomePage() {
   }, []);
 
   const dynamicCardsHtml = buildDynamicCards(chars);
-  const fullHtml = `<style>${PAGE_CSS}</style><div class="content">${STATIC_HTML}</div>`;
 
   const charsRef = React.useRef<Character[]>(chars);
   charsRef.current = chars;
@@ -798,7 +799,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div dangerouslySetInnerHTML={{ __html: fullHtml }} />
+      <div dangerouslySetInnerHTML={{ __html: FULL_HTML }} />
       <CharacterProfilePopup
         character={selectedChar}
         onClose={() => setSelectedChar(null)}
