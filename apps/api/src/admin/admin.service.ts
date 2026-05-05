@@ -464,4 +464,72 @@ export class AdminService {
     }
     return result;
   }
+
+  // ─── Pose Categories ───────────────────────────────────────
+
+  async getPoseCategories(tab?: string) {
+    return this.prisma.poseCategory.findMany({
+      where: tab ? { tab } : undefined,
+      orderBy: [{ tab: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createPoseCategory(dto: { tab: string; name: string; order?: number }) {
+    return this.prisma.poseCategory.create({ data: { ...dto, order: dto.order ?? 0 } });
+  }
+
+  async updatePoseCategory(id: string, dto: { tab?: string; name?: string; order?: number }) {
+    const existing = await this.prisma.poseCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`PoseCategory "${id}" not found`);
+    return this.prisma.poseCategory.update({ where: { id }, data: dto });
+  }
+
+  async deletePoseCategory(id: string) {
+    const existing = await this.prisma.poseCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`PoseCategory "${id}" not found`);
+    await this.prisma.poseCategory.delete({ where: { id } });
+  }
+
+  // ─── Pose Options ──────────────────────────────────────────
+
+  async getPoseOptions(categoryId?: string) {
+    return this.prisma.poseOption.findMany({
+      where: categoryId ? { categoryId } : undefined,
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createPoseOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+    const category = await this.prisma.poseCategory.findUnique({ where: { id: dto.categoryId } });
+    if (!category) throw new NotFoundException(`PoseCategory "${dto.categoryId}" not found`);
+    return this.prisma.poseOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+  }
+
+  async updatePoseOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+    const existing = await this.prisma.poseOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`PoseOption "${id}" not found`);
+    return this.prisma.poseOption.update({ where: { id }, data: dto });
+  }
+
+  async deletePoseOption(id: string) {
+    const existing = await this.prisma.poseOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`PoseOption "${id}" not found`);
+    await this.prisma.poseOption.delete({ where: { id } });
+  }
+
+  // ─── Pose Options (public, for generation) ────────────────
+
+  async getPoseOptionsForGeneration() {
+    const categories = await this.prisma.poseCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: Record<string, typeof categories> = { FACIAL_EXPRESSION: [], POSE: [] };
+    for (const cat of categories) {
+      if (result[cat.tab]) result[cat.tab].push(cat);
+    }
+    return result;
+  }
 }

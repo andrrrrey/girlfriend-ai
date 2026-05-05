@@ -99,6 +99,7 @@ export default function AdminSettingsPage() {
           <a href="/admin/users" style={adminStyles.tab}>Пользователи</a>
           <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
           <a href="/admin/appearance-options" style={adminStyles.tab}>Appearance</a>
+          <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
         </div>
 
         {error && <div style={{ ...adminStyles.card, ...adminStyles.error, marginBottom: 20 }}>{error}</div>}

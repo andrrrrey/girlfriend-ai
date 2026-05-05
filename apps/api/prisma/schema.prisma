@@ -227,6 +227,35 @@ model AppearanceOption {
   @@map("appearance_options")
 }
 
+// ─── Pose Options (image generation) ─────────────────────────
+
+model PoseCategory {
+  id        String   @id @default(cuid())
+  tab       String   // FACIAL_EXPRESSION | POSE
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  options PoseOption[]
+
+  @@index([tab])
+  @@map("pose_categories")
+}
+
+model PoseOption {
+  id         String   @id @default(cuid())
+  categoryId String   @map("category_id")
+  name       String
+  imageUrl   String?  @map("image_url")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  category PoseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("pose_options")
+}
+
 // ─── Message Copy Audit ───────────────────────────────────────
 
 model MessageCopyAudit {

@@ -45,6 +45,10 @@ import { CreateAppearanceCategoryDto } from "./dto/create-appearance-category.dt
 import { UpdateAppearanceCategoryDto } from "./dto/update-appearance-category.dto";
 import { CreateAppearanceOptionDto } from "./dto/create-appearance-option.dto";
 import { UpdateAppearanceOptionDto } from "./dto/update-appearance-option.dto";
+import { CreatePoseCategoryDto } from "./dto/create-pose-category.dto";
+import { UpdatePoseCategoryDto } from "./dto/update-pose-category.dto";
+import { CreatePoseOptionDto } from "./dto/create-pose-option.dto";
+import { UpdatePoseOptionDto } from "./dto/update-pose-option.dto";
 
 /**
  * Контроллер административного раздела.
@@ -340,5 +344,57 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAppearanceOption(@Param("id") id: string) {
     await this.adminService.deleteAppearanceOption(id);
+  }
+
+  // ─── Pose Categories ───────────────────────────────────────
+
+  @Get("pose-categories")
+  async getPoseCategories(@Query("tab") tab?: string) {
+    return this.adminService.getPoseCategories(tab);
+  }
+
+  @Post("pose-categories")
+  async createPoseCategory(@Body() dto: CreatePoseCategoryDto) {
+    return this.adminService.createPoseCategory(dto);
+  }
+
+  @Patch("pose-categories/:id")
+  async updatePoseCategory(
+    @Param("id") id: string,
+    @Body() dto: UpdatePoseCategoryDto,
+  ) {
+    return this.adminService.updatePoseCategory(id, dto);
+  }
+
+  @Delete("pose-categories/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deletePoseCategory(@Param("id") id: string) {
+    await this.adminService.deletePoseCategory(id);
+  }
+
+  // ─── Pose Options ──────────────────────────────────────────
+
+  @Get("pose-options")
+  async getPoseOptions(@Query("categoryId") categoryId?: string) {
+    return this.adminService.getPoseOptions(categoryId);
+  }
+
+  @Post("pose-options")
+  async createPoseOption(@Body() dto: CreatePoseOptionDto) {
+    return this.adminService.createPoseOption(dto);
+  }
+
+  @Patch("pose-options/:id")
+  async updatePoseOption(
+    @Param("id") id: string,
+    @Body() dto: UpdatePoseOptionDto,
+  ) {
+    return this.adminService.updatePoseOption(id, dto);
+  }
+
+  @Delete("pose-options/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deletePoseOption(@Param("id") id: string) {
+    await this.adminService.deletePoseOption(id);
   }
 }

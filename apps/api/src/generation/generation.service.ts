@@ -145,6 +145,24 @@ export class GenerationService {
     return result;
   }
 
+  async getPoseOptions() {
+    const categories = await this.prisma.poseCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: { FACIAL_EXPRESSION: typeof categories; POSE: typeof categories } = {
+      FACIAL_EXPRESSION: [],
+      POSE: [],
+    };
+    for (const cat of categories) {
+      if (cat.tab === "FACIAL_EXPRESSION") result.FACIAL_EXPRESSION.push(cat);
+      else if (cat.tab === "POSE") result.POSE.push(cat);
+    }
+    return result;
+  }
+
   async createVideoJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },

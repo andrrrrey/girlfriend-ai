@@ -12,12 +12,15 @@ import {
   deleteGenerationJob,
   getCharacterOptions,
   getAppearanceOptions,
+  getPoseOptions,
 } from "../../lib/api";
-import type { CharacterOption, AppearanceOptionsResponse } from "../../lib/api";
+import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse } from "../../lib/api";
 import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
 import type { CharacterSelections } from "../components/CharacterModal";
 import AppearanceModal, { DEFAULT_APPEARANCE_SELECTIONS } from "../components/AppearanceModal";
 import type { AppearanceSelections } from "../components/AppearanceModal";
+import PoseModal, { DEFAULT_POSE_SELECTIONS } from "../components/PoseModal";
+import type { PoseSelections } from "../components/PoseModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -896,6 +899,9 @@ export default function GenerationPage() {
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [appearanceSelections, setAppearanceSelections] = useState<AppearanceSelections>(DEFAULT_APPEARANCE_SELECTIONS);
   const [appearanceOptions, setAppearanceOptions] = useState<AppearanceOptionsResponse>({ OUTFITS: [], OUTFIT_DETAILS: [] });
+  const [poseOpen, setPoseOpen] = useState(false);
+  const [poseSelections, setPoseSelections] = useState<PoseSelections>(DEFAULT_POSE_SELECTIONS);
+  const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse>({ FACIAL_EXPRESSION: [], POSE: [] });
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -913,6 +919,7 @@ export default function GenerationPage() {
     getGenerationHistory().then(setHistory).catch(() => {});
     getCharacterOptions().then(setCharacterOptions).catch(() => {});
     getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
+    getPoseOptions().then(setPoseOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1058,6 +1065,14 @@ export default function GenerationPage() {
   const extraAppearanceTags = appearanceTags.length > 5 ? appearanceTags.length - 5 : 0;
   const hasAppearanceSelections = appearanceTags.length > 0;
 
+  const poseTags: string[] = [
+    ...poseSelections.facialExpressions,
+    ...poseSelections.poses,
+  ];
+  const visiblePoseTags = poseTags.slice(0, 5);
+  const extraPoseTags = poseTags.length > 5 ? poseTags.length - 5 : 0;
+  const hasPoseSelections = poseTags.length > 0;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -1195,7 +1210,7 @@ export default function GenerationPage() {
             </div>
 
             {/* Pose */}
-            <div className="editor-card">
+            <div className="editor-card" onClick={() => setPoseOpen(true)}>
               <div className="card-content">
                 <div className="editor-icon">
                   <svg viewBox="0 0 20 20" fill="none"><path d="M10 3a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 5c-2.5 0-4 1.5-4 3.5V12l1.5 5h5L14 12V8.5C14 6.5 12.5 5 10 5z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M6 10l-2 1M14 10l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
@@ -1204,6 +1219,12 @@ export default function GenerationPage() {
                   <div className="name">Pose</div>
                   <div className="sub required">required</div>
                 </div>
+                {hasPoseSelections && (
+                  <div className="editor-tags">
+                    {visiblePoseTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {extraPoseTags > 0 && <span className="editor-tag">+{extraPoseTags}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1509,6 +1530,14 @@ export default function GenerationPage() {
         selections={appearanceSelections}
         onSave={(s) => setAppearanceSelections(s)}
         options={appearanceOptions}
+      />
+
+      <PoseModal
+        open={poseOpen}
+        onClose={() => setPoseOpen(false)}
+        selections={poseSelections}
+        onSave={(s) => setPoseSelections(s)}
+        options={poseOptions}
       />
     </>
   );

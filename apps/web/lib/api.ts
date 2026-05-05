@@ -351,6 +351,35 @@ export async function getAppearanceOptions(): Promise<AppearanceOptionsResponse>
   return apiFetch<AppearanceOptionsResponse>("/generation/appearance-options");
 }
 
+// ─── Pose Options ────────────────────────────────────────────
+
+export interface PoseOption {
+  id: string;
+  categoryId: string;
+  name: string;
+  imageUrl?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export interface PoseCategory {
+  id: string;
+  tab: string;
+  name: string;
+  order: number;
+  createdAt: string;
+  options: PoseOption[];
+}
+
+export interface PoseOptionsResponse {
+  FACIAL_EXPRESSION: PoseCategory[];
+  POSE: PoseCategory[];
+}
+
+export async function getPoseOptions(): Promise<PoseOptionsResponse> {
+  return apiFetch<PoseOptionsResponse>("/generation/pose-options");
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -549,6 +578,52 @@ export const admin = {
 
   async deleteAppearanceOption(id: string): Promise<void> {
     return apiFetch(`/admin/appearance-options/${id}`, { method: "DELETE" });
+  },
+
+  async getPoseCategories(tab?: string): Promise<PoseCategory[]> {
+    const q = tab ? `?tab=${tab}` : "";
+    return apiFetch<PoseCategory[]>(`/admin/pose-categories${q}`);
+  },
+
+  async createPoseCategory(data: { tab: string; name: string; order?: number }): Promise<PoseCategory> {
+    return apiFetch<PoseCategory>("/admin/pose-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updatePoseCategory(id: string, data: { tab?: string; name?: string; order?: number }): Promise<PoseCategory> {
+    return apiFetch<PoseCategory>(`/admin/pose-categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePoseCategory(id: string): Promise<void> {
+    return apiFetch(`/admin/pose-categories/${id}`, { method: "DELETE" });
+  },
+
+  async getPoseOptions(categoryId?: string): Promise<PoseOption[]> {
+    const q = categoryId ? `?categoryId=${categoryId}` : "";
+    return apiFetch<PoseOption[]>(`/admin/pose-options${q}`);
+  },
+
+  async createPoseOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+    return apiFetch<PoseOption>("/admin/pose-options", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+    return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePoseOption(id: string): Promise<void> {
+    return apiFetch(`/admin/pose-options/${id}`, { method: "DELETE" });
   },
 };
 
