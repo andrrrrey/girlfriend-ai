@@ -1,0 +1,449 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../../../context/auth";
+import { admin, type AppearanceCategory, type AppearanceOption } from "../../../lib/api";
+import { adminStyles } from "../admin-styles";
+
+const TABS = [
+  { key: "OUTFITS", label: "Outfits" },
+  { key: "OUTFIT_DETAILS", label: "Outfit Details" },
+];
+
+const s: Record<string, React.CSSProperties> = {
+  tabRow: { display: "flex", gap: 4, flexWrap: "wrap" as const, marginBottom: 24 },
+  tab: {
+    padding: "6px 16px",
+    borderRadius: 6,
+    border: "1px solid #313131",
+    background: "transparent",
+    color: "#848484",
+    fontSize: 13,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  tabActive: {
+    background: "#f95bad",
+    border: "1px solid #f95bad",
+    color: "#fff",
+  },
+  catRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    background: "#151515",
+    borderRadius: 8,
+    marginBottom: 2,
+    cursor: "pointer",
+  },
+  catRowActive: {
+    background: "#1e1e1e",
+    borderLeft: "3px solid #f95bad",
+  },
+  catName: { color: "#fff", fontSize: 14, fontWeight: 600 },
+  catOrder: { color: "#848484", fontSize: 12 },
+  catActions: { display: "flex", gap: 6 },
+  optionList: { padding: "8px 14px 14px", background: "#1a1a1a", borderRadius: "0 0 8px 8px", marginBottom: 8 },
+  optionRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "10px 0",
+    borderBottom: "1px solid #252525",
+  },
+  optionImg: { width: 44, height: 44, borderRadius: 6, objectFit: "cover" as const, background: "#252525", flexShrink: 0 },
+  optionImgPlaceholder: { width: 44, height: 44, borderRadius: 6, background: "#252525", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" },
+  optionName: { flex: 1, color: "#fff", fontSize: 14 },
+  optionOrder: { color: "#848484", fontSize: 12 },
+  smallBtn: {
+    padding: "4px 12px",
+    borderRadius: 6,
+    border: "1px solid #313131",
+    background: "transparent",
+    color: "#ccc",
+    fontSize: 12,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  deleteBtn: {
+    padding: "4px 12px",
+    borderRadius: 6,
+    border: "1px solid #e36466",
+    background: "transparent",
+    color: "#e36466",
+    fontSize: 12,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  saveBtn: {
+    padding: "8px 20px",
+    borderRadius: 8,
+    border: "none",
+    background: "#f95bad",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  cancelBtn: {
+    padding: "8px 16px",
+    borderRadius: 8,
+    border: "1px solid #313131",
+    background: "transparent",
+    color: "#ccc",
+    fontSize: 13,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  formBox: {
+    background: "#1a1a1a",
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 12,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 10,
+  },
+  formRow: { display: "flex", gap: 10 },
+  input: {
+    flex: 1,
+    background: "#0f0f0f",
+    border: "1px solid #313131",
+    borderRadius: 6,
+    padding: "8px 12px",
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "inherit",
+    outline: "none",
+  },
+  errorText: { color: "#e36466", fontSize: 13 },
+};
+
+interface CatForm { name: string; order: string }
+interface OptForm { name: string; imageUrl: string; order: string }
+const emptyCatForm: CatForm = { name: "", order: "0" };
+const emptyOptForm: OptForm = { name: "", imageUrl: "", order: "0" };
+
+export default function AdminAppearanceOptionsPage() {
+  const { user, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState("OUTFITS");
+  const [categories, setCategories] = useState<AppearanceCategory[]>([]);
+  const [expandedCatId, setExpandedCatId] = useState<string | null>(null);
+  const [optionsByCat, setOptionsByCat] = useState<Record<string, AppearanceOption[]>>({});
+
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [editingCat, setEditingCat] = useState<AppearanceCategory | null>(null);
+  const [catForm, setCatForm] = useState<CatForm>(emptyCatForm);
+  const [catError, setCatError] = useState("");
+  const [savingCat, setSavingCat] = useState(false);
+
+  const [showOptForm, setShowOptForm] = useState<string | null>(null); // categoryId
+  const [editingOpt, setEditingOpt] = useState<AppearanceOption | null>(null);
+  const [optForm, setOptForm] = useState<OptForm>(emptyOptForm);
+  const [optError, setOptError] = useState("");
+  const [savingOpt, setSavingOpt] = useState(false);
+
+  const loadCategories = () => {
+    admin.getAppearanceCategories(activeTab).then((cats) => {
+      setCategories(cats);
+      setExpandedCatId(null);
+    }).catch(() => {});
+  };
+
+  const loadOptions = (categoryId: string) => {
+    admin.getAppearanceOptions(categoryId).then((opts) => {
+      setOptionsByCat((prev) => ({ ...prev, [categoryId]: opts }));
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!loading && user?.role === "admin") loadCategories();
+  }, [loading, user, activeTab]);
+
+  useEffect(() => {
+    if (expandedCatId) loadOptions(expandedCatId);
+  }, [expandedCatId]);
+
+  if (loading) return <div style={adminStyles.page}><p style={{ color: "#aaa" }}>Loading...</p></div>;
+  if (!user || user.role !== "admin") {
+    return (
+      <div style={adminStyles.page}>
+        <div style={adminStyles.card}><h1 style={adminStyles.title}>Access denied</h1></div>
+      </div>
+    );
+  }
+
+  const openAddCat = () => {
+    setEditingCat(null);
+    setCatForm(emptyCatForm);
+    setShowCatForm(true);
+    setCatError("");
+  };
+
+  const openEditCat = (cat: AppearanceCategory, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCat(cat);
+    setCatForm({ name: cat.name, order: String(cat.order) });
+    setShowCatForm(true);
+    setCatError("");
+  };
+
+  const handleSaveCat = async () => {
+    if (!catForm.name.trim()) { setCatError("Name is required"); return; }
+    setSavingCat(true);
+    setCatError("");
+    try {
+      const data = { tab: activeTab, name: catForm.name.trim(), order: parseInt(catForm.order) || 0 };
+      if (editingCat) {
+        await admin.updateAppearanceCategory(editingCat.id, data);
+      } else {
+        await admin.createAppearanceCategory(data);
+      }
+      setShowCatForm(false);
+      setEditingCat(null);
+      loadCategories();
+    } catch {
+      setCatError("Failed to save");
+    } finally {
+      setSavingCat(false);
+    }
+  };
+
+  const handleDeleteCat = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this category and all its options?")) return;
+    try {
+      await admin.deleteAppearanceCategory(id);
+      setOptionsByCat((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      loadCategories();
+    } catch {
+      alert("Failed to delete");
+    }
+  };
+
+  const openAddOpt = (categoryId: string) => {
+    setEditingOpt(null);
+    setOptForm(emptyOptForm);
+    setShowOptForm(categoryId);
+    setOptError("");
+  };
+
+  const openEditOpt = (opt: AppearanceOption, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingOpt(opt);
+    setOptForm({ name: opt.name, imageUrl: opt.imageUrl ?? "", order: String(opt.order) });
+    setShowOptForm(opt.categoryId);
+    setOptError("");
+  };
+
+  const handleSaveOpt = async () => {
+    if (!optForm.name.trim()) { setOptError("Name is required"); return; }
+    if (!showOptForm) return;
+    setSavingOpt(true);
+    setOptError("");
+    try {
+      const data = {
+        categoryId: showOptForm,
+        name: optForm.name.trim(),
+        imageUrl: optForm.imageUrl.trim() || undefined,
+        order: parseInt(optForm.order) || 0,
+      };
+      if (editingOpt) {
+        await admin.updateAppearanceOption(editingOpt.id, data);
+      } else {
+        await admin.createAppearanceOption(data);
+      }
+      setShowOptForm(null);
+      setEditingOpt(null);
+      loadOptions(showOptForm);
+    } catch {
+      setOptError("Failed to save");
+    } finally {
+      setSavingOpt(false);
+    }
+  };
+
+  const handleDeleteOpt = async (opt: AppearanceOption, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this option?")) return;
+    try {
+      await admin.deleteAppearanceOption(opt.id);
+      loadOptions(opt.categoryId);
+    } catch {
+      alert("Failed to delete");
+    }
+  };
+
+  const toggleExpand = (catId: string) => {
+    setExpandedCatId((prev) => (prev === catId ? null : catId));
+    setShowOptForm(null);
+  };
+
+  const currentTabLabel = TABS.find((t) => t.key === activeTab)?.label ?? activeTab;
+
+  return (
+    <div style={adminStyles.page}>
+      <div style={adminStyles.card}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h1 style={adminStyles.title}>Appearance Options</h1>
+          <a href="/admin" style={{ ...s.cancelBtn, textDecoration: "none", display: "inline-block" }}>← Admin</a>
+        </div>
+
+        {/* Tab selector */}
+        <div style={s.tabRow}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              style={{ ...s.tab, ...(activeTab === t.key ? s.tabActive : {}) }}
+              onClick={() => { setActiveTab(t.key); setShowCatForm(false); setEditingCat(null); }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Header row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <p style={{ color: "#848484", fontSize: 13, margin: 0 }}>
+            {categories.length} categor{categories.length !== 1 ? "ies" : "y"} in <strong style={{ color: "#fff" }}>{currentTabLabel}</strong>
+          </p>
+          <button style={s.saveBtn} onClick={openAddCat}>+ Add Category</button>
+        </div>
+
+        {/* Add/Edit Category form */}
+        {showCatForm && (
+          <div style={s.formBox}>
+            <p style={{ color: "#fff", fontWeight: 700, fontSize: 14, margin: 0 }}>
+              {editingCat ? "Edit category" : `Add new category to ${currentTabLabel}`}
+            </p>
+            <div style={s.formRow}>
+              <input
+                style={s.input}
+                placeholder="Category name (e.g. Casual)"
+                value={catForm.name}
+                onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+              />
+              <input
+                style={{ ...s.input, flex: "0 0 80px" }}
+                placeholder="Order"
+                type="number"
+                value={catForm.order}
+                onChange={(e) => setCatForm({ ...catForm, order: e.target.value })}
+              />
+            </div>
+            {catError && <p style={s.errorText}>{catError}</p>}
+            <div style={s.formRow}>
+              <button style={s.cancelBtn} onClick={() => { setShowCatForm(false); setEditingCat(null); }}>Cancel</button>
+              <button style={s.saveBtn} onClick={handleSaveCat} disabled={savingCat}>
+                {savingCat ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Categories list */}
+        <div style={{ marginTop: 8 }}>
+          {categories.length === 0 && (
+            <p style={{ color: "#555", fontSize: 13, fontStyle: "italic" }}>No categories yet. Click "+ Add Category" to create one.</p>
+          )}
+          {categories.map((cat) => {
+            const isExpanded = expandedCatId === cat.id;
+            const opts = optionsByCat[cat.id] ?? [];
+            return (
+              <div key={cat.id} style={{ marginBottom: 4 }}>
+                <div
+                  style={{ ...s.catRow, ...(isExpanded ? s.catRowActive : {}) }}
+                  onClick={() => toggleExpand(cat.id)}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ color: isExpanded ? "#f95bad" : "#666", fontSize: 12 }}>{isExpanded ? "▼" : "▶"}</span>
+                    <span style={s.catName}>{cat.name}</span>
+                    <span style={s.catOrder}>order: {cat.order}</span>
+                  </div>
+                  <div style={s.catActions} onClick={(e) => e.stopPropagation()}>
+                    <button style={s.smallBtn} onClick={(e) => openEditCat(cat, e)}>Edit</button>
+                    <button style={s.deleteBtn} onClick={(e) => handleDeleteCat(cat.id, e)}>Delete</button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div style={s.optionList}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ color: "#848484", fontSize: 12 }}>{opts.length} option{opts.length !== 1 ? "s" : ""}</span>
+                      <button style={s.saveBtn} onClick={() => openAddOpt(cat.id)}>+ Add Option</button>
+                    </div>
+
+                    {/* Add/Edit Option form */}
+                    {showOptForm === cat.id && (
+                      <div style={{ ...s.formBox, background: "#111", marginTop: 0, marginBottom: 12 }}>
+                        <p style={{ color: "#fff", fontWeight: 700, fontSize: 13, margin: 0 }}>
+                          {editingOpt ? "Edit option" : `Add option to "${cat.name}"`}
+                        </p>
+                        <div style={s.formRow}>
+                          <input
+                            style={s.input}
+                            placeholder="Name (e.g. Realistic)"
+                            value={optForm.name}
+                            onChange={(e) => setOptForm({ ...optForm, name: e.target.value })}
+                          />
+                        </div>
+                        <div style={s.formRow}>
+                          <input
+                            style={{ ...s.input, flex: 2 }}
+                            placeholder="Image URL (optional)"
+                            value={optForm.imageUrl}
+                            onChange={(e) => setOptForm({ ...optForm, imageUrl: e.target.value })}
+                          />
+                          <input
+                            style={{ ...s.input, flex: "0 0 80px" }}
+                            placeholder="Order"
+                            type="number"
+                            value={optForm.order}
+                            onChange={(e) => setOptForm({ ...optForm, order: e.target.value })}
+                          />
+                        </div>
+                        {optError && <p style={s.errorText}>{optError}</p>}
+                        <div style={s.formRow}>
+                          <button style={s.cancelBtn} onClick={() => { setShowOptForm(null); setEditingOpt(null); }}>Cancel</button>
+                          <button style={s.saveBtn} onClick={handleSaveOpt} disabled={savingOpt}>
+                            {savingOpt ? "Saving…" : "Save"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Options list */}
+                    {opts.map((opt) => (
+                      <div key={opt.id} style={s.optionRow}>
+                        {opt.imageUrl ? (
+                          <img src={opt.imageUrl} alt={opt.name} style={s.optionImg} />
+                        ) : (
+                          <div style={s.optionImgPlaceholder}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                              <rect x="1" y="3" width="14" height="10" rx="2" stroke="#444" strokeWidth="1.2"/>
+                              <circle cx="5.5" cy="7" r="1.5" fill="#444"/>
+                              <path d="M2 12l3.5-3.5 3 3L11 9l3 3" stroke="#444" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        )}
+                        <span style={s.optionName}>{opt.name}</span>
+                        <span style={s.optionOrder}>#{opt.order}</span>
+                        <button style={s.smallBtn} onClick={(e) => openEditOpt(opt, e)}>Edit</button>
+                        <button style={s.deleteBtn} onClick={(e) => handleDeleteOpt(opt, e)}>Delete</button>
+                      </div>
+                    ))}
+                    {opts.length === 0 && !showOptForm && (
+                      <p style={{ color: "#555", fontSize: 12, fontStyle: "italic", margin: 0 }}>No options yet.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -392,4 +392,76 @@ export class AdminService {
     if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
     await this.prisma.characterOption.delete({ where: { id } });
   }
+
+  // ─── Appearance Categories ─────────────────────────────────
+
+  async getAppearanceCategories(tab?: string) {
+    return this.prisma.appearanceCategory.findMany({
+      where: tab ? { tab } : undefined,
+      orderBy: [{ tab: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createAppearanceCategory(dto: { tab: string; name: string; order?: number }) {
+    return this.prisma.appearanceCategory.create({
+      data: { tab: dto.tab, name: dto.name, order: dto.order ?? 0 },
+    });
+  }
+
+  async updateAppearanceCategory(id: string, dto: { tab?: string; name?: string; order?: number }) {
+    const existing = await this.prisma.appearanceCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`AppearanceCategory "${id}" not found`);
+    return this.prisma.appearanceCategory.update({ where: { id }, data: dto });
+  }
+
+  async deleteAppearanceCategory(id: string) {
+    const existing = await this.prisma.appearanceCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`AppearanceCategory "${id}" not found`);
+    await this.prisma.appearanceCategory.delete({ where: { id } });
+  }
+
+  // ─── Appearance Options ────────────────────────────────────
+
+  async getAppearanceOptions(categoryId?: string) {
+    return this.prisma.appearanceOption.findMany({
+      where: categoryId ? { categoryId } : undefined,
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createAppearanceOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+    const category = await this.prisma.appearanceCategory.findUnique({ where: { id: dto.categoryId } });
+    if (!category) throw new NotFoundException(`AppearanceCategory "${dto.categoryId}" not found`);
+    return this.prisma.appearanceOption.create({
+      data: { categoryId: dto.categoryId, name: dto.name, imageUrl: dto.imageUrl, order: dto.order ?? 0 },
+    });
+  }
+
+  async updateAppearanceOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+    const existing = await this.prisma.appearanceOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`AppearanceOption "${id}" not found`);
+    return this.prisma.appearanceOption.update({ where: { id }, data: dto });
+  }
+
+  async deleteAppearanceOption(id: string) {
+    const existing = await this.prisma.appearanceOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`AppearanceOption "${id}" not found`);
+    await this.prisma.appearanceOption.delete({ where: { id } });
+  }
+
+  // ─── Appearance Options (public, for generation) ───────────
+
+  async getAppearanceOptionsForGeneration() {
+    const categories = await this.prisma.appearanceCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: Record<string, typeof categories> = { OUTFITS: [], OUTFIT_DETAILS: [] };
+    for (const cat of categories) {
+      if (result[cat.tab]) result[cat.tab].push(cat);
+    }
+    return result;
+  }
 }

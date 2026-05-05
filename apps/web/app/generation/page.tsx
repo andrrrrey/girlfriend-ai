@@ -11,10 +11,13 @@ import {
   getGenerationHistory,
   deleteGenerationJob,
   getCharacterOptions,
+  getAppearanceOptions,
 } from "../../lib/api";
-import type { CharacterOption } from "../../lib/api";
+import type { CharacterOption, AppearanceOptionsResponse } from "../../lib/api";
 import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
 import type { CharacterSelections } from "../components/CharacterModal";
+import AppearanceModal, { DEFAULT_APPEARANCE_SELECTIONS } from "../components/AppearanceModal";
+import type { AppearanceSelections } from "../components/AppearanceModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -890,6 +893,9 @@ export default function GenerationPage() {
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterSelections, setCharacterSelections] = useState<CharacterSelections>(DEFAULT_CHARACTER_SELECTIONS);
   const [characterOptions, setCharacterOptions] = useState<CharacterOption[]>([]);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [appearanceSelections, setAppearanceSelections] = useState<AppearanceSelections>(DEFAULT_APPEARANCE_SELECTIONS);
+  const [appearanceOptions, setAppearanceOptions] = useState<AppearanceOptionsResponse>({ OUTFITS: [], OUTFIT_DETAILS: [] });
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -906,6 +912,7 @@ export default function GenerationPage() {
     getVideoStyles().then(setVideoModels).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
     getCharacterOptions().then(setCharacterOptions).catch(() => {});
+    getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1042,6 +1049,15 @@ export default function GenerationPage() {
   const extraCharTags = charTags.length > 5 ? charTags.length - 5 : 0;
   const hasCharSelections = charTags.length > 0;
 
+  const appearanceTags: string[] = [
+    ...appearanceSelections.outfits,
+    ...appearanceSelections.outfitDetails,
+    ...appearanceSelections.condition,
+  ];
+  const visibleAppearanceTags = appearanceTags.slice(0, 5);
+  const extraAppearanceTags = appearanceTags.length > 5 ? appearanceTags.length - 5 : 0;
+  const hasAppearanceSelections = appearanceTags.length > 0;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -1160,7 +1176,7 @@ export default function GenerationPage() {
             </div>
 
             {/* Appearance */}
-            <div className="editor-card">
+            <div className={`editor-card${hasAppearanceSelections ? " active" : ""}`} onClick={() => setAppearanceOpen(true)}>
               <div className="card-content">
                 <div className="editor-icon">
                   <svg viewBox="0 0 20 20" fill="none"><path d="M7 3h6a2 2 0 0 1 2 2v1H5V5a2 2 0 0 1 2-2zM5 6h10l-1 11H6L5 6z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M8 9v5M12 9v5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
@@ -1169,6 +1185,12 @@ export default function GenerationPage() {
                   <div className="name">Appearance</div>
                   <div className="sub">optional</div>
                 </div>
+                {hasAppearanceSelections && (
+                  <div className="editor-tags">
+                    {visibleAppearanceTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {extraAppearanceTags > 0 && <span className="editor-tag">+{extraAppearanceTags}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1479,6 +1501,14 @@ export default function GenerationPage() {
         selections={characterSelections}
         onSave={(s) => setCharacterSelections(s)}
         options={characterOptions}
+      />
+
+      <AppearanceModal
+        open={appearanceOpen}
+        onClose={() => setAppearanceOpen(false)}
+        selections={appearanceSelections}
+        onSave={(s) => setAppearanceSelections(s)}
+        options={appearanceOptions}
       />
     </>
   );

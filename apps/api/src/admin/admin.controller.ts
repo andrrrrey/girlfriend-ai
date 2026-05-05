@@ -41,6 +41,10 @@ import { UpdateCharacterDto } from "./dto/update-character.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { CreateCharacterOptionDto } from "./dto/create-character-option.dto";
 import { UpdateCharacterOptionDto } from "./dto/update-character-option.dto";
+import { CreateAppearanceCategoryDto } from "./dto/create-appearance-category.dto";
+import { UpdateAppearanceCategoryDto } from "./dto/update-appearance-category.dto";
+import { CreateAppearanceOptionDto } from "./dto/create-appearance-option.dto";
+import { UpdateAppearanceOptionDto } from "./dto/update-appearance-option.dto";
 
 /**
  * Контроллер административного раздела.
@@ -284,5 +288,57 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCharacterOption(@Param("id") id: string) {
     await this.adminService.deleteCharacterOption(id);
+  }
+
+  // ─── Appearance Categories ─────────────────────────────────
+
+  @Get("appearance-categories")
+  async getAppearanceCategories(@Query("tab") tab?: string) {
+    return this.adminService.getAppearanceCategories(tab);
+  }
+
+  @Post("appearance-categories")
+  async createAppearanceCategory(@Body() dto: CreateAppearanceCategoryDto) {
+    return this.adminService.createAppearanceCategory(dto);
+  }
+
+  @Patch("appearance-categories/:id")
+  async updateAppearanceCategory(
+    @Param("id") id: string,
+    @Body() dto: UpdateAppearanceCategoryDto,
+  ) {
+    return this.adminService.updateAppearanceCategory(id, dto);
+  }
+
+  @Delete("appearance-categories/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAppearanceCategory(@Param("id") id: string) {
+    await this.adminService.deleteAppearanceCategory(id);
+  }
+
+  // ─── Appearance Options ────────────────────────────────────
+
+  @Get("appearance-options")
+  async getAppearanceOptions(@Query("categoryId") categoryId?: string) {
+    return this.adminService.getAppearanceOptions(categoryId);
+  }
+
+  @Post("appearance-options")
+  async createAppearanceOption(@Body() dto: CreateAppearanceOptionDto) {
+    return this.adminService.createAppearanceOption(dto);
+  }
+
+  @Patch("appearance-options/:id")
+  async updateAppearanceOption(
+    @Param("id") id: string,
+    @Body() dto: UpdateAppearanceOptionDto,
+  ) {
+    return this.adminService.updateAppearanceOption(id, dto);
+  }
+
+  @Delete("appearance-options/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAppearanceOption(@Param("id") id: string) {
+    await this.adminService.deleteAppearanceOption(id);
   }
 }

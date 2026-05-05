@@ -322,6 +322,35 @@ export async function getCharacterOptions(): Promise<CharacterOption[]> {
   return apiFetch<CharacterOption[]>("/generation/character-options");
 }
 
+// ─── Appearance Options ──────────────────────────────────────
+
+export interface AppearanceOption {
+  id: string;
+  categoryId: string;
+  name: string;
+  imageUrl?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export interface AppearanceCategory {
+  id: string;
+  tab: string;
+  name: string;
+  order: number;
+  createdAt: string;
+  options: AppearanceOption[];
+}
+
+export interface AppearanceOptionsResponse {
+  OUTFITS: AppearanceCategory[];
+  OUTFIT_DETAILS: AppearanceCategory[];
+}
+
+export async function getAppearanceOptions(): Promise<AppearanceOptionsResponse> {
+  return apiFetch<AppearanceOptionsResponse>("/generation/appearance-options");
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -474,6 +503,52 @@ export const admin = {
 
   async deleteCharacterOption(id: string): Promise<void> {
     return apiFetch(`/admin/character-options/${id}`, { method: "DELETE" });
+  },
+
+  async getAppearanceCategories(tab?: string): Promise<AppearanceCategory[]> {
+    const q = tab ? `?tab=${tab}` : "";
+    return apiFetch<AppearanceCategory[]>(`/admin/appearance-categories${q}`);
+  },
+
+  async createAppearanceCategory(data: { tab: string; name: string; order?: number }): Promise<AppearanceCategory> {
+    return apiFetch<AppearanceCategory>("/admin/appearance-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateAppearanceCategory(id: string, data: { tab?: string; name?: string; order?: number }): Promise<AppearanceCategory> {
+    return apiFetch<AppearanceCategory>(`/admin/appearance-categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteAppearanceCategory(id: string): Promise<void> {
+    return apiFetch(`/admin/appearance-categories/${id}`, { method: "DELETE" });
+  },
+
+  async getAppearanceOptions(categoryId?: string): Promise<AppearanceOption[]> {
+    const q = categoryId ? `?categoryId=${categoryId}` : "";
+    return apiFetch<AppearanceOption[]>(`/admin/appearance-options${q}`);
+  },
+
+  async createAppearanceOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+    return apiFetch<AppearanceOption>("/admin/appearance-options", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+    return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteAppearanceOption(id: string): Promise<void> {
+    return apiFetch(`/admin/appearance-options/${id}`, { method: "DELETE" });
   },
 };
 

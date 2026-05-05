@@ -127,6 +127,24 @@ export class GenerationService {
     });
   }
 
+  async getAppearanceOptions() {
+    const categories = await this.prisma.appearanceCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: { OUTFITS: typeof categories; OUTFIT_DETAILS: typeof categories } = {
+      OUTFITS: [],
+      OUTFIT_DETAILS: [],
+    };
+    for (const cat of categories) {
+      if (cat.tab === "OUTFITS") result.OUTFITS.push(cat);
+      else if (cat.tab === "OUTFIT_DETAILS") result.OUTFIT_DETAILS.push(cat);
+    }
+    return result;
+  }
+
   async createVideoJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
