@@ -274,6 +274,9 @@ export const PAGE_CSS = `
     z-index: 200; font-size: 16px; color: #fff;
   }
   .create-error { color: #e36466; font-size: 12px; margin-top: 8px; text-align: center; }
+  .field-error-ring { outline: 2px solid #e36466; outline-offset: 2px; border-radius: 6px; }
+  .btn-continue.shake { animation: shake 0.4s ease-in-out; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-4px)} 40%,80%{transform:translateX(4px)} }
 
   /* Stage 09 */
   .s9-header { display: flex; align-items: flex-start; width: 100%; flex-shrink: 0; }

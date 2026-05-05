@@ -291,6 +291,92 @@ function collectFormData() {
   };
 }
 
+/* ── Stage validation ────────────────────────── */
+
+function validateStage(n: number): { valid: boolean; errors: { field: string; message: string }[] } {
+  const errors: { field: string; message: string }[] = [];
+
+  const hasCard = (field: string) =>
+    !!document.querySelector(`.ethnicity-grid[data-field="${field}"] .ethnicity-card.selected`);
+  const hasChip = (field: string) =>
+    document.querySelectorAll(`.tags-wrap[data-field="${field}"] .tag-chip.selected`).length > 0;
+
+  switch (n) {
+    case 1: {
+      const name = (document.getElementById("input-name") as HTMLInputElement)?.value?.trim();
+      if (!name) errors.push({ field: "input-name", message: "Please enter a character name" });
+      break;
+    }
+    case 2:
+      if (!hasCard("ethnicity")) errors.push({ field: "ethnicity", message: "Please select an ethnicity" });
+      break;
+    case 3:
+      if (!hasCard("eyeColor")) errors.push({ field: "eyeColor", message: "Please select an eye color" });
+      if (!hasCard("hairStyle")) errors.push({ field: "hairStyle", message: "Please select a hair style" });
+      if (!hasCard("hairColor")) errors.push({ field: "hairColor", message: "Please select a hair color" });
+      break;
+    case 4:
+      if (!hasCard("bodyType")) errors.push({ field: "bodyType", message: "Please select a body type" });
+      if (!hasCard("breastSize")) errors.push({ field: "breastSize", message: "Please select a breast size" });
+      if (!hasCard("buttSize")) errors.push({ field: "buttSize", message: "Please select a butt size" });
+      break;
+    case 5:
+      if (!document.querySelector(".personality-card.selected"))
+        errors.push({ field: "personality", message: "Please select a personality" });
+      break;
+    case 6:
+      if (!hasCard("lifestyle")) errors.push({ field: "lifestyle", message: "Please select a lifestyle" });
+      if (!hasChip("work")) errors.push({ field: "work", message: "Please select at least one work option" });
+      if (!hasChip("hobbies")) errors.push({ field: "hobbies", message: "Please select at least one hobby" });
+      break;
+    case 7:
+      if (!hasChip("kinks1") && !hasChip("kinks2") && !hasChip("kinks3"))
+        errors.push({ field: "kinks1", message: "Please select at least one kink" });
+      break;
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+function showValidationErrors(stageNum: number, errors: { field: string; message: string }[]) {
+  clearValidationErrors(stageNum);
+  const stageEl = document.getElementById(`stage-${pad(stageNum)}-content`);
+  if (!stageEl) return;
+
+  for (const err of errors) {
+    if (err.field === "input-name") {
+      document.getElementById("input-name")?.classList.add("field-error-ring");
+    } else if (err.field === "personality") {
+      stageEl.querySelector(".personality-grid")?.classList.add("field-error-ring");
+    } else {
+      stageEl.querySelector(`[data-field="${err.field}"]`)?.classList.add("field-error-ring");
+    }
+  }
+
+  const buttonsRow = stageEl.querySelector(".buttons-row");
+  if (buttonsRow) {
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "create-error stage-validation-error";
+    errorDiv.textContent = errors.length === 1
+      ? errors[0].message
+      : `Please fill in the highlighted fields (${errors.length} remaining)`;
+    buttonsRow.parentElement?.insertBefore(errorDiv, buttonsRow);
+  }
+
+  const continueBtn = stageEl.querySelector<HTMLElement>(".btn-continue");
+  if (continueBtn) {
+    continueBtn.classList.add("shake");
+    setTimeout(() => continueBtn.classList.remove("shake"), 400);
+  }
+}
+
+function clearValidationErrors(stageNum: number) {
+  const stageEl = document.getElementById(`stage-${pad(stageNum)}-content`);
+  if (!stageEl) return;
+  stageEl.querySelectorAll(".field-error-ring").forEach((el) => el.classList.remove("field-error-ring"));
+  stageEl.querySelectorAll(".stage-validation-error").forEach((el) => el.remove());
+}
+
 /* ── Populate stage-09 preview ────────────────── */
 
 function row(icon: string, label: string, value: string) {
@@ -517,6 +603,7 @@ function initInteractive() {
       card.onclick = () => {
         grid.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
         card.classList.add("selected");
+        grid.classList.remove("field-error-ring");
       };
     });
   });
@@ -546,6 +633,7 @@ function initInteractive() {
       card.onclick = () => {
         grid.querySelectorAll(".personality-card").forEach((c) => c.classList.remove("selected"));
         card.classList.add("selected");
+        grid.classList.remove("field-error-ring");
       };
     });
   });
@@ -553,7 +641,10 @@ function initInteractive() {
   // Tag chips — multi-select
   document.querySelectorAll<HTMLElement>(".tags-wrap").forEach((wrap) => {
     wrap.querySelectorAll<HTMLElement>(".tag-chip").forEach((chip) => {
-      chip.onclick = () => chip.classList.toggle("selected");
+      chip.onclick = () => {
+        chip.classList.toggle("selected");
+        wrap.classList.remove("field-error-ring");
+      };
     });
   });
 
@@ -635,11 +726,32 @@ export default function CreateCharacterPage() {
       });
     }
 
-    // Navigation buttons
+    // Clear name validation on input
+    document.getElementById("input-name")?.addEventListener("input", () => {
+      document.getElementById("input-name")?.classList.remove("field-error-ring");
+    });
+
+    // Navigation buttons (validate before forward navigation)
     document.querySelectorAll<HTMLElement>("[data-goto]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const target = parseInt(btn.dataset.goto!);
-        if (!isNaN(target)) goToStage(target);
+        if (isNaN(target)) return;
+
+        const activeStage = document.querySelector(".stage-content.active");
+        const currentStageNum = activeStage
+          ? parseInt(activeStage.id.replace("stage-", "").replace("-content", ""))
+          : 0;
+
+        if (target > currentStageNum) {
+          const result = validateStage(currentStageNum);
+          if (!result.valid) {
+            showValidationErrors(currentStageNum, result.errors);
+            return;
+          }
+          clearValidationErrors(currentStageNum);
+        }
+
+        goToStage(target);
       });
     });
 
