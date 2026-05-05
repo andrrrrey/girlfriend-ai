@@ -20,7 +20,7 @@ interface Props {
   onClose: () => void;
   prompt: string;
   selections: PromptDetailsSelections;
-  onSave: (selections: PromptDetailsSelections) => void;
+  onSave: (selections: PromptDetailsSelections, prompt: string) => void;
   characterSelections: CharacterSelections;
   appearanceSelections: AppearanceSelections;
   poseSelections: PoseSelections;
@@ -71,6 +71,7 @@ export default function PromptDetailsModal({
   characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections,
 }: Props) {
   const [tab, setTab] = useState<Tab>("prompt");
+  const [draftPrompt, setDraftPrompt] = useState(prompt);
   const [draft, setDraft] = useState<PromptDetailsSelections>({
     negativePromptTerms: [...selections.negativePromptTerms],
   });
@@ -167,12 +168,13 @@ export default function PromptDetailsModal({
                   Prompt Preview
                   <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
                 </div>
-                <div style={s.promptBox}>
-                  {prompt
-                    ? <span style={{ color: "#fff" }}>{prompt}</span>
-                    : <span style={{ color: "#555" }}>No prompt entered yet.</span>
-                  }
-                </div>
+                <textarea
+                  style={s.promptTextarea}
+                  value={draftPrompt}
+                  onChange={(e) => setDraftPrompt(e.target.value)}
+                  placeholder="No prompt entered yet."
+                  className="pd-prompt-textarea"
+                />
               </div>
 
               {/* Prompt Breakdown */}
@@ -238,7 +240,7 @@ export default function PromptDetailsModal({
         {/* Footer */}
         <div style={s.footer}>
           <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft, draftPrompt); onClose(); }}>Save</button>
         </div>
       </div>
 
@@ -246,6 +248,10 @@ export default function PromptDetailsModal({
         .pd-modal-scroll::-webkit-scrollbar { width: 4px; }
         .pd-modal-scroll::-webkit-scrollbar-track { background: transparent; }
         .pd-modal-scroll::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+        .pd-prompt-textarea::placeholder { color: #555; }
+        .pd-prompt-textarea:focus { border-color: #3a3a3a !important; }
+        .pd-prompt-textarea::-webkit-scrollbar { width: 4px; }
+        .pd-prompt-textarea::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
       `}</style>
     </div>
   );
@@ -343,14 +349,20 @@ const s: Record<string, React.CSSProperties> = {
     color: "#f95bad",
     fontSize: 12,
   },
-  promptBox: {
+  promptTextarea: {
     background: "#1a1a1a",
     borderRadius: 10,
     padding: "16px",
     fontSize: 13,
     lineHeight: 1.7,
-    wordBreak: "break-word",
-    minHeight: 80,
+    minHeight: 100,
+    width: "100%",
+    boxSizing: "border-box" as const,
+    resize: "vertical" as const,
+    border: "1px solid transparent",
+    color: "#fff",
+    fontFamily: "inherit",
+    outline: "none",
   },
   breakdownGrid: {
     display: "grid",

@@ -1626,7 +1626,7 @@ export default function GenerationPage() {
         onClose={() => setPromptDetailsOpen(false)}
         prompt={prompt}
         selections={promptDetailsSelections}
-        onSave={(s) => setPromptDetailsSelections(s)}
+        onSave={(s, p) => { setPromptDetailsSelections(s); setPrompt(p); }}
         characterSelections={characterSelections}
         appearanceSelections={appearanceSelections}
         poseSelections={poseSelections}
