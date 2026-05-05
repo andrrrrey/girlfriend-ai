@@ -140,6 +140,39 @@ const CSS = `
   .sort-btn .sort-text .value { color: #fff; }
   .sort-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
+  .model-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid #313131;
+    border-radius: 8px;
+    z-index: 100;
+    padding: 4px 0;
+    min-width: 220px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .model-dropdown-item {
+    padding: 8px 14px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    transition: background 0.1s;
+  }
+  .model-dropdown-item:hover { background: #2a2a2a; }
+  .model-dropdown-item.active { color: #f95bad; }
+  .model-dropdown-desc {
+    font-size: 10px;
+    color: #848484;
+    font-weight: 400;
+  }
+  .model-dropdown-item.active .model-dropdown-desc { color: rgba(249,91,173,0.6); }
+
   .btn-random {
     flex: 1;
     height: 30px;
@@ -869,6 +902,24 @@ const CSS = `
 
 const CHEVRON_DOWN = `<svg viewBox="0 0 9 5" fill="none"><path d="M0.5 0.5L4.5 4.5L8.5 0.5" stroke="#969696" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+const DEFAULT_IMAGE_MODELS: GenModel[] = [
+  { id: "realistic-vision-v51", name: "Realistic Vision", description: "Photorealistic images" },
+  { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
+  { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
+  { id: "flux", name: "FLUX", description: "Next-gen quality" },
+];
+
+const DEFAULT_VIDEO_MODELS: GenModel[] = [
+  { id: "wan2.1", name: "Wan 2.1", description: "High quality video", provider: "modelslab" },
+  { id: "wan2.2", name: "Wan 2.2", description: "Latest Wan model", provider: "modelslab" },
+  { id: "hunyuan-video", name: "Hunyuan Video", description: "Realistic video generation", provider: "modelslab" },
+  { id: "animatediff", name: "AnimateDiff", description: "Animate any style", provider: "modelslab" },
+  { id: "ltx-video", name: "LTX Video", description: "Lightweight fast video", provider: "modelslab" },
+  { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
+  { id: "atlascloud/wan-2.2-turbo-spicy/image-to-video", name: "Wan 2.2 Spicy (I2V)", description: "Image-to-video, NSFW", provider: "atlascloud" },
+  { id: "atlascloud/hunyuan-video/t2v", name: "Hunyuan (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
+];
+
 const PREMIUM_GEM = `<svg viewBox="0 0 15.86 13.51" fill="none"><path d="M12.09.5l.01-.5c.27.01.54.08.77.21.24.13.44.31.59.53l2.08 2.88c.22.31.33.68.31 1.06-.02.38-.16.74-.41 1.03L9.21 12.9c-.15.19-.34.34-.56.45-.22.11-.47.17-.72.17s-.5-.06-.72-.17c-.22-.11-.41-.26-.56-.45L.41 5.71c-.25-.29-.39-.65-.41-1.03-.02-.38.09-.75.31-1.06l2.08-2.88c.15-.22.36-.4.59-.53.24-.13.5-.2.77-.21h8.33V.5zM5.3 5.31l2.64 6.37 2.65-6.37H5.3zM1.39 5.31l5.4 6.22-2.58-6.22H1.39zm10.28 0l-2.59 6.21 5.39-6.21h-2.8zM3.7 1.01a.68.68 0 0 0-.48.3l-2.08 2.88c-.03.04-.05.07-.06.12h3.21l2.14-3.31H3.79zm1.77 3.3h4.95L8.3 1H7.6zm6.14 0h3.19c-.02-.04-.04-.08-.06-.12l-2.08-2.87a.72.72 0 0 0-.49-.3L12.08 1H9.48l2.13 3.31z" fill="url(#pg)"/><defs><linearGradient id="pg" x1="0" y1="6.76" x2="15.86" y2="6.76" gradientUnits="userSpaceOnUse"><stop stop-color="#F95BAD"/><stop offset="1" stop-color="#FF0084"/></linearGradient></defs></svg>`;
 
 interface GenModel {
@@ -899,8 +950,8 @@ export default function GenerationPage() {
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("realistic-vision-v51");
   const [selectedVideoModel, setSelectedVideoModel] = useState("wan2.1");
-  const [imageModels, setImageModels] = useState<GenModel[]>([]);
-  const [videoModels, setVideoModels] = useState<GenModel[]>([]);
+  const [imageModels, setImageModels] = useState<GenModel[]>(DEFAULT_IMAGE_MODELS);
+  const [videoModels, setVideoModels] = useState<GenModel[]>(DEFAULT_VIDEO_MODELS);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterSelections, setCharacterSelections] = useState<CharacterSelections>(DEFAULT_CHARACTER_SELECTIONS);
   const [characterOptions, setCharacterOptions] = useState<CharacterOption[]>([]);
@@ -918,6 +969,7 @@ export default function GenerationPage() {
   const [cameraOptions, setCameraOptions] = useState<CameraOptionsResponse>({ FRAMING: [], CAMERA_ANGLE: [] });
   const [promptDetailsOpen, setPromptDetailsOpen] = useState(false);
   const [promptDetailsSelections, setPromptDetailsSelections] = useState<PromptDetailsSelections>(DEFAULT_PROMPT_DETAILS_SELECTIONS);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -1182,31 +1234,53 @@ export default function GenerationPage() {
 
           {/* Sorting row */}
           <div className="sorting-row">
-            <div className="sort-btn">
-              <div className="sort-text">
-                <span className="label">Gender:</span>
-                <span className="value">Female</span>
+            {modelDropdownOpen && (
+              <div
+                style={{ position: "fixed", inset: 0, zIndex: 99 }}
+                onClick={() => setModelDropdownOpen(false)}
+              />
+            )}
+            <div style={{ position: "relative", flex: 1 }}>
+              <div
+                className="sort-btn"
+                style={{ zIndex: modelDropdownOpen ? 101 : 1, position: "relative" }}
+                onClick={() => setModelDropdownOpen((v) => !v)}
+              >
+                <div className="sort-text">
+                  <span className="label">AI model:</span>
+                  <span className="value">
+                    {activeTab === "video"
+                      ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
+                      : (imageModels.find((m) => m.id === selectedModel)?.name || "Realistic Vision")
+                    }
+                  </span>
+                </div>
+                <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
               </div>
-              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
-            </div>
-            <div className="sort-btn">
-              <div className="sort-text">
-                <span className="label">Style:</span>
-                <span className="value">Realistic</span>
-              </div>
-              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
-            </div>
-            <div className="sort-btn">
-              <div className="sort-text">
-                <span className="label">AI model:</span>
-                <span className="value">
-                  {activeTab === "video"
-                    ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
-                    : (imageModels.find((m) => m.id === selectedModel)?.name || "FireFly 12")
-                  }
-                </span>
-              </div>
-              <span dangerouslySetInnerHTML={{ __html: CHEVRON_DOWN }} />
+              {modelDropdownOpen && (
+                <div className="model-dropdown">
+                  {(activeTab === "video"
+                    ? videoModels.filter((m) => !m.description?.includes("SFW only"))
+                    : imageModels
+                  ).map((m) => {
+                    const isActive = activeTab === "video" ? selectedVideoModel === m.id : selectedModel === m.id;
+                    return (
+                      <div
+                        key={m.id}
+                        className={`model-dropdown-item${isActive ? " active" : ""}`}
+                        onClick={() => {
+                          if (activeTab === "video") setSelectedVideoModel(m.id);
+                          else setSelectedModel(m.id);
+                          setModelDropdownOpen(false);
+                        }}
+                      >
+                        <span>{m.name}</span>
+                        {m.description && <span className="model-dropdown-desc">{m.description}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="btn-random">
               <svg viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
