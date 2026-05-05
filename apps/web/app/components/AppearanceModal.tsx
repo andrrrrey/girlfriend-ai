@@ -105,9 +105,8 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
               });
             }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M13.5 3.5l3 3M7 16H4v-3l9.5-9.5z" stroke="#C1F0AA" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeWidth="1.3" strokeLinejoin="round"/>
-                <path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/>
+                <path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/>
               </svg>
               Generate Random
             </button>
@@ -520,15 +519,16 @@ const s: Record<string, React.CSSProperties> = {
   },
   footer: {
     display: "flex",
-    gap: 0,
+    gap: 12,
+    padding: "16px 24px",
     borderTop: "1px solid #2a2a2a",
     flexShrink: 0,
   },
   cancelBtn: {
     flex: 1,
-    padding: "16px 0",
-    borderRadius: 0,
-    border: "none",
+    padding: "12px 0",
+    borderRadius: 10,
+    border: "1px solid #3a3a3a",
     background: "transparent",
     color: "#fff",
     fontSize: 15,
@@ -537,9 +537,9 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
   },
   saveBtn: {
-    flex: 1,
-    padding: "16px 0",
-    borderRadius: 0,
+    flex: 2,
+    padding: "12px 0",
+    borderRadius: 10,
     border: "none",
     background: "linear-gradient(135deg, #f95bad, #c940a0)",
     color: "#fff",
