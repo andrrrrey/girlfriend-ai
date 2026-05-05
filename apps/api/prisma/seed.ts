@@ -49,6 +49,7 @@ async function main() {
     ELEVENLABS_API_KEY: "",
     ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM", // Rachel — дефолтный голос ElevenLabs
     ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
+    MODELSLAB_CHAT_MODEL: "llama-3-8b-instruct",
   };
 
   for (const [key, value] of Object.entries(defaults)) {

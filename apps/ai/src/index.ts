@@ -221,12 +221,12 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
-  const apiKey = settings.OPENAI_API_KEY;
+  const apiKey = settings.MODELSLAB_API_KEY;
   if (!apiKey) {
-    return reply.status(503).send({ error: "OpenAI API key not configured" });
+    return reply.status(503).send({ error: "ModelsLab API key not configured" });
   }
 
-  const model = settings.OPENAI_MODEL || "gpt-4o"; // Дефолт если не задан в настройках
+  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3-8b-instruct";
 
   // Формируем системный промпт: прямой > из персонажа > пустой
   let finalSystemPrompt = systemPrompt || "";
@@ -241,83 +241,65 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     }
   }
 
-  // Собираем массив messages для OpenAI: [system, ...history]
-  const allMessages: OpenAI.ChatCompletionMessageParam[] = [];
-  if (finalSystemPrompt) {
-    allMessages.push({ role: "system", content: finalSystemPrompt });
-  }
-  allMessages.push(
-    ...messages.map((m) => ({ role: m.role, content: m.content }) as OpenAI.ChatCompletionMessageParam),
-  );
+  // Фильтруем системные сообщения из истории — system_prompt передаётся отдельным полем
+  const chatMessages = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role, content: m.content }));
 
-  const openai = createOpenAIClient(apiKey);
-
-  // AbortController для отмены OpenAI запроса при разрыве соединения клиентом
+  // AbortController для отмены запроса при разрыве соединения клиентом
   const abortController = new AbortController();
   req.raw.on("close", () => {
-    // req.raw.complete = false означает что соединение закрыто ДО завершения ответа
     if (!req.raw.complete) {
       abortController.abort();
     }
   });
 
   try {
-    const stream = await openai.chat.completions.create(
-      {
-        model,
-        messages: allMessages,
-        stream: true,
-        stream_options: { include_usage: true }, // Запрашиваем токены в финальном чанке
-      },
-      { signal: abortController.signal }, // Передаём сигнал отмены в OpenAI SDK
-    );
+    const mlRes = await fetch("https://modelslab.com/api/v6/llm/uncensored_chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: apiKey,
+        model_id: model,
+        system_prompt: finalSystemPrompt || undefined,
+        messages: chatMessages,
+        max_new_tokens: 1000,
+        temperature: 0.7,
+        top_p: 0.9,
+      }),
+      signal: abortController.signal,
+    });
+
+    if (!mlRes.ok) {
+      const text = await mlRes.text().catch(() => "");
+      logger.error({ status: mlRes.status, text }, "modelslab_chat_http_error");
+      return reply.status(502).send({ error: "ModelsLab API error", details: text });
+    }
+
+    const data: any = await mlRes.json();
+
+    if (data.status === "error") {
+      logger.error({ data }, "modelslab_chat_api_error");
+      return reply.status(502).send({ error: "ModelsLab API error", details: data.message });
+    }
+
+    const output: string = data.output ?? data.message ?? "";
 
     // Устанавливаем заголовки SSE-стрима
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "X-Accel-Buffering": "no", // Отключаем буферизацию в nginx для real-time доставки
+      "X-Accel-Buffering": "no",
     });
 
-    let tokensUsed = 0;
+    reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
+    reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason: "stop", usage: null })}\n\n`);
 
-    // Читаем стриминговые чанки от OpenAI и пробрасываем клиенту
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        // Текстовый контент — отправляем клиенту сразу
-        reply.raw.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-      }
-
-      // Финальный чанк содержит статистику токенов (из stream_options: include_usage)
-      if (chunk.usage) {
-        tokensUsed = chunk.usage.total_tokens;
-        reply.raw.write(
-          `data: ${JSON.stringify({
-            done: true,
-            finishReason: chunk.choices?.[0]?.finish_reason,
-            usage: {
-              promptTokens: chunk.usage.prompt_tokens,
-              completionTokens: chunk.usage.completion_tokens,
-              totalTokens: chunk.usage.total_tokens,
-            },
-          })}\n\n`,
-        );
-      } else {
-        // Если нет usage — проверяем finishReason для не-stop завершений
-        const finishReason = chunk.choices?.[0]?.finish_reason;
-        if (finishReason && finishReason !== "stop") {
-          reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason })}\n\n`);
-        }
-      }
-    }
-
-    logger.info({ model, tokensUsed }, "chat_completion_done");
-    reply.raw.write("data: [DONE]\n\n"); // SSE стандарт: конец стрима
+    logger.info({ model }, "modelslab_chat_done");
+    reply.raw.write("data: [DONE]\n\n");
     reply.raw.end();
   } catch (err: any) {
-    // Обрабатываем отмену (клиент закрыл соединение)
     if (err.name === "AbortError" || abortController.signal.aborted) {
       logger.info({ characterId }, "chat_completion_aborted");
       if (!reply.raw.headersSent) {
@@ -326,15 +308,10 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       reply.raw.end();
       return;
     }
-    logger.error({ err }, "openai_error");
+    logger.error({ err }, "modelslab_chat_error");
     if (!reply.raw.headersSent) {
-      // OpenAI rate limit / quota exceeded → 503 (service unavailable)
-      if (err.status === 429) {
-        return reply.status(503).send({ error: "AI service quota exceeded. Please try again later." });
-      }
       return reply.status(502).send({ error: "AI service error", details: err.message });
     }
-    // Если заголовки уже отправлены — передаём ошибку через SSE
     reply.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
     reply.raw.end();
   }
