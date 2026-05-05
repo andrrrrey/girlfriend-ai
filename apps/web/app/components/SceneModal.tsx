@@ -1,0 +1,496 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import type { SceneCategory, SceneOptionsResponse } from "../../lib/api";
+
+export interface SceneSelections {
+  locations: string[];
+  timeOfDay: string[];
+  weather: string[];
+  particles: string[];
+  environmentEffects: string[];
+  props: string;
+}
+
+export const DEFAULT_SCENE_SELECTIONS: SceneSelections = {
+  locations: [],
+  timeOfDay: [],
+  weather: [],
+  particles: [],
+  environmentEffects: [],
+  props: "",
+};
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  selections: SceneSelections;
+  onSave: (selections: SceneSelections) => void;
+  options: SceneOptionsResponse;
+}
+
+type Tab = "location" | "atmosphere";
+
+const ATMOSPHERE_SECTIONS = [
+  {
+    key: "timeOfDay" as const,
+    label: "Time of Day",
+    options: ["Sunrise", "Morning", "Daylight", "Strong Sun", "Golden Hour", "Sunset", "Night", "Moonlight"],
+  },
+  {
+    key: "weather" as const,
+    label: "Weather",
+    options: ["Clear sky", "Overcast", "Light rain", "Heavy rain", "Thunderstorm", "Light snow", "Blizzard", "Fog", "Strong wind", "Rainbow", "Aurora / Northern lights", "Heat", "Frost"],
+  },
+  {
+    key: "particles" as const,
+    label: "Particles",
+    options: ["Sakura petals", "Falling leaves", "Fireflies", "Flying sparks", "Magic sparkles", "Dust in light", "Soap bubbles", "Ash", "Confetti", "Falling feathers"],
+  },
+  {
+    key: "environmentEffects" as const,
+    label: "Environment Effects",
+    options: ["Smoke", "Steam", "Wet surfaces", "God rays", "Volumetric fog", "Sun glare", "Neon glow", "Bioluminescence"],
+  },
+];
+
+type AtmosphereKey = "timeOfDay" | "weather" | "particles" | "environmentEffects";
+
+const getActiveCategoryId = (categories: SceneCategory[], selected: string | null) => {
+  if (!categories.length) return null;
+  if (selected && categories.find((c) => c.id === selected)) return selected;
+  return categories[0].id;
+};
+
+const toggle = (arr: string[], val: string): string[] =>
+  arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
+
+export default function SceneModal({ open, onClose, selections, onSave, options }: Props) {
+  const [tab, setTab] = useState<Tab>("location");
+  const [draft, setDraft] = useState<SceneSelections>({
+    locations: [...selections.locations],
+    timeOfDay: [...selections.timeOfDay],
+    weather: [...selections.weather],
+    particles: [...selections.particles],
+    environmentEffects: [...selections.environmentEffects],
+    props: selections.props,
+  });
+  const [locationCategory, setLocationCategory] = useState<string | null>(null);
+  const [locationSearch, setLocationSearch] = useState("");
+
+  const locationCatId = getActiveCategoryId(options.LOCATION, locationCategory);
+
+  const locationItems = useMemo(() => {
+    const cat = options.LOCATION.find((c) => c.id === locationCatId);
+    if (!cat) return [];
+    const q = locationSearch.toLowerCase();
+    return q ? cat.options.filter((o) => o.name.toLowerCase().includes(q)) : cat.options;
+  }, [options.LOCATION, locationCatId, locationSearch]);
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "location", label: "Location" },
+    { key: "atmosphere", label: "Atmosphere" },
+  ];
+
+  if (!open) return null;
+
+  const handleRandom = () => {
+    const allLocations = options.LOCATION.flatMap((c) => c.options);
+    const randomLocation = allLocations[Math.floor(Math.random() * allLocations.length)]?.name;
+    const randomTimeOfDay = ATMOSPHERE_SECTIONS[0].options[Math.floor(Math.random() * ATMOSPHERE_SECTIONS[0].options.length)];
+    const randomWeather = ATMOSPHERE_SECTIONS[1].options[Math.floor(Math.random() * ATMOSPHERE_SECTIONS[1].options.length)];
+    setDraft({
+      locations: randomLocation ? [randomLocation] : [],
+      timeOfDay: randomTimeOfDay ? [randomTimeOfDay] : [],
+      weather: randomWeather ? [randomWeather] : [],
+      particles: [],
+      environmentEffects: [],
+      props: "",
+    });
+  };
+
+  const toggleAtmosphere = (key: AtmosphereKey, val: string) => {
+    setDraft({ ...draft, [key]: toggle(draft[key] as string[], val) });
+  };
+
+  return (
+    <div style={s.overlay} onClick={onClose}>
+      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={s.header}>
+          <span style={s.title}>Scene</span>
+          <div style={s.headerActions}>
+            <button style={s.headerBtn} onClick={handleRandom}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/>
+                <path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/>
+              </svg>
+              Generate Random
+            </button>
+            <button style={s.closeBtn} onClick={onClose}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={s.tabs}>
+          {tabs.map(({ key, label }) => (
+            <button
+              key={key}
+              style={{ ...s.tabBtn, ...(tab === key ? s.tabBtnActive : {}) }}
+              onClick={() => setTab(key)}
+            >
+              {label}
+              {tab === key && <div style={s.tabUnderline} />}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={s.content} className="scene-modal-scroll">
+
+          {/* ── Location ── */}
+          {tab === "location" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={s.searchWrap}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={s.searchIcon}>
+                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#666" strokeWidth="1.3"/>
+                  <path d="M10.5 10.5L14 14" stroke="#666" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                <input
+                  style={s.searchInput}
+                  placeholder="Search"
+                  value={locationSearch}
+                  onChange={(e) => setLocationSearch(e.target.value)}
+                />
+              </div>
+
+              {options.LOCATION.length === 0 ? (
+                <div style={s.emptyHint}>No locations added yet. Add them in the admin panel.</div>
+              ) : (
+                <>
+                  <div style={s.catPillRow} className="scene-cat-pills">
+                    {options.LOCATION.map((cat) => (
+                      <button
+                        key={cat.id}
+                        style={{ ...s.catPill, ...(locationCatId === cat.id ? s.catPillActive : {}) }}
+                        onClick={() => { setLocationCategory(cat.id); setLocationSearch(""); }}
+                      >
+                        {cat.name}
+                        {locationCatId === cat.id && <div style={s.catPillUnderline} />}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={s.imageGrid}>
+                    {locationItems.map((opt) => {
+                      const selected = draft.locations.includes(opt.name);
+                      return (
+                        <button
+                          key={opt.id}
+                          style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }}
+                          onClick={() => setDraft({ ...draft, locations: toggle(draft.locations, opt.name) })}
+                        >
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                          <span style={s.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
+                    {locationItems.length === 0 && (
+                      <div style={s.emptyHint}>{locationSearch ? "No results" : "No options in this category."}</div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Atmosphere ── */}
+          {tab === "atmosphere" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {ATMOSPHERE_SECTIONS.map((section) => (
+                <div key={section.key}>
+                  <div style={s.sectionLabel}>{section.label}</div>
+                  <div style={s.pillRow}>
+                    {section.options.map((opt) => {
+                      const selected = (draft[section.key] as string[]).includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          style={{ ...s.pill, ...(selected ? s.pillActive : {}) }}
+                          onClick={() => toggleAtmosphere(section.key, opt)}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Props */}
+              <div>
+                <div style={s.sectionLabel}>Props</div>
+                <textarea
+                  style={s.propsTextarea}
+                  placeholder="Describe props in the scene in English..."
+                  value={draft.props}
+                  onChange={(e) => setDraft({ ...draft, props: e.target.value })}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={s.footer}>
+          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+        </div>
+      </div>
+
+      <style>{`
+        .scene-modal-scroll::-webkit-scrollbar { width: 4px; }
+        .scene-modal-scroll::-webkit-scrollbar-track { background: transparent; }
+        .scene-modal-scroll::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+        .scene-cat-pills::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
+  );
+}
+
+const s: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.7)",
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modal: {
+    background: "#111",
+    borderRadius: 16,
+    width: "min(860px, 95vw)",
+    maxHeight: "90vh",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    border: "1px solid #2a2a2a",
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "20px 24px 16px",
+    borderBottom: "1px solid #2a2a2a",
+    flexShrink: 0,
+  },
+  title: { color: "#fff", fontSize: 20, fontWeight: 700 },
+  headerActions: { display: "flex", alignItems: "center", gap: 8 },
+  headerBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "7px 14px",
+    borderRadius: 8,
+    border: "1px solid #3a3a3a",
+    background: "transparent",
+    color: "#fff",
+    fontSize: 13,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    border: "1px solid #3a3a3a",
+    background: "transparent",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabs: {
+    display: "flex",
+    borderBottom: "1px solid #2a2a2a",
+    flexShrink: 0,
+  },
+  tabBtn: {
+    position: "relative",
+    flex: 1,
+    padding: "14px 20px",
+    background: "transparent",
+    border: "none",
+    color: "#888",
+    fontSize: 14,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+    fontFamily: "inherit",
+  },
+  tabBtnActive: { color: "#fff" },
+  tabUnderline: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    background: "#f95bad",
+    borderRadius: "2px 2px 0 0",
+  },
+  content: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "20px 24px",
+  },
+  searchWrap: { position: "relative", display: "flex", alignItems: "center" },
+  searchIcon: { position: "absolute", left: 12, pointerEvents: "none" },
+  searchInput: {
+    width: "100%",
+    padding: "10px 12px 10px 36px",
+    background: "#1a1a1a",
+    border: "1px solid #2a2a2a",
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 14,
+    outline: "none",
+    fontFamily: "inherit",
+    boxSizing: "border-box" as const,
+  },
+  catPillRow: {
+    display: "flex",
+    gap: 0,
+    overflowX: "auto",
+    scrollbarWidth: "none" as const,
+    msOverflowStyle: "none" as const,
+  },
+  catPill: {
+    position: "relative",
+    padding: "8px 16px",
+    background: "transparent",
+    border: "none",
+    color: "#888",
+    fontSize: 14,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+    fontFamily: "inherit",
+    flexShrink: 0,
+  },
+  catPillActive: { color: "#fff" },
+  catPillUnderline: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    background: "#f95bad",
+    borderRadius: "2px 2px 0 0",
+  },
+  imageGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 1fr)",
+    gap: 10,
+  },
+  imgCard: {
+    position: "relative",
+    aspectRatio: "1 / 1",
+    borderRadius: 12,
+    overflow: "hidden",
+    cursor: "pointer",
+    background: "#1a1a1a",
+    padding: 0,
+  },
+  imgCardSelected: { border: "2px solid #f95bad" },
+  imgCardUnselected: { border: "1px dashed rgba(255,255,255,0.3)" },
+  imgCardImg: { width: "100%", height: "100%", objectFit: "cover" as const },
+  imgCardLabel: {
+    position: "absolute",
+    bottom: 8,
+    left: 0,
+    right: 0,
+    textAlign: "center" as const,
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 600,
+    textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+  },
+  sectionLabel: {
+    color: "#aaa",
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 10,
+  },
+  pillRow: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: 8,
+  },
+  pill: {
+    padding: "8px 16px",
+    borderRadius: 8,
+    border: "1px solid #2a2a2a",
+    background: "#1a1a1a",
+    color: "#ccc",
+    fontSize: 13,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  pillActive: {
+    border: "1px solid #f95bad",
+    background: "rgba(249,91,173,0.12)",
+    color: "#f95bad",
+  },
+  propsTextarea: {
+    width: "100%",
+    padding: "12px",
+    background: "#1a1a1a",
+    border: "1px solid #2a2a2a",
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 14,
+    outline: "none",
+    fontFamily: "inherit",
+    resize: "vertical" as const,
+    boxSizing: "border-box" as const,
+    minHeight: 100,
+  },
+  emptyHint: { color: "#555", fontSize: 13, padding: "20px 0" },
+  footer: {
+    display: "flex",
+    gap: 12,
+    padding: "16px 24px",
+    borderTop: "1px solid #2a2a2a",
+    flexShrink: 0,
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: "12px",
+    borderRadius: 12,
+    border: "1px solid #2a2a2a",
+    background: "transparent",
+    color: "#fff",
+    fontSize: 14,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  saveBtn: {
+    flex: 1,
+    padding: "12px",
+    borderRadius: 12,
+    border: "none",
+    background: "linear-gradient(135deg, #f95bad 0%, #e0429a 100%)",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+};

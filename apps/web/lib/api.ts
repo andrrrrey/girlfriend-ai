@@ -380,6 +380,34 @@ export async function getPoseOptions(): Promise<PoseOptionsResponse> {
   return apiFetch<PoseOptionsResponse>("/generation/pose-options");
 }
 
+// ─── Scene Options ────────────────────────────────────────────
+
+export interface SceneOption {
+  id: string;
+  categoryId: string;
+  name: string;
+  imageUrl?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export interface SceneCategory {
+  id: string;
+  tab: string;
+  name: string;
+  order: number;
+  createdAt: string;
+  options: SceneOption[];
+}
+
+export interface SceneOptionsResponse {
+  LOCATION: SceneCategory[];
+}
+
+export async function getSceneOptions(): Promise<SceneOptionsResponse> {
+  return apiFetch<SceneOptionsResponse>("/generation/scene-options");
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -624,6 +652,52 @@ export const admin = {
 
   async deletePoseOption(id: string): Promise<void> {
     return apiFetch(`/admin/pose-options/${id}`, { method: "DELETE" });
+  },
+
+  async getSceneCategories(tab?: string): Promise<SceneCategory[]> {
+    const q = tab ? `?tab=${tab}` : "";
+    return apiFetch<SceneCategory[]>(`/admin/scene-categories${q}`);
+  },
+
+  async createSceneCategory(data: { tab: string; name: string; order?: number }): Promise<SceneCategory> {
+    return apiFetch<SceneCategory>("/admin/scene-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateSceneCategory(id: string, data: { tab?: string; name?: string; order?: number }): Promise<SceneCategory> {
+    return apiFetch<SceneCategory>(`/admin/scene-categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteSceneCategory(id: string): Promise<void> {
+    return apiFetch(`/admin/scene-categories/${id}`, { method: "DELETE" });
+  },
+
+  async getSceneOptions(categoryId?: string): Promise<SceneOption[]> {
+    const q = categoryId ? `?categoryId=${categoryId}` : "";
+    return apiFetch<SceneOption[]>(`/admin/scene-options${q}`);
+  },
+
+  async createSceneOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+    return apiFetch<SceneOption>("/admin/scene-options", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+    return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteSceneOption(id: string): Promise<void> {
+    return apiFetch(`/admin/scene-options/${id}`, { method: "DELETE" });
   },
 };
 

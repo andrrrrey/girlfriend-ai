@@ -13,14 +13,17 @@ import {
   getCharacterOptions,
   getAppearanceOptions,
   getPoseOptions,
+  getSceneOptions,
 } from "../../lib/api";
-import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse } from "../../lib/api";
+import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse } from "../../lib/api";
 import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
 import type { CharacterSelections } from "../components/CharacterModal";
 import AppearanceModal, { DEFAULT_APPEARANCE_SELECTIONS } from "../components/AppearanceModal";
 import type { AppearanceSelections } from "../components/AppearanceModal";
 import PoseModal, { DEFAULT_POSE_SELECTIONS } from "../components/PoseModal";
 import type { PoseSelections } from "../components/PoseModal";
+import SceneModal, { DEFAULT_SCENE_SELECTIONS } from "../components/SceneModal";
+import type { SceneSelections } from "../components/SceneModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -902,6 +905,9 @@ export default function GenerationPage() {
   const [poseOpen, setPoseOpen] = useState(false);
   const [poseSelections, setPoseSelections] = useState<PoseSelections>(DEFAULT_POSE_SELECTIONS);
   const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse>({ FACIAL_EXPRESSION: [], POSE: [] });
+  const [sceneOpen, setSceneOpen] = useState(false);
+  const [sceneSelections, setSceneSelections] = useState<SceneSelections>(DEFAULT_SCENE_SELECTIONS);
+  const [sceneOptions, setSceneOptions] = useState<SceneOptionsResponse>({ LOCATION: [] });
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -920,6 +926,7 @@ export default function GenerationPage() {
     getCharacterOptions().then(setCharacterOptions).catch(() => {});
     getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
     getPoseOptions().then(setPoseOptions).catch(() => {});
+    getSceneOptions().then(setSceneOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1072,6 +1079,18 @@ export default function GenerationPage() {
   const visiblePoseTags = poseTags.slice(0, 5);
   const extraPoseTags = poseTags.length > 5 ? poseTags.length - 5 : 0;
   const hasPoseSelections = poseTags.length > 0;
+
+  const sceneTags: string[] = [
+    ...sceneSelections.locations,
+    ...sceneSelections.timeOfDay,
+    ...sceneSelections.weather,
+    ...sceneSelections.particles,
+    ...sceneSelections.environmentEffects,
+    ...(sceneSelections.props ? [sceneSelections.props] : []),
+  ];
+  const visibleSceneTags = sceneTags.slice(0, 5);
+  const extraSceneTags = sceneTags.length > 5 ? sceneTags.length - 5 : 0;
+  const hasSceneSelections = sceneTags.length > 0;
 
   return (
     <>
@@ -1229,7 +1248,7 @@ export default function GenerationPage() {
             </div>
 
             {/* Scene */}
-            <div className="editor-card">
+            <div className="editor-card" onClick={() => setSceneOpen(true)}>
               <div className="card-content">
                 <div className="editor-icon">
                   <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 13l4-4 3 3 4-4 5 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="6.5" cy="8.5" r="1.5" fill="#fff"/></svg>
@@ -1238,6 +1257,12 @@ export default function GenerationPage() {
                   <div className="name">Scene</div>
                   <div className="sub">optional</div>
                 </div>
+                {hasSceneSelections && (
+                  <div className="editor-tags">
+                    {visibleSceneTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {extraSceneTags > 0 && <span className="editor-tag">+{extraSceneTags}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1538,6 +1563,14 @@ export default function GenerationPage() {
         selections={poseSelections}
         onSave={(s) => setPoseSelections(s)}
         options={poseOptions}
+      />
+
+      <SceneModal
+        open={sceneOpen}
+        onClose={() => setSceneOpen(false)}
+        selections={sceneSelections}
+        onSave={(s) => setSceneSelections(s)}
+        options={sceneOptions}
       />
     </>
   );

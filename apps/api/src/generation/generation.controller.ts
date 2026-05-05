@@ -74,6 +74,11 @@ export class GenerationController {
     return this.generationService.getPoseOptions();
   }
 
+  @Get("scene-options")
+  async getSceneOptions() {
+    return this.generationService.getSceneOptions();
+  }
+
   @Get("video/styles")
   getVideoStyles() {
     return this.generationService.getVideoStyles();

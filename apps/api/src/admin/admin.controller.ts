@@ -49,6 +49,10 @@ import { CreatePoseCategoryDto } from "./dto/create-pose-category.dto";
 import { UpdatePoseCategoryDto } from "./dto/update-pose-category.dto";
 import { CreatePoseOptionDto } from "./dto/create-pose-option.dto";
 import { UpdatePoseOptionDto } from "./dto/update-pose-option.dto";
+import { CreateSceneCategoryDto } from "./dto/create-scene-category.dto";
+import { UpdateSceneCategoryDto } from "./dto/update-scene-category.dto";
+import { CreateSceneOptionDto } from "./dto/create-scene-option.dto";
+import { UpdateSceneOptionDto } from "./dto/update-scene-option.dto";
 
 /**
  * Контроллер административного раздела.
@@ -396,5 +400,57 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePoseOption(@Param("id") id: string) {
     await this.adminService.deletePoseOption(id);
+  }
+
+  // ─── Scene Categories ──────────────────────────────────────
+
+  @Get("scene-categories")
+  async getSceneCategories(@Query("tab") tab?: string) {
+    return this.adminService.getSceneCategories(tab);
+  }
+
+  @Post("scene-categories")
+  async createSceneCategory(@Body() dto: CreateSceneCategoryDto) {
+    return this.adminService.createSceneCategory(dto);
+  }
+
+  @Patch("scene-categories/:id")
+  async updateSceneCategory(
+    @Param("id") id: string,
+    @Body() dto: UpdateSceneCategoryDto,
+  ) {
+    return this.adminService.updateSceneCategory(id, dto);
+  }
+
+  @Delete("scene-categories/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSceneCategory(@Param("id") id: string) {
+    await this.adminService.deleteSceneCategory(id);
+  }
+
+  // ─── Scene Options ─────────────────────────────────────────
+
+  @Get("scene-options")
+  async getSceneOptions(@Query("categoryId") categoryId?: string) {
+    return this.adminService.getSceneOptions(categoryId);
+  }
+
+  @Post("scene-options")
+  async createSceneOption(@Body() dto: CreateSceneOptionDto) {
+    return this.adminService.createSceneOption(dto);
+  }
+
+  @Patch("scene-options/:id")
+  async updateSceneOption(
+    @Param("id") id: string,
+    @Body() dto: UpdateSceneOptionDto,
+  ) {
+    return this.adminService.updateSceneOption(id, dto);
+  }
+
+  @Delete("scene-options/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSceneOption(@Param("id") id: string) {
+    await this.adminService.deleteSceneOption(id);
   }
 }

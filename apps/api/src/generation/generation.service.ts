@@ -163,6 +163,20 @@ export class GenerationService {
     return result;
   }
 
+  async getSceneOptions() {
+    const categories = await this.prisma.sceneCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: { LOCATION: typeof categories } = { LOCATION: [] };
+    for (const cat of categories) {
+      if (cat.tab === "LOCATION") result.LOCATION.push(cat);
+    }
+    return result;
+  }
+
   async createVideoJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },

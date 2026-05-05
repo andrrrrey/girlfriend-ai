@@ -532,4 +532,72 @@ export class AdminService {
     }
     return result;
   }
+
+  // ─── Scene Categories ──────────────────────────────────────
+
+  async getSceneCategories(tab?: string) {
+    return this.prisma.sceneCategory.findMany({
+      where: tab ? { tab } : undefined,
+      orderBy: [{ tab: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createSceneCategory(dto: { tab: string; name: string; order?: number }) {
+    return this.prisma.sceneCategory.create({ data: { ...dto, order: dto.order ?? 0 } });
+  }
+
+  async updateSceneCategory(id: string, dto: { tab?: string; name?: string; order?: number }) {
+    const existing = await this.prisma.sceneCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`SceneCategory "${id}" not found`);
+    return this.prisma.sceneCategory.update({ where: { id }, data: dto });
+  }
+
+  async deleteSceneCategory(id: string) {
+    const existing = await this.prisma.sceneCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`SceneCategory "${id}" not found`);
+    await this.prisma.sceneCategory.delete({ where: { id } });
+  }
+
+  // ─── Scene Options ─────────────────────────────────────────
+
+  async getSceneOptions(categoryId?: string) {
+    return this.prisma.sceneOption.findMany({
+      where: categoryId ? { categoryId } : undefined,
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createSceneOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+    const category = await this.prisma.sceneCategory.findUnique({ where: { id: dto.categoryId } });
+    if (!category) throw new NotFoundException(`SceneCategory "${dto.categoryId}" not found`);
+    return this.prisma.sceneOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+  }
+
+  async updateSceneOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+    const existing = await this.prisma.sceneOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`SceneOption "${id}" not found`);
+    return this.prisma.sceneOption.update({ where: { id }, data: dto });
+  }
+
+  async deleteSceneOption(id: string) {
+    const existing = await this.prisma.sceneOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`SceneOption "${id}" not found`);
+    await this.prisma.sceneOption.delete({ where: { id } });
+  }
+
+  // ─── Scene Options (public, for generation) ───────────────
+
+  async getSceneOptionsForGeneration() {
+    const categories = await this.prisma.sceneCategory.findMany({
+      orderBy: [{ tab: "asc" }, { order: "asc" }],
+      include: {
+        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    });
+    const result: Record<string, typeof categories> = { LOCATION: [] };
+    for (const cat of categories) {
+      if (result[cat.tab]) result[cat.tab].push(cat);
+    }
+    return result;
+  }
 }

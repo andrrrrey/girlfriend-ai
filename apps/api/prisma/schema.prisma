@@ -256,6 +256,35 @@ model PoseOption {
   @@map("pose_options")
 }
 
+// ─── Scene Options (image generation) ────────────────────────
+
+model SceneCategory {
+  id        String   @id @default(cuid())
+  tab       String   // LOCATION
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  options SceneOption[]
+
+  @@index([tab])
+  @@map("scene_categories")
+}
+
+model SceneOption {
+  id         String   @id @default(cuid())
+  categoryId String   @map("category_id")
+  name       String
+  imageUrl   String?  @map("image_url")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  category SceneCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("scene_options")
+}
+
 // ─── Message Copy Audit ───────────────────────────────────────
 
 model MessageCopyAudit {
