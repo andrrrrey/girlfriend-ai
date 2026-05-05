@@ -27,6 +27,8 @@ import SceneModal, { DEFAULT_SCENE_SELECTIONS } from "../components/SceneModal";
 import type { SceneSelections } from "../components/SceneModal";
 import CameraModal, { DEFAULT_CAMERA_SELECTIONS } from "../components/CameraModal";
 import type { CameraSelections } from "../components/CameraModal";
+import PromptDetailsModal, { DEFAULT_PROMPT_DETAILS_SELECTIONS } from "../components/PromptDetailsModal";
+import type { PromptDetailsSelections } from "../components/PromptDetailsModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -914,6 +916,8 @@ export default function GenerationPage() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSelections, setCameraSelections] = useState<CameraSelections>(DEFAULT_CAMERA_SELECTIONS);
   const [cameraOptions, setCameraOptions] = useState<CameraOptionsResponse>({ FRAMING: [], CAMERA_ANGLE: [] });
+  const [promptDetailsOpen, setPromptDetailsOpen] = useState(false);
+  const [promptDetailsSelections, setPromptDetailsSelections] = useState<PromptDetailsSelections>(DEFAULT_PROMPT_DETAILS_SELECTIONS);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -952,10 +956,14 @@ export default function GenerationPage() {
 
     try {
       let jobId: string;
+      const negativePrompt = promptDetailsSelections.negativePromptTerms.length > 0
+        ? promptDetailsSelections.negativePromptTerms.join(", ")
+        : undefined;
       if (isVideo) {
         const videoProvider = videoModels.find((m) => m.id === selectedVideoModel)?.provider;
         const result = await createVideoJob({
           prompt: prompt.trim(),
+          negativePrompt,
           model,
           provider: videoProvider,
         });
@@ -963,6 +971,7 @@ export default function GenerationPage() {
       } else {
         const result = await createImageJob({
           prompt: prompt.trim(),
+          negativePrompt,
           model,
         });
         jobId = result.jobId;
@@ -1003,7 +1012,7 @@ export default function GenerationPage() {
       setGenerating(false);
       setError(err.message || "Failed to start generation");
     }
-  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab]);
+  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1303,7 +1312,7 @@ export default function GenerationPage() {
             </div>
 
             {/* Prompt Details (Premium) */}
-            <div className="editor-card">
+            <div className="editor-card" onClick={() => setPromptDetailsOpen(true)}>
               <div className="card-content">
                 <div className="editor-icon premium">
                   <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1315,6 +1324,14 @@ export default function GenerationPage() {
                   </div>
                   <div className="sub premium-label">premium feature</div>
                 </div>
+                {promptDetailsSelections.negativePromptTerms.length > 0 && (
+                  <div className="editor-tags">
+                    {promptDetailsSelections.negativePromptTerms.slice(0, 3).map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {promptDetailsSelections.negativePromptTerms.length > 3 && (
+                      <span className="editor-tag">+{promptDetailsSelections.negativePromptTerms.length - 3}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1602,6 +1619,19 @@ export default function GenerationPage() {
         selections={cameraSelections}
         onSave={(s) => setCameraSelections(s)}
         options={cameraOptions}
+      />
+
+      <PromptDetailsModal
+        open={promptDetailsOpen}
+        onClose={() => setPromptDetailsOpen(false)}
+        prompt={prompt}
+        selections={promptDetailsSelections}
+        onSave={(s) => setPromptDetailsSelections(s)}
+        characterSelections={characterSelections}
+        appearanceSelections={appearanceSelections}
+        poseSelections={poseSelections}
+        sceneSelections={sceneSelections}
+        cameraSelections={cameraSelections}
       />
     </>
   );
