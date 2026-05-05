@@ -140,8 +140,8 @@ const PAGE_CSS = `
     .characters-section {
       position: absolute;
       left: 36px;
+      right: 36px;
       top: 196px;
-      width: 1172px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -151,7 +151,7 @@ const PAGE_CSS = `
       display: flex;
       flex-direction: column;
       gap: 5px;
-      width: 570px;
+      max-width: 570px;
     }
     .chars-title {
       font-size: 32px;
