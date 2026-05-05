@@ -263,7 +263,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
         model_id: model,
         system_prompt: finalSystemPrompt || undefined,
         messages: chatMessages,
-        max_new_tokens: 1000,
+        max_tokens: 1000,
         temperature: 0.7,
         top_p: 0.9,
       }),
