@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { characters, auth } from "../lib/api";
 import type { Character } from "../lib/api";
+import CharacterProfilePopup from "./components/CharacterProfilePopup";
 
 const PAGE_CSS = `
     /* ─── Content area ───────────────────────────── */
@@ -139,7 +140,7 @@ const PAGE_CSS = `
     .characters-section {
       position: absolute;
       left: 36px;
-      top: 312px;
+      top: 196px;
       width: 1172px;
       display: flex;
       flex-direction: column;
@@ -537,12 +538,12 @@ const PAGE_CSS = `
       .stories-row::-webkit-scrollbar { display: none; }
       .stories-arrow { display: none; }
       .story-avatar { width: 52px; height: 52px; flex-shrink: 0; }
-      .characters-section { left: 16px; top: 280px; width: calc(100% - 32px); }
+      .characters-section { left: 16px; top: 168px; width: calc(100% - 32px); }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
       .cards-row { gap: 10px; }
-      .card { width: calc(50% - 5px); height: 230px; }
-      .card-featured-wrap { width: calc(50% - 5px); height: 230px; }
+      .card { width: calc(50% - 9px); height: 230px; }
+      .card-featured-wrap { width: calc(50% - 9px); height: 230px; }
       .hover-panel { width: 100%; height: 230px; }
       .card-name { font-size: 15px; }
       .search-and-sorting { flex-wrap: wrap; gap: 8px; }
@@ -555,8 +556,8 @@ const PAGE_CSS = `
       .tags-arrow { display: none; }
     }
     @media (max-width: 480px) {
-      .card { width: calc(50% - 5px); height: 190px; }
-      .card-featured-wrap { width: calc(50% - 5px); height: 190px; }
+      .card { width: calc(50% - 9px); height: 190px; }
+      .card-featured-wrap { width: calc(50% - 9px); height: 190px; }
       .hover-panel { width: 100%; height: 190px; }
       .hero-title { font-size: 18px; }
     }
@@ -583,8 +584,8 @@ const STATIC_HTML = `
         </div>
       </div>
 
-      <!-- Stories -->
-      <div class="stories-section">
+      <!-- Stories (temporarily hidden) -->
+      <div class="stories-section" style="display:none;">
         <div class="section-label">Stories</div>
         <div class="stories-row">
           <div class="story-avatar" style="background:linear-gradient(135deg, #f95bad, #ff0084);"></div>
@@ -704,7 +705,7 @@ const STATIC_HTML = `
 function buildDynamicCards(chars: Character[]): string {
   if (!chars || chars.length === 0) return "";
   return chars
-    .map((char) => {
+    .map((char, index) => {
       const p = (char.personality as Record<string, unknown> | null) || {};
       const age = p["age"] ? ` ${p["age"]}` : "";
       const label = `${char.name}${age}`;
@@ -721,7 +722,7 @@ function buildDynamicCards(chars: Character[]): string {
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
 
       return `
-<div class="card-featured-wrap">
+<div class="card-featured-wrap" data-char-idx="${index}">
   <div class="hover-panel">
     <div class="hover-tags">${tagsHtml}</div>
     ${descHtml}
@@ -752,9 +753,10 @@ function buildDynamicCards(chars: Character[]): string {
 }
 
 export default function HomePage() {
-  const [chars, setChars] = React.useState<Character[]>([]);
+  const [chars, setChars] = useState<Character[]>([]);
+  const [selectedChar, setSelectedChar] = useState<Character | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const isLoggedIn = auth.isAuthenticated();
     const fetches: Promise<Character[]>[] = [characters.listPublic()];
     if (isLoggedIn) fetches.push(characters.listMy());
@@ -770,17 +772,37 @@ export default function HomePage() {
   }, []);
 
   const dynamicCardsHtml = buildDynamicCards(chars);
-
-  // Inject dynamic cards after the featured card
   const fullHtml = `<style>${PAGE_CSS}</style><div class="content">${STATIC_HTML}</div>`;
 
-  React.useEffect(() => {
+  const charsRef = React.useRef<Character[]>(chars);
+  charsRef.current = chars;
+
+  const handleCardClick = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".card-action-btn")) return;
+    const wrap = target.closest(".card-featured-wrap") as HTMLElement | null;
+    if (!wrap) return;
+    const idx = Number(wrap.dataset.charIdx);
+    if (!isNaN(idx) && charsRef.current[idx]) {
+      setSelectedChar(charsRef.current[idx]);
+    }
+  }, []);
+
+  useEffect(() => {
     const container = document.getElementById("cards-row-dynamic");
     if (!container) return;
     container.innerHTML = dynamicCardsHtml;
-  }, [dynamicCardsHtml]);
+    container.addEventListener("click", handleCardClick as EventListener);
+    return () => container.removeEventListener("click", handleCardClick as EventListener);
+  }, [dynamicCardsHtml, handleCardClick]);
 
-  return React.createElement("div", {
-    dangerouslySetInnerHTML: { __html: fullHtml },
-  });
+  return (
+    <>
+      <div dangerouslySetInnerHTML={{ __html: fullHtml }} />
+      <CharacterProfilePopup
+        character={selectedChar}
+        onClose={() => setSelectedChar(null)}
+      />
+    </>
+  );
 }
