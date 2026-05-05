@@ -111,10 +111,9 @@ const s: Record<string, React.CSSProperties> = {
 interface FormState {
   name: string;
   imageUrl: string;
-  order: string;
 }
 
-const emptyForm: FormState = { name: "", imageUrl: "", order: "0" };
+const emptyForm: FormState = { name: "", imageUrl: "" };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -154,7 +153,7 @@ export default function AdminCharacterOptionsPage() {
 
   const openEdit = (opt: CharacterOption) => {
     setEditing(opt);
-    setForm({ name: opt.name, imageUrl: opt.imageUrl ?? "", order: String(opt.order) });
+    setForm({ name: opt.name, imageUrl: opt.imageUrl ?? "" });
     setShowForm(true);
     setError("");
   };
@@ -167,8 +166,7 @@ export default function AdminCharacterOptionsPage() {
       const data = {
         category: activeCategory,
         name: form.name.trim(),
-        imageUrl: form.imageUrl.trim() || undefined,
-        order: parseInt(form.order) || 0,
+        imageUrl: form.imageUrl || undefined,
       };
       if (editing) {
         await admin.updateCharacterOption(editing.id, data);
@@ -241,26 +239,31 @@ export default function AdminCharacterOptionsPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
-              <input
-                style={{ ...s.input, flex: 2 }}
-                placeholder="Image URL (optional)"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-              />
-              <input
-                style={{ ...s.input, width: 70, flex: "none" }}
-                placeholder="Order"
-                type="number"
-                value={form.order}
-                onChange={(e) => setForm({ ...form, order: e.target.value })}
-              />
             </div>
-            {form.imageUrl && (
-              <div>
-                <p style={{ color: "#848484", fontSize: 12, margin: "0 0 6px" }}>Image preview:</p>
-                <img src={form.imageUrl} alt="preview" style={{ height: 80, borderRadius: 6, objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="file"
+                accept="image/*"
+                id="char-opt-img"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setForm((f) => ({ ...f, imageUrl: reader.result as string }));
+                  reader.readAsDataURL(file);
+                }}
+              />
+              <label htmlFor="char-opt-img" style={{ ...s.cancelBtn, cursor: "pointer" }}>
+                {form.imageUrl ? "Change image" : "Upload image"}
+              </label>
+              {form.imageUrl && (
+                <img src={form.imageUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
+              )}
+              {form.imageUrl && (
+                <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}>✕</button>
+              )}
+            </div>
             {error && <p style={{ color: "#e36466", fontSize: 12, margin: 0 }}>{error}</p>}
             <div style={{ display: "flex", gap: 8 }}>
               <button style={s.saveBtn} onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</button>

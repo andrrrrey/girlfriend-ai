@@ -121,10 +121,10 @@ const s: Record<string, React.CSSProperties> = {
   errorText: { color: "#e36466", fontSize: 13 },
 };
 
-interface CatForm { name: string; order: string }
-interface OptForm { name: string; imageUrl: string; order: string }
-const emptyCatForm: CatForm = { name: "", order: "0" };
-const emptyOptForm: OptForm = { name: "", imageUrl: "", order: "0" };
+interface CatForm { name: string }
+interface OptForm { name: string; imageUrl: string }
+const emptyCatForm: CatForm = { name: "" };
+const emptyOptForm: OptForm = { name: "", imageUrl: "" };
 
 export default function AdminAppearanceOptionsPage() {
   const { user, loading } = useAuth();
@@ -185,7 +185,7 @@ export default function AdminAppearanceOptionsPage() {
   const openEditCat = (cat: AppearanceCategory, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingCat(cat);
-    setCatForm({ name: cat.name, order: String(cat.order) });
+    setCatForm({ name: cat.name });
     setShowCatForm(true);
     setCatError("");
   };
@@ -195,7 +195,7 @@ export default function AdminAppearanceOptionsPage() {
     setSavingCat(true);
     setCatError("");
     try {
-      const data = { tab: activeTab, name: catForm.name.trim(), order: parseInt(catForm.order) || 0 };
+      const data = { tab: activeTab, name: catForm.name.trim() };
       if (editingCat) {
         await admin.updateAppearanceCategory(editingCat.id, data);
       } else {
@@ -233,7 +233,7 @@ export default function AdminAppearanceOptionsPage() {
   const openEditOpt = (opt: AppearanceOption, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingOpt(opt);
-    setOptForm({ name: opt.name, imageUrl: opt.imageUrl ?? "", order: String(opt.order) });
+    setOptForm({ name: opt.name, imageUrl: opt.imageUrl ?? "" });
     setShowOptForm(opt.categoryId);
     setOptError("");
   };
@@ -247,8 +247,7 @@ export default function AdminAppearanceOptionsPage() {
       const data = {
         categoryId: showOptForm,
         name: optForm.name.trim(),
-        imageUrl: optForm.imageUrl.trim() || undefined,
-        order: parseInt(optForm.order) || 0,
+        imageUrl: optForm.imageUrl || undefined,
       };
       if (editingOpt) {
         await admin.updateAppearanceOption(editingOpt.id, data);
@@ -323,14 +322,7 @@ export default function AdminAppearanceOptionsPage() {
                 style={s.input}
                 placeholder="Category name (e.g. Casual)"
                 value={catForm.name}
-                onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-              />
-              <input
-                style={{ ...s.input, flex: "0 0 80px" }}
-                placeholder="Order"
-                type="number"
-                value={catForm.order}
-                onChange={(e) => setCatForm({ ...catForm, order: e.target.value })}
+                onChange={(e) => setCatForm({ name: e.target.value })}
               />
             </div>
             {catError && <p style={s.errorText}>{catError}</p>}
@@ -384,25 +376,34 @@ export default function AdminAppearanceOptionsPage() {
                         <div style={s.formRow}>
                           <input
                             style={s.input}
-                            placeholder="Name (e.g. Realistic)"
+                            placeholder="Name (e.g. Casual Shirt)"
                             value={optForm.name}
                             onChange={(e) => setOptForm({ ...optForm, name: e.target.value })}
                           />
                         </div>
-                        <div style={s.formRow}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <input
-                            style={{ ...s.input, flex: 2 }}
-                            placeholder="Image URL (optional)"
-                            value={optForm.imageUrl}
-                            onChange={(e) => setOptForm({ ...optForm, imageUrl: e.target.value })}
+                            type="file"
+                            accept="image/*"
+                            id="app-opt-img"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = () => setOptForm((f) => ({ ...f, imageUrl: reader.result as string }));
+                              reader.readAsDataURL(file);
+                            }}
                           />
-                          <input
-                            style={{ ...s.input, flex: "0 0 80px" }}
-                            placeholder="Order"
-                            type="number"
-                            value={optForm.order}
-                            onChange={(e) => setOptForm({ ...optForm, order: e.target.value })}
-                          />
+                          <label htmlFor="app-opt-img" style={{ ...s.cancelBtn, cursor: "pointer" }}>
+                            {optForm.imageUrl ? "Change image" : "Upload image"}
+                          </label>
+                          {optForm.imageUrl && (
+                            <img src={optForm.imageUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
+                          )}
+                          {optForm.imageUrl && (
+                            <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setOptForm((f) => ({ ...f, imageUrl: "" }))}>✕</button>
+                          )}
                         </div>
                         {optError && <p style={s.errorText}>{optError}</p>}
                         <div style={s.formRow}>
