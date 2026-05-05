@@ -53,6 +53,8 @@ import { CreateSceneCategoryDto } from "./dto/create-scene-category.dto";
 import { UpdateSceneCategoryDto } from "./dto/update-scene-category.dto";
 import { CreateSceneOptionDto } from "./dto/create-scene-option.dto";
 import { UpdateSceneOptionDto } from "./dto/update-scene-option.dto";
+import { CreateCameraOptionDto } from "./dto/create-camera-option.dto";
+import { UpdateCameraOptionDto } from "./dto/update-camera-option.dto";
 
 /**
  * Контроллер административного раздела.
@@ -452,5 +454,31 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteSceneOption(@Param("id") id: string) {
     await this.adminService.deleteSceneOption(id);
+  }
+
+  // ─── Camera Options ────────────────────────────────────────
+
+  @Get("camera-options")
+  async getCameraOptions(@Query("section") section?: string) {
+    return this.adminService.getCameraOptions(section);
+  }
+
+  @Post("camera-options")
+  async createCameraOption(@Body() dto: CreateCameraOptionDto) {
+    return this.adminService.createCameraOption(dto);
+  }
+
+  @Patch("camera-options/:id")
+  async updateCameraOption(
+    @Param("id") id: string,
+    @Body() dto: UpdateCameraOptionDto,
+  ) {
+    return this.adminService.updateCameraOption(id, dto);
+  }
+
+  @Delete("camera-options/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCameraOption(@Param("id") id: string) {
+    await this.adminService.deleteCameraOption(id);
   }
 }

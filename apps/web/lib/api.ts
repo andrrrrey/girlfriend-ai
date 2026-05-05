@@ -408,6 +408,26 @@ export async function getSceneOptions(): Promise<SceneOptionsResponse> {
   return apiFetch<SceneOptionsResponse>("/generation/scene-options");
 }
 
+// ─── Camera Options ───────────────────────────────────────────
+
+export interface CameraOption {
+  id: string;
+  section: string;
+  name: string;
+  imageUrl?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export interface CameraOptionsResponse {
+  FRAMING: CameraOption[];
+  CAMERA_ANGLE: CameraOption[];
+}
+
+export async function getCameraOptions(): Promise<CameraOptionsResponse> {
+  return apiFetch<CameraOptionsResponse>("/generation/camera-options");
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -698,6 +718,29 @@ export const admin = {
 
   async deleteSceneOption(id: string): Promise<void> {
     return apiFetch(`/admin/scene-options/${id}`, { method: "DELETE" });
+  },
+
+  async getCameraOptions(section?: string): Promise<CameraOption[]> {
+    const q = section ? `?section=${section}` : "";
+    return apiFetch<CameraOption[]>(`/admin/camera-options${q}`);
+  },
+
+  async createCameraOption(data: { section: string; name: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+    return apiFetch<CameraOption>("/admin/camera-options", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCameraOption(id: string, data: { section?: string; name?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+    return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCameraOption(id: string): Promise<void> {
+    return apiFetch(`/admin/camera-options/${id}`, { method: "DELETE" });
   },
 };
 

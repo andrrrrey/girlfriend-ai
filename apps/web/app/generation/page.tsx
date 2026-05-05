@@ -14,8 +14,9 @@ import {
   getAppearanceOptions,
   getPoseOptions,
   getSceneOptions,
+  getCameraOptions,
 } from "../../lib/api";
-import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse } from "../../lib/api";
+import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse } from "../../lib/api";
 import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
 import type { CharacterSelections } from "../components/CharacterModal";
 import AppearanceModal, { DEFAULT_APPEARANCE_SELECTIONS } from "../components/AppearanceModal";
@@ -24,6 +25,8 @@ import PoseModal, { DEFAULT_POSE_SELECTIONS } from "../components/PoseModal";
 import type { PoseSelections } from "../components/PoseModal";
 import SceneModal, { DEFAULT_SCENE_SELECTIONS } from "../components/SceneModal";
 import type { SceneSelections } from "../components/SceneModal";
+import CameraModal, { DEFAULT_CAMERA_SELECTIONS } from "../components/CameraModal";
+import type { CameraSelections } from "../components/CameraModal";
 
 const CSS = `
   /* ── Page content ── */
@@ -908,6 +911,9 @@ export default function GenerationPage() {
   const [sceneOpen, setSceneOpen] = useState(false);
   const [sceneSelections, setSceneSelections] = useState<SceneSelections>(DEFAULT_SCENE_SELECTIONS);
   const [sceneOptions, setSceneOptions] = useState<SceneOptionsResponse>({ LOCATION: [] });
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraSelections, setCameraSelections] = useState<CameraSelections>(DEFAULT_CAMERA_SELECTIONS);
+  const [cameraOptions, setCameraOptions] = useState<CameraOptionsResponse>({ FRAMING: [], CAMERA_ANGLE: [] });
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -927,6 +933,7 @@ export default function GenerationPage() {
     getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
     getPoseOptions().then(setPoseOptions).catch(() => {});
     getSceneOptions().then(setSceneOptions).catch(() => {});
+    getCameraOptions().then(setCameraOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1091,6 +1098,16 @@ export default function GenerationPage() {
   const visibleSceneTags = sceneTags.slice(0, 5);
   const extraSceneTags = sceneTags.length > 5 ? sceneTags.length - 5 : 0;
   const hasSceneSelections = sceneTags.length > 0;
+
+  const cameraTags: string[] = [
+    ...cameraSelections.framing,
+    ...cameraSelections.cameraAngle,
+    ...cameraSelections.lens,
+    ...cameraSelections.lighting,
+  ];
+  const visibleCameraTags = cameraTags.slice(0, 5);
+  const extraCameraTags = cameraTags.length > 5 ? cameraTags.length - 5 : 0;
+  const hasCameraSelections = cameraTags.length > 0;
 
   return (
     <>
@@ -1267,7 +1284,7 @@ export default function GenerationPage() {
             </div>
 
             {/* Camera */}
-            <div className="editor-card">
+            <div className="editor-card" onClick={() => setCameraOpen(true)}>
               <div className="card-content">
                 <div className="editor-icon">
                   <svg viewBox="0 0 20 20" fill="none"><path d="M2 7h2l2-3h8l2 3h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><circle cx="10" cy="12" r="3" stroke="#fff" strokeWidth="1.2"/></svg>
@@ -1276,6 +1293,12 @@ export default function GenerationPage() {
                   <div className="name">Camera</div>
                   <div className="sub">optional</div>
                 </div>
+                {hasCameraSelections && (
+                  <div className="editor-tags">
+                    {visibleCameraTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {extraCameraTags > 0 && <span className="editor-tag">+{extraCameraTags}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1571,6 +1594,14 @@ export default function GenerationPage() {
         selections={sceneSelections}
         onSave={(s) => setSceneSelections(s)}
         options={sceneOptions}
+      />
+
+      <CameraModal
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        selections={cameraSelections}
+        onSave={(s) => setCameraSelections(s)}
+        options={cameraOptions}
       />
     </>
   );

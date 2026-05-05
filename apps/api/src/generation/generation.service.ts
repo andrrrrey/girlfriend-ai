@@ -177,6 +177,21 @@ export class GenerationService {
     return result;
   }
 
+  async getCameraOptions() {
+    const options = await this.prisma.cameraOption.findMany({
+      orderBy: [{ section: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+    const result: { FRAMING: typeof options; CAMERA_ANGLE: typeof options } = {
+      FRAMING: [],
+      CAMERA_ANGLE: [],
+    };
+    for (const opt of options) {
+      if (opt.section === "FRAMING") result.FRAMING.push(opt);
+      else if (opt.section === "CAMERA_ANGLE") result.CAMERA_ANGLE.push(opt);
+    }
+    return result;
+  }
+
   async createVideoJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },

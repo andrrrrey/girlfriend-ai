@@ -600,4 +600,29 @@ export class AdminService {
     }
     return result;
   }
+
+  // ─── Camera Options ────────────────────────────────────────
+
+  async getCameraOptions(section?: string) {
+    return this.prisma.cameraOption.findMany({
+      where: section ? { section } : undefined,
+      orderBy: [{ section: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createCameraOption(dto: { section: string; name: string; imageUrl?: string; order?: number }) {
+    return this.prisma.cameraOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+  }
+
+  async updateCameraOption(id: string, dto: { section?: string; name?: string; imageUrl?: string; order?: number }) {
+    const existing = await this.prisma.cameraOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`CameraOption "${id}" not found`);
+    return this.prisma.cameraOption.update({ where: { id }, data: dto });
+  }
+
+  async deleteCameraOption(id: string) {
+    const existing = await this.prisma.cameraOption.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`CameraOption "${id}" not found`);
+    await this.prisma.cameraOption.delete({ where: { id } });
+  }
 }

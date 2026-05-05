@@ -79,6 +79,11 @@ export class GenerationController {
     return this.generationService.getSceneOptions();
   }
 
+  @Get("camera-options")
+  async getCameraOptions() {
+    return this.generationService.getCameraOptions();
+  }
+
   @Get("video/styles")
   getVideoStyles() {
     return this.generationService.getVideoStyles();

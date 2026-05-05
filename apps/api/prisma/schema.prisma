@@ -285,6 +285,20 @@ model SceneOption {
   @@map("scene_options")
 }
 
+// ─── Camera Options (image generation) ───────────────────────
+
+model CameraOption {
+  id        String   @id @default(cuid())
+  section   String   // FRAMING | CAMERA_ANGLE
+  name      String
+  imageUrl  String?  @map("image_url")
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([section])
+  @@map("camera_options")
+}
+
 // ─── Message Copy Audit ───────────────────────────────────────
 
 model MessageCopyAudit {
