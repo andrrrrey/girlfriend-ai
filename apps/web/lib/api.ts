@@ -177,13 +177,11 @@ export const auth = {
    * @param {string} password - Пароль (минимум 6 символов)
    * @returns {Promise<TokenPair>} Пара токенов доступа
    */
-  async register(email: string, password: string): Promise<TokenPair> {
-    const data = await apiFetch<TokenPair>("/auth/register", {
+  async register(email: string, password: string, turnstileToken?: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, turnstileToken }),
     });
-    saveTokens(data);
-    return data;
   },
 
   /**
@@ -192,10 +190,10 @@ export const auth = {
    * @param {string} password - Пароль
    * @returns {Promise<TokenPair>} Пара токенов доступа
    */
-  async login(email: string, password: string): Promise<TokenPair> {
+  async login(email: string, password: string, turnstileToken?: string): Promise<TokenPair> {
     const data = await apiFetch<TokenPair>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, turnstileToken }),
     });
     saveTokens(data);
     return data;

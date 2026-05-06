@@ -56,12 +56,12 @@ interface AuthContextValue {
    * Выполняет вход: вызывает POST /auth/login, сохраняет токены,
    * затем загружает профиль через GET /users/me.
    */
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, turnstileToken?: string) => Promise<void>;
   /**
    * Регистрирует нового пользователя: POST /auth/register,
    * сохраняет токены, загружает профиль.
    */
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, turnstileToken?: string) => Promise<{ message: string }>;
   /**
    * Выполняет выход: инвалидирует refresh token на сервере,
    * очищает localStorage, устанавливает user = null.
@@ -124,8 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Сохраняет токены в localStorage (через authApi.login),
    * затем загружает профиль (чтобы получить роль, подписку и т.д.).
    */
-  const login = async (email: string, password: string) => {
-    await authApi.login(email, password);
+  const login = async (email: string, password: string, turnstileToken?: string) => {
+    await authApi.login(email, password, turnstileToken);
     await refreshProfile();
   };
 
@@ -133,9 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Регистрация нового пользователя.
    * Аналогична login — сохраняет токены и загружает профиль.
    */
-  const register = async (email: string, password: string) => {
-    await authApi.register(email, password);
-    await refreshProfile();
+  const register = async (email: string, password: string, turnstileToken?: string): Promise<{ message: string }> => {
+    return authApi.register(email, password, turnstileToken);
   };
 
   /**

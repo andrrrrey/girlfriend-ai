@@ -15,18 +15,22 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
+import { TurnstileService } from "./turnstile.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { Request } from "express";
+import { UnauthorizedException } from "@nestjs/common";
 
 /**
  * Контроллер аутентификации.
@@ -38,7 +42,10 @@ import { Request } from "express";
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly turnstile: TurnstileService,
+  ) {}
 
   /**
    * POST /auth/register
@@ -51,7 +58,10 @@ export class AuthController {
    */
   @ApiOperation({ summary: "Register a new user" })
   @Post("register")
-  async register(@Body() dto: RegisterDto) {
+  async register(@Body() dto: RegisterDto, @Req() req: Request) {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip;
+    const ok = await this.turnstile.verify(dto.turnstileToken, ip);
+    if (!ok) throw new UnauthorizedException("Captcha verification failed");
     return this.authService.register(dto.email, dto.password);
   }
 
@@ -72,11 +82,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const userAgent = req.headers["user-agent"];
-    // X-Forwarded-For содержит список IP через запятую (клиент, прокси1, прокси2...)
-    // Берём первый — это реальный IP клиента
-    const ip =
-      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-      req.ip;
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip;
+    const ok = await this.turnstile.verify(dto.turnstileToken, ip);
+    if (!ok) throw new UnauthorizedException("Captcha verification failed");
     return this.authService.login(dto.email, dto.password, userAgent, ip);
   }
 
@@ -109,5 +117,12 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Body() dto: RefreshDto) {
     await this.authService.logout(dto.refreshToken);
+  }
+
+  @ApiOperation({ summary: "Verify email address with token from email link" })
+  @Get("verify-email")
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Query("token") token: string) {
+    return this.authService.verifyEmail(token);
   }
 }

@@ -48,21 +48,21 @@ const EnvSchema = z.object({
   /** ClickHouse HTTP URL для записи аналитики (опционально) */
   CLICKHOUSE_URL: z.string().optional(),
 
-  // ─── S3 / MinIO ─────────────────────────────────────────────────────────────
+  // ─── S3 / Cloudflare R2 ─────────────────────────────────────────────────────
   // Все поля опциональны. Если не заданы — TTS отдаёт бинарный аудио-поток.
-  // Если заданы — TTS загружает mp3 в S3 и возвращает публичный URL.
-  /** Эндпоинт MinIO/S3, например: http://minio:9000 */
+  // Если заданы — TTS загружает mp3 в R2/S3 и возвращает presigned URL.
+  // Для Cloudflare R2: S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com, S3_REGION=auto
+  /** Эндпоинт R2/S3, например: https://<account_id>.r2.cloudflarestorage.com */
   S3_ENDPOINT: z.string().optional(),
-  /** AWS регион (для MinIO обычно "us-east-1") */
+  /** AWS регион (для Cloudflare R2 — "auto") */
   S3_REGION: z.string().optional(),
-  /** S3 Access Key ID */
+  /** S3 / R2 Access Key ID */
   S3_ACCESS_KEY: z.string().optional(),
-  /** S3 Secret Access Key */
+  /** S3 / R2 Secret Access Key */
   S3_SECRET_KEY: z.string().optional(),
-  /** Название бакета для медиафайлов (по умолчанию "media" в коде ai/index.ts) */
+  /** Название бакета для медиафайлов */
   S3_BUCKET: z.string().optional(),
-  /** Публичный базовый URL для отдачи файлов браузеру (если отличается от S3_ENDPOINT,
-   *  например S3_ENDPOINT=http://minio:9000 внутри docker, а S3_PUBLIC_URL=https://media.example.com) */
+  /** Публичный базовый URL для отдачи файлов браузеру (кастомный домен или *.r2.dev) */
   S3_PUBLIC_URL: z.string().optional(),
 
   // ─── JWT Auth ───────────────────────────────────────────────────────────────
@@ -80,6 +80,18 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.string().default("info"),
   /** Формат вывода: "json" для production, "pretty" для локальной разработки */
   LOG_FORMAT: z.string().default("json"),
+
+  // ─── Email (Resend) ─────────────────────────────────────────────────────────
+  /** API-ключ Resend для отправки email (опционально) */
+  RESEND_API_KEY: z.string().optional(),
+  /** Email отправителя, например: noreply@yourdomain.com */
+  RESEND_FROM: z.string().optional(),
+  /** Публичный URL фронтенда (для ссылок в письмах верификации) */
+  WEB_URL: z.string().optional().default("http://localhost:3000"),
+
+  // ─── Cloudflare Turnstile ───────────────────────────────────────────────────
+  /** Секретный ключ Turnstile для серверной верификации капчи */
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 
   // ─── Request Tracing ────────────────────────────────────────────────────────
   /**

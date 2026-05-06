@@ -6,7 +6,7 @@ import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
 import BottomBarMobile from "./BottomBarMobile";
 
-const NO_SHELL_ROUTES = ["/login", "/register"];
+const NO_SHELL_ROUTES = ["/login", "/register", "/verify-email"];
 
 type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "admin" | "profile";
 

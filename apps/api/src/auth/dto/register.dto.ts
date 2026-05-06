@@ -6,7 +6,7 @@
  * Неизвестные поля в теле запроса вызовут HTTP 400.
  */
 
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, MinLength } from "class-validator";
 
 /**
  * Тело запроса POST /auth/register
@@ -24,4 +24,8 @@ export class RegisterDto {
   @IsString()
   @MinLength(6)
   password!: string;
+
+  @IsString()
+  @IsOptional()
+  turnstileToken?: string;
 }

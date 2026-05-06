@@ -28,6 +28,7 @@ import { ChatsModule } from "./chats/chats.module";
 import { CleanupModule } from "./cleanup/cleanup.module";
 import { QueueModule } from "./queue/queue.module";
 import { GenerationModule } from "./generation/generation.module";
+import { MediaModule } from "./media/media.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { GenerationModule } from "./generation/generation.module";
     InternalModule, // Внутренние API для ai-сервиса и worker-а (без аутентификации!)
     ChatsModule,      // Чаты, сообщения, SSE, STT, TTS
     GenerationModule, // Генерация изображений (ModelsLab API)
+    MediaModule,      // Presigned URL эндпоинты для медиафайлов (R2/S3)
     CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe

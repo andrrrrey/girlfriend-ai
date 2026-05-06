@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
+import { S3Service } from "../s3/s3.service";
 import type { ImageJobData, VideoJobData } from "../queue/queue.types";
 import { loadEnv } from "@repo/config";
 
@@ -29,7 +30,32 @@ export class GenerationService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(AI_QUEUE) private readonly queue: Queue,
+    private readonly s3: S3Service,
   ) {}
+
+  /** Заменяет публичный URL на presigned, если S3 настроен. */
+  private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
+    if (!url || !this.s3.isConfigured()) return url ?? null;
+    const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
+    if (!publicBase) return url;
+    const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
+    if (!key) return url;
+    try {
+      return await this.s3.getSignedUrl(key);
+    } catch {
+      return url;
+    }
+  }
+
+  /** Заменяет url в объекте output на presigned, возвращает новый output. */
+  private async signOutput(output: unknown): Promise<unknown> {
+    if (!output || typeof output !== "object") return output;
+    const o = output as Record<string, unknown>;
+    if (typeof o["url"] === "string") {
+      return { ...o, url: await this.toSignedUrl(o["url"] as string) };
+    }
+    return output;
+  }
 
   private async translateToEnglish(text: string): Promise<string> {
     try {
@@ -101,7 +127,7 @@ export class GenerationService {
     return {
       jobId: job.id,
       status: job.status,
-      output: job.output,
+      output: await this.signOutput(job.output),
       input: job.input,
       error: job.error,
       createdAt: job.createdAt,
@@ -251,13 +277,13 @@ export class GenerationService {
       take: 50,
     });
 
-    return jobs.map((job) => ({
+    return Promise.all(jobs.map(async (job) => ({
       jobId: job.id,
       type: job.type,
-      output: job.output,
+      output: await this.signOutput(job.output),
       input: job.input,
       createdAt: job.createdAt,
-    }));
+    })));
   }
 
   async getGallery(limit = 50, type?: string) {
@@ -274,17 +300,17 @@ export class GenerationService {
       take: limit,
     });
 
-    return jobs.map((job) => ({
+    return Promise.all(jobs.map(async (job) => ({
       jobId: job.id,
       type: job.type,
-      output: job.output,
+      output: await this.signOutput(job.output),
       input: (() => {
         const input = job.input as Record<string, unknown> | null;
         if (!input) return {};
         return { prompt: input["prompt"], model: input["model"] };
       })(),
       createdAt: job.createdAt,
-    }));
+    })));
   }
 
   async deleteJob(jobId: string, userId: string) {

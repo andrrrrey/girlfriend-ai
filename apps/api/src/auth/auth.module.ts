@@ -19,6 +19,8 @@ import { PassportModule } from "@nestjs/passport";
 import { loadEnv } from "@repo/config";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { EmailService } from "./email.service";
+import { TurnstileService } from "./turnstile.service";
 import { JwtStrategy } from "./jwt.strategy";
 import { PrismaService } from "../prisma.service";
 
@@ -40,9 +42,11 @@ const env = loadEnv();
   ],
   controllers: [AuthController],
   providers: [
-    AuthService,   // Бизнес-логика: bcrypt-хеширование, создание токенов, ротация refresh
-    JwtStrategy,   // Passport-стратегия: извлекает JWT из Bearer и загружает пользователя
-    PrismaService, // Доступ к таблицам User и Session
+    AuthService,       // Бизнес-логика: bcrypt-хеширование, создание токенов, ротация refresh
+    EmailService,      // Отправка писем через Resend (верификация email)
+    TurnstileService,  // Верификация Cloudflare Turnstile капчи
+    JwtStrategy,       // Passport-стратегия: извлекает JWT из Bearer и загружает пользователя
+    PrismaService,     // Доступ к таблицам User и Session
   ],
   exports: [
     AuthService, // Доступен другим модулям (если нужны прямые вызовы)
