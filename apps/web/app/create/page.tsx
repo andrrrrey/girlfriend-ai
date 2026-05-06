@@ -777,15 +777,8 @@ export default function CreateCharacterPage() {
     initInteractive();
   }, [user, router]);
 
-  if (loading) return <div style={{ color: "#aaa", padding: 40 }}>Loading...</div>;
-  if (!user) {
-    return (
-      <div style={{ padding: 40 }}>
-        <p style={{ color: "#aaa", marginBottom: 16 }}>Log in to create a character.</p>
-        <a href="/login" style={{ color: "#f95bad", textDecoration: "none" }}>Log in</a>
-      </div>
-    );
-  }
+  if (loading) return null;
+  if (!user) { router.push("/login"); return null; }
 
   return (
     <>

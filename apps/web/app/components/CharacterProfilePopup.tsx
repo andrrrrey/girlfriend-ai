@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/auth";
 import type { Character } from "../../lib/api";
 
 interface Props {
@@ -21,6 +22,7 @@ const MOCK_COMMENTS = [
 
 export default function CharacterProfilePopup({ character, onClose }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("about");
 
   useEffect(() => {
@@ -59,6 +61,11 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
     : (p.hobbies as string) || "";
 
   const handleStartChat = () => {
+    if (!user) {
+      router.push("/login");
+      onClose();
+      return;
+    }
     router.push(`/chat?characterId=${character.id}`);
     onClose();
   };

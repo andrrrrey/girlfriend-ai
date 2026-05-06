@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
   createImageJob,
@@ -937,6 +938,7 @@ const GALLERY_TAGS = ["All", "Group Chats", "Teen", "Asian", "Anime", "Blond", "
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
   const [videoSubTab, setVideoSubTab] = useState<VideoSubTab>("scratch");
   const [promptOpen, setPromptOpen] = useState(false);
@@ -1179,6 +1181,7 @@ export default function GenerationPage() {
   });
 
   if (loading) return null;
+  if (!user) { router.push("/login"); return null; }
 
   const charTags: string[] = [];
   if (characterSelections.style) charTags.push(characterSelections.style);

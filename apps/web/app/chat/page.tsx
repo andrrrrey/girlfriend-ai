@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
   chats,
@@ -20,6 +20,7 @@ const DEMO_MESSAGE_LIMIT = 20;
 
 export default function ChatPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const isDemo = !user || user.subscription === "free";
   const searchParams = useSearchParams();
 
@@ -138,14 +139,8 @@ export default function ChatPage() {
 
   if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
   if (!user) {
-    return (
-      <div className="chat-content">
-        <div style={{ padding: 40 }}>
-          <p style={{ color: "#aaa", marginBottom: 16 }}>Войдите, чтобы использовать чат.</p>
-          <a href="/login" style={{ color: "#f95bad", textDecoration: "none" }}>Войти</a>
-        </div>
-      </div>
-    );
+    router.push("/login");
+    return null;
   }
 
   const handleDemoError = (err: string, code?: number) => {
@@ -835,11 +830,7 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
-                  <button className="ask-btn" title="Ask">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 4.5L10 6.5L6.5 4.5ZM6.5 4.5V11.5L10 9.5V6.5L6.5 4.5Z" stroke="#969696" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span className="ask-btn-text">Ask</span>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><path d="M4 6l4 4 4-4" stroke="#969696" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
+                  {/* Ask button temporarily hidden */}
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -893,14 +884,7 @@ export default function ChatPage() {
               <div className="gallery-bg-overlay" />
             </div>
             {activeChatData?.character?.avatarUrl && <div className="gallery-bg-overlay" style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8))',borderRadius:8}} />}
-            <div className="small-avatar" style={{zIndex:2, position:'relative', background:'#313131', overflow:'hidden'}}>
-              {activeChatData?.character?.avatarUrl && (
-                <img src={activeChatData.character.avatarUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-              )}
-              <div className="link-badge">
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3.4 4.6l-0.6 0.6a1.1 1.1 0 01-1.6-1.6l1.2-1.2a1.1 1.1 0 011.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M4.6 3.4l0.6-0.6a1.1 1.1 0 011.6 1.6l-1.2 1.2a1.1 1.1 0 01-1.6 0" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
-            </div>
+            {/* small-avatar temporarily hidden */}
             <div className="profile-slider">
               <div className="slider-bar active"><div className="slider-bar-inner" /></div>
               <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
@@ -910,11 +894,7 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="profile-buttons">
-            <button className="profile-btn-secondary">Relationships settings</button>
-            <button className="profile-btn-primary">Edit Character</button>
-          </div>
+          {/* Buttons temporarily hidden */}
 
           {/* Profile Text */}
           <div className="profile-text">

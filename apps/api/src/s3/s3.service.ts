@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { Readable } from "stream";
 import { loadEnv } from "@repo/config";
 
 @Injectable()
@@ -42,6 +43,14 @@ export class S3Service {
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return getSignedUrl(this.s3 as any, command as any, { expiresIn });
+  }
+
+  /** Возвращает тело объекта из S3 для проксирования. */
+  async getObject(key: string): Promise<{ body: Readable; contentType?: string }> {
+    if (!this.s3) throw new Error("S3 is not configured");
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const response = await this.s3.send(command);
+    return { body: response.Body as Readable, contentType: response.ContentType };
   }
 
   /** Извлекает S3-ключ из полного публичного URL */

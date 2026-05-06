@@ -6,14 +6,13 @@ import { generateSystemPrompt } from "./generate-system-prompt";
 import type { Prisma } from "@prisma/client";
 
 @Controller("characters")
-@UseGuards(JwtAuthGuard)
 export class CharactersController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
   async listPublic() {
     return this.prisma.character.findMany({
-      where: { isPublic: true, deletedAt: null },
+      where: { deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -26,6 +25,7 @@ export class CharactersController {
   }
 
   @Get("my")
+  @UseGuards(JwtAuthGuard)
   async listMy(@Req() req: any) {
     return this.prisma.character.findMany({
       where: { createdBy: req.user.id, deletedAt: null },
@@ -43,7 +43,7 @@ export class CharactersController {
   @Get(":id")
   async getOne(@Param("id") id: string) {
     return this.prisma.character.findFirst({
-      where: { id, isPublic: true, deletedAt: null },
+      where: { id, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -55,6 +55,7 @@ export class CharactersController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   async createCharacter(@Req() req: any, @Body() dto: CreateUserCharacterDto) {
     const systemPrompt = generateSystemPrompt(dto);
 

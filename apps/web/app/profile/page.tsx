@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { users } from "../../lib/api";
 
@@ -952,12 +953,14 @@ function ProfileContent() {
 ═══════════════════════════════════════ */
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   if (loading) return null;
+  if (!user) { router.push("/login"); return null; }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="pp-wrap">
-        {user ? <ProfileContent /> : <UnauthContent />}
+        <ProfileContent />
       </div>
     </>
   );
