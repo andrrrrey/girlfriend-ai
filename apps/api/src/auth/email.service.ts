@@ -54,6 +54,6 @@ export class EmailService {
       throw new Error("Failed to send verification email");
     }
 
-    this.logger.info({ email }, "verification_email_sent");
+    this.logger.log(`verification_email_sent email=${email}`);
   }
 }

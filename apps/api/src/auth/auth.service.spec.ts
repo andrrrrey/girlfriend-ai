@@ -39,18 +39,14 @@ describe("AuthService", () => {
   });
 
   describe("register", () => {
-    it("hashes password and returns token pair", async () => {
+    it("hashes password and returns verification message", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue({ id: "user-1" });
-      mockPrisma.session.create.mockResolvedValue({
-        refreshToken: "refresh-uuid",
-      });
 
       const result = await service.register("test@example.com", "password123");
 
-      expect(result.accessToken).toBe("test_access_token");
-      expect(typeof result.refreshToken).toBe("string");
-      expect(result.refreshToken.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("message");
+      expect(typeof result.message).toBe("string");
 
       const createCall = mockPrisma.user.create.mock.calls[0][0];
       const hash = createCall.data.passwordHash;

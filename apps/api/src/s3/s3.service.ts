@@ -40,7 +40,8 @@ export class S3Service {
     }
 
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-    return getSignedUrl(this.s3, command, { expiresIn });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return getSignedUrl(this.s3 as any, command, { expiresIn });
   }
 
   /** Извлекает S3-ключ из полного публичного URL */
