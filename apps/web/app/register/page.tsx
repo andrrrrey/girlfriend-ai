@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useAuth } from "../../context/auth";
 import Logo from "../components/Logo";
 import TurnstileWidget from "../components/TurnstileWidget";
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -17,11 +15,19 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | undefined>(undefined);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d: { turnstileSiteKey: string | null }) => setTurnstileSiteKey(d.turnstileSiteKey))
+      .catch(() => {});
+  }, []);
 
   const handleTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(undefined), []);
 
-  const canSubmit = !TURNSTILE_SITE_KEY || !!turnstileToken;
+  const canSubmit = !turnstileSiteKey || !!turnstileToken;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,9 +115,9 @@ export default function RegisterPage() {
               placeholder="Повторите пароль"
             />
 
-            {TURNSTILE_SITE_KEY && (
+            {turnstileSiteKey && (
               <TurnstileWidget
-                siteKey={TURNSTILE_SITE_KEY}
+                siteKey={turnstileSiteKey}
                 onVerify={handleTurnstileVerify}
                 onExpire={handleTurnstileExpire}
               />
