@@ -276,7 +276,8 @@ async function insertCategoryOption(
 }
 
 async function seedGenerationElements(client: Client, workspaceRoot: string): Promise<void> {
-  const manifestPath = path.join(workspaceRoot, "apps", "web", "public", "generation-elements", "manifest.json");
+  // manifest.json лежит в apps/migrator/data/ — внутри образа мигратора
+  const manifestPath = path.join(__dirname, "..", "data", "manifest.json");
   if (!existsSync(manifestPath)) {
     logger.warn({ manifestPath }, "generation_elements_manifest_not_found_skipping");
     return;
