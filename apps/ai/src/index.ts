@@ -561,18 +561,28 @@ async function generateImageAtlasCloud(params: {
 
   const result = rawResult.data || rawResult as { id: string; status: string; outputs?: string[]; urls?: { get?: string; cancel?: string } };
 
-  logger.info({ id: result.id, status: result.status, urls: result.urls }, "atlascloud_image_initial_response");
+  logger.info({ rawResult, id: result.id, status: result.status, urls: result.urls, outputs: result.outputs }, "atlascloud_image_initial_response");
 
-  if (result.outputs?.[0]) {
-    return { url: result.outputs[0] };
+  // Check if image was returned synchronously
+  const immediateUrl = result.outputs?.[0]
+    || (rawResult as any).output?.[0]
+    || (rawResult as any).images?.[0]
+    || (rawResult as any).url
+    || (rawResult.data as any)?.output?.[0]
+    || (rawResult.data as any)?.images?.[0];
+  if (immediateUrl) {
+    return { url: immediateUrl };
   }
 
-  const predictionId = result.id;
+  const predictionId = result.id || (rawResult as any).prediction_id || (rawResult as any).task_id;
   if (!predictionId) {
+    logger.error({ rawResult }, "atlascloud_image_no_prediction_id");
     throw new Error("Atlas Cloud did not return a prediction ID");
   }
 
   const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  logger.info({ pollUrl, predictionId }, "atlascloud_image_poll_url");
+
   const maxAttempts = 60;
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -583,23 +593,26 @@ async function generateImageAtlasCloud(params: {
     });
 
     if (!pollResponse.ok) {
-      logger.warn({ status: pollResponse.status, attempt: i }, "atlascloud_image_poll_error");
+      const pollErrBody = await pollResponse.text().catch(() => "");
+      logger.warn({ status: pollResponse.status, body: pollErrBody, pollUrl, predictionId, attempt: i }, "atlascloud_image_poll_error");
       continue;
     }
 
     const rawPoll = await pollResponse.json() as {
-      data?: { id: string; status: string; outputs?: string[] };
+      data?: { id: string; status: string; outputs?: string[]; output?: string[]; images?: string[] };
       id?: string;
       status?: string;
       outputs?: string[];
+      output?: string[];
+      images?: string[];
     };
 
-    const pollResult = rawPoll.data || rawPoll as { id: string; status: string; outputs?: string[] };
+    const pollResult = rawPoll.data || rawPoll as { id: string; status: string; outputs?: string[]; output?: string[]; images?: string[] };
 
-    logger.info({ status: pollResult.status, hasOutputs: !!pollResult.outputs?.length, attempt: i }, "atlascloud_image_poll_result");
+    logger.info({ status: pollResult.status, outputs: pollResult.outputs, output: pollResult.output, attempt: i }, "atlascloud_image_poll_result");
 
     if (pollResult.status === "completed" || pollResult.status === "succeeded") {
-      const imageUrl = pollResult.outputs?.[0];
+      const imageUrl = pollResult.outputs?.[0] || pollResult.output?.[0] || pollResult.images?.[0];
       if (imageUrl) {
         return { url: imageUrl };
       }
