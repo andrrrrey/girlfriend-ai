@@ -515,8 +515,9 @@ async function generateImageAtlasCloud(params: {
 }): Promise<{ url: string }> {
   const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
 
-  const w = width || 1024;
-  const h = height || 1024;
+  // AtlasCloud requires between 589824 and 2073600 total pixels (min ~768x768)
+  const w = Math.max(width || 1024, 768);
+  const h = Math.max(height || 1024, 768);
   const size = `${w}*${h}`;
 
   const requestBody: Record<string, unknown> = {
