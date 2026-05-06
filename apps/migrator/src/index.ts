@@ -26,7 +26,7 @@ import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { Client } from "pg";
 import { spawn } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import * as bcrypt from "bcrypt";
 
@@ -194,6 +194,204 @@ async function seedDatabase(client: Client): Promise<void> {
   }
 }
 
+interface ManifestItem {
+  name: string;
+  group: string;
+  prompt: string;
+  file: string;
+}
+
+interface ManifestSection {
+  title: string;
+  folder: string;
+  items: Record<string, ManifestItem>;
+}
+
+interface Manifest {
+  version: number;
+  sections: Record<string, ManifestSection>;
+}
+
+function imgUrl(filePath: string): string {
+  return `/generation-elements/${filePath}`;
+}
+
+async function getOrCreateCategory(
+  client: Client,
+  table: string,
+  keyCol: string,
+  keyVal: string,
+  name: string,
+  order: number,
+): Promise<string> {
+  const res = await client.query<{ id: string }>(
+    `WITH ins AS (
+       INSERT INTO "${table}" (id, "${keyCol}", name, "order", created_at)
+       SELECT gen_random_uuid()::text, $1, $2, $3, NOW()
+       WHERE NOT EXISTS (SELECT 1 FROM "${table}" WHERE "${keyCol}" = $1 AND name = $2)
+       RETURNING id
+     )
+     SELECT id FROM ins
+     UNION ALL
+     SELECT id FROM "${table}" WHERE "${keyCol}" = $1 AND name = $2
+     LIMIT 1`,
+    [keyVal, name, order],
+  );
+  return res.rows[0].id;
+}
+
+async function insertFlatOption(
+  client: Client,
+  table: string,
+  keyCol: string,
+  keyVal: string,
+  name: string,
+  prompt: string,
+  imageUrl: string,
+  order: number,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO "${table}" (id, "${keyCol}", name, prompt, image_url, "order", created_at)
+     SELECT gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW()
+     WHERE NOT EXISTS (SELECT 1 FROM "${table}" WHERE "${keyCol}" = $1 AND name = $2)`,
+    [keyVal, name, prompt, imageUrl, order],
+  );
+}
+
+async function insertCategoryOption(
+  client: Client,
+  table: string,
+  categoryId: string,
+  name: string,
+  prompt: string,
+  imageUrl: string,
+  order: number,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO "${table}" (id, category_id, name, prompt, image_url, "order", created_at)
+     SELECT gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW()
+     WHERE NOT EXISTS (SELECT 1 FROM "${table}" WHERE category_id = $1 AND name = $2)`,
+    [categoryId, name, prompt, imageUrl, order],
+  );
+}
+
+async function seedGenerationElements(client: Client, workspaceRoot: string): Promise<void> {
+  const manifestPath = path.join(workspaceRoot, "apps", "web", "public", "generation-elements", "manifest.json");
+  if (!existsSync(manifestPath)) {
+    logger.warn({ manifestPath }, "generation_elements_manifest_not_found_skipping");
+    return;
+  }
+
+  const manifest: Manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  const s = manifest.sections;
+
+  // ── Character options ──
+  const ethnicityItems = Object.values(s.ethnicity.items);
+  const humanItems = ethnicityItems.filter((i) => i.group === "Человеческие");
+  const fantasyItems = ethnicityItems.filter((i) => i.group === "Фэнтезийные");
+
+  for (let i = 0; i < humanItems.length; i++) {
+    const it = humanItems[i];
+    await insertFlatOption(client, "character_options", "category", "HUMAN_RACE", it.name, it.prompt, imgUrl(it.file), i);
+  }
+  for (let i = 0; i < fantasyItems.length; i++) {
+    const it = fantasyItems[i];
+    await insertFlatOption(client, "character_options", "category", "FANTASY_RACE", it.name, it.prompt, imgUrl(it.file), i);
+  }
+
+  const hairstyleItems = Object.values(s.hairstyle.items);
+  for (let i = 0; i < hairstyleItems.length; i++) {
+    const it = hairstyleItems[i];
+    await insertFlatOption(client, "character_options", "category", "HAIR_STYLE", it.name, it.prompt, imgUrl(it.file), i);
+  }
+
+  const bodyItems = Object.values(s.body.items);
+  for (let i = 0; i < bodyItems.length; i++) {
+    const it = bodyItems[i];
+    await insertFlatOption(client, "character_options", "category", "BODY_TYPE", it.name, it.prompt, imgUrl(it.file), i);
+  }
+
+  // ── Appearance options ──
+  const processAppearance = async (items: ManifestItem[], tab: string, defaultGroup?: string) => {
+    const groupMap = new Map<string, ManifestItem[]>();
+    for (const item of items) {
+      const g = item.group || defaultGroup || tab;
+      if (!groupMap.has(g)) groupMap.set(g, []);
+      groupMap.get(g)!.push(item);
+    }
+    let catOrder = 0;
+    for (const [groupName, groupItems] of groupMap) {
+      const catId = await getOrCreateCategory(client, "appearance_categories", "tab", tab, groupName, catOrder++);
+      for (let i = 0; i < groupItems.length; i++) {
+        const it = groupItems[i];
+        await insertCategoryOption(client, "appearance_options", catId, it.name, it.prompt, imgUrl(it.file), i);
+      }
+    }
+  };
+
+  await processAppearance(Object.values(s.outfit.items), "OUTFITS");
+  await processAppearance(Object.values(s.accessories.items), "OUTFIT_DETAILS");
+  await processAppearance(Object.values(s.footwear.items), "OUTFIT_DETAILS", "Обувь");
+  await processAppearance(Object.values(s.distinctive.items), "OUTFIT_DETAILS", "Отличительные черты");
+
+  // ── Pose options ──
+  const processPose = async (items: ManifestItem[], tab: string, defaultGroup?: string) => {
+    const groupMap = new Map<string, ManifestItem[]>();
+    for (const item of items) {
+      const g = item.group || defaultGroup || tab;
+      if (!groupMap.has(g)) groupMap.set(g, []);
+      groupMap.get(g)!.push(item);
+    }
+    let catOrder = 0;
+    for (const [groupName, groupItems] of groupMap) {
+      const catId = await getOrCreateCategory(client, "pose_categories", "tab", tab, groupName, catOrder++);
+      for (let i = 0; i < groupItems.length; i++) {
+        const it = groupItems[i];
+        await insertCategoryOption(client, "pose_options", catId, it.name, it.prompt, imgUrl(it.file), i);
+      }
+    }
+  };
+
+  await processPose(Object.values(s.expression.items), "FACIAL_EXPRESSION");
+  await processPose(Object.values(s.pose.items), "POSE", "Позы");
+  await processPose(Object.values(s.subject.items), "POSE", "Действия");
+
+  // ── Scene options ──
+  const processScene = async (items: ManifestItem[], tab: string) => {
+    const groupMap = new Map<string, ManifestItem[]>();
+    for (const item of items) {
+      const g = item.group || tab;
+      if (!groupMap.has(g)) groupMap.set(g, []);
+      groupMap.get(g)!.push(item);
+    }
+    let catOrder = 0;
+    for (const [groupName, groupItems] of groupMap) {
+      const catId = await getOrCreateCategory(client, "scene_categories", "tab", tab, groupName, catOrder++);
+      for (let i = 0; i < groupItems.length; i++) {
+        const it = groupItems[i];
+        await insertCategoryOption(client, "scene_options", catId, it.name, it.prompt, imgUrl(it.file), i);
+      }
+    }
+  };
+
+  await processScene(Object.values(s.background.items), "LOCATION");
+
+  // ── Camera options ──
+  const framingItems = Object.values(s.framing.items);
+  for (let i = 0; i < framingItems.length; i++) {
+    const it = framingItems[i];
+    await insertFlatOption(client, "camera_options", "section", "FRAMING", it.name, it.prompt, imgUrl(it.file), i);
+  }
+
+  const cameraItems = Object.values(s.camera.items);
+  for (let i = 0; i < cameraItems.length; i++) {
+    const it = cameraItems[i];
+    await insertFlatOption(client, "camera_options", "section", "CAMERA_ANGLE", it.name, it.prompt, imgUrl(it.file), i);
+  }
+
+  logger.info({ version: manifest.version }, "generation_elements_seeded");
+}
+
 /**
  * Основная функция миграции.
  *
@@ -239,6 +437,10 @@ async function main() {
     logger.info({}, "seed_start");
     await seedDatabase(client);
     logger.info({}, "seed_done");
+
+    logger.info({}, "seed_generation_elements_start");
+    await seedGenerationElements(client, workspaceRoot);
+    logger.info({}, "seed_generation_elements_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
     await client.query("SELECT pg_advisory_unlock(987654321);");
