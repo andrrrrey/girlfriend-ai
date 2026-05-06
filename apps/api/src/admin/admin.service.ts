@@ -370,18 +370,19 @@ export class AdminService {
     });
   }
 
-  async createCharacterOption(dto: { category: string; name: string; imageUrl?: string; order?: number }) {
+  async createCharacterOption(dto: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
     return this.prisma.characterOption.create({
       data: {
         category: dto.category,
         name: dto.name,
+        prompt: dto.prompt,
         imageUrl: dto.imageUrl,
         order: dto.order ?? 0,
       },
     });
   }
 
-  async updateCharacterOption(id: string, dto: { category?: string; name?: string; imageUrl?: string; order?: number }) {
+  async updateCharacterOption(id: string, dto: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
     const existing = await this.prisma.characterOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
     return this.prisma.characterOption.update({ where: { id }, data: dto });
@@ -429,15 +430,15 @@ export class AdminService {
     });
   }
 
-  async createAppearanceOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+  async createAppearanceOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
     const category = await this.prisma.appearanceCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`AppearanceCategory "${dto.categoryId}" not found`);
     return this.prisma.appearanceOption.create({
-      data: { categoryId: dto.categoryId, name: dto.name, imageUrl: dto.imageUrl, order: dto.order ?? 0 },
+      data: { categoryId: dto.categoryId, name: dto.name, prompt: dto.prompt, imageUrl: dto.imageUrl, order: dto.order ?? 0 },
     });
   }
 
-  async updateAppearanceOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+  async updateAppearanceOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
     const existing = await this.prisma.appearanceOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`AppearanceOption "${id}" not found`);
     return this.prisma.appearanceOption.update({ where: { id }, data: dto });
@@ -499,13 +500,13 @@ export class AdminService {
     });
   }
 
-  async createPoseOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+  async createPoseOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
     const category = await this.prisma.poseCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`PoseCategory "${dto.categoryId}" not found`);
     return this.prisma.poseOption.create({ data: { ...dto, order: dto.order ?? 0 } });
   }
 
-  async updatePoseOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+  async updatePoseOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
     const existing = await this.prisma.poseOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`PoseOption "${id}" not found`);
     return this.prisma.poseOption.update({ where: { id }, data: dto });
@@ -567,13 +568,13 @@ export class AdminService {
     });
   }
 
-  async createSceneOption(dto: { categoryId: string; name: string; imageUrl?: string; order?: number }) {
+  async createSceneOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
     const category = await this.prisma.sceneCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`SceneCategory "${dto.categoryId}" not found`);
     return this.prisma.sceneOption.create({ data: { ...dto, order: dto.order ?? 0 } });
   }
 
-  async updateSceneOption(id: string, dto: { categoryId?: string; name?: string; imageUrl?: string; order?: number }) {
+  async updateSceneOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
     const existing = await this.prisma.sceneOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`SceneOption "${id}" not found`);
     return this.prisma.sceneOption.update({ where: { id }, data: dto });
@@ -610,11 +611,11 @@ export class AdminService {
     });
   }
 
-  async createCameraOption(dto: { section: string; name: string; imageUrl?: string; order?: number }) {
+  async createCameraOption(dto: { section: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
     return this.prisma.cameraOption.create({ data: { ...dto, order: dto.order ?? 0 } });
   }
 
-  async updateCameraOption(id: string, dto: { section?: string; name?: string; imageUrl?: string; order?: number }) {
+  async updateCameraOption(id: string, dto: { section?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
     const existing = await this.prisma.cameraOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CameraOption "${id}" not found`);
     return this.prisma.cameraOption.update({ where: { id }, data: dto });

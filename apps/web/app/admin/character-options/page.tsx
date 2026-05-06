@@ -110,10 +110,11 @@ const s: Record<string, React.CSSProperties> = {
 
 interface FormState {
   name: string;
+  prompt: string;
   imageUrl: string;
 }
 
-const emptyForm: FormState = { name: "", imageUrl: "" };
+const emptyForm: FormState = { name: "", prompt: "", imageUrl: "" };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -153,7 +154,7 @@ export default function AdminCharacterOptionsPage() {
 
   const openEdit = (opt: CharacterOption) => {
     setEditing(opt);
-    setForm({ name: opt.name, imageUrl: opt.imageUrl ?? "" });
+    setForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "" });
     setShowForm(true);
     setError("");
   };
@@ -166,6 +167,7 @@ export default function AdminCharacterOptionsPage() {
       const data = {
         category: activeCategory,
         name: form.name.trim(),
+        prompt: form.prompt.trim() || undefined,
         imageUrl: form.imageUrl || undefined,
       };
       if (editing) {
@@ -240,6 +242,12 @@ export default function AdminCharacterOptionsPage() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
+            <textarea
+              style={{ ...s.input, minHeight: 60, resize: "vertical" as const }}
+              placeholder="Prompt (e.g. european caucasian ethnicity...)"
+              value={form.prompt}
+              onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+            />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
                 type="file"

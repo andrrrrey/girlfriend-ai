@@ -190,6 +190,7 @@ model CharacterOption {
   id        String   @id @default(cuid())
   category  String   // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
   name      String
+  prompt    String?
   imageUrl  String?  @map("image_url")
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
@@ -217,6 +218,7 @@ model AppearanceOption {
   id         String   @id @default(cuid())
   categoryId String   @map("category_id")
   name       String
+  prompt     String?
   imageUrl   String?  @map("image_url")
   order      Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -246,6 +248,7 @@ model PoseOption {
   id         String   @id @default(cuid())
   categoryId String   @map("category_id")
   name       String
+  prompt     String?
   imageUrl   String?  @map("image_url")
   order      Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -275,6 +278,7 @@ model SceneOption {
   id         String   @id @default(cuid())
   categoryId String   @map("category_id")
   name       String
+  prompt     String?
   imageUrl   String?  @map("image_url")
   order      Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -291,6 +295,7 @@ model CameraOption {
   id        String   @id @default(cuid())
   section   String   // FRAMING | CAMERA_ANGLE
   name      String
+  prompt    String?
   imageUrl  String?  @map("image_url")
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")

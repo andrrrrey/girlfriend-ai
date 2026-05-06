@@ -991,6 +991,75 @@ export default function GenerationPage() {
     };
   }, []);
 
+  const buildCompositePrompt = useCallback((userPrompt: string): string => {
+    const prompts: string[] = [];
+
+    if (userPrompt.trim()) prompts.push(userPrompt.trim());
+
+    const findPrompt = (name: string, options: Array<{ name: string; prompt?: string | null }>) =>
+      options.find((o) => o.name === name)?.prompt ?? null;
+
+    // Character prompts
+    if (characterSelections.humanRace) {
+      const p = findPrompt(characterSelections.humanRace, characterOptions.filter((o) => o.category === "HUMAN_RACE"));
+      if (p) prompts.push(p);
+    }
+    if (characterSelections.fantasyRace) {
+      const p = findPrompt(characterSelections.fantasyRace, characterOptions.filter((o) => o.category === "FANTASY_RACE"));
+      if (p) prompts.push(p);
+    }
+    if (characterSelections.hairStyle) {
+      const p = findPrompt(characterSelections.hairStyle, characterOptions.filter((o) => o.category === "HAIR_STYLE"));
+      if (p) prompts.push(p);
+    }
+    if (characterSelections.bodyType) {
+      const p = findPrompt(characterSelections.bodyType, characterOptions.filter((o) => o.category === "BODY_TYPE"));
+      if (p) prompts.push(p);
+    }
+
+    // Appearance prompts
+    const allAppearanceOpts = [
+      ...appearanceOptions.OUTFITS.flatMap((c) => c.options),
+      ...appearanceOptions.OUTFIT_DETAILS.flatMap((c) => c.options),
+    ];
+    for (const name of [...appearanceSelections.outfits, ...appearanceSelections.outfitDetails]) {
+      const p = findPrompt(name, allAppearanceOpts);
+      if (p) prompts.push(p);
+    }
+
+    // Pose prompts
+    const allPoseOpts = [
+      ...poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options),
+      ...poseOptions.POSE.flatMap((c) => c.options),
+    ];
+    for (const name of [...poseSelections.facialExpressions, ...poseSelections.poses]) {
+      const p = findPrompt(name, allPoseOpts);
+      if (p) prompts.push(p);
+    }
+
+    // Scene prompts
+    const allSceneOpts = sceneOptions.LOCATION.flatMap((c) => c.options);
+    for (const name of sceneSelections.locations) {
+      const p = findPrompt(name, allSceneOpts);
+      if (p) prompts.push(p);
+    }
+
+    // Camera prompts
+    const allCameraOpts = [...cameraOptions.FRAMING, ...cameraOptions.CAMERA_ANGLE];
+    for (const name of [...cameraSelections.framing, ...cameraSelections.cameraAngle]) {
+      const p = findPrompt(name, allCameraOpts);
+      if (p) prompts.push(p);
+    }
+
+    return prompts.join(", ");
+  }, [
+    characterSelections, characterOptions,
+    appearanceSelections, appearanceOptions,
+    poseSelections, poseOptions,
+    sceneSelections, sceneOptions,
+    cameraSelections, cameraOptions,
+  ]);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || generating) return;
     setError(null);
@@ -998,6 +1067,7 @@ export default function GenerationPage() {
 
     const isVideo = activeTab === "video";
     const model = isVideo ? selectedVideoModel : selectedModel;
+    const compositePrompt = buildCompositePrompt(prompt.trim());
 
     try {
       let jobId: string;
@@ -1007,7 +1077,7 @@ export default function GenerationPage() {
       if (isVideo) {
         const videoProvider = videoModels.find((m) => m.id === selectedVideoModel)?.provider;
         const result = await createVideoJob({
-          prompt: prompt.trim(),
+          prompt: compositePrompt,
           negativePrompt,
           model,
           provider: videoProvider,
@@ -1015,7 +1085,7 @@ export default function GenerationPage() {
         jobId = result.jobId;
       } else {
         const result = await createImageJob({
-          prompt: prompt.trim(),
+          prompt: compositePrompt,
           negativePrompt,
           model,
         });
@@ -1057,7 +1127,7 @@ export default function GenerationPage() {
       setGenerating(false);
       setError(err.message || "Failed to start generation");
     }
-  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections]);
+  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {

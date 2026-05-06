@@ -13,6 +13,10 @@ export class UpdateSceneOptionDto {
 
   @IsOptional()
   @IsString()
+  prompt?: string;
+
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
   @IsOptional()

@@ -9,7 +9,8 @@
     "test": "jest",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
-    "prisma:seed": "npx --yes tsx@latest prisma/seed.ts"
+    "prisma:seed": "npx --yes tsx@latest prisma/seed.ts",
+    "seed:elements": "npx --yes tsx@latest prisma/seed-generation-elements.ts"
   },
   "prisma": {
     "seed": "npx --yes tsx@latest prisma/seed.ts"

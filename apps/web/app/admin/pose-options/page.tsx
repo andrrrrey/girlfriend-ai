@@ -122,9 +122,9 @@ const s: Record<string, React.CSSProperties> = {
 };
 
 interface CatForm { name: string }
-interface OptForm { name: string; imageUrl: string }
+interface OptForm { name: string; prompt: string; imageUrl: string }
 const emptyCatForm: CatForm = { name: "" };
-const emptyOptForm: OptForm = { name: "", imageUrl: "" };
+const emptyOptForm: OptForm = { name: "", prompt: "", imageUrl: "" };
 
 export default function AdminPoseOptionsPage() {
   const { user, loading } = useAuth();
@@ -233,7 +233,7 @@ export default function AdminPoseOptionsPage() {
   const openEditOpt = (opt: PoseOption, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingOpt(opt);
-    setOptForm({ name: opt.name, imageUrl: opt.imageUrl ?? "" });
+    setOptForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "" });
     setShowOptForm(opt.categoryId);
     setOptError("");
   };
@@ -247,6 +247,7 @@ export default function AdminPoseOptionsPage() {
       const data = {
         categoryId: showOptForm,
         name: optForm.name.trim(),
+        prompt: optForm.prompt.trim() || undefined,
         imageUrl: optForm.imageUrl || undefined,
       };
       if (editingOpt) {
@@ -381,6 +382,12 @@ export default function AdminPoseOptionsPage() {
                             onChange={(e) => setOptForm({ ...optForm, name: e.target.value })}
                           />
                         </div>
+                        <textarea
+                          style={{ ...s.input, minHeight: 60, resize: "vertical" as const }}
+                          placeholder="Prompt (e.g. standing with arms crossed...)"
+                          value={optForm.prompt}
+                          onChange={(e) => setOptForm({ ...optForm, prompt: e.target.value })}
+                        />
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <input
                             type="file"

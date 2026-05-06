@@ -105,11 +105,12 @@ const s: Record<string, React.CSSProperties> = {
 
 interface FormState {
   name: string;
+  prompt: string;
   imageUrl: string;
   order: string;
 }
 
-const emptyForm: FormState = { name: "", imageUrl: "", order: "0" };
+const emptyForm: FormState = { name: "", prompt: "", imageUrl: "", order: "0" };
 
 export default function AdminCameraOptionsPage() {
   const { user, loading } = useAuth();
@@ -149,7 +150,7 @@ export default function AdminCameraOptionsPage() {
 
   const openEdit = (opt: CameraOption) => {
     setEditing(opt);
-    setForm({ name: opt.name, imageUrl: opt.imageUrl ?? "", order: String(opt.order) });
+    setForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "", order: String(opt.order) });
     setShowForm(true);
     setError("");
   };
@@ -162,6 +163,7 @@ export default function AdminCameraOptionsPage() {
       const data = {
         section: activeSection,
         name: form.name.trim(),
+        prompt: form.prompt.trim() || undefined,
         imageUrl: form.imageUrl || undefined,
         order: parseInt(form.order) || 0,
       };
@@ -267,6 +269,12 @@ export default function AdminCameraOptionsPage() {
                 onChange={(e) => setForm({ ...form, order: e.target.value })}
               />
             </div>
+            <textarea
+              style={{ ...s.input, minHeight: 60, resize: "vertical" as const }}
+              placeholder="Prompt (e.g. close-up shot framing...)"
+              value={form.prompt}
+              onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+            />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
                 type="file"

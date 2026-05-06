@@ -313,6 +313,7 @@ export interface CharacterOption {
   id: string;
   category: string;
   name: string;
+  prompt?: string | null;
   imageUrl?: string | null;
   order: number;
   createdAt: string;
@@ -328,6 +329,7 @@ export interface AppearanceOption {
   id: string;
   categoryId: string;
   name: string;
+  prompt?: string | null;
   imageUrl?: string | null;
   order: number;
   createdAt: string;
@@ -357,6 +359,7 @@ export interface PoseOption {
   id: string;
   categoryId: string;
   name: string;
+  prompt?: string | null;
   imageUrl?: string | null;
   order: number;
   createdAt: string;
@@ -386,6 +389,7 @@ export interface SceneOption {
   id: string;
   categoryId: string;
   name: string;
+  prompt?: string | null;
   imageUrl?: string | null;
   order: number;
   createdAt: string;
@@ -414,6 +418,7 @@ export interface CameraOption {
   id: string;
   section: string;
   name: string;
+  prompt?: string | null;
   imageUrl?: string | null;
   order: number;
   createdAt: string;
@@ -564,14 +569,14 @@ export const admin = {
     return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
   },
 
-  async createCharacterOption(data: { category: string; name: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>("/admin/character-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -610,14 +615,14 @@ export const admin = {
     return apiFetch<AppearanceOption[]>(`/admin/appearance-options${q}`);
   },
 
-  async createAppearanceOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>("/admin/appearance-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -656,14 +661,14 @@ export const admin = {
     return apiFetch<PoseOption[]>(`/admin/pose-options${q}`);
   },
 
-  async createPoseOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
     return apiFetch<PoseOption>("/admin/pose-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
     return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -702,14 +707,14 @@ export const admin = {
     return apiFetch<SceneOption[]>(`/admin/scene-options${q}`);
   },
 
-  async createSceneOption(data: { categoryId: string; name: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
     return apiFetch<SceneOption>("/admin/scene-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
     return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -725,14 +730,14 @@ export const admin = {
     return apiFetch<CameraOption[]>(`/admin/camera-options${q}`);
   },
 
-  async createCameraOption(data: { section: string; name: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
     return apiFetch<CameraOption>("/admin/camera-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCameraOption(id: string, data: { section?: string; name?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
     return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
