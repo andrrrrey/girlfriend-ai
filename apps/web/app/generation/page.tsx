@@ -908,7 +908,7 @@ const DEFAULT_IMAGE_MODELS: GenModel[] = [
   { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
   { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
   { id: "flux", name: "FLUX", description: "Next-gen quality" },
-  { id: "atlascloud/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
+  { id: "alibaba/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
 ];
 
 const DEFAULT_VIDEO_MODELS: GenModel[] = [
