@@ -120,8 +120,10 @@ export interface ImageJobData {
   negativePrompt?: string;
   /** Соотношение сторон: "1:1" | "4:5" | "5:4" | "9:16" | "16:9" */
   aspectRatio?: string;
-  /** ID модели ModelsLab: realistic-vision-v51 | sdxl | juggernaut-xl | flux */
+  /** ID модели: realistic-vision-v51 | sdxl | juggernaut-xl | flux | atlascloud/wan-2.6/text-to-image */
   model?: string;
+  /** Провайдер генерации: "modelslab" | "atlascloud" */
+  provider?: string;
 }
 
 /**

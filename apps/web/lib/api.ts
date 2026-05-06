@@ -1254,6 +1254,7 @@ export async function createImageJob(data: {
   model?: string;
   negativePrompt?: string;
   aspectRatio?: string;
+  provider?: string;
 }) {
   return apiFetch<{ jobId: string; status: string }>("/generation/image", {
     method: "POST",

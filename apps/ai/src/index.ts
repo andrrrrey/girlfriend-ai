@@ -495,30 +495,127 @@ interface ImageGenerateBody {
   prompt: string;
   /** Негативный промпт */
   negativePrompt?: string;
-  /** ID модели ModelsLab */
+  /** ID модели */
   model?: string;
+  /** Провайдер: "modelslab" | "atlascloud" */
+  provider?: string;
   /** Ширина изображения в пикселях */
   width?: number;
   /** Высота изображения в пикселях */
   height?: number;
 }
 
-/**
- * POST /ai/image/generate
- *
- * Генерирует изображение через ModelsLab API и загружает результат в S3.
- *
- * Логика:
- * 1. Получает MODELSLAB_API_KEY и MODELSLAB_DEFAULT_MODEL из настроек БД
- * 2. Отправляет запрос в ModelsLab text2img API
- * 3. Если статус "processing" — поллит fetch_result URL (до 60 сек)
- * 4. Скачивает сгенерированное изображение и загружает в S3
- * 5. Возвращает публичный S3 URL
- *
- * @returns { url: string } — публичная ссылка на изображение в S3
- */
+async function generateImageAtlasCloud(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
+
+  const w = width || 1024;
+  const h = height || 1024;
+  const size = `${w}*${h}`;
+
+  const requestBody: Record<string, unknown> = {
+    model: modelId,
+    prompt,
+    size,
+    enable_prompt_expansion: false,
+  };
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
+  }
+
+  logger.info({ requestBody }, "atlascloud_image_request_body");
+
+  const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateImage", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    logger.error({ status: response.status, body: errBody }, "atlascloud_image_api_error");
+    throw new Error("Atlas Cloud Image API error");
+  }
+
+  const rawResult = await response.json() as {
+    data?: {
+      id: string;
+      status: string;
+      outputs?: string[];
+      urls?: { get?: string; cancel?: string };
+    };
+    id?: string;
+    status?: string;
+    outputs?: string[];
+    urls?: { get?: string; cancel?: string };
+  };
+
+  const result = rawResult.data || rawResult as { id: string; status: string; outputs?: string[]; urls?: { get?: string; cancel?: string } };
+
+  logger.info({ id: result.id, status: result.status, urls: result.urls }, "atlascloud_image_initial_response");
+
+  if (result.outputs?.[0]) {
+    return { url: result.outputs[0] };
+  }
+
+  const predictionId = result.id;
+  if (!predictionId) {
+    throw new Error("Atlas Cloud did not return a prediction ID");
+  }
+
+  const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const pollResponse = await fetch(pollUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!pollResponse.ok) {
+      logger.warn({ status: pollResponse.status, attempt: i }, "atlascloud_image_poll_error");
+      continue;
+    }
+
+    const rawPoll = await pollResponse.json() as {
+      data?: { id: string; status: string; outputs?: string[] };
+      id?: string;
+      status?: string;
+      outputs?: string[];
+    };
+
+    const pollResult = rawPoll.data || rawPoll as { id: string; status: string; outputs?: string[] };
+
+    logger.info({ status: pollResult.status, hasOutputs: !!pollResult.outputs?.length, attempt: i }, "atlascloud_image_poll_result");
+
+    if (pollResult.status === "completed" || pollResult.status === "succeeded") {
+      const imageUrl = pollResult.outputs?.[0];
+      if (imageUrl) {
+        return { url: imageUrl };
+      }
+    }
+
+    if (pollResult.status === "failed" || pollResult.status === "error" || pollResult.status === "canceled") {
+      logger.error({ pollResult }, "atlascloud_image_generation_failed");
+      throw new Error("Atlas Cloud image generation failed");
+    }
+  }
+
+  throw new Error("Atlas Cloud image generation timed out");
+}
+
 app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, width, height } = req.body;
+  const { prompt, negativePrompt, model, provider, width, height } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
@@ -532,14 +629,63 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
+  const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
+
+  // AtlasCloud routing
+  if (provider === "atlascloud") {
+    const atlasKey = settings.ATLASCLOUD_API_KEY;
+    if (!atlasKey) {
+      return reply.status(503).send({ error: "AtlasCloud API key not configured" });
+    }
+    try {
+      const result = await generateImageAtlasCloud({
+        apiKey: atlasKey,
+        modelId,
+        prompt,
+        negativePrompt,
+        width,
+        height,
+      });
+
+      const imageResponse = await fetch(result.url);
+      if (!imageResponse.ok) {
+        return reply.send({ url: result.url });
+      }
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      const s3 = createS3Client();
+      const bucket = env.S3_BUCKET || "media";
+      if (s3) {
+        try {
+          const key = `images/${randomUUID()}.png`;
+          const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
+          logger.info({ key, modelId }, "atlascloud_image_uploaded_to_s3");
+          return reply.send({ url });
+        } catch (s3Err: any) {
+          logger.warn({ err: s3Err }, "atlascloud_image_s3_upload_failed");
+        }
+      }
+      return reply.send({ url: result.url });
+    } catch (err: any) {
+      logger.error({ err }, "atlascloud_image_generation_error");
+      return reply.status(502).send({ error: "AtlasCloud image generation failed", details: err.message });
+    }
+  }
+
+  // ModelsLab flow
   const apiKey = settings.MODELSLAB_API_KEY;
   if (!apiKey) {
     return reply.status(503).send({ error: "ModelsLab API key not configured" });
   }
 
-  const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
-  const imgWidth = width || 512;
-  const imgHeight = height || 512;
+  const modelResDefaults: Record<string, { w: number; h: number }> = {
+    "realistic-vision-v51": { w: 512, h: 768 },
+    "sdxl": { w: 1024, h: 1024 },
+    "juggernaut-xl": { w: 1024, h: 1024 },
+    "flux": { w: 1024, h: 1024 },
+  };
+  const defaults = modelResDefaults[modelId];
+  const imgWidth = width || defaults?.w || 512;
+  const imgHeight = height || defaults?.h || 768;
 
   try {
     // 1. Запрос к ModelsLab text2img API
@@ -556,6 +702,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         samples: 1,
         safety_checker: "no",
         enhance_prompt: "no",
+        self_attention: "yes",
         num_inference_steps: 30,
         seed: null,
       }),

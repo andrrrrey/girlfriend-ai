@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
@@ -908,6 +908,7 @@ const DEFAULT_IMAGE_MODELS: GenModel[] = [
   { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
   { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
   { id: "flux", name: "FLUX", description: "Next-gen quality" },
+  { id: "atlascloud/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
 ];
 
 const DEFAULT_VIDEO_MODELS: GenModel[] = [
@@ -993,6 +994,21 @@ export default function GenerationPage() {
     };
   }, []);
 
+  const hasAnySelection = useMemo(() => {
+    if (characterSelections.humanRace || characterSelections.fantasyRace ||
+        characterSelections.hairStyle || characterSelections.bodyType ||
+        characterSelections.style || characterSelections.gender ||
+        characterSelections.eyeColor || characterSelections.hairColor ||
+        characterSelections.hairLength || characterSelections.breastSize ||
+        characterSelections.buttSize || characterSelections.height ||
+        characterSelections.eyeFeatures.length > 0 || characterSelections.faceFeatures.length > 0) return true;
+    if (appearanceSelections.outfits.length > 0 || appearanceSelections.outfitDetails.length > 0) return true;
+    if (poseSelections.facialExpressions.length > 0 || poseSelections.poses.length > 0) return true;
+    if (sceneSelections.locations.length > 0) return true;
+    if (cameraSelections.framing.length > 0 || cameraSelections.cameraAngle.length > 0) return true;
+    return false;
+  }, [characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
+
   const buildCompositePrompt = useCallback((userPrompt: string): string => {
     const prompts: string[] = [];
 
@@ -1063,7 +1079,7 @@ export default function GenerationPage() {
   ]);
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() || generating) return;
+    if ((!prompt.trim() && !hasAnySelection) || generating) return;
     setError(null);
     setGenerating(true);
 
@@ -1086,10 +1102,12 @@ export default function GenerationPage() {
         });
         jobId = result.jobId;
       } else {
+        const imageProvider = imageModels.find((m) => m.id === selectedModel)?.provider;
         const result = await createImageJob({
           prompt: compositePrompt,
           negativePrompt,
           model,
+          provider: imageProvider,
         });
         jobId = result.jobId;
       }
@@ -1538,7 +1556,7 @@ export default function GenerationPage() {
             <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
             <button
               className="btn-generate"
-              disabled={!prompt.trim() || generating}
+              disabled={(!prompt.trim() && !hasAnySelection) || generating}
               onClick={handleGenerate}
             >
               {generating

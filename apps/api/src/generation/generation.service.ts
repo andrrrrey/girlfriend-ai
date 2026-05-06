@@ -17,6 +17,7 @@ const IMAGE_MODELS = [
   { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
   { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
   { id: "flux", name: "FLUX", description: "Next-gen quality" },
+  { id: "atlascloud/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
 ];
 
 const VIDEO_MODELS = [
@@ -74,7 +75,7 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -83,6 +84,8 @@ export class GenerationService {
       this.logger.log("Cyrillic detected in prompt, translating to English");
       prompt = await this.translateToEnglish(prompt);
     }
+
+    const resolvedProvider = data.provider || IMAGE_MODELS.find((m) => m.id === data.model)?.provider;
 
     const aiJob = await this.prisma.aiJob.create({
       data: {
@@ -95,6 +98,7 @@ export class GenerationService {
           negativePrompt: data.negativePrompt,
           model: data.model,
           aspectRatio: data.aspectRatio,
+          provider: resolvedProvider,
         },
       },
     });
@@ -106,6 +110,7 @@ export class GenerationService {
       negativePrompt: data.negativePrompt,
       aspectRatio: data.aspectRatio,
       model: data.model,
+      provider: resolvedProvider,
     };
 
     await this.queue.add(JOB_NAMES.IMAGE, jobData);

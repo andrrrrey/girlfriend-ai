@@ -31,6 +31,7 @@ export class GenerationController {
       negativePrompt: dto.negativePrompt,
       model: dto.model,
       aspectRatio: dto.aspectRatio,
+      provider: dto.provider,
     });
   }
 

@@ -308,8 +308,8 @@ function getImageDimensions(aspectRatio?: string): { width: number; height: numb
  * @param {Job} job - BullMQ Job с данными типа ImageJobData
  */
 async function handleImageJob(job: Job): Promise<void> {
-  const { jobId, userId, prompt, negativePrompt, model, aspectRatio } = job.data;
-  logger.info({ jobId, userId }, "image_job_started");
+  const { jobId, userId, prompt, negativePrompt, model, aspectRatio, provider } = job.data;
+  logger.info({ jobId, userId, provider }, "image_job_started");
 
   await updateJobStatus(jobId, "processing");
 
@@ -318,7 +318,7 @@ async function handleImageJob(job: Job): Promise<void> {
   const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/image/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, negativePrompt, model, width, height }),
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider }),
   });
 
   if (!response.ok) {
