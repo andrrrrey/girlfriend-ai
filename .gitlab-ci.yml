@@ -83,7 +83,7 @@ patch_web_url_staging:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$STAGING_SSH_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/.ssh/staging_key
+    - echo "$STAGING_SSH_KEY" | base64 -d > ~/.ssh/staging_key
     - chmod 600 ~/.ssh/staging_key
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
@@ -109,7 +109,7 @@ make_admin_staging:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$STAGING_SSH_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/.ssh/staging_key
+    - echo "$STAGING_SSH_KEY" | base64 -d > ~/.ssh/staging_key
     - chmod 600 ~/.ssh/staging_key
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
@@ -217,7 +217,7 @@ patch_web_url_prod:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/.ssh/prod_key
+    - echo "$PRODUCTION_SSH_KEY" | base64 -d > ~/.ssh/prod_key
     - chmod 600 ~/.ssh/prod_key
     - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
@@ -243,7 +243,7 @@ make_admin_prod:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ~/.ssh/prod_key
+    - echo "$PRODUCTION_SSH_KEY" | base64 -d > ~/.ssh/prod_key
     - chmod 600 ~/.ssh/prod_key
     - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
