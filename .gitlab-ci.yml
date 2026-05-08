@@ -73,6 +73,46 @@ rollback_staging_api:
   needs: ["deploy_staging_api"]
   when: manual
   allow_failure: true
+
+patch_web_url_staging:
+  image: alpine:3.19
+  stage: deploy
+  needs: ["deploy_staging_api"]
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - |
+      ssh "$STAGING_USER@$STAGING_HOST" "
+        cat > /opt/docker/apps/vflirt/app/app/api/docker-compose.override.yml << 'EOF'
+      services:
+        api:
+          environment:
+            - WEB_URL=${WEB_URL}
+      EOF
+        cd /opt/docker/apps/vflirt/app/app/api
+        docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
+      "
+
+make_admin_staging:
+  image: alpine:3.19
+  stage: deploy
+  when: manual
+  allow_failure: true
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - |
+      ssh "$STAGING_USER@$STAGING_HOST" "
+        docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+      "
 rollback_staging_migrator:
   extends: .rollback_staging
   variables:
@@ -163,6 +203,46 @@ rollback_prod_api:
   needs: ["deploy_prod_api"]
   when: manual
   allow_failure: true
+
+patch_web_url_prod:
+  image: alpine:3.19
+  stage: deploy
+  needs: ["deploy_prod_api"]
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - |
+      ssh "$PRODUCTION_USER@$PRODUCTION_HOST" "
+        cat > /opt/docker/apps/vflirt/app/app/api/docker-compose.override.yml << 'EOF'
+      services:
+        api:
+          environment:
+            - WEB_URL=${WEB_URL}
+      EOF
+        cd /opt/docker/apps/vflirt/app/app/api
+        docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
+      "
+
+make_admin_prod:
+  image: alpine:3.19
+  stage: deploy
+  when: manual
+  allow_failure: true
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - |
+      ssh "$PRODUCTION_USER@$PRODUCTION_HOST" "
+        docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+      "
 rollback_prod_migrator:
   extends: .rollback_production
   variables:
