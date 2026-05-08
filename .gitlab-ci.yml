@@ -115,7 +115,7 @@ make_admin_staging:
   script:
     - |
       ssh -i ~/.ssh/staging_key "$STAGING_USER@$STAGING_HOST" "
-        sudo docker exec psql psql -U postgres -d app -c \"UPDATE users SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+        sudo docker exec psql psql -U postgres -d app -c \"UPDATE users SET role='admin', email_verified=true WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_staging_migrator:
   extends: .rollback_staging
@@ -249,7 +249,7 @@ make_admin_prod:
   script:
     - |
       ssh -i ~/.ssh/prod_key "$PRODUCTION_USER@$PRODUCTION_HOST" "
-        sudo docker exec psql psql -U postgres -d app -c \"UPDATE users SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+        sudo docker exec psql psql -U postgres -d app -c \"UPDATE users SET role='admin', email_verified=true WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_prod_migrator:
   extends: .rollback_production
