@@ -83,11 +83,12 @@ patch_web_url_staging:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - chmod 600 "$STAGING_SSH_KEY"
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' > ~/.ssh/staging_key
+    - chmod 600 ~/.ssh/staging_key
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - |
-      ssh -i "$STAGING_SSH_KEY" "$STAGING_USER@$STAGING_HOST" "
+      ssh -i ~/.ssh/staging_key "$STAGING_USER@$STAGING_HOST" "
         cat > /opt/docker/apps/vflirt/app/app/api/docker-compose.override.yml << 'EOF'
       services:
         api:
@@ -108,11 +109,12 @@ make_admin_staging:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - chmod 600 "$STAGING_SSH_KEY"
+    - echo "$STAGING_SSH_KEY" | tr -d '\r' > ~/.ssh/staging_key
+    - chmod 600 ~/.ssh/staging_key
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - |
-      ssh -i "$STAGING_SSH_KEY" "$STAGING_USER@$STAGING_HOST" "
+      ssh -i ~/.ssh/staging_key "$STAGING_USER@$STAGING_HOST" "
         docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_staging_migrator:
@@ -215,11 +217,12 @@ patch_web_url_prod:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - chmod 600 "$PRODUCTION_SSH_KEY"
+    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' > ~/.ssh/prod_key
+    - chmod 600 ~/.ssh/prod_key
     - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - |
-      ssh -i "$PRODUCTION_SSH_KEY" "$PRODUCTION_USER@$PRODUCTION_HOST" "
+      ssh -i ~/.ssh/prod_key "$PRODUCTION_USER@$PRODUCTION_HOST" "
         cat > /opt/docker/apps/vflirt/app/app/api/docker-compose.override.yml << 'EOF'
       services:
         api:
@@ -240,11 +243,12 @@ make_admin_prod:
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - chmod 600 "$PRODUCTION_SSH_KEY"
+    - echo "$PRODUCTION_SSH_KEY" | tr -d '\r' > ~/.ssh/prod_key
+    - chmod 600 ~/.ssh/prod_key
     - ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - |
-      ssh -i "$PRODUCTION_SSH_KEY" "$PRODUCTION_USER@$PRODUCTION_HOST" "
+      ssh -i ~/.ssh/prod_key "$PRODUCTION_USER@$PRODUCTION_HOST" "
         docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_prod_migrator:
