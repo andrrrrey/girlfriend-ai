@@ -96,7 +96,7 @@ patch_web_url_staging:
             - WEB_URL=${WEB_URL}
       EOF
         cd /opt/docker/apps/vflirt/app/app/api
-        docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
+        sudo docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
       "
 
 make_admin_staging:
@@ -115,7 +115,7 @@ make_admin_staging:
   script:
     - |
       ssh -i ~/.ssh/staging_key "$STAGING_USER@$STAGING_HOST" "
-        docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+        sudo docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_staging_migrator:
   extends: .rollback_staging
@@ -230,7 +230,7 @@ patch_web_url_prod:
             - WEB_URL=${WEB_URL}
       EOF
         cd /opt/docker/apps/vflirt/app/app/api
-        docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
+        sudo docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate --no-deps api
       "
 
 make_admin_prod:
@@ -249,7 +249,7 @@ make_admin_prod:
   script:
     - |
       ssh -i ~/.ssh/prod_key "$PRODUCTION_USER@$PRODUCTION_HOST" "
-        docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
+        sudo docker exec psql psql -U postgres -d app -c \"UPDATE \\\"User\\\" SET role='admin' WHERE email='${ADMIN_EMAIL}'\"
       "
 rollback_prod_migrator:
   extends: .rollback_production
