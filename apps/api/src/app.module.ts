@@ -29,6 +29,8 @@ import { CleanupModule } from "./cleanup/cleanup.module";
 import { QueueModule } from "./queue/queue.module";
 import { GenerationModule } from "./generation/generation.module";
 import { MediaModule } from "./media/media.module";
+import { LikesModule } from "./likes/likes.module";
+import { CommentsModule } from "./comments/comments.module";
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { MediaModule } from "./media/media.module";
     GenerationModule, // Генерация изображений (ModelsLab API)
     MediaModule,      // Presigned URL эндпоинты для медиафайлов (R2/S3)
     CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов
+    LikesModule,      // Лайки (полиморфные: персонажи, комментарии, галерея, shorts)
+    CommentsModule,   // Комментарии к персонажам
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

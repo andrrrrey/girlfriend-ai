@@ -984,8 +984,31 @@ export interface CreateCharacterFormData {
 }
 
 export const characters = {
-  async listPublic(): Promise<Character[]> {
-    return apiFetch<Character[]>("/characters");
+  async listPublic(params?: {
+    search?: string;
+    gender?: string;
+    style?: string;
+    createdBy?: string;
+    sortBy?: string;
+    tags?: string[];
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Character[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set("search", params.search);
+    if (params?.gender) query.set("gender", params.gender);
+    if (params?.style) query.set("style", params.style);
+    if (params?.createdBy) query.set("createdBy", params.createdBy);
+    if (params?.sortBy) query.set("sortBy", params.sortBy);
+    if (params?.tags?.length) query.set("tags", params.tags.join(","));
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return apiFetch<{ items: Character[]; total: number }>(`/characters${qs ? `?${qs}` : ""}`);
+  },
+
+  async getTags(): Promise<{ tag: string; count: number }[]> {
+    return apiFetch<{ tag: string; count: number }[]>("/characters/tags");
   },
 
   async listMy(): Promise<Character[]> {
@@ -997,6 +1020,88 @@ export const characters = {
       method: "POST",
       body: JSON.stringify(data),
     });
+  },
+};
+
+// ─── Likes API ──────────────────────────────────────────────
+
+export const likes = {
+  async toggle(targetType: string, targetId: string): Promise<{ liked: boolean; count: number }> {
+    return apiFetch<{ liked: boolean; count: number }>("/likes/toggle", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId }),
+    });
+  },
+
+  async getStatus(targetType: string, targetId: string): Promise<{ liked: boolean; count: number }> {
+    return apiFetch<{ liked: boolean; count: number }>(
+      `/likes/status?targetType=${targetType}&targetId=${targetId}`,
+    );
+  },
+
+  async getCount(targetType: string, targetId: string): Promise<{ count: number }> {
+    return apiFetch<{ count: number }>(
+      `/likes/count?targetType=${targetType}&targetId=${targetId}`,
+    );
+  },
+
+  async batchStatus(
+    targetType: string,
+    targetIds: string[],
+  ): Promise<Record<string, { liked: boolean; count: number }>> {
+    return apiFetch<Record<string, { liked: boolean; count: number }>>(
+      `/likes/batch-status?targetType=${targetType}&targetIds=${targetIds.join(",")}`,
+    );
+  },
+
+  async getMyLiked(
+    targetType: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ items: any[]; total: number }> {
+    return apiFetch<{ items: any[]; total: number }>(
+      `/likes/my?targetType=${targetType}&page=${page}&limit=${limit}`,
+    );
+  },
+};
+
+// ─── Comments API ───────────────────────────────────────────
+
+export interface CommentItem {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; nickname: string | null; avatarUrl: string | null };
+  likeCount: number;
+  liked: boolean;
+}
+
+export const comments = {
+  async list(
+    characterId: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<{ items: CommentItem[]; nextCursor: string | null }> {
+    const query = new URLSearchParams({ characterId, limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    return apiFetch<{ items: CommentItem[]; nextCursor: string | null }>(
+      `/comments?${query.toString()}`,
+    );
+  },
+
+  async create(characterId: string, content: string): Promise<CommentItem> {
+    return apiFetch<CommentItem>("/comments", {
+      method: "POST",
+      body: JSON.stringify({ characterId, content }),
+    });
+  },
+
+  async remove(commentId: string): Promise<void> {
+    return apiFetch(`/comments/${commentId}`, { method: "DELETE" });
+  },
+
+  async getCount(characterId: string): Promise<{ count: number }> {
+    return apiFetch<{ count: number }>(`/comments/count?characterId=${characterId}`);
   },
 };
 
@@ -1342,10 +1447,42 @@ export async function deleteGenerationJob(jobId: string) {
   });
 }
 
-export async function getPublicGallery() {
-  return apiFetch<any[]>("/generation/gallery");
+export interface GalleryItem {
+  jobId: string;
+  type: string;
+  output: { url?: string } | null;
+  input: { prompt?: string; model?: string } | null;
+  createdAt: string;
+  user: { id: string; nickname: string | null; avatarUrl: string | null } | null;
 }
 
-export async function getPublicShorts() {
-  return apiFetch<any[]>("/generation/gallery?type=video");
+export async function getPublicGallery(params?: {
+  type?: string;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ items: GalleryItem[]; total: number }> {
+  const query = new URLSearchParams();
+  if (params?.type) query.set("type", params.type);
+  if (params?.sortBy) query.set("sortBy", params.sortBy);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  const qs = query.toString();
+  return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
+}
+
+export async function getPublicShorts(params?: {
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ items: GalleryItem[]; total: number }> {
+  const query = new URLSearchParams({ type: "video" });
+  if (params?.sortBy) query.set("sortBy", params.sortBy);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery?${query.toString()}`);
+}
+
+export async function getGalleryTags(): Promise<{ tag: string; count: number }[]> {
+  return apiFetch<{ tag: string; count: number }[]>("/generation/gallery/tags");
 }

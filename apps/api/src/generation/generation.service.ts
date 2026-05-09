@@ -287,21 +287,37 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
 
-    const jobs = await this.prisma.aiJob.findMany({
-      where: {
-        status: "completed",
-        type: typeFilter,
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    const skip = (page - 1) * limit;
 
-    return Promise.all(jobs.map(async (job) => ({
+    let orderBy: { createdAt: "desc" | "asc" } = { createdAt: "desc" };
+    if (sortBy === "oldest") {
+      orderBy = { createdAt: "asc" };
+    }
+
+    const where = {
+      status: "completed" as const,
+      type: typeFilter,
+    };
+
+    const [jobs, total] = await Promise.all([
+      this.prisma.aiJob.findMany({
+        where,
+        orderBy,
+        take: limit,
+        skip,
+        include: {
+          user: { select: { id: true, nickname: true, avatarUrl: true } },
+        },
+      }),
+      this.prisma.aiJob.count({ where }),
+    ]);
+
+    const items = await Promise.all(jobs.map(async (job) => ({
       jobId: job.id,
       type: job.type,
       output: await this.signOutput(job.output),
@@ -311,7 +327,36 @@ export class GenerationService {
         return { prompt: input["prompt"], model: input["model"] };
       })(),
       createdAt: job.createdAt,
+      user: job.user,
     })));
+
+    return { items, total };
+  }
+
+  async getGalleryTags() {
+    const jobs = await this.prisma.aiJob.findMany({
+      where: { status: "completed", type: { in: ["image", "video"] } },
+      select: { input: true },
+      take: 500,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const freq = new Map<string, number>();
+    for (const job of jobs) {
+      const input = job.input as Record<string, unknown> | null;
+      const prompt = input?.["prompt"] as string | undefined;
+      if (!prompt) continue;
+      const words = prompt.toLowerCase().split(/[,\s]+/).filter((w) => w.length > 2 && w.length < 20);
+      for (const word of words) {
+        freq.set(word, (freq.get(word) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(freq.entries())
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 50)
+      .map(([tag, count]) => ({ tag, count }));
   }
 
   async deleteJob(jobId: string, userId: string) {

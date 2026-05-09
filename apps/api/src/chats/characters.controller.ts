@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
@@ -10,18 +10,94 @@ export class CharactersController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  async listPublic() {
-    return this.prisma.character.findMany({
+  async listPublic(
+    @Query("search") search?: string,
+    @Query("gender") gender?: string,
+    @Query("style") style?: string,
+    @Query("createdBy") createdBy?: string,
+    @Query("sortBy") sortBy?: string,
+    @Query("tags") tags?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    const where: Prisma.CharacterWhereInput = { deletedAt: null };
+
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" };
+    }
+
+    const jsonFilters: Prisma.CharacterWhereInput[] = [];
+    if (gender) {
+      jsonFilters.push({ personality: { path: ["gender"], equals: gender } });
+    }
+    if (style) {
+      jsonFilters.push({ personality: { path: ["style"], equals: style } });
+    }
+    if (jsonFilters.length > 0) {
+      where.AND = jsonFilters;
+    }
+
+    if (createdBy === "platform") {
+      where.createdBy = null;
+    } else if (createdBy === "community") {
+      where.createdBy = { not: null };
+    }
+
+    if (tags) {
+      const tagList = tags.split(",").filter(Boolean);
+      if (tagList.length > 0) {
+        where.tags = { hasSome: tagList };
+      }
+    }
+
+    let orderBy: Prisma.CharacterOrderByWithRelationInput = { createdAt: "desc" };
+    if (sortBy === "name") {
+      orderBy = { name: "asc" };
+    } else if (sortBy === "oldest") {
+      orderBy = { createdAt: "asc" };
+    }
+
+    const take = limit ? parseInt(limit, 10) : 30;
+    const skip = page ? (parseInt(page, 10) - 1) * take : 0;
+
+    const [items, total] = await Promise.all([
+      this.prisma.character.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          tags: true,
+          personality: true,
+          createdBy: true,
+        },
+        orderBy,
+        take,
+        skip,
+      }),
+      this.prisma.character.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  @Get("tags")
+  async getTags() {
+    const characters = await this.prisma.character.findMany({
       where: { deletedAt: null },
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        tags: true,
-        personality: true,
-      },
-      orderBy: { createdAt: "asc" },
+      select: { tags: true },
     });
+
+    const freq = new Map<string, number>();
+    for (const c of characters) {
+      for (const tag of c.tags) {
+        freq.set(tag, (freq.get(tag) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(freq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag, count]) => ({ tag, count }));
   }
 
   @Get("my")

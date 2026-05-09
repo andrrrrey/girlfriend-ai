@@ -18,13 +18,13 @@ import { CreateImageJobDto } from "./dto/create-image-job.dto";
 import { CreateVideoJobDto } from "./dto/create-video-job.dto";
 
 @ApiTags("generation")
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller("generation")
 export class GenerationController {
   constructor(private readonly generationService: GenerationService) {}
 
   @Post("image")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async createImageJob(@Req() req: any, @Body() dto: CreateImageJobDto) {
     return this.generationService.createImageJob(req.user.id, {
       prompt: dto.prompt,
@@ -36,6 +36,8 @@ export class GenerationController {
   }
 
   @Post("video")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async createVideoJob(@Req() req: any, @Body() dto: CreateVideoJobDto) {
     return this.generationService.createVideoJob(req.user.id, {
       prompt: dto.prompt,
@@ -47,6 +49,8 @@ export class GenerationController {
   }
 
   @Get("jobs/:jobId")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getJobStatus(@Req() req: any, @Param("jobId") jobId: string) {
     const result = await this.generationService.getJobStatus(jobId, req.user.id);
     if (!result) {
@@ -56,51 +60,84 @@ export class GenerationController {
   }
 
   @Get("image/styles")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   getImageStyles() {
     return this.generationService.getImageStyles();
   }
 
   @Get("character-options")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getCharacterOptions(@Query("category") category?: string) {
     return this.generationService.getCharacterOptions(category);
   }
 
   @Get("appearance-options")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getAppearanceOptions() {
     return this.generationService.getAppearanceOptions();
   }
 
   @Get("pose-options")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getPoseOptions() {
     return this.generationService.getPoseOptions();
   }
 
   @Get("scene-options")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getSceneOptions() {
     return this.generationService.getSceneOptions();
   }
 
   @Get("camera-options")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getCameraOptions() {
     return this.generationService.getCameraOptions();
   }
 
   @Get("video/styles")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   getVideoStyles() {
     return this.generationService.getVideoStyles();
   }
 
   @Get("gallery")
-  async getGallery(@Query("type") type?: string) {
-    return this.generationService.getGallery(50, type);
+  async getGallery(
+    @Query("type") type?: string,
+    @Query("sortBy") sortBy?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.generationService.getGallery(
+      limit ? parseInt(limit, 10) : 50,
+      type,
+      sortBy,
+      page ? parseInt(page, 10) : 1,
+    );
+  }
+
+  @Get("gallery/tags")
+  async getGalleryTags() {
+    return this.generationService.getGalleryTags();
   }
 
   @Get("history")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getHistory(@Req() req: any, @Query("type") type?: string) {
     return this.generationService.getHistory(req.user.id, type);
   }
 
   @Delete("jobs/:jobId")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async deleteJob(@Req() req: any, @Param("jobId") jobId: string) {
     const result = await this.generationService.deleteJob(jobId, req.user.id);
     if (!result) {
