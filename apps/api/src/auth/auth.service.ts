@@ -31,6 +31,7 @@ import { EmailService } from "./email.service";
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
+const PASSWORD_RESET_TOKEN_TTL_HOURS = 1;
 
 export interface TokenPair {
   accessToken: string;
@@ -156,6 +157,81 @@ export class AuthService {
 
   async logout(refreshToken: string): Promise<void> {
     await this.prisma.session.deleteMany({ where: { refreshToken } });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.deletedAt) {
+      return { message: "If this email exists, a reset link has been sent" };
+    }
+
+    const passwordResetToken = randomUUID();
+    const passwordResetTokenExpiresAt = new Date();
+    passwordResetTokenExpiresAt.setHours(
+      passwordResetTokenExpiresAt.getHours() + PASSWORD_RESET_TOKEN_TTL_HOURS,
+    );
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken, passwordResetTokenExpiresAt },
+    });
+
+    await this.email.sendPasswordResetEmail(email, passwordResetToken);
+
+    return { message: "If this email exists, a reset link has been sent" };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { passwordResetToken: token },
+    });
+
+    if (
+      !user ||
+      !user.passwordResetTokenExpiresAt ||
+      user.passwordResetTokenExpiresAt < new Date()
+    ) {
+      throw new UnauthorizedException("Invalid or expired reset token");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetTokenExpiresAt: null,
+      },
+    });
+
+    await this.prisma.session.deleteMany({ where: { userId: user.id } });
+
+    return { message: "Password has been reset successfully" };
+  }
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.deletedAt || user.emailVerified) {
+      return { message: "If this email needs verification, a new link has been sent" };
+    }
+
+    const verificationToken = randomUUID();
+    const verificationTokenExpiresAt = new Date();
+    verificationTokenExpiresAt.setHours(
+      verificationTokenExpiresAt.getHours() + VERIFICATION_TOKEN_TTL_HOURS,
+    );
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { verificationToken, verificationTokenExpiresAt },
+    });
+
+    await this.email.sendVerificationEmail(email, verificationToken);
+
+    return { message: "If this email needs verification, a new link has been sent" };
   }
 
   private async createTokenPair(

@@ -361,6 +361,15 @@ export class AdminService {
     await this.prisma.usageCounter.deleteMany({ where: { userId: id } });
   }
 
+  async deleteUser(id: string) {
+    await this.getUser(id);
+    await this.prisma.session.deleteMany({ where: { userId: id } });
+    return this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   // ─── Character Options ─────────────────────────────────────
 
   async getCharacterOptions(category?: string) {

@@ -274,6 +274,12 @@ export class AdminController {
     await this.adminService.resetUserLimits(id);
   }
 
+  @Delete("users/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUser(@Param("id") id: string) {
+    await this.adminService.deleteUser(id);
+  }
+
   // ─── Character Options ─────────────────────────────────────
 
   @Get("character-options")

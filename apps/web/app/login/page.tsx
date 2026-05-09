@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { useAuth } from "../../context/auth";
+import { auth } from "../../lib/api";
 import Logo from "../components/Logo";
 import TurnstileWidget from "../components/TurnstileWidget";
 
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | undefined>(undefined);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   useEffect(() => {
     fetch("/api/config")
@@ -50,7 +52,39 @@ export default function LoginPage() {
 
         <h1 style={styles.title}>Вход</h1>
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && (
+          <div style={styles.error}>
+            {error}
+            {error === "Please verify your email first" && !verificationSent && (
+              <button
+                onClick={async () => {
+                  try {
+                    await auth.resendVerification(email);
+                    setVerificationSent(true);
+                  } catch {}
+                }}
+                style={{
+                  display: "block",
+                  marginTop: 8,
+                  background: "none",
+                  border: "none",
+                  color: "#f95bad",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  padding: 0,
+                  textDecoration: "underline",
+                }}
+              >
+                Отправить письмо повторно
+              </button>
+            )}
+            {verificationSent && (
+              <span style={{ display: "block", marginTop: 8, color: "#c1f0aa", fontSize: 13 }}>
+                Письмо отправлено!
+              </span>
+            )}
+          </div>
+        )}
 
         <label style={styles.label}>Email</label>
         <input
@@ -83,6 +117,10 @@ export default function LoginPage() {
           }}
           placeholder="Введите пароль"
         />
+
+        <div style={{ textAlign: "right" as const, marginTop: 8 }}>
+          <a href="/forgot-password" style={styles.link}>Забыли пароль?</a>
+        </div>
 
         {turnstileSiteKey && (
           <TurnstileWidget

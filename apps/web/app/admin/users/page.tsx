@@ -233,9 +233,20 @@ export default function AdminUsersPage() {
     if (!confirm(`Сбросить лимиты пользователя ${u.email}?`)) return;
     try {
       await admin.resetUserLimits(u.id);
-      // Reload to show updated counters
       await loadUsers(search, offset);
       flash(`Лимиты пользователя ${u.email} сброшены`);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteUser = async (u: AdminUser) => {
+    if (!confirm(`Удалить пользователя ${u.email}? Это действие пометит аккаунт как удалённый.`)) return;
+    try {
+      await admin.deleteUser(u.id);
+      setUsers((prev) => prev.filter((x) => x.id !== u.id));
+      setTotal((prev) => prev - 1);
+      flash(`Пользователь ${u.email} удалён`);
     } catch (err: any) {
       setError(err.message);
     }
@@ -375,6 +386,13 @@ export default function AdminUsersPage() {
                               title={u.role === "admin" ? "Снять права администратора" : "Дать права администратора"}
                             >
                               {u.role === "admin" ? "→ user" : "→ admin"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              style={{ ...pageStyles.btn, ...pageStyles.btnDanger }}
+                              title="Удалить пользователя"
+                            >
+                              Удалить
                             </button>
                           </div>
                         </td>

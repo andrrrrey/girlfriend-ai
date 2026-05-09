@@ -222,6 +222,27 @@ export const auth = {
   isAuthenticated(): boolean {
     return !!getTokens()?.accessToken;
   },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    });
+  },
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
 };
 
 // ─── Users API ────────────────────────────────────────────────
@@ -560,6 +581,10 @@ export const admin = {
    */
   async resetUserLimits(id: string): Promise<void> {
     return apiFetch(`/admin/users/${id}/limits`, { method: "DELETE" });
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    return apiFetch(`/admin/users/${id}`, { method: "DELETE" });
   },
 
   async getCharacterOptions(category?: string): Promise<CharacterOption[]> {

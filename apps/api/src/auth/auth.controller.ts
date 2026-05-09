@@ -29,6 +29,9 @@ import { TurnstileService } from "./turnstile.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { ResendVerificationDto } from "./dto/resend-verification.dto";
 import { Request } from "express";
 import { UnauthorizedException } from "@nestjs/common";
 
@@ -124,5 +127,26 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Query("token") token: string) {
     return this.authService.verifyEmail(token);
+  }
+
+  @ApiOperation({ summary: "Request password reset email" })
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @ApiOperation({ summary: "Reset password using token from email" })
+  @Post("reset-password")
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @ApiOperation({ summary: "Resend email verification link" })
+  @Post("resend-verification")
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto.email);
   }
 }
