@@ -315,11 +315,6 @@ const STYLE_OPTIONS = [
   { value: "Anime", label: "Anime" },
   { value: "Fantasy", label: "Fantasy" },
 ];
-const CREATED_BY_OPTIONS = [
-  { value: "", label: "Everyone" },
-  { value: "platform", label: "Platform" },
-  { value: "community", label: "Community" },
-];
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "popular", label: "Popular" },
@@ -334,9 +329,6 @@ function GalleryCard({ item, onOpen }: { item: GalleryItem; onOpen: (item: Galle
     <div className="g-card-wrap">
       <div className="g-hover-panel">
         {prompt && <p className="g-hover-prompt">{prompt}</p>}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <LikeButton targetType="gallery_item" targetId={item.jobId} size="sm" showCount />
-        </div>
         <div className="g-hover-actions">
           <button className="g-hover-btn primary" onClick={(e) => { e.stopPropagation(); if (url) onOpen(item); }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="8" r="6"/><path d="M6 5l5 3-5 3V5z" fill="currentColor" stroke="none"/></svg>
@@ -390,7 +382,6 @@ export default function GalleryPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
-  const [createdBy, setCreatedBy] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -402,13 +393,12 @@ export default function GalleryPage() {
     if (activeTab !== "all") params.type = activeTab;
     if (gender) params.gender = gender;
     if (style) params.style = style;
-    if (createdBy) params.createdBy = createdBy;
 
     getPublicGallery(params)
       .then((data) => setItems(data.items || []))
       .catch(() => setItems([]))
       .finally(() => setFetching(false));
-  }, [activeTab, gender, style, createdBy, sortBy]);
+  }, [activeTab, gender, style, sortBy]);
 
   useEffect(() => {
     if (loading) return;
@@ -476,7 +466,6 @@ export default function GalleryPage() {
         <div className="gallery-filter-row">
           <FilterDropdown label="Gender" value={gender} options={GENDER_OPTIONS} onChange={setGender} />
           <FilterDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-          <FilterDropdown label="Created by" value={createdBy} options={CREATED_BY_OPTIONS} onChange={setCreatedBy} />
           <FilterDropdown label="Sort by" value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
         </div>
 
@@ -485,9 +474,13 @@ export default function GalleryPage() {
             tags={tags}
             selectedTags={selectedTags}
             onTagToggle={(tag) => {
-              setSelectedTags((prev) =>
-                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-              );
+              if (tag === "__ALL__") {
+                setSelectedTags([]);
+              } else {
+                setSelectedTags((prev) =>
+                  prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                );
+              }
             }}
           />
         )}

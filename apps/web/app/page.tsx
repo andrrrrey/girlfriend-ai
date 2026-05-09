@@ -135,11 +135,6 @@ const STYLE_OPTIONS = [
   { value: "Realistic", label: "Realistic" },
   { value: "Anime", label: "Anime" },
 ];
-const CREATED_BY_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "platform", label: "lovecast.ai" },
-  { value: "community", label: "Community" },
-];
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
@@ -192,7 +187,6 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
-  const [createdBy, setCreatedBy] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -202,14 +196,13 @@ export default function HomePage() {
 
   const fetchChars = useCallback(async (params?: {
     search?: string; gender?: string; style?: string;
-    createdBy?: string; sortBy?: string; tags?: string[];
+    sortBy?: string; tags?: string[];
   }) => {
     try {
       const result = await characters.listPublic({
         search: params?.search || undefined,
         gender: params?.gender || undefined,
         style: params?.style || undefined,
-        createdBy: params?.createdBy || undefined,
         sortBy: params?.sortBy || "newest",
         tags: params?.tags?.length ? params.tags : undefined,
       });
@@ -230,14 +223,14 @@ export default function HomePage() {
   }, [fetchChars]);
 
   useEffect(() => {
-    fetchChars({ search: searchQuery, gender, style, createdBy, sortBy, tags: selectedTags });
-  }, [gender, style, createdBy, sortBy, selectedTags, fetchChars]);
+    fetchChars({ search: searchQuery, gender, style, sortBy, tags: selectedTags });
+  }, [gender, style, sortBy, selectedTags, fetchChars]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      fetchChars({ search: val, gender, style, createdBy, sortBy, tags: selectedTags });
+      fetchChars({ search: val, gender, style, sortBy, tags: selectedTags });
     }, 300);
   };
 
@@ -314,7 +307,6 @@ export default function HomePage() {
               <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
                 <FilterDropdown label="Gender" value={gender} options={GENDER_OPTIONS} onChange={setGender} />
                 <FilterDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-                <FilterDropdown label="Created by" value={createdBy} options={CREATED_BY_OPTIONS} onChange={setCreatedBy} />
                 <FilterDropdown label="Sort by" value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
               </div>
             </div>

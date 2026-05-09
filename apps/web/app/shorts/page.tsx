@@ -9,7 +9,7 @@ import LikeButton from "../components/LikeButton";
 
 const PAGE_CSS = `
   .shorts-feed-wrapper {
-    position: fixed; inset: 0 0 0 240px;
+    position: fixed; top: 0; bottom: 0; left: 240px; right: 0;
     overflow-y: scroll; scroll-snap-type: y mandatory; background: #090909;
   }
   .shorts-feed-wrapper::-webkit-scrollbar { display: none; }
@@ -87,9 +87,9 @@ const PAGE_CSS = `
     animation: sk-shimmer 1.4s infinite;
   }
   @keyframes sk-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-  @media (max-width: 900px) { .shorts-feed-wrapper { inset: 0; } .shorts-card { max-width: 420px; } }
+  @media (max-width: 900px) { .shorts-feed-wrapper { left: 0; } .shorts-card { max-width: 420px; } }
   @media (max-width: 600px) {
-    .shorts-feed-wrapper { inset: 0; }
+    .shorts-feed-wrapper { left: 0; }
     .shorts-card-wrap { padding: 0; border-radius: 0; }
     .shorts-card { max-width: 100%; width: 100%; border-radius: 0; border: none; }
   }

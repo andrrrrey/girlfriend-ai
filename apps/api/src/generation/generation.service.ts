@@ -334,6 +334,25 @@ export class GenerationService {
   }
 
   async getGalleryTags() {
+    const STOP_WORDS = new Set([
+      "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+      "of", "with", "by", "from", "as", "is", "was", "are", "be", "been",
+      "being", "have", "has", "had", "do", "does", "did", "will", "would",
+      "could", "should", "may", "might", "must", "shall", "can", "need",
+      "not", "no", "nor", "so", "if", "then", "than", "too", "very",
+      "just", "about", "above", "after", "again", "all", "also", "any",
+      "because", "before", "between", "both", "each", "few", "her", "here",
+      "him", "his", "how", "its", "let", "more", "most", "my", "new",
+      "now", "old", "only", "other", "our", "out", "own", "same", "she",
+      "some", "still", "such", "tell", "that", "their", "them", "there",
+      "these", "they", "this", "those", "through", "under", "until", "up",
+      "upon", "what", "when", "where", "which", "while", "who", "whom",
+      "why", "you", "your", "into", "over", "down", "off", "once",
+      "during", "without", "within", "along", "among", "around",
+      "style", "quality", "high", "resolution", "detailed", "ultra",
+      "photo", "image", "video", "prompt", "generate", "creating",
+    ]);
+
     const jobs = await this.prisma.aiJob.findMany({
       where: { status: "completed", type: { in: ["image", "video"] } },
       select: { input: true },
@@ -346,7 +365,9 @@ export class GenerationService {
       const input = job.input as Record<string, unknown> | null;
       const prompt = input?.["prompt"] as string | undefined;
       if (!prompt) continue;
-      const words = prompt.toLowerCase().split(/[,\s]+/).filter((w) => w.length > 2 && w.length < 20);
+      const words = prompt.toLowerCase().split(/[,\s]+/).filter(
+        (w) => w.length > 2 && w.length < 20 && /^[a-z]+$/.test(w) && !STOP_WORDS.has(w),
+      );
       for (const word of words) {
         freq.set(word, (freq.get(word) ?? 0) + 1);
       }

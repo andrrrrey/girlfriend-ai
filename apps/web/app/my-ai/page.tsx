@@ -801,9 +801,13 @@ export default function MyAIPage() {
             tags={tags}
             selectedTags={selectedTags}
             onTagToggle={(tag) => {
-              setSelectedTags((prev) =>
-                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-              );
+              if (tag === "__ALL__") {
+                setSelectedTags([]);
+              } else {
+                setSelectedTags((prev) =>
+                  prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                );
+              }
             }}
           />
         )}

@@ -55,9 +55,7 @@ export default function ScrollableTagsRow({
       <div ref={scrollRef} style={s.scroll}>
         <button
           style={isAllActive ? { ...s.tag, ...s.tagActive } : s.tag}
-          onClick={() => {
-            if (!isAllActive) onTagToggle("__ALL__");
-          }}
+          onClick={() => onTagToggle("__ALL__")}
         >
           All
           {isAllActive && <span style={s.underline} />}
