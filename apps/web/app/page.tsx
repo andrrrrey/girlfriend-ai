@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { characters, auth } from "../lib/api";
+import { characters, auth, likes } from "../lib/api";
 import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
@@ -141,7 +141,7 @@ const SORT_OPTIONS = [
   { value: "name", label: "Name" },
 ];
 
-function buildDynamicCards(chars: Character[]): string {
+function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { liked: boolean; count: number }>): string {
   if (!chars || chars.length === 0) return "";
   return chars
     .map((char, index) => {
@@ -157,19 +157,23 @@ function buildDynamicCards(chars: Character[]): string {
       const bgContent = char.avatarUrl
         ? `<img src="${char.avatarUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
+      const isLiked = likeStatuses[char.id]?.liked || false;
+      const likeCount = likeStatuses[char.id]?.count || 0;
+      const heartFill = isLiked ? "#f95bad" : "none";
+      const heartStroke = isLiked ? "#f95bad" : "#fff";
       return `
-<div class="card-featured-wrap" data-char-idx="${index}">
+<div class="card-featured-wrap" data-char-idx="${index}" data-char-id="${char.id}">
   <div class="hover-panel">
     <div class="hover-tags">${tagsHtml}</div>
     ${descHtml}
     <div class="hover-stats">
-      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">likes</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">${likeCount}</span><span class="hover-stat-label">likes</span></div>
       <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">comments</span></div>
       <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">generated</span></div>
     </div>
   </div>
   <div class="card-actions">
-    <div class="card-action-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="card-action-btn card-like-btn" data-char-id="${char.id}"><svg width="16" height="16" viewBox="0 0 16 16" fill="${heartFill}"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="${heartStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="card-action-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg></div>
   </div>
   <div class="card featured">
@@ -190,6 +194,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const charsRef = useRef<Character[]>(chars);
   charsRef.current = chars;
@@ -223,6 +228,14 @@ export default function HomePage() {
   }, [fetchChars]);
 
   useEffect(() => {
+    if (chars.length === 0) return;
+    const ids = chars.map((c) => c.id);
+    likes.batchStatus("character", ids)
+      .then(setLikeStatuses)
+      .catch(() => {});
+  }, [chars]);
+
+  useEffect(() => {
     fetchChars({ search: searchQuery, gender, style, sortBy, tags: selectedTags });
   }, [gender, style, sortBy, selectedTags, fetchChars]);
 
@@ -244,10 +257,22 @@ export default function HomePage() {
     }
   };
 
-  const dynamicCardsHtml = buildDynamicCards(chars);
+  const dynamicCardsHtml = buildDynamicCards(chars, likeStatuses);
 
   const handleCardClick = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
+    const likeBtn = target.closest(".card-like-btn") as HTMLElement | null;
+    if (likeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const charId = likeBtn.dataset.charId;
+      if (charId) {
+        likes.toggle("character", charId).then((result) => {
+          setLikeStatuses((prev) => ({ ...prev, [charId]: result }));
+        }).catch(() => {});
+      }
+      return;
+    }
     if (target.closest(".card-action-btn")) return;
     const wrap = target.closest(".card-featured-wrap") as HTMLElement | null;
     if (!wrap) return;
@@ -263,7 +288,7 @@ export default function HomePage() {
     container.innerHTML = dynamicCardsHtml;
     container.addEventListener("click", handleCardClick as EventListener);
     return () => container.removeEventListener("click", handleCardClick as EventListener);
-  }, [dynamicCardsHtml, handleCardClick, selectedChar]);
+  }, [dynamicCardsHtml, handleCardClick]);
 
   return (
     <>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../../context/auth";
-import { getPublicGallery, getGalleryTags } from "../../lib/api";
+import { getPublicGallery, getGalleryTags, likes } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import FilterDropdown from "../components/FilterDropdown";
@@ -320,7 +320,7 @@ const SORT_OPTIONS = [
   { value: "popular", label: "Popular" },
 ];
 
-function GalleryCard({ item, onOpen }: { item: GalleryItem; onOpen: (item: GalleryItem) => void }) {
+function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
   const isVideo = item.type === "video";
@@ -348,7 +348,7 @@ function GalleryCard({ item, onOpen }: { item: GalleryItem; onOpen: (item: Galle
           width: 28, height: 28, background: "rgba(48,39,43,0.55)", backdropFilter: "blur(2px)",
           borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <LikeButton targetType="gallery_item" targetId={item.jobId} size="sm" showCount={false} />
+          <LikeButton targetType="gallery_item" targetId={item.jobId} size="sm" showCount={true} initialLiked={likeStatus?.liked || false} initialCount={likeStatus?.count || 0} />
         </div>
       </div>
       <div className="g-card" onClick={() => { if (url) onOpen(item); }}>
@@ -386,6 +386,7 @@ export default function GalleryPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
 
   const fetchItems = useCallback(() => {
     setFetching(true);
@@ -404,6 +405,14 @@ export default function GalleryPage() {
     if (loading) return;
     fetchItems();
   }, [loading, fetchItems]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    const jobIds = items.map((i) => i.jobId);
+    likes.batchStatus("gallery_item", jobIds)
+      .then(setLikeStatuses)
+      .catch(() => {});
+  }, [items]);
 
   useEffect(() => {
     if (loading) return;
@@ -501,7 +510,7 @@ export default function GalleryPage() {
             </div>
           ) : (
             filteredItems.map((item) => (
-              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} />
+              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} likeStatus={likeStatuses[item.jobId]} />
             ))
           )}
         </div>

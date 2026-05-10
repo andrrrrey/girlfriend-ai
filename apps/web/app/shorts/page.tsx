@@ -9,7 +9,7 @@ import LikeButton from "../components/LikeButton";
 
 const PAGE_CSS = `
   .shorts-feed-wrapper {
-    position: fixed; top: 0; bottom: 0; left: 240px; right: 0;
+    position: fixed; top: 0; bottom: 0; left: 196px; right: 0;
     overflow-y: scroll; scroll-snap-type: y mandatory; background: #090909;
   }
   .shorts-feed-wrapper::-webkit-scrollbar { display: none; }
@@ -95,7 +95,7 @@ const PAGE_CSS = `
   }
 `;
 
-function ShortCard({ item }: { item: GalleryItem }) {
+function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number } }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -146,7 +146,7 @@ function ShortCard({ item }: { item: GalleryItem }) {
 
         <div className="shorts-actions">
           <div className="shorts-btn-group">
-            <LikeButton targetType="short" targetId={item.jobId} size="md" showCount={true} />
+            <LikeButton targetType="short" targetId={item.jobId} size="md" showCount={true} initialLiked={likeStatus?.liked || false} initialCount={likeStatus?.count || 0} />
           </div>
 
           <div className="shorts-btn-group">
@@ -179,6 +179,7 @@ export default function ShortsPage() {
   const { user, loading } = useAuth();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
 
   useEffect(() => {
     if (loading) return;
@@ -188,12 +189,20 @@ export default function ShortsPage() {
       .finally(() => setFetching(false));
   }, [loading]);
 
+  useEffect(() => {
+    if (items.length === 0) return;
+    const jobIds = items.map((i) => i.jobId);
+    likes.batchStatus("short", jobIds)
+      .then(setLikeStatuses)
+      .catch(() => {});
+  }, [items]);
+
   if (loading) return null;
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
-      <div className="shorts-feed-wrapper" style={{ position: "relative" }}>
+      <div className="shorts-feed-wrapper">
         {!user && (
           <>
             <div style={{ position: "fixed", inset: 0, zIndex: 99, pointerEvents: "none" }}>
@@ -221,7 +230,7 @@ export default function ShortsPage() {
             </div>
           </div>
         ) : (
-          items.map((item) => <ShortCard key={item.jobId} item={item} />)
+          items.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} />)
         )}
       </div>
     </>
