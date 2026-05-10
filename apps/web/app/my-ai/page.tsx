@@ -451,11 +451,13 @@ function MyAICard({
   manageMode,
   selected,
   onToggleSelect,
+  likeStatus,
 }: {
   item: GridItem;
   manageMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  likeStatus?: { liked: boolean; count: number };
 }) {
   const router = useRouter();
   const isCharacter = item.type === "Character";
@@ -524,7 +526,7 @@ function MyAICard({
           </div>
           <div className="ai-card-top-actions">
             <div className="ai-card-action-btn">
-              <LikeButton targetType={targetType} targetId={targetId} size="sm" showCount={false} />
+              <LikeButton targetType={targetType} targetId={targetId} size="sm" showCount={true} initialLiked={likeStatus?.liked || false} initialCount={likeStatus?.count || 0} />
             </div>
           </div>
         </>
@@ -583,6 +585,7 @@ export default function MyAIPage() {
   const [manageMode, setManageMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
 
   const loadCreated = useCallback(() => {
     if (!user) return;
@@ -679,6 +682,29 @@ export default function MyAIPage() {
     if (activeTab === "created") loadCreated();
     else loadLiked();
   }, [user, loading, router, activeTab, loadCreated, loadLiked]);
+
+  useEffect(() => {
+    const source = activeTab === "created" ? items : likedItems;
+    if (source.length === 0 || !user) return;
+    const charIds = source.filter((i) => i.type === "Character" && i.id).map((i) => i.id!);
+    const galleryIds = source.filter((i) => i.type !== "Character" && i.jobId).map((i) => i.jobId!);
+    const promises: Promise<void>[] = [];
+    if (charIds.length > 0) {
+      promises.push(
+        likes.batchStatus("character", charIds)
+          .then((r) => setLikeStatuses((prev) => ({ ...prev, ...r })))
+          .catch(() => {})
+      );
+    }
+    if (galleryIds.length > 0) {
+      promises.push(
+        likes.batchStatus("gallery_item", galleryIds)
+          .then((r) => setLikeStatuses((prev) => ({ ...prev, ...r })))
+          .catch(() => {})
+      );
+    }
+    Promise.all(promises);
+  }, [items, likedItems, activeTab, user]);
 
   const sourceItems = activeTab === "created" ? items : likedItems;
 
@@ -847,6 +873,7 @@ export default function MyAIPage() {
                   manageMode={manageMode}
                   selected={selectedIds.has(itemId)}
                   onToggleSelect={() => toggleSelect(itemId)}
+                  likeStatus={likeStatuses[itemId]}
                 />
               );
             })
