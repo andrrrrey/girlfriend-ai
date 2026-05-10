@@ -526,7 +526,7 @@ function MyAICard({
           </div>
           <div className="ai-card-top-actions">
             <div className="ai-card-action-btn">
-              <LikeButton targetType={targetType} targetId={targetId} size="sm" showCount={true} initialLiked={likeStatus?.liked || false} initialCount={likeStatus?.count || 0} />
+              <LikeButton targetType={targetType} targetId={targetId} size="sm" showCount={false} initialLiked={likeStatus?.liked || false} initialCount={likeStatus?.count || 0} />
             </div>
           </div>
         </>

@@ -10,6 +10,7 @@ import {
   Req,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { CommentsService } from "./comments.service";
 import { CreateCommentDto } from "./dto/create-comment.dto";
 
@@ -18,6 +19,7 @@ export class CommentsController {
   constructor(private commentsService: CommentsService) {}
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   async list(
     @Query("characterId") characterId: string,
     @Query("cursor") cursor?: string,
