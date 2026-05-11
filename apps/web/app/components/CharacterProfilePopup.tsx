@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { likes, comments as commentsApi } from "../../lib/api";
+import { likes, comments as commentsApi, users } from "../../lib/api";
 import type { Character, CommentItem } from "../../lib/api";
 import LikeButton from "./LikeButton";
 
@@ -224,6 +224,7 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
                 relationships={relationshipsVal}
                 kinks={kinksVal}
                 hobbies={hobbiesVal}
+                creator={character.creator ?? null}
               />
             )}
             {tab === "gallery" && <GalleryTab avatarUrl={character.avatarUrl} />}
@@ -292,9 +293,10 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
 
 /* ══════════════════ Sub-components ══════════════════ */
 
-function AboutTab({ description, age, personality, lifestyle, relationships, kinks, hobbies }: {
+function AboutTab({ description, age, personality, lifestyle, relationships, kinks, hobbies, creator }: {
   description: string; age: string; personality: string; lifestyle: string;
   relationships: string; kinks: string; hobbies: string;
+  creator: Character["creator"] | null;
 }) {
   const rows: { icon: string; label: string; value: string }[] = [
     { icon: "age",           label: "AGE",           value: age },
@@ -331,20 +333,96 @@ function AboutTab({ description, age, personality, lifestyle, relationships, kin
         </>
       )}
 
-      <p style={{ ...s.secLabel, marginTop: 22 }}>CREATOR</p>
-      <div style={s.creatorRow}>
-        <div style={s.creatorAva} />
-        <div>
-          <div style={s.creatorName}>@helloimjack17499</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
-            <span style={{ fontSize: 12, color: "#c1f0aa" }}>34K ♥</span>
-            <span style={{ fontSize: 12, color: "#848484" }}>12K 👥</span>
-          </div>
-        </div>
-        <div style={{ flex: 1 }} />
-        <button style={s.outlineBtn}>More Characters</button>
-        <button style={s.outlineBtn}>Follow 🟢</button>
+      {creator && (
+        <>
+          <p style={{ ...s.secLabel, marginTop: 22 }}>CREATOR</p>
+          <CreatorSection creator={creator} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function CreatorSection({ creator }: {
+  creator: NonNullable<Character["creator"]>
+}) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [following, setFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  const formatCount = (n: number) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return String(n);
+  };
+
+  useEffect(() => {
+    if (!user || !creator.nickname) return;
+    users.getFollowStatus(creator.nickname)
+      .then((r) => setFollowing(r.following))
+      .catch(() => {});
+  }, [user, creator.nickname]);
+
+  const handleFollow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user || !creator.nickname || followLoading) return;
+    setFollowLoading(true);
+    try {
+      if (following) {
+        await users.unfollow(creator.nickname);
+        setFollowing(false);
+      } else {
+        await users.follow(creator.nickname);
+        setFollowing(true);
+      }
+    } catch {}
+    setFollowLoading(false);
+  };
+
+  const goToProfile = () => {
+    if (creator.nickname) router.push(`/users/${creator.nickname}`);
+  };
+
+  return (
+    <div style={s.creatorRow}>
+      <div
+        style={{ ...s.creatorAva, cursor: creator.nickname ? "pointer" : "default" }}
+        onClick={creator.nickname ? goToProfile : undefined}
+      >
+        {creator.avatarUrl && (
+          <img src={creator.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+        )}
       </div>
+      <div>
+        <div
+          style={{ ...s.creatorName, cursor: creator.nickname ? "pointer" : "default" }}
+          onClick={creator.nickname ? goToProfile : undefined}
+        >
+          @{creator.nickname || "unknown"}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
+          {creator.likeCount !== undefined && (
+            <span style={{ fontSize: 12, color: "#c1f0aa" }}>{formatCount(creator.likeCount)} ♥</span>
+          )}
+          {creator.followerCount !== undefined && (
+            <span style={{ fontSize: 12, color: "#848484" }}>{formatCount(creator.followerCount)} 👥</span>
+          )}
+        </div>
+      </div>
+      <div style={{ flex: 1 }} />
+      {creator.nickname && (
+        <button style={s.outlineBtn} onClick={goToProfile}>More Characters</button>
+      )}
+      {user && creator.nickname && user.id !== creator.id && (
+        <button
+          style={{ ...s.outlineBtn, ...(following ? { borderColor: "#f95bad", color: "#f95bad" } : {}) }}
+          onClick={handleFollow}
+          disabled={followLoading}
+        >
+          {following ? "Following 🟢" : "Follow 🟢"}
+        </button>
+      )}
     </div>
   );
 }

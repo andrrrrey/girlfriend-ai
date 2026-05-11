@@ -114,12 +114,14 @@ export class GenerationController {
     @Query("sortBy") sortBy?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
+    @Query("userId") userId?: string,
   ) {
     return this.generationService.getGallery(
       limit ? parseInt(limit, 10) : 50,
       type,
       sortBy,
       page ? parseInt(page, 10) : 1,
+      userId,
     );
   }
 

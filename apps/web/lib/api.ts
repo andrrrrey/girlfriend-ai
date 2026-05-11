@@ -255,11 +255,25 @@ export interface UserProfile {
   email: string;
   nickname: string | null;
   avatarUrl: string | null;
+  aboutMe: string | null;
   role: string;           // "user" | "admin"
   subscription: string;  // "free" | "premium" | ...
   lang: string;          // "en" | "ru"
   createdAt: string;     // ISO 8601
   socialLinks: { provider: string; url: string }[];
+}
+
+export interface PublicUserProfile {
+  id: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  aboutMe: string | null;
+  socialLinks: { provider: string; url: string }[];
+  followerCount: number;
+  likeCount: number;
+  characterCount: number;
+  isFollowing: boolean;
+  createdAt: string;
 }
 
 /**
@@ -273,15 +287,40 @@ export const users = {
 
   /**
    * Обновляет профиль (PATCH /users/me). Все поля опциональны.
-   * @param data - Поля для обновления: nickname, avatarUrl, lang
+   * @param data - Поля для обновления: nickname, avatarUrl, lang, aboutMe
    */
   async updateProfile(
-    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang">>,
+    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe">>,
   ): Promise<UserProfile> {
     return apiFetch<UserProfile>("/users/me", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  },
+
+  /** Checks if a nickname is available (GET /users/check-nickname). */
+  async checkNickname(nickname: string): Promise<{ available: boolean }> {
+    return apiFetch<{ available: boolean }>(`/users/check-nickname?nickname=${encodeURIComponent(nickname)}`);
+  },
+
+  /** Returns a public user profile by nickname (GET /users/:nickname). */
+  async getPublicProfile(nickname: string): Promise<PublicUserProfile> {
+    return apiFetch<PublicUserProfile>(`/users/${encodeURIComponent(nickname)}`);
+  },
+
+  /** Follows a user (POST /users/:nickname/follow). */
+  async follow(nickname: string): Promise<{ following: boolean }> {
+    return apiFetch<{ following: boolean }>(`/users/${encodeURIComponent(nickname)}/follow`, { method: "POST" });
+  },
+
+  /** Unfollows a user (DELETE /users/:nickname/follow). */
+  async unfollow(nickname: string): Promise<{ following: boolean }> {
+    return apiFetch<{ following: boolean }>(`/users/${encodeURIComponent(nickname)}/follow`, { method: "DELETE" });
+  },
+
+  /** Returns whether the current user follows the given user. */
+  async getFollowStatus(nickname: string): Promise<{ following: boolean }> {
+    return apiFetch<{ following: boolean }>(`/users/${encodeURIComponent(nickname)}/follow-status`);
   },
 
   /**
@@ -486,6 +525,14 @@ export interface Character {
   tags: string[];
   isPublic: boolean;                       // Виден ли в публичном каталоге
   createdAt: string;
+  createdBy: string | null;
+  creator?: {
+    id: string;
+    nickname: string | null;
+    avatarUrl: string | null;
+    followerCount?: number;
+    likeCount?: number;
+  } | null;
 }
 
 /**
@@ -989,6 +1036,7 @@ export const characters = {
     gender?: string;
     style?: string;
     createdBy?: string;
+    createdByUserId?: string;
     sortBy?: string;
     tags?: string[];
     page?: number;
@@ -999,6 +1047,7 @@ export const characters = {
     if (params?.gender) query.set("gender", params.gender);
     if (params?.style) query.set("style", params.style);
     if (params?.createdBy) query.set("createdBy", params.createdBy);
+    if (params?.createdByUserId) query.set("createdByUserId", params.createdByUserId);
     if (params?.sortBy) query.set("sortBy", params.sortBy);
     if (params?.tags?.length) query.set("tags", params.tags.join(","));
     if (params?.page) query.set("page", String(params.page));
@@ -1461,12 +1510,14 @@ export async function getPublicGallery(params?: {
   sortBy?: string;
   page?: number;
   limit?: number;
+  userId?: string;
 }): Promise<{ items: GalleryItem[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.type) query.set("type", params.type);
   if (params?.sortBy) query.set("sortBy", params.sortBy);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.userId) query.set("userId", params.userId);
   const qs = query.toString();
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
 }

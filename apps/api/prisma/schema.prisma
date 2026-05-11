@@ -13,8 +13,9 @@ model User {
   id           String    @id @default(uuid()) @db.Uuid
   email        String    @unique
   passwordHash String    @map("password_hash")
-  nickname     String?
+  nickname     String?   @unique
   avatarUrl    String?   @map("avatar_url")
+  aboutMe      String?   @map("about_me")
   role                       String    @default("user")
   subscription               String    @default("free")
   isDemo                     Boolean   @default(false) @map("is_demo")
@@ -37,6 +38,8 @@ model User {
   messageCopyAudit MessageCopyAudit[]
   likes            Like[]
   comments         Comment[]
+  following        Follow[]           @relation("follower")
+  followers        Follow[]           @relation("followee")
 
   @@map("users")
 }
@@ -341,6 +344,22 @@ model Like {
   @@index([targetType, targetId])
   @@index([userId])
   @@map("likes")
+}
+
+// ─── Follows ─────────────────────────────────────────────────
+
+model Follow {
+  id         String   @id @default(uuid()) @db.Uuid
+  followerId String   @map("follower_id") @db.Uuid
+  followeeId String   @map("followee_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followeeId])
+  @@index([followeeId])
+  @@map("follows")
 }
 
 // ─── Comments ────────────────────────────────────────────────

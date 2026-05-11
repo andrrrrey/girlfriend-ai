@@ -287,7 +287,7 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
@@ -299,10 +299,13 @@ export class GenerationService {
       orderBy = { createdAt: "asc" };
     }
 
-    const where = {
+    const where: Record<string, unknown> = {
       status: "completed" as const,
       type: typeFilter,
     };
+    if (userId) {
+      where["userId"] = userId;
+    }
 
     const [jobs, total] = await Promise.all([
       this.prisma.aiJob.findMany({

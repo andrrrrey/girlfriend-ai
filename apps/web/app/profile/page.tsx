@@ -567,8 +567,7 @@ function AccountTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl]   = useState(user?.avatarUrl ?? "");
   const [nickname, setNickname]     = useState(user?.nickname ?? "");
-  const [bio, setBio]               = useState(() =>
-    typeof window !== "undefined" ? (localStorage.getItem(`bio-${user?.id}`) ?? "") : "");
+  const [bio, setBio]               = useState(user?.aboutMe ?? "");
   const [socialLinks, setSocialLinks] = useState<string[]>(() =>
     user?.socialLinks?.map((l) => l.url) ?? []);
   const [showPwdForm, setShowPwdForm] = useState(false);
@@ -578,12 +577,33 @@ function AccountTab() {
   const [pwdMsg, setPwdMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
+  const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const nicknameCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleNicknameChange(value: string) {
+    setNickname(value);
+    setNicknameAvailable(null);
+    if (nicknameCheckRef.current) clearTimeout(nicknameCheckRef.current);
+    if (!value || value === user?.nickname) return;
+    setCheckingNickname(true);
+    nicknameCheckRef.current = setTimeout(async () => {
+      try {
+        const res = await users.checkNickname(value);
+        setNicknameAvailable(res.available);
+      } catch {}
+      setCheckingNickname(false);
+    }, 500);
+  }
 
   async function handleSave() {
+    if (nickname && nickname !== user?.nickname && nicknameAvailable === false) {
+      setMsg({ text: "Nickname is already taken", ok: false });
+      return;
+    }
     setSaving(true); setMsg(null);
     try {
-      await users.updateProfile({ nickname: nickname || null, avatarUrl: avatarUrl || null });
-      if (typeof window !== "undefined") localStorage.setItem(`bio-${user?.id}`, bio);
+      await users.updateProfile({ nickname: nickname || undefined, avatarUrl: avatarUrl || undefined, aboutMe: bio || undefined });
       const nonEmpty = socialLinks.filter((u) => u.trim());
       await Promise.all(nonEmpty.map((url) => {
         const p = detectProvider(url);
@@ -591,7 +611,10 @@ function AccountTab() {
       }));
       await refreshProfile();
       setMsg({ text: "Saved successfully", ok: true });
-    } catch { setMsg({ text: "Failed to save", ok: false }); }
+    } catch (err: any) {
+      const msg = err?.message || "Failed to save";
+      setMsg({ text: msg.includes("taken") ? "Nickname is already taken" : msg, ok: false });
+    }
     finally { setSaving(false); }
   }
 
@@ -738,17 +761,32 @@ function AccountTab() {
         {/* ── Right column ── */}
         <div className="pp-acc-col">
           <div className="pp-field">
-            <span className="pp-lbl"><span>Name</span></span>
-            <input className="pp-input" type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Your name" />
+            <span className="pp-lbl">
+              <span>Nickname</span>
+              {checkingNickname && <span style={{ fontSize: 10, color: "#848484" }}>Checking…</span>}
+              {!checkingNickname && nicknameAvailable === true && nickname !== user?.nickname && (
+                <span style={{ fontSize: 10, color: "#c1f0aa" }}>✓ Available</span>
+              )}
+              {!checkingNickname && nicknameAvailable === false && (
+                <span style={{ fontSize: 10, color: "#f95bad" }}>✗ Already taken</span>
+              )}
+            </span>
+            <input
+              className="pp-input"
+              type="text"
+              value={nickname}
+              onChange={e => handleNicknameChange(e.target.value)}
+              placeholder="your_handle"
+            />
           </div>
 
           <div className="pp-field">
-            <span className="pp-lbl"><span>Nickname</span></span>
-            <input className="pp-input" type="text" value={nickname ? `@${nickname.toLowerCase().replace(/\s+/g, "")}` : ""} disabled placeholder="@handle" />
+            <span className="pp-lbl"><span>Handle</span></span>
+            <input className="pp-input" type="text" value={nickname ? `@${nickname}` : ""} disabled placeholder="@handle" />
           </div>
 
           <div className="pp-field">
-            <span className="pp-lbl"><span>Bio</span></span>
+            <span className="pp-lbl"><span>About me</span></span>
             <textarea className="pp-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell about yourself…" />
           </div>
         </div>
@@ -756,7 +794,7 @@ function AccountTab() {
         {/* ── Bottom bar ── */}
         <div className="pp-acc-bottom">
           {msg && <span className={`pp-feedback ${msg.ok ? "ok" : "err"}`} style={{ marginRight: "auto", alignSelf: "center" }}>{msg.text}</span>}
-          <button className="pp-cancel-btn" onClick={() => { setNickname(user?.nickname ?? ""); setAvatarUrl(user?.avatarUrl ?? ""); }}>Cancel</button>
+          <button className="pp-cancel-btn" onClick={() => { setNickname(user?.nickname ?? ""); setAvatarUrl(user?.avatarUrl ?? ""); setBio(user?.aboutMe ?? ""); setNicknameAvailable(null); }}>Cancel</button>
           <button className="pp-save-btn" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
         </div>
       </div>
