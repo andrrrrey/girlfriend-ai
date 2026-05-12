@@ -1233,10 +1233,17 @@ function ChatPageInner() {
   );
 }
 
+import dynamic from "next/dynamic";
+
+const ChatPageClient = dynamic(() => Promise.resolve(ChatPageInner), {
+  ssr: false,
+  loading: () => <div style={{ background: "#090909", minHeight: "100vh" }} />,
+});
+
 export default function ChatPage() {
   return (
     <Suspense fallback={<div style={{ background: "#090909", minHeight: "100vh" }} />}>
-      <ChatPageInner />
+      <ChatPageClient />
     </Suspense>
   );
 }
