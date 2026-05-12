@@ -1009,67 +1009,231 @@ export default function GenerationPage() {
     return false;
   }, [characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
 
-  const buildCompositePrompt = useCallback((userPrompt: string): string => {
-    const prompts: string[] = [];
-
-    if (userPrompt.trim()) prompts.push(userPrompt.trim());
-
+  const buildCompositePrompt = useCallback((userPrompt: string, model: string, isVideo: boolean): string => {
     const findPrompt = (name: string, options: Array<{ name: string; prompt?: string | null }>) =>
       options.find((o) => o.name === name)?.prompt ?? null;
 
-    // Character prompts
-    if (characterSelections.humanRace) {
-      const p = findPrompt(characterSelections.humanRace, characterOptions.filter((o) => o.category === "HUMAN_RACE"));
-      if (p) prompts.push(p);
+    const isNsfwModel = model.toLowerCase().includes("nsfw") ||
+      model.includes("wan-2.6") || model.includes("van-2.6");
+
+    const LENS_PROMPTS: Record<string, string> = {
+      "Ultra-wide 14mm": "14mm ultra-wide lens, heavy barrel distortion",
+      "Wide 24mm": "24mm wide angle lens",
+      "Standard 35mm": "35mm lens, street photography natural perspective",
+      "Normal 50mm": "50mm lens, natural human eye perspective",
+      "Portrait 85mm": "85mm portrait lens, soft background bokeh, flattering compression",
+      "Telephoto 135mm": "135mm telephoto lens, compressed perspective, creamy bokeh",
+      "Fisheye": "fisheye lens, 180-degree spherical distortion",
+    };
+
+    const LIGHTING_PROMPTS: Record<string, string> = {
+      "Natural Light": "natural lighting",
+      "Golden Hour": "golden hour warm light",
+      "Soft Diffused": "soft diffused lighting, minimal shadows",
+      "Hard Directional": "hard directional light, sharp shadows",
+      "Studio Softbox": "studio softbox lighting, even professional light",
+      "Backlight": "backlight, silhouette, halo effect",
+      "High Key": "high-key lighting, bright airy minimal shadows",
+      "Neon": "neon lighting, pink blue green neon colors",
+      "Candlelight": "candlelight, warm flickering glow",
+      "Moonlight": "moonlight, cold silver light from moon",
+      "Spotlight": "spotlight, single bright directed beam",
+      "Window Light": "window light, soft directional natural",
+      "Ultraviolet": "UV black light, neon glowing colors fluorescent",
+    };
+
+    const TIME_PROMPTS: Record<string, string> = {
+      "Sunrise": "dawn lighting, soft pink orange and lavender gradient on horizon, sun just beginning to rise",
+      "Morning": "morning light, warm soft golden-white rays from a low angle, clean fresh atmosphere",
+      "Daylight": "moderate afternoon daylight, well-balanced natural illumination",
+      "Strong Sun": "high noon midday lighting, sun directly overhead, bright intense illumination, harsh shadows",
+      "Golden Hour": "evening golden hour, rich deep warm golden-orange light streaming horizontally",
+      "Sunset": "dramatic sunset sky, vivid bands of intense orange red pink and purple coloring clouds",
+      "Night": "full nighttime darkness, scene illuminated by artificial light sources, deep shadows",
+      "Moonlight": "moonlit night, bright full moon casting silver-blue cool-toned moonlight, ethereal luminosity",
+    };
+
+    const WEATHER_PROMPTS: Record<string, string> = {
+      "Clear sky": "perfectly clear cloudless sky, crisp defined shadows",
+      "Overcast": "completely overcast sky, soft even diffused light",
+      "Light rain": "light gentle rain, fine small raindrops, wet sheen on surfaces",
+      "Heavy rain": "heavy torrential downpour, thick sheets of rain, reduced visibility",
+      "Thunderstorm": "dramatic thunderstorm, dark storm clouds, lightning bolts, heavy rain",
+      "Light snow": "gentle light snowfall, delicate white snowflakes drifting slowly, peaceful winter atmosphere",
+      "Blizzard": "intense raging blizzard, dense snow driven by powerful winds, severely reduced visibility",
+      "Fog": "thick atmospheric fog reducing visibility, objects fading into white-grey mist",
+      "Strong wind": "strong powerful wind, hair streaming and whipping dramatically, clothing billowing",
+      "Rainbow": "vivid colorful rainbow arcing across sky, full spectrum of colors",
+      "Aurora / Northern lights": "spectacular aurora borealis dancing across dark sky in curtains of vivid green with purple and pink edges",
+      "Heat": "scorching intense heat, visible heat haze distortion shimmering above surfaces",
+      "Frost": "bitter cold frost, intricate ice crystal patterns, white frost coating surfaces, visible breath",
+    };
+
+    const PARTICLE_PROMPTS: Record<string, string> = {
+      "Sakura petals": "delicate pink and white cherry blossom petals floating and drifting through air",
+      "Falling leaves": "colorful autumn leaves gently falling and tumbling through the air",
+      "Fireflies": "tiny warm glowing fireflies floating in the air, bioluminescent dots",
+      "Flying sparks": "glowing orange embers and sparks floating upward in the air",
+      "Magic sparkles": "magical glowing sparkle particles floating in the air, shimmering light motes",
+      "Dust in light": "visible dust particles floating in beams of light, atmospheric haze",
+      "Soap bubbles": "iridescent soap bubbles floating weightlessly in the air, rainbow reflections",
+      "Ash": "grey ash particles drifting slowly through the air",
+      "Confetti": "colorful confetti pieces falling and fluttering through the air",
+      "Falling feathers": "soft white feathers gently drifting downward through the air",
+    };
+
+    const findCharPrompt = (name: string, category: string) =>
+      findPrompt(name, characterOptions.filter((o) => o.category === category));
+
+    // --- 1. Quality / Style prefix ---
+    const qualityParts: string[] = ["masterpiece", "best quality", "highres"];
+    if (isNsfwModel) {
+      qualityParts.push("nsfw", "explicit");
     }
-    if (characterSelections.fantasyRace) {
-      const p = findPrompt(characterSelections.fantasyRace, characterOptions.filter((o) => o.category === "FANTASY_RACE"));
-      if (p) prompts.push(p);
-    }
-    if (characterSelections.hairStyle) {
-      const p = findPrompt(characterSelections.hairStyle, characterOptions.filter((o) => o.category === "HAIR_STYLE"));
-      if (p) prompts.push(p);
-    }
-    if (characterSelections.bodyType) {
-      const p = findPrompt(characterSelections.bodyType, characterOptions.filter((o) => o.category === "BODY_TYPE"));
-      if (p) prompts.push(p);
+    if (characterSelections.style) {
+      const p = findCharPrompt(characterSelections.style, "STYLE");
+      if (p) qualityParts.push(p);
     }
 
-    // Appearance prompts
+    // --- 2. Subject: gender + age + ethnicity ---
+    const subjectParts: string[] = [];
+    if (characterSelections.gender) {
+      const genderMap: Record<string, string> = {
+        Female: "woman", Male: "man", Femboy: "femboy, feminine male", "Non-binary": "androgynous person",
+      };
+      subjectParts.push(genderMap[characterSelections.gender] || characterSelections.gender.toLowerCase());
+    }
+    if (characterSelections.age) {
+      subjectParts.push(`${characterSelections.age}-year-old`);
+    }
+    if (characterSelections.humanRace) {
+      const p = findCharPrompt(characterSelections.humanRace, "HUMAN_RACE");
+      if (p) subjectParts.push(p);
+    }
+    if (characterSelections.fantasyRace) {
+      const p = findCharPrompt(characterSelections.fantasyRace, "FANTASY_RACE");
+      if (p) subjectParts.push(p);
+    }
+
+    // --- 3. Face: eye color + eye features + face features ---
+    const faceParts: string[] = [];
+    if (characterSelections.eyeColor) {
+      faceParts.push(`${characterSelections.eyeColor.toLowerCase()} eyes`);
+    }
+    for (const f of characterSelections.eyeFeatures) {
+      if (f !== "Normal") faceParts.push(f.toLowerCase());
+    }
+    for (const f of characterSelections.faceFeatures) {
+      if (f !== "None") faceParts.push(f.toLowerCase());
+    }
+
+    // --- 4. Hair: style + color + length ---
+    const hairParts: string[] = [];
+    if (characterSelections.hairColor) {
+      hairParts.push(`${characterSelections.hairColor.toLowerCase()} hair`);
+    }
+    if (characterSelections.hairLength) {
+      hairParts.push(`${characterSelections.hairLength.toLowerCase()} hair`);
+    }
+    if (characterSelections.hairStyle) {
+      const p = findCharPrompt(characterSelections.hairStyle, "HAIR_STYLE");
+      if (p) hairParts.push(p);
+    }
+
+    // --- 5. Body: body type + breast + butt + height ---
+    const bodyParts: string[] = [];
+    if (characterSelections.bodyType) {
+      const p = findCharPrompt(characterSelections.bodyType, "BODY_TYPE");
+      if (p) bodyParts.push(p);
+    }
+    if (characterSelections.breastSize) {
+      const p = findCharPrompt(characterSelections.breastSize, "BREAST_SIZE");
+      if (p) bodyParts.push(p);
+    }
+    if (characterSelections.buttSize) {
+      const p = findCharPrompt(characterSelections.buttSize, "BUTT_SIZE");
+      if (p) bodyParts.push(p);
+    }
+    if (characterSelections.height) {
+      const heightMap: Record<string, string> = {
+        Short: "short height", "Below Average": "below average height", Average: "average height",
+        Tall: "tall height", "Very Tall": "very tall height",
+      };
+      bodyParts.push(heightMap[characterSelections.height] || characterSelections.height.toLowerCase());
+    }
+
+    // --- 6. Expression ---
+    const expressionParts: string[] = [];
+    const allExpressionOpts = poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options);
+    for (const name of poseSelections.facialExpressions) {
+      const p = findPrompt(name, allExpressionOpts);
+      if (p) expressionParts.push(p);
+    }
+
+    // --- 7. Clothing (outfits + outfit details + condition) ---
+    const clothingParts: string[] = [];
     const allAppearanceOpts = [
       ...appearanceOptions.OUTFITS.flatMap((c) => c.options),
       ...appearanceOptions.OUTFIT_DETAILS.flatMap((c) => c.options),
     ];
     for (const name of [...appearanceSelections.outfits, ...appearanceSelections.outfitDetails]) {
       const p = findPrompt(name, allAppearanceOpts);
-      if (p) prompts.push(p);
+      if (p) clothingParts.push(p);
+    }
+    for (const c of appearanceSelections.condition) {
+      clothingParts.push(c.toLowerCase());
     }
 
-    // Pose prompts
-    const allPoseOpts = [
-      ...poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options),
-      ...poseOptions.POSE.flatMap((c) => c.options),
-    ];
-    for (const name of [...poseSelections.facialExpressions, ...poseSelections.poses]) {
+    // --- 8. Pose ---
+    const poseParts: string[] = [];
+    const allPoseOpts = poseOptions.POSE.flatMap((c) => c.options);
+    for (const name of poseSelections.poses) {
       const p = findPrompt(name, allPoseOpts);
-      if (p) prompts.push(p);
+      if (p) poseParts.push(p);
     }
 
-    // Scene prompts
+    // --- 9. Scene: location + time of day + weather + particles + effects + props ---
+    const sceneParts: string[] = [];
     const allSceneOpts = sceneOptions.LOCATION.flatMap((c) => c.options);
     for (const name of sceneSelections.locations) {
       const p = findPrompt(name, allSceneOpts);
-      if (p) prompts.push(p);
+      if (p) sceneParts.push(p);
     }
+    for (const t of sceneSelections.timeOfDay) sceneParts.push(TIME_PROMPTS[t] || t.toLowerCase());
+    for (const w of sceneSelections.weather) sceneParts.push(WEATHER_PROMPTS[w] || w.toLowerCase());
+    for (const p of sceneSelections.particles) sceneParts.push(PARTICLE_PROMPTS[p] || p.toLowerCase());
+    for (const e of sceneSelections.environmentEffects) sceneParts.push(e.toLowerCase());
+    if (sceneSelections.props?.trim()) sceneParts.push(sceneSelections.props.trim());
 
-    // Camera prompts
-    const allCameraOpts = [...cameraOptions.FRAMING, ...cameraOptions.CAMERA_ANGLE];
-    for (const name of [...cameraSelections.framing, ...cameraSelections.cameraAngle]) {
-      const p = findPrompt(name, allCameraOpts);
-      if (p) prompts.push(p);
+    // --- 10. Camera: framing + angle + lens + lighting ---
+    const cameraParts: string[] = [];
+    for (const name of cameraSelections.framing) {
+      const p = findPrompt(name, cameraOptions.FRAMING);
+      if (p) cameraParts.push(p);
     }
+    for (const name of cameraSelections.cameraAngle) {
+      const p = findPrompt(name, cameraOptions.CAMERA_ANGLE);
+      if (p) cameraParts.push(p);
+    }
+    for (const l of cameraSelections.lens) cameraParts.push(LENS_PROMPTS[l] || l.toLowerCase());
+    for (const l of cameraSelections.lighting) cameraParts.push(LIGHTING_PROMPTS[l] || l.toLowerCase());
 
-    return prompts.join(", ");
+    // --- Assemble in structured order ---
+    const sections = [
+      qualityParts.join(", "),
+      subjectParts.join(", "),
+      faceParts.join(", "),
+      hairParts.join(", "),
+      bodyParts.join(", "),
+      expressionParts.join(", "),
+      clothingParts.join(", "),
+      poseParts.join(", "),
+      sceneParts.join(", "),
+      cameraParts.join(", "),
+      userPrompt.trim(),
+    ].filter(Boolean);
+
+    return sections.join(", ");
   }, [
     characterSelections, characterOptions,
     appearanceSelections, appearanceOptions,
@@ -1085,13 +1249,14 @@ export default function GenerationPage() {
 
     const isVideo = activeTab === "video";
     const model = isVideo ? selectedVideoModel : selectedModel;
-    const compositePrompt = buildCompositePrompt(prompt.trim());
+    const compositePrompt = buildCompositePrompt(prompt.trim(), model, isVideo);
 
     try {
       let jobId: string;
+      const defaultNeg = "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo, signature, cropped, out of frame";
       const negativePrompt = promptDetailsSelections.negativePromptTerms.length > 0
-        ? promptDetailsSelections.negativePromptTerms.join(", ")
-        : undefined;
+        ? promptDetailsSelections.negativePromptTerms.join(", ") + ", " + defaultNeg
+        : defaultNeg;
       if (isVideo) {
         const videoProvider = videoModels.find((m) => m.id === selectedVideoModel)?.provider;
         const result = await createVideoJob({
