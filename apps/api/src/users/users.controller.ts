@@ -24,7 +24,9 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -111,8 +113,44 @@ export class UsersController {
    */
   @ApiOperation({ summary: "Delete a social link" })
   @Delete("me/social-links/:provider")
-  @HttpCode(HttpStatus.NO_CONTENT) // Успешное удаление — пустой ответ
+  @HttpCode(HttpStatus.NO_CONTENT)
   async deleteSocialLink(@Req() req: any, @Param("provider") provider: string) {
     await this.usersService.deleteSocialLink(req.user.id, provider);
+  }
+
+  /** GET /users/check-nickname?nickname=... — check if nickname is available */
+  @ApiOperation({ summary: "Check nickname availability" })
+  @Get("check-nickname")
+  async checkNickname(@Req() req: any, @Query("nickname") nickname: string) {
+    return this.usersService.checkNicknameAvailability(nickname, req.user.id);
+  }
+
+  /** GET /users/:nickname — get public profile (auth required) */
+  @ApiOperation({ summary: "Get public user profile by nickname" })
+  @Get(":nickname")
+  async getPublicProfile(@Req() req: any, @Param("nickname") nickname: string) {
+    return this.usersService.getPublicProfile(nickname, req.user.id);
+  }
+
+  /** POST /users/:nickname/follow — follow a user */
+  @ApiOperation({ summary: "Follow a user" })
+  @Post(":nickname/follow")
+  async follow(@Req() req: any, @Param("nickname") nickname: string) {
+    return this.usersService.followUser(req.user.id, nickname);
+  }
+
+  /** DELETE /users/:nickname/follow — unfollow a user */
+  @ApiOperation({ summary: "Unfollow a user" })
+  @Delete(":nickname/follow")
+  @HttpCode(HttpStatus.OK)
+  async unfollow(@Req() req: any, @Param("nickname") nickname: string) {
+    return this.usersService.unfollowUser(req.user.id, nickname);
+  }
+
+  /** GET /users/:nickname/follow-status — check follow status */
+  @ApiOperation({ summary: "Check if current user follows a given user" })
+  @Get(":nickname/follow-status")
+  async followStatus(@Req() req: any, @Param("nickname") nickname: string) {
+    return this.usersService.getFollowStatus(req.user.id, nickname);
   }
 }

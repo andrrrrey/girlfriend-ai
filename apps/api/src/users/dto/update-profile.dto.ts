@@ -1,37 +1,24 @@
-/**
- * @file update-profile.dto.ts
- * @description DTO для частичного обновления профиля пользователя.
- * Все поля опциональны — можно передать только те, что изменились.
- */
+import { IsOptional, IsString, MaxLength, IsIn, Matches, IsNotIn } from "class-validator";
 
-import { IsOptional, IsString, MaxLength, IsIn } from "class-validator";
+const RESERVED_NICKNAMES = ["me", "admin", "check-nickname", "api", "support"];
 
-/**
- * Тело запроса PATCH /users/me
- */
 export class UpdateProfileDto {
-  /**
-   * Отображаемое имя пользователя.
-   * Максимум 50 символов. Опциональное.
-   */
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  @Matches(/^[a-zA-Z0-9_]+$/, { message: "Nickname can only contain letters, numbers and underscores" })
+  @IsNotIn(RESERVED_NICKNAMES, { message: "This nickname is reserved" })
   nickname?: string;
 
-  /**
-   * URL аватара пользователя.
-   * Обычно ссылка на загруженное изображение в S3/MinIO.
-   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  aboutMe?: string;
+
   @IsOptional()
   @IsString()
   avatarUrl?: string;
 
-  /**
-   * Язык интерфейса.
-   * Допустимые значения: "en" | "ru".
-   * Используется фронтендом для локализации.
-   */
   @IsOptional()
   @IsString()
   @IsIn(["en", "ru"])

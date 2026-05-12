@@ -15,12 +15,13 @@ export class CharactersController {
     @Query("gender") gender?: string,
     @Query("style") style?: string,
     @Query("createdBy") createdBy?: string,
+    @Query("createdByUserId") createdByUserId?: string,
     @Query("sortBy") sortBy?: string,
     @Query("tags") tags?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
-    const where: Prisma.CharacterWhereInput = { deletedAt: null };
+    const where: Prisma.CharacterWhereInput = { deletedAt: null, isPublic: true };
 
     if (search) {
       where.name = { contains: search, mode: "insensitive" };
@@ -37,7 +38,9 @@ export class CharactersController {
       where.AND = jsonFilters;
     }
 
-    if (createdBy === "platform") {
+    if (createdByUserId) {
+      where.createdBy = createdByUserId;
+    } else if (createdBy === "platform") {
       where.createdBy = null;
     } else if (createdBy === "community") {
       where.createdBy = { not: null };
@@ -60,7 +63,7 @@ export class CharactersController {
     const take = limit ? parseInt(limit, 10) : 30;
     const skip = page ? (parseInt(page, 10) - 1) * take : 0;
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.prisma.character.findMany({
         where,
         select: {
@@ -70,6 +73,7 @@ export class CharactersController {
           tags: true,
           personality: true,
           createdBy: true,
+          createdAt: true,
         },
         orderBy,
         take,
@@ -77,6 +81,25 @@ export class CharactersController {
       }),
       this.prisma.character.count({ where }),
     ]);
+
+    // Attach creator info for characters created by users
+    const creatorIds = [...new Set(rawItems.map((c) => c.createdBy).filter(Boolean) as string[])];
+    const creatorsMap = new Map<string, { id: string; nickname: string | null; avatarUrl: string | null }>();
+    if (creatorIds.length > 0) {
+      const creators = await this.prisma.user.findMany({
+        where: { id: { in: creatorIds } },
+        select: { id: true, nickname: true, avatarUrl: true },
+      });
+      for (const c of creators) creatorsMap.set(c.id, c);
+    }
+
+    const items = rawItems.map((c) => ({
+      ...c,
+      isPublic: true,
+      systemPrompt: "",
+      voiceId: null,
+      creator: c.createdBy ? (creatorsMap.get(c.createdBy) ?? null) : null,
+    }));
 
     return { items, total };
   }
@@ -118,7 +141,7 @@ export class CharactersController {
 
   @Get(":id")
   async getOne(@Param("id") id: string) {
-    return this.prisma.character.findFirst({
+    const character = await this.prisma.character.findFirst({
       where: { id, deletedAt: null },
       select: {
         id: true,
@@ -126,8 +149,31 @@ export class CharactersController {
         avatarUrl: true,
         tags: true,
         personality: true,
+        createdBy: true,
+        createdAt: true,
+        isPublic: true,
+        voiceId: true,
       },
     });
+
+    if (!character) return null;
+
+    let creator = null;
+    if (character.createdBy) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: character.createdBy },
+        select: { id: true, nickname: true, avatarUrl: true },
+      });
+      if (user) {
+        const [followerCount, likeCount] = await Promise.all([
+          this.prisma.follow.count({ where: { followeeId: user.id } }),
+          this.prisma.like.count({ where: { userId: user.id } }),
+        ]);
+        creator = { ...user, followerCount, likeCount };
+      }
+    }
+
+    return { ...character, systemPrompt: "", creator };
   }
 
   @Post()

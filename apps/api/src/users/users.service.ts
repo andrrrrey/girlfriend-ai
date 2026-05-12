@@ -15,7 +15,7 @@
  * - Новый пароль хешируется bcrypt с cost-factor 10
  */
 
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, NotFoundException, ConflictException, BadRequestException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "../prisma.service";
 
@@ -46,16 +46,113 @@ export class UsersService {
         email: true,
         nickname: true,
         avatarUrl: true,
+        aboutMe: true,
         role: true,
         subscription: true,
         lang: true,
         createdAt: true,
         socialLinks: {
-          select: { provider: true, url: true }, // Только провайдер и URL (без id)
+          select: { provider: true, url: true },
         },
       },
     });
     return user;
+  }
+
+  async checkNicknameAvailability(nickname: string, currentUserId: string) {
+    const existing = await this.prisma.user.findFirst({
+      where: { nickname, id: { not: currentUserId } },
+      select: { id: true },
+    });
+    return { available: !existing };
+  }
+
+  async getPublicProfile(nickname: string, viewerId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { nickname, deletedAt: null },
+      select: {
+        id: true,
+        nickname: true,
+        avatarUrl: true,
+        aboutMe: true,
+        createdAt: true,
+        socialLinks: { select: { provider: true, url: true } },
+        _count: {
+          select: {
+            followers: true,
+            likes: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new NotFoundException("User not found");
+
+    const [characterCount, isFollowing] = await Promise.all([
+      this.prisma.character.count({ where: { createdBy: user.id, isPublic: true, deletedAt: null } }),
+      this.prisma.follow.findFirst({
+        where: { followerId: viewerId, followeeId: user.id },
+        select: { id: true },
+      }),
+    ]);
+
+    return {
+      id: user.id,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      aboutMe: user.aboutMe,
+      socialLinks: user.socialLinks,
+      followerCount: user._count.followers,
+      likeCount: user._count.likes,
+      characterCount,
+      isFollowing: !!isFollowing,
+      createdAt: user.createdAt,
+    };
+  }
+
+  async followUser(followerId: string, followeeNickname: string) {
+    const followee = await this.prisma.user.findFirst({
+      where: { nickname: followeeNickname, deletedAt: null },
+      select: { id: true },
+    });
+    if (!followee) throw new NotFoundException("User not found");
+    if (followee.id === followerId) throw new BadRequestException("Cannot follow yourself");
+
+    try {
+      await this.prisma.follow.create({
+        data: { followerId, followeeId: followee.id },
+      });
+    } catch {
+      // Already following — ignore duplicate
+    }
+    return { following: true };
+  }
+
+  async unfollowUser(followerId: string, followeeNickname: string) {
+    const followee = await this.prisma.user.findFirst({
+      where: { nickname: followeeNickname, deletedAt: null },
+      select: { id: true },
+    });
+    if (!followee) throw new NotFoundException("User not found");
+
+    await this.prisma.follow.deleteMany({
+      where: { followerId, followeeId: followee.id },
+    });
+    return { following: false };
+  }
+
+  async getFollowStatus(followerId: string, followeeNickname: string) {
+    const followee = await this.prisma.user.findFirst({
+      where: { nickname: followeeNickname, deletedAt: null },
+      select: { id: true },
+    });
+    if (!followee) throw new NotFoundException("User not found");
+
+    const follow = await this.prisma.follow.findFirst({
+      where: { followerId, followeeId: followee.id },
+      select: { id: true },
+    });
+    return { following: !!follow };
   }
 
   /**
@@ -71,8 +168,16 @@ export class UsersService {
    */
   async updateProfile(
     userId: string,
-    data: { nickname?: string; avatarUrl?: string; lang?: string },
+    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string },
   ) {
+    if (data.nickname) {
+      const conflict = await this.prisma.user.findFirst({
+        where: { nickname: data.nickname, id: { not: userId } },
+        select: { id: true },
+      });
+      if (conflict) throw new ConflictException("Nickname is already taken");
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
       data,
@@ -81,10 +186,10 @@ export class UsersService {
         email: true,
         nickname: true,
         avatarUrl: true,
+        aboutMe: true,
         role: true,
         subscription: true,
         lang: true,
-        // passwordHash, deletedAt — не возвращаем
       },
     });
   }
