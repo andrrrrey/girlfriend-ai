@@ -151,11 +151,14 @@ function ChatPageInner() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
+
   if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
-  if (!user) {
-    router.push("/login");
-    return null;
-  }
+  if (!user) return null;
 
   const handleDemoError = (err: string, code?: number) => {
     if (code === 429) {
@@ -614,6 +617,21 @@ function ChatPageInner() {
     }
   };
 
+  const handleRegenerateImage = (poseName: string) => {
+    if (!poseOptions) {
+      getPoseOptions().then((opts) => {
+        setPoseOptions(opts);
+        const allPoses = opts.POSE.flatMap((c) => c.options);
+        const pose = allPoses.find((o) => o.name === poseName);
+        if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
+      }).catch(() => {});
+      return;
+    }
+    const allPoses = poseOptions.POSE.flatMap((c) => c.options);
+    const pose = allPoses.find((o) => o.name === poseName);
+    if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
+  };
+
   // Cleanup polling on unmount or chat switch
   useEffect(() => {
     return () => {
@@ -892,7 +910,29 @@ function ChatPageInner() {
                       })}
                     </span>
                     <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && (
+                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type === "image" && (
+                        <>
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="action-btn"
+                            title="Удалить"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const poseName = (msg.metadata as Record<string, unknown>)?.poseName as string;
+                              if (poseName) handleRegenerateImage(poseName);
+                            }}
+                            className="action-btn"
+                            disabled={streaming || generatingImage}
+                            title="Перегенерировать"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                        </>
+                      )}
+                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type !== "image" && (
                         <>
                           <button
                             onClick={() => handlePlayTTS(msg.id)}
@@ -902,12 +942,6 @@ function ChatPageInner() {
                             title={isDemo ? "Доступно по подписке" : (playingTTSId === msg.id ? "Остановить" : "Озвучить")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5h1.5L6 2.5v7L3.5 7.5H2a.5.5 0 01-.5-.5V5a.5.5 0 01.5-.5z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 4a2.5 2.5 0 010 4" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/><path d="M9.5 2.5a4.5 4.5 0 010 7" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
-                          </button>
-                          <button className="action-btn" title="Нравится">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3.5 5.5V10M1.5 6.5v3a1 1 0 001 1h5.38a1 1 0 00.97-.75l.88-3.5a.5.5 0 00-.48-.62H7V3.5a1 1 0 00-1-1l-2 3.5H2.5a1 1 0 00-1 1z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button className="action-btn" title="Не нравится">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 6.5V2M10.5 5.5v-3a1 1 0 00-1-1H4.12a1 1 0 00-.97.75l-.88 3.5a.5.5 0 00.48.62H5v2.13a1 1 0 001 1l2-3.5h1.5a1 1 0 001-1z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
                           <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
