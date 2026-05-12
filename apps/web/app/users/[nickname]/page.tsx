@@ -715,12 +715,13 @@ export default function UserProfilePage() {
           {tags.length > 0 && (
             <ScrollableTagsRow
               tags={tags}
-              selected={selectedTags}
-              onToggle={(tag) =>
+              selectedTags={selectedTags}
+              onTagToggle={(tag) => {
+                if (tag === "__ALL__") { setSelectedTags([]); return; }
                 setSelectedTags((prev) =>
                   prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-                )
-              }
+                );
+              }}
             />
           )}
 
