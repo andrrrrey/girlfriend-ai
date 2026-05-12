@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
@@ -24,7 +24,7 @@ import ChatPoseModal from "../components/ChatPoseModal";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
-export default function ChatPage() {
+function ChatPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const isDemo = !user || user.subscription === "free";
@@ -1196,5 +1196,13 @@ export default function ChatPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div style={{ background: "#090909", minHeight: "100vh" }} />}>
+      <ChatPageInner />
+    </Suspense>
   );
 }
