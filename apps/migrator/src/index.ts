@@ -250,12 +250,18 @@ async function insertFlatOption(
   imageUrl: string,
   order: number,
 ): Promise<void> {
-  await client.query(
-    `INSERT INTO "${table}" (id, "${keyCol}", name, prompt, image_url, "order", created_at)
-     SELECT gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW()
-     WHERE NOT EXISTS (SELECT 1 FROM "${table}" WHERE "${keyCol}" = $1 AND name = $2)`,
+  const { rowCount } = await client.query(
+    `UPDATE "${table}" SET prompt = $3, image_url = $4, "order" = $5
+     WHERE "${keyCol}" = $1 AND name = $2`,
     [keyVal, name, prompt, imageUrl, order],
   );
+  if (!rowCount) {
+    await client.query(
+      `INSERT INTO "${table}" (id, "${keyCol}", name, prompt, image_url, "order", created_at)
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW())`,
+      [keyVal, name, prompt, imageUrl, order],
+    );
+  }
 }
 
 async function insertCategoryOption(
@@ -267,12 +273,18 @@ async function insertCategoryOption(
   imageUrl: string,
   order: number,
 ): Promise<void> {
-  await client.query(
-    `INSERT INTO "${table}" (id, category_id, name, prompt, image_url, "order", created_at)
-     SELECT gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW()
-     WHERE NOT EXISTS (SELECT 1 FROM "${table}" WHERE category_id = $1 AND name = $2)`,
+  const { rowCount } = await client.query(
+    `UPDATE "${table}" SET prompt = $3, image_url = $4, "order" = $5
+     WHERE category_id = $1 AND name = $2`,
     [categoryId, name, prompt, imageUrl, order],
   );
+  if (!rowCount) {
+    await client.query(
+      `INSERT INTO "${table}" (id, category_id, name, prompt, image_url, "order", created_at)
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW())`,
+      [categoryId, name, prompt, imageUrl, order],
+    );
+  }
 }
 
 async function seedGenerationElements(client: Client, workspaceRoot: string): Promise<void> {
