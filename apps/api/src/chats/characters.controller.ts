@@ -21,7 +21,7 @@ export class CharactersController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
-    const where: Prisma.CharacterWhereInput = { deletedAt: null, isPublic: true };
+    const where: Prisma.CharacterWhereInput = { deletedAt: null };
 
     if (search) {
       where.name = { contains: search, mode: "insensitive" };
