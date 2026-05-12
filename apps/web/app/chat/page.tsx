@@ -11,10 +11,16 @@ import {
   streamVoiceMessage,
   streamEditMessage,
   fetchTTS,
+  getPoseOptions,
+  createImageJob,
+  getJobStatus,
+  saveImageMessage,
   type ChatSession,
   type Message,
   type Character,
+  type PoseOptionsResponse,
 } from "../../lib/api";
+import ChatPoseModal from "../components/ChatPoseModal";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -53,6 +59,14 @@ export default function ChatPage() {
   // Edit message state
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+
+  // Image generation state
+  const [inputMode, setInputMode] = useState<"ask" | "image">("ask");
+  const [showInputModeDropdown, setShowInputModeDropdown] = useState(false);
+  const [showPoseSelector, setShowPoseSelector] = useState(false);
+  const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse | null>(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const imagePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load chat list
   const loadChats = useCallback(async () => {
@@ -492,6 +506,124 @@ export default function ChatPage() {
   const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
 
+  const buildChatImagePrompt = (personality: Record<string, unknown>, posePrompt: string): string => {
+    const parts: string[] = ["masterpiece", "best quality", "highres", "nsfw", "explicit"];
+
+    const genderMap: Record<string, string> = { Female: "woman", Male: "man", Femboy: "femboy, feminine male", "Non-binary": "androgynous person" };
+    const gender = personality.gender as string | undefined;
+    if (gender) parts.push(genderMap[gender] || gender.toLowerCase());
+
+    const age = personality.age as string | number | undefined;
+    if (age) parts.push(`${age}-year-old`);
+
+    const ethnicity = (personality.ethnicity || personality.nationality) as string | undefined;
+    if (ethnicity) parts.push(ethnicity.toLowerCase());
+
+    const eyeColor = personality.eyeColor as string | undefined;
+    if (eyeColor) parts.push(`${eyeColor.toLowerCase()} eyes`);
+
+    const hairColor = personality.hairColor as string | undefined;
+    if (hairColor) parts.push(`${hairColor.toLowerCase()} hair`);
+
+    const hairStyle = personality.hairStyle as string | undefined;
+    if (hairStyle) parts.push(hairStyle.toLowerCase());
+
+    const bodyType = personality.bodyType as string | undefined;
+    if (bodyType) parts.push(bodyType.toLowerCase());
+
+    const breastSize = personality.breastSize as string | undefined;
+    if (breastSize) parts.push(`${breastSize.toLowerCase()} breasts`);
+
+    const buttSize = personality.buttSize as string | undefined;
+    if (buttSize) parts.push(`${buttSize.toLowerCase()} butt`);
+
+    const height = personality.height as string | undefined;
+    if (height) parts.push(height.toLowerCase());
+
+    parts.push(posePrompt);
+
+    return parts.filter(Boolean).join(", ");
+  };
+
+  const handleOpenPoseSelector = async () => {
+    if (!poseOptions) {
+      try {
+        const opts = await getPoseOptions();
+        setPoseOptions(opts);
+      } catch { return; }
+    }
+    setShowPoseSelector(true);
+  };
+
+  const handleGenerateImage = async (poseName: string, posePrompt: string) => {
+    if (!activeChat || generatingImage) return;
+    setShowPoseSelector(false);
+    setGeneratingImage(true);
+
+    const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
+    const tempId = `temp-img-${Date.now()}`;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        role: "assistant",
+        content: `Генерация изображения: ${poseName}...`,
+        type: "image",
+        mediaUrl: null,
+        metadata: null,
+        createdAt: new Date().toISOString(),
+      } as Message,
+    ]);
+
+    try {
+      const { jobId } = await createImageJob({
+        prompt,
+        model: "alibaba/wan-2.6/text-to-image",
+        negativePrompt: "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo",
+        provider: "atlascloud",
+      });
+
+      const chatIdSnapshot = activeChat;
+      imagePollingRef.current = setInterval(async () => {
+        try {
+          const status = await getJobStatus(jobId);
+          if (status.status === "completed" && status.output?.url) {
+            if (imagePollingRef.current) clearInterval(imagePollingRef.current);
+            imagePollingRef.current = null;
+            await saveImageMessage(chatIdSnapshot, status.output.url, poseName);
+            const res = await chats.getMessages(chatIdSnapshot);
+            setMessages(res.items);
+            setGeneratingImage(false);
+          } else if (status.status === "failed") {
+            if (imagePollingRef.current) clearInterval(imagePollingRef.current);
+            imagePollingRef.current = null;
+            setMessages((prev) => prev.filter((m) => m.id !== tempId));
+            setGeneratingImage(false);
+          }
+        } catch {
+          if (imagePollingRef.current) clearInterval(imagePollingRef.current);
+          imagePollingRef.current = null;
+          setMessages((prev) => prev.filter((m) => m.id !== tempId));
+          setGeneratingImage(false);
+        }
+      }, 3000);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setGeneratingImage(false);
+    }
+  };
+
+  // Cleanup polling on unmount or chat switch
+  useEffect(() => {
+    return () => {
+      if (imagePollingRef.current) {
+        clearInterval(imagePollingRef.current);
+        imagePollingRef.current = null;
+      }
+    };
+  }, [activeChat]);
+
   return (
     <div className="chat-content">
       <style>{`
@@ -549,6 +681,20 @@ export default function ChatPage() {
 .edit-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
 .ask-btn { background: #1e1e1e; border-radius: 4px; height: 32px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; border: none; font-family: 'Syne', sans-serif; }
 .ask-btn-text { font-size: 10px; font-weight: 500; color: #969696; }
+.input-mode-dropdown-wrap { position: relative; flex-shrink: 0; }
+.input-mode-btn { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Syne', sans-serif; height: 32px; white-space: nowrap; }
+.input-mode-btn:hover { border-color: #f95bad; }
+.input-mode-dropdown { position: absolute; bottom: calc(100% + 6px); left: 0; background: #1a1a1a; border: 1px solid #313131; border-radius: 8px; padding: 4px; z-index: 10; min-width: 130px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+.input-mode-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; background: transparent; border: none; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: 6px; font-family: 'Syne', sans-serif; }
+.input-mode-option:hover { background: #2a2a2a; }
+.input-mode-option.active { background: rgba(249,91,173,0.15); color: #f95bad; }
+.choose-pose-btn { flex: 1; height: 32px; background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif; }
+.choose-pose-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.image-message { padding: 4px !important; }
+.chat-gen-image { max-width: 300px; width: 100%; border-radius: 8px; cursor: pointer; display: block; }
+.generating-indicator { display: flex; align-items: center; gap: 8px; }
+.generating-spinner { width: 14px; height: 14px; border: 2px solid #f95bad; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .right-panel { width: 256px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; overflow-y: auto; height: calc(100vh - 46px); }
 .profile-gallery { width: 100%; height: 300px; border-radius: 8px; border: 1px solid #252525; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 8px; }
 .profile-gallery .gallery-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%); }
@@ -587,7 +733,6 @@ export default function ChatPage() {
       <aside className="chats-panel">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 className="chats-panel-title">Chats</h2>
-          <button onClick={() => setShowNewChat(true)} className="new-chat-btn">+</button>
         </div>
 
         <div className="chats-search">
@@ -721,6 +866,20 @@ export default function ChatPage() {
                         </button>
                       </div>
                     </div>
+                  ) : msg.type === "image" && msg.mediaUrl ? (
+                    <div className="message-bubble image-message">
+                      <img
+                        src={msg.mediaUrl}
+                        alt={msg.content}
+                        className="chat-gen-image"
+                        onClick={() => window.open(msg.mediaUrl!, "_blank")}
+                      />
+                    </div>
+                  ) : msg.type === "image" && !msg.mediaUrl ? (
+                    <div className="message-bubble generating-indicator">
+                      <div className="generating-spinner" />
+                      <span>{msg.content}</span>
+                    </div>
                   ) : (
                     <div className="message-bubble">{msg.content}</div>
                   )}
@@ -759,9 +918,6 @@ export default function ChatPage() {
                             title="Удалить"
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button className="action-btn" title="Редактировать">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
                           <button
                             onClick={() => handleRegenerate(msg.id)}
@@ -830,31 +986,77 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
-                  {/* Ask button temporarily hidden */}
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="chat-text-input"
-                    placeholder="Leave a message..."
-                    disabled={streaming}
-                  />
-                  <button
-                    onClick={startRecording}
-                    disabled={streaming}
-                    className="input-icon-btn"
-                    style={isDemo ? { color: "#555", cursor: "default" } : {}}
-                    title={isDemo ? "Голосовые функции доступны по подписке" : "Голосовое сообщение"}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  </button>
-                  <button
-                    onClick={handleSend}
-                    disabled={streaming || !input.trim()}
-                    className="input-icon-btn send"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
+                  <div className="input-mode-dropdown-wrap">
+                    <button
+                      className="input-mode-btn"
+                      onClick={() => setShowInputModeDropdown(!showInputModeDropdown)}
+                    >
+                      {inputMode === "ask" ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      )}
+                      {inputMode === "ask" ? "Ask" : "Image"}
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginLeft: 2 }}>
+                        <path d="M2.5 4L5 6.5L7.5 4" stroke="#888" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    {showInputModeDropdown && (
+                      <div className="input-mode-dropdown">
+                        <button
+                          className={`input-mode-option ${inputMode === "ask" ? "active" : ""}`}
+                          onClick={() => { setInputMode("ask"); setShowInputModeDropdown(false); }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                          Ask
+                        </button>
+                        <button
+                          className={`input-mode-option ${inputMode === "image" ? "active" : ""}`}
+                          onClick={() => { setInputMode("image"); setShowInputModeDropdown(false); }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          Image
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {inputMode === "ask" ? (
+                    <>
+                      <input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="chat-text-input"
+                        placeholder="Leave a message..."
+                        disabled={streaming}
+                      />
+                      <button
+                        onClick={startRecording}
+                        disabled={streaming}
+                        className="input-icon-btn"
+                        style={isDemo ? { color: "#555", cursor: "default" } : {}}
+                        title={isDemo ? "Голосовые функции доступны по подписке" : "Голосовое сообщение"}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round"/></svg>
+                      </button>
+                      <button
+                        onClick={handleSend}
+                        disabled={streaming || !input.trim()}
+                        className="input-icon-btn send"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleOpenPoseSelector}
+                      disabled={generatingImage || streaming}
+                      className="choose-pose-btn"
+                    >
+                      {generatingImage ? "Генерация..." : "Выбрать позу"}
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -983,6 +1185,15 @@ export default function ChatPage() {
             )}
           </div>
         </aside>
+      )}
+
+      {poseOptions && (
+        <ChatPoseModal
+          open={showPoseSelector}
+          onClose={() => setShowPoseSelector(false)}
+          onGenerate={handleGenerateImage}
+          options={poseOptions}
+        />
       )}
     </div>
   );

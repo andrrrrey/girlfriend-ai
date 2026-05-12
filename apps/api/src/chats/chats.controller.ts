@@ -988,4 +988,22 @@ export class ChatsController {
 
     res.end();
   }
+
+  @ApiOperation({ summary: "Save a generated image as a chat message" })
+  @Post(":id/image-message")
+  async saveImageMessage(
+    @Req() req: { user: { id: string } },
+    @Param("id") chatId: string,
+    @Body() body: { content: string; mediaUrl: string; metadata?: Record<string, unknown> },
+  ) {
+    await this.chatsService.getChat(chatId, req.user.id);
+
+    const msg = await this.chatsService.saveMessage(chatId, "assistant", body.content, {
+      type: "image",
+      mediaUrl: body.mediaUrl,
+      metadata: body.metadata,
+    });
+
+    return msg;
+  }
 }

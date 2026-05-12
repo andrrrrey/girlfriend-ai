@@ -1452,6 +1452,21 @@ export async function getJobStatus(jobId: string) {
   }>(`/generation/jobs/${jobId}`);
 }
 
+export async function saveImageMessage(
+  chatId: string,
+  mediaUrl: string,
+  poseName: string,
+): Promise<Message> {
+  return apiFetch<Message>(`/chats/${chatId}/image-message`, {
+    method: "POST",
+    body: JSON.stringify({
+      content: `Generated image: ${poseName}`,
+      mediaUrl,
+      metadata: { poseName, type: "generated-image" },
+    }),
+  });
+}
+
 export async function getImageStyles() {
   return apiFetch<{ id: string; name: string; description: string }[]>(
     "/generation/image/styles",
