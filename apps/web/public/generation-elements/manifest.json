@@ -334,49 +334,49 @@
         "type_petite": {
           "name": "type_petite",
           "group": "",
-          "prompt": "",
+          "prompt": "petite small-framed body",
           "file": "body/type_petite.jpg"
         },
         "type_slim": {
           "name": "type_slim",
           "group": "",
-          "prompt": "",
+          "prompt": "slim slender body",
           "file": "body/type_slim.jpg"
         },
         "type_average": {
           "name": "type_average",
           "group": "",
-          "prompt": "",
+          "prompt": "average build body",
           "file": "body/type_average.jpg"
         },
         "type_athletic": {
           "name": "type_athletic",
           "group": "",
-          "prompt": "",
+          "prompt": "athletic fit toned body",
           "file": "body/type_athletic.jpg"
         },
         "type_curvy": {
           "name": "type_curvy",
           "group": "",
-          "prompt": "",
+          "prompt": "curvy hourglass figure body",
           "file": "body/type_curvy.jpg"
         },
         "type_chubby": {
           "name": "type_chubby",
           "group": "",
-          "prompt": "",
+          "prompt": "chubby plump body",
           "file": "body/type_chubby.jpg"
         },
         "type_fat": {
           "name": "type_fat",
           "group": "",
-          "prompt": "",
+          "prompt": "fat overweight body",
           "file": "body/type_fat.jpg"
         },
         "type_muscular": {
           "name": "type_muscular",
           "group": "",
-          "prompt": "",
+          "prompt": "muscular body with defined muscles",
           "file": "body/type_muscular.jpg"
         }
       }
@@ -2338,301 +2338,301 @@
         "marks_freckles": {
           "name": "marks_freckles",
           "group": "",
-          "prompt": "",
+          "prompt": "freckles on face and body",
           "file": "distinctive/marks_freckles.jpg"
         },
         "marks_beauty_mark": {
           "name": "marks_beauty_mark",
           "group": "",
-          "prompt": "",
+          "prompt": "beauty mark on face",
           "file": "distinctive/marks_beauty_mark.jpg"
         },
         "marks_moles": {
           "name": "marks_moles",
           "group": "",
-          "prompt": "",
+          "prompt": "moles on body",
           "file": "distinctive/marks_moles.jpg"
         },
         "marks_birthmark": {
           "name": "marks_birthmark",
           "group": "",
-          "prompt": "",
+          "prompt": "birthmark",
           "file": "distinctive/marks_birthmark.jpg"
         },
         "marks_tan_lines": {
           "name": "marks_tan_lines",
           "group": "",
-          "prompt": "",
+          "prompt": "tan lines on skin",
           "file": "distinctive/marks_tan_lines.jpg"
         },
         "marks_stretch_marks": {
           "name": "marks_stretch_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "stretch marks",
           "file": "distinctive/marks_stretch_marks.jpg"
         },
         "marks_body_paint": {
           "name": "marks_body_paint",
           "group": "",
-          "prompt": "",
+          "prompt": "body paint decorative patterns",
           "file": "distinctive/marks_body_paint.jpg"
         },
         "marks_henna": {
           "name": "marks_henna",
           "group": "",
-          "prompt": "",
+          "prompt": "henna mehndi tattoo patterns",
           "file": "distinctive/marks_henna.jpg"
         },
         "marks_oiled_skin": {
           "name": "marks_oiled_skin",
           "group": "",
-          "prompt": "",
+          "prompt": "oiled glistening skin",
           "file": "distinctive/marks_oiled_skin.jpg"
         },
         "marks_dirty_skin": {
           "name": "marks_dirty_skin",
           "group": "",
-          "prompt": "",
+          "prompt": "dirty skin with smudges",
           "file": "distinctive/marks_dirty_skin.jpg"
         },
         "marks_scar_face": {
           "name": "marks_scar_face",
           "group": "",
-          "prompt": "",
+          "prompt": "facial scar",
           "file": "distinctive/marks_scar_face.jpg"
         },
         "marks_scar_body": {
           "name": "marks_scar_body",
           "group": "",
-          "prompt": "",
+          "prompt": "body scars",
           "file": "distinctive/marks_scar_body.jpg"
         },
         "marks_tattoo_small": {
           "name": "marks_tattoo_small",
           "group": "",
-          "prompt": "",
+          "prompt": "small tattoo",
           "file": "distinctive/marks_tattoo_small.jpg"
         },
         "marks_tattoo_arm": {
           "name": "marks_tattoo_arm",
           "group": "",
-          "prompt": "",
+          "prompt": "arm tattoo",
           "file": "distinctive/marks_tattoo_arm.jpg"
         },
         "marks_tattoo_sleeve": {
           "name": "marks_tattoo_sleeve",
           "group": "",
-          "prompt": "",
+          "prompt": "full sleeve tattoo",
           "file": "distinctive/marks_tattoo_sleeve.jpg"
         },
         "marks_tattoo_back": {
           "name": "marks_tattoo_back",
           "group": "",
-          "prompt": "",
+          "prompt": "back tattoo",
           "file": "distinctive/marks_tattoo_back.jpg"
         },
         "marks_tattoo_chest": {
           "name": "marks_tattoo_chest",
           "group": "",
-          "prompt": "",
+          "prompt": "chest tattoo",
           "file": "distinctive/marks_tattoo_chest.jpg"
         },
         "marks_tattoo_leg": {
           "name": "marks_tattoo_leg",
           "group": "",
-          "prompt": "",
+          "prompt": "leg tattoo",
           "file": "distinctive/marks_tattoo_leg.jpg"
         },
         "marks_tattoo_neck": {
           "name": "marks_tattoo_neck",
           "group": "",
-          "prompt": "",
+          "prompt": "neck tattoo",
           "file": "distinctive/marks_tattoo_neck.jpg"
         },
         "marks_tribal_tattoo": {
           "name": "marks_tribal_tattoo",
           "group": "",
-          "prompt": "",
+          "prompt": "tribal tattoo patterns",
           "file": "distinctive/marks_tribal_tattoo.jpg"
         },
         "marks_tattoo_lower_back": {
           "name": "marks_tattoo_lower_back",
           "group": "",
-          "prompt": "",
+          "prompt": "lower back tattoo tramp stamp",
           "file": "distinctive/marks_tattoo_lower_back.jpg"
         },
         "marks_tattoo_pubic": {
           "name": "marks_tattoo_pubic",
           "group": "",
-          "prompt": "",
+          "prompt": "pubic tattoo above crotch",
           "file": "distinctive/marks_tattoo_pubic.jpg"
         },
         "marks_tattoo_inner_thigh": {
           "name": "marks_tattoo_inner_thigh",
           "group": "",
-          "prompt": "",
+          "prompt": "inner thigh tattoo",
           "file": "distinctive/marks_tattoo_inner_thigh.jpg"
         },
         "marks_tattoo_underboob": {
           "name": "marks_tattoo_underboob",
           "group": "",
-          "prompt": "",
+          "prompt": "underboob tattoo",
           "file": "distinctive/marks_tattoo_underboob.jpg"
         },
         "marks_tattoo_heart": {
           "name": "marks_tattoo_heart",
           "group": "",
-          "prompt": "",
+          "prompt": "small heart tattoo",
           "file": "distinctive/marks_tattoo_heart.jpg"
         },
         "marks_tattoo_womb": {
           "name": "marks_tattoo_womb",
           "group": "",
-          "prompt": "",
+          "prompt": "womb tattoo symbol above pelvis",
           "file": "distinctive/marks_tattoo_womb.jpg"
         },
         "marks_tattoo_slave_mark": {
           "name": "marks_tattoo_slave_mark",
           "group": "",
-          "prompt": "",
+          "prompt": "slave mark tattoo, ownership brand tattoo symbol on skin, degrading marking, permanent body inscription",
           "file": "distinctive/marks_tattoo_slave_mark.jpg"
         },
         "marks_piercing_ear": {
           "name": "marks_piercing_ear",
           "group": "",
-          "prompt": "",
+          "prompt": "multiple ear piercings",
           "file": "distinctive/marks_piercing_ear.jpg"
         },
         "marks_piercing_nose": {
           "name": "marks_piercing_nose",
           "group": "",
-          "prompt": "",
+          "prompt": "nose piercing",
           "file": "distinctive/marks_piercing_nose.jpg"
         },
         "marks_piercing_lip": {
           "name": "marks_piercing_lip",
           "group": "",
-          "prompt": "",
+          "prompt": "lip piercing",
           "file": "distinctive/marks_piercing_lip.jpg"
         },
         "marks_piercing_eyebrow": {
           "name": "marks_piercing_eyebrow",
           "group": "",
-          "prompt": "",
+          "prompt": "eyebrow piercing",
           "file": "distinctive/marks_piercing_eyebrow.jpg"
         },
         "marks_piercing_navel": {
           "name": "marks_piercing_navel",
           "group": "",
-          "prompt": "",
+          "prompt": "navel belly button ring piercing",
           "file": "distinctive/marks_piercing_navel.jpg"
         },
         "marks_piercing_tongue": {
           "name": "marks_piercing_tongue",
           "group": "",
-          "prompt": "",
+          "prompt": "tongue piercing",
           "file": "distinctive/marks_piercing_tongue.jpg"
         },
         "marks_piercing_nipple": {
           "name": "marks_piercing_nipple",
           "group": "",
-          "prompt": "",
+          "prompt": "nipple piercing",
           "file": "distinctive/marks_piercing_nipple.jpg"
         },
         "marks_no_marks": {
           "name": "marks_no_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "clear unblemished clean skin",
           "file": "distinctive/marks_no_marks.jpg"
         },
         "marks_piercing_clit": {
           "name": "marks_piercing_clit",
           "group": "",
-          "prompt": "",
+          "prompt": "clitoral hood piercing",
           "file": "distinctive/marks_piercing_clit.jpg"
         },
         "marks_piercing_labia": {
           "name": "marks_piercing_labia",
           "group": "",
-          "prompt": "",
+          "prompt": "labia genital piercing",
           "file": "distinctive/marks_piercing_labia.jpg"
         },
         "marks_piercing_chain_nipple": {
           "name": "marks_piercing_chain_nipple",
           "group": "",
-          "prompt": "",
+          "prompt": "chain connecting nipple piercings",
           "file": "distinctive/marks_piercing_chain_nipple.jpg"
         },
         "marks_piercing_dermal_chest": {
           "name": "marks_piercing_dermal_chest",
           "group": "",
-          "prompt": "",
+          "prompt": "dermal chest piercing, micro-dermal anchor piercings on chest, small metal studs embedded in skin surface on upper chest",
           "file": "distinctive/marks_piercing_dermal_chest.jpg"
         },
         "marks_piercing_corset_back": {
           "name": "marks_piercing_corset_back",
           "group": "",
-          "prompt": "",
+          "prompt": "corset piercing on back laced with ribbon",
           "file": "distinctive/marks_piercing_corset_back.jpg"
         },
         "marks_love_bites": {
           "name": "marks_love_bites",
           "group": "",
-          "prompt": "",
+          "prompt": "hickeys love bites on neck and body",
           "file": "distinctive/marks_love_bites.jpg"
         },
         "marks_bite_marks": {
           "name": "marks_bite_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "bite marks on skin",
           "file": "distinctive/marks_bite_marks.jpg"
         },
         "marks_handprint_mark": {
           "name": "marks_handprint_mark",
           "group": "",
-          "prompt": "",
+          "prompt": "red handprint slap mark on buttock",
           "file": "distinctive/marks_handprint_mark.jpg"
         },
         "marks_rope_marks": {
           "name": "marks_rope_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "rope marks burn indentations on skin",
           "file": "distinctive/marks_rope_marks.jpg"
         },
         "marks_wax_on_body": {
           "name": "marks_wax_on_body",
           "group": "",
-          "prompt": "",
+          "prompt": "hardened red and white candle wax dripped on bare skin of torso and chest, dried wax drops on body",
           "file": "distinctive/marks_wax_on_body.jpg"
         },
         "marks_lipstick_marks": {
           "name": "marks_lipstick_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "lipstick kiss marks on body",
           "file": "distinctive/marks_lipstick_marks.jpg"
         },
         "marks_scratch_marks": {
           "name": "marks_scratch_marks",
           "group": "",
-          "prompt": "",
+          "prompt": "nail scratch marks on back",
           "file": "distinctive/marks_scratch_marks.jpg"
         },
         "marks_dripping_fluids": {
           "name": "marks_dripping_fluids",
           "group": "",
-          "prompt": "",
+          "prompt": "fluids dripping down thighs",
           "file": "distinctive/marks_dripping_fluids.jpg"
         },
         "marks_bruised_knees": {
           "name": "marks_bruised_knees",
           "group": "",
-          "prompt": "",
+          "prompt": "bruised reddened knees",
           "file": "distinctive/marks_bruised_knees.jpg"
         },
         "marks_smeared_makeup": {
           "name": "marks_smeared_makeup",
           "group": "",
-          "prompt": "",
+          "prompt": "smeared ruined makeup mascara running down face",
           "file": "distinctive/marks_smeared_makeup.jpg"
         }
       }
@@ -2920,2143 +2920,2143 @@
         "img_standing_neutral": {
           "name": "img_standing_neutral",
           "group": "",
-          "prompt": "",
+          "prompt": "standing upright, arms at sides, straight posture, facing forward, full body visible",
           "file": "pose/img_standing_neutral.jpg"
         },
         "img_hand_on_hip": {
           "name": "img_hand_on_hip",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, one hand on hip, weight shifted to one leg, natural body curve, confident pose",
           "file": "pose/img_hand_on_hip.jpg"
         },
         "img_hands_on_hips": {
           "name": "img_hands_on_hips",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, both hands on hips, elbows out, feet apart, confident assertive power stance",
           "file": "pose/img_hands_on_hips.jpg"
         },
         "img_arms_crossed": {
           "name": "img_arms_crossed",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, arms crossed over chest, shoulders squared, guarded or confident posture",
           "file": "pose/img_arms_crossed.jpg"
         },
         "img_hands_behind_back": {
           "name": "img_hands_behind_back",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, hands clasped behind back, chest forward, innocent attentive posture",
           "file": "pose/img_hands_behind_back.jpg"
         },
         "img_hands_behind_head": {
           "name": "img_hands_behind_head",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, both hands behind head, elbows out, torso stretched, relaxed open pose",
           "file": "pose/img_hands_behind_head.jpg"
         },
         "img_arms_up": {
           "name": "img_arms_up",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, both arms raised high above head, body elongated, triumphant celebratory pose",
           "file": "pose/img_arms_up.jpg"
         },
         "img_back_turned": {
           "name": "img_back_turned",
           "group": "",
-          "prompt": "",
+          "prompt": "standing with back to viewer, entire back visible, looking away, rear view",
           "file": "pose/img_back_turned.jpg"
         },
         "img_over_shoulder_look": {
           "name": "img_over_shoulder_look",
           "group": "",
-          "prompt": "",
+          "prompt": "body turned away, head rotated looking back over shoulder at viewer, classic over-shoulder glance",
           "file": "pose/img_over_shoulder_look.jpg"
         },
         "img_leaning_wall": {
           "name": "img_leaning_wall",
           "group": "",
-          "prompt": "",
+          "prompt": "leaning casually against wall, shoulder pressed to surface, relaxed nonchalant cool pose",
           "file": "pose/img_leaning_wall.jpg"
         },
         "img_leaning_forward": {
           "name": "img_leaning_forward",
           "group": "",
-          "prompt": "",
+          "prompt": "leaning upper body forward toward viewer, torso tilted from hips, engaging closeness",
           "file": "pose/img_leaning_forward.jpg"
         },
         "img_contrapposto": {
           "name": "img_contrapposto",
           "group": "",
-          "prompt": "",
+          "prompt": "contrapposto pose, weight on one leg, hips tilted, shoulders opposite, elegant S-curve spine",
           "file": "pose/img_contrapposto.jpg"
         },
         "img_tiptoe": {
           "name": "img_tiptoe",
           "group": "",
-          "prompt": "",
+          "prompt": "standing on tiptoes, heels raised, calves flexed, body stretched taller, graceful",
           "file": "pose/img_tiptoe.jpg"
         },
         "img_one_leg_raised": {
           "name": "img_one_leg_raised",
           "group": "",
-          "prompt": "",
+          "prompt": "standing on one leg, other knee bent and raised, playful dynamic posture, balancing",
           "file": "pose/img_one_leg_raised.jpg"
         },
         "img_power_pose": {
           "name": "img_power_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "confident power pose, legs wide apart, hands on hips, chest out, chin raised, dominant stance",
           "file": "pose/img_power_pose.jpg"
         },
         "img_model_pose": {
           "name": "img_model_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "high-fashion model pose, one leg forward, body angled three-quarters to camera, editorial runway stance",
           "file": "pose/img_model_pose.jpg"
         },
         "img_anime_girl_pose_p": {
           "name": "img_anime_girl_pose_p",
           "group": "",
-          "prompt": "",
+          "prompt": "cute anime pose, V peace sign near face, head tilted, hand on hip, one leg lifted, kawaii",
           "file": "pose/img_anime_girl_pose_p.jpg"
         },
         "img_frontal_confident": {
           "name": "img_frontal_confident",
           "group": "",
-          "prompt": "",
+          "prompt": "standing facing camera directly, shoulders back, chest open, direct eye contact, symmetrical commanding presence",
           "file": "pose/img_frontal_confident.jpg"
         },
         "img_against_wall": {
           "name": "img_against_wall",
           "group": "",
-          "prompt": "",
+          "prompt": "back pressed flat against wall, arms at sides or raised above head against wall surface",
           "file": "pose/img_against_wall.jpg"
         },
         "img_standing_split": {
           "name": "img_standing_split",
           "group": "",
-          "prompt": "",
+          "prompt": "standing vertical split, one leg on ground, other raised straight up alongside torso, extreme flexibility",
           "file": "pose/img_standing_split.jpg"
         },
         "img_hands_on_knees": {
           "name": "img_hands_on_knees",
           "group": "",
-          "prompt": "",
+          "prompt": "bent forward slightly, hands on kneecaps, knees bent, looking up at camera from lower position",
           "file": "pose/img_hands_on_knees.jpg"
         },
         "img_hip_pop": {
           "name": "img_hip_pop",
           "group": "",
-          "prompt": "",
+          "prompt": "one hip popped dramatically to side, sharp waist curve, weight on one leg, sassy attitude pose",
           "file": "pose/img_hip_pop.jpg"
         },
         "img_walking": {
           "name": "img_walking",
           "group": "",
-          "prompt": "",
+          "prompt": "walking mid-stride, one foot forward, arms swinging, dynamic forward motion",
           "file": "pose/img_walking.jpg"
         },
         "img_walking_towards": {
           "name": "img_walking_towards",
           "group": "",
-          "prompt": "",
+          "prompt": "walking toward camera, eyes on lens, confident forward stride, approaching viewer",
           "file": "pose/img_walking_towards.jpg"
         },
         "img_running": {
           "name": "img_running",
           "group": "",
-          "prompt": "",
+          "prompt": "running mid-sprint, one knee high, arms pumping, hair streaming back, dynamic speed",
           "file": "pose/img_running.jpg"
         },
         "img_jogging": {
           "name": "img_jogging",
           "group": "",
-          "prompt": "",
+          "prompt": "light jogging, casual running pace, arms swinging, athletic comfortable form",
           "file": "pose/img_jogging.jpg"
         },
         "img_dancing": {
           "name": "img_dancing",
           "group": "",
-          "prompt": "",
+          "prompt": "dynamic dancing pose, body twisted or extended at peak of movement, joyful free spirit",
           "file": "pose/img_dancing.jpg"
         },
         "img_twirling": {
           "name": "img_twirling",
           "group": "",
-          "prompt": "",
+          "prompt": "spinning on one foot, hair fanning out in arc, skirt or dress billowing outward, graceful rotation",
           "file": "pose/img_twirling.jpg"
         },
         "img_twerking": {
           "name": "img_twerking",
           "group": "",
-          "prompt": "",
+          "prompt": "twerking, bent forward, buttocks thrust out, rhythmic hip movement, provocative dance, 1girl",
           "file": "pose/img_twerking.jpg"
         },
         "img_hip_sway": {
           "name": "img_hip_sway",
           "group": "",
-          "prompt": "",
+          "prompt": "swaying hips side to side slowly, exaggerated lateral hip movement, seductive S-curves, 1girl",
           "file": "pose/img_hip_sway.jpg"
         },
         "img_body_wave": {
           "name": "img_body_wave",
           "group": "",
-          "prompt": "",
+          "prompt": "body wave rolling through torso, chest down through stomach to hips, undulating motion, 1girl",
           "file": "pose/img_body_wave.jpg"
         },
         "img_bouncy_walk": {
           "name": "img_bouncy_walk",
           "group": "",
-          "prompt": "",
+          "prompt": "walking with bouncy springy stride, visible bounce through body, playful carefree movement",
           "file": "pose/img_bouncy_walk.jpg"
         },
         "img_jump_for_joy": {
           "name": "img_jump_for_joy",
           "group": "",
-          "prompt": "",
+          "prompt": "jumping high, both feet off ground, arms overhead, hair flying, huge beaming smile, frozen joy",
           "file": "pose/img_jump_for_joy.jpg"
         },
         "img_stretching": {
           "name": "img_stretching",
           "group": "",
-          "prompt": "",
+          "prompt": "stretching, arms raised high, back arching, torso elongated, ribcage expanded, morning stretch",
           "file": "pose/img_stretching.jpg"
         },
         "img_pole_dance_p": {
           "name": "img_pole_dance_p",
           "group": "",
-          "prompt": "",
+          "prompt": "pole dancing on chrome pole, body wrapped around pole, legs extended, athletic sensual performance, 1girl",
           "file": "pose/img_pole_dance_p.jpg"
         },
         "img_sitting_chair": {
           "name": "img_sitting_chair",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting on chair, feet flat, hands on thighs, relaxed seated position",
           "file": "pose/img_sitting_chair.jpg"
         },
         "img_sitting_edge": {
           "name": "img_sitting_edge",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting on edge of bed or surface, legs dangling, hands gripping edge, perched",
           "file": "pose/img_sitting_edge.jpg"
         },
         "img_sitting_floor": {
           "name": "img_sitting_floor",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting on floor, legs tucked or extended, relaxed informal grounded posture",
           "file": "pose/img_sitting_floor.jpg"
         },
         "img_sitting_cross_legged": {
           "name": "img_sitting_cross_legged",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting cross-legged on floor, hands on knees, meditative comfortable pose",
           "file": "pose/img_sitting_cross_legged.jpg"
         },
         "img_sitting_legs_crossed": {
           "name": "img_sitting_legs_crossed",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting elegantly, one leg crossed over other at knee, refined sophisticated posture",
           "file": "pose/img_sitting_legs_crossed.jpg"
         },
         "img_sitting_knees_together": {
           "name": "img_sitting_knees_together",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting, knees pressed together, feet apart, demure ladylike position, hands on knees",
           "file": "pose/img_sitting_knees_together.jpg"
         },
         "img_sitting_legs_spread": {
           "name": "img_sitting_legs_spread",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting with legs spread wide apart, knees outward, bold open seated position, 1girl",
           "file": "pose/img_sitting_legs_spread.jpg"
         },
         "img_sitting_straddle": {
           "name": "img_sitting_straddle",
           "group": "",
-          "prompt": "",
+          "prompt": "straddling chair backwards, legs on each side, arms folded on chair back, casual reversed sitting",
           "file": "pose/img_sitting_straddle.jpg"
         },
         "img_sitting_railing": {
           "name": "img_sitting_railing",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting balanced on railing, legs dangling, hands gripping for stability, elevated perch",
           "file": "pose/img_sitting_railing.jpg"
         },
         "img_sitting_on_lap": {
           "name": "img_sitting_on_lap",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on 1boy's lap, facing him or sideways, intimate close physical contact",
           "file": "pose/img_sitting_on_lap.jpg"
         },
         "img_squatting": {
           "name": "img_squatting",
           "group": "",
-          "prompt": "",
+          "prompt": "squatting low, knees deeply bent, arms on knees, compact low crouching position",
           "file": "pose/img_squatting.jpg"
         },
         "img_perched": {
           "name": "img_perched",
           "group": "",
-          "prompt": "",
+          "prompt": "perched lightly on edge of surface, balanced delicately, legs dangling",
           "file": "pose/img_perched.jpg"
         },
         "img_lying_on_back": {
           "name": "img_lying_on_back",
           "group": "",
-          "prompt": "",
+          "prompt": "lying flat on back, face up, arms at sides or above head, legs relaxed, full front visible",
           "file": "pose/img_lying_on_back.jpg"
         },
         "img_lying_on_stomach": {
           "name": "img_lying_on_stomach",
           "group": "",
-          "prompt": "",
+          "prompt": "lying face down on stomach, head turned to side, back and buttocks facing up, legs straight or bent",
           "file": "pose/img_lying_on_stomach.jpg"
         },
         "img_lying_on_side": {
           "name": "img_lying_on_side",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on side, arm under head, legs stacked, relaxed S-curve of waist and hips",
           "file": "pose/img_lying_on_side.jpg"
         },
         "img_lying_propped_elbow": {
           "name": "img_lying_propped_elbow",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on side propped on elbow, head resting in hand, classic reclining pinup pose",
           "file": "pose/img_lying_propped_elbow.jpg"
         },
         "img_lying_legs_up": {
           "name": "img_lying_legs_up",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on back, both legs raised straight up, feet toward ceiling, L-shape position, 1girl",
           "file": "pose/img_lying_legs_up.jpg"
         },
         "img_lying_curled_up": {
           "name": "img_lying_curled_up",
           "group": "",
-          "prompt": "",
+          "prompt": "lying curled up in fetal position on side, knees to chest, arms hugging knees, cozy",
           "file": "pose/img_lying_curled_up.jpg"
         },
         "img_lying_sprawled": {
           "name": "img_lying_sprawled",
           "group": "",
-          "prompt": "",
+          "prompt": "lying sprawled, arms and legs spread freely, completely relaxed, uninhibited star shape",
           "file": "pose/img_lying_sprawled.jpg"
         },
         "img_lying_arched_back": {
           "name": "img_lying_arched_back",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on back, spine arched up, chest toward ceiling, head back, dramatic body arch, 1girl",
           "file": "pose/img_lying_arched_back.jpg"
         },
         "img_reclining": {
           "name": "img_reclining",
           "group": "",
-          "prompt": "",
+          "prompt": "reclining at 45 degrees, supported by elbows or pillows, upper body elevated, legs extended, lounging",
           "file": "pose/img_reclining.jpg"
         },
         "img_lying_next_to_pov": {
           "name": "img_lying_next_to_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "lying next to viewer POV, head on pillow facing camera, intimate close gaze, lying in bed beside viewer",
           "file": "pose/img_lying_next_to_pov.jpg"
         },
         "img_fetal_position": {
           "name": "img_fetal_position",
           "group": "",
-          "prompt": "",
+          "prompt": "lying in tight fetal position on side, knees pulled to chest, arms around shins, curled ball",
           "file": "pose/img_fetal_position.jpg"
         },
         "img_lying_on_bed": {
           "name": "img_lying_on_bed",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on bed with rumpled sheets and pillows, body relaxed on mattress, intimate bedroom scene",
           "file": "pose/img_lying_on_bed.jpg"
         },
         "img_kneeling": {
           "name": "img_kneeling",
           "group": "",
-          "prompt": "",
+          "prompt": "kneeling, both knees on floor, upper body upright, hands on thighs",
           "file": "pose/img_kneeling.jpg"
         },
         "img_kneeling_upright": {
           "name": "img_kneeling_upright",
           "group": "",
-          "prompt": "",
+          "prompt": "kneeling with straight upright posture, spine erect, shoulders back, poised kneeling",
           "file": "pose/img_kneeling_upright.jpg"
         },
         "img_kneeling_sitting_back": {
           "name": "img_kneeling_sitting_back",
           "group": "",
-          "prompt": "",
+          "prompt": "kneeling sitting back on heels, seiza position, shins flat, settled posture",
           "file": "pose/img_kneeling_sitting_back.jpg"
         },
         "img_kneeling_one_knee": {
           "name": "img_kneeling_one_knee",
           "group": "",
-          "prompt": "",
+          "prompt": "down on one knee, other foot flat on floor, proposal or knight pose",
           "file": "pose/img_kneeling_one_knee.jpg"
         },
         "img_kneeling_leaning_forward": {
           "name": "img_kneeling_leaning_forward",
           "group": "",
-          "prompt": "",
+          "prompt": "kneeling leaning forward, hands on floor, torso angled down, playful posture",
           "file": "pose/img_kneeling_leaning_forward.jpg"
         },
         "img_kneeling_looking_up": {
           "name": "img_kneeling_looking_up",
           "group": "",
-          "prompt": "",
+          "prompt": "kneeling looking up at viewer, chin raised, neck exposed, upward gaze from below",
           "file": "pose/img_kneeling_looking_up.jpg"
         },
         "img_bending_over": {
           "name": "img_bending_over",
           "group": "",
-          "prompt": "",
+          "prompt": "bending forward at waist, torso down, buttocks elevated, hair hanging, deep forward fold",
           "file": "pose/img_bending_over.jpg"
         },
         "img_bending_over_table": {
           "name": "img_bending_over_table",
           "group": "",
-          "prompt": "",
+          "prompt": "bending forward over table, hands flat on surface, hips against table edge, buttocks pushed back",
           "file": "pose/img_bending_over_table.jpg"
         },
         "img_bent_at_waist": {
           "name": "img_bent_at_waist",
           "group": "",
-          "prompt": "",
+          "prompt": "bent at waist, torso parallel to floor, 90-degree angle at hips, arms hanging or braced",
           "file": "pose/img_bent_at_waist.jpg"
         },
         "img_arched_back_standing": {
           "name": "img_arched_back_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, back arched dramatically, chest pushed forward, lower back curved inward, stomach taut",
           "file": "pose/img_arched_back_standing.jpg"
         },
         "img_touching_toes": {
           "name": "img_touching_toes",
           "group": "",
-          "prompt": "",
+          "prompt": "bending forward touching toes, legs straight, entire back side stretched, extreme forward fold",
           "file": "pose/img_touching_toes.jpg"
         },
         "img_jack_o_front": {
           "name": "img_jack_o_front",
           "group": "",
-          "prompt": "",
+          "prompt": "Jack-O challenge pose front view, extreme low crouch, legs spread wide, back arched, hands on ground, looking up, 1girl",
           "file": "pose/img_jack_o_front.jpg"
         },
         "img_jack_o_rear": {
           "name": "img_jack_o_rear",
           "group": "",
-          "prompt": "",
+          "prompt": "Jack-O challenge pose rear view, extreme low crouch, back deeply arched, buttocks up toward camera, legs spread, 1girl",
           "file": "pose/img_jack_o_rear.jpg"
         },
         "img_all_fours": {
           "name": "img_all_fours",
           "group": "",
-          "prompt": "",
+          "prompt": "on all fours, hands and knees on ground, back slightly arched, looking at viewer, 1girl, solo",
           "file": "pose/img_all_fours.jpg"
         },
         "img_crawling": {
           "name": "img_crawling",
           "group": "",
-          "prompt": "",
+          "prompt": "crawling forward on all fours toward viewer, one hand extended, predatory approach, 1girl, solo",
           "file": "pose/img_crawling.jpg"
         },
         "img_cat_pose": {
           "name": "img_cat_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "on all fours, deep cat arch, back curved downward concave, buttocks and head raised, 1girl, solo",
           "file": "pose/img_cat_pose.jpg"
         },
         "img_face_down_ass_up": {
           "name": "img_face_down_ass_up",
           "group": "",
-          "prompt": "",
+          "prompt": "face down on surface, buttocks raised high in air, knees apart, back arched, presenting position, 1girl",
           "file": "pose/img_face_down_ass_up.jpg"
         },
         "img_cooking": {
           "name": "img_cooking",
           "group": "",
-          "prompt": "",
+          "prompt": "standing in kitchen cooking, hands with utensils, domestic atmosphere, kitchen background",
           "file": "pose/img_cooking.jpg"
         },
         "img_eating": {
           "name": "img_eating",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting at table eating, holding utensils, casual mealtime moment",
           "file": "pose/img_eating.jpg"
         },
         "img_sleeping": {
           "name": "img_sleeping",
           "group": "",
-          "prompt": "",
+          "prompt": "sleeping peacefully, eyes closed, relaxed on bed with pillows and blankets, serene expression",
           "file": "pose/img_sleeping.jpg"
         },
         "img_showering_p": {
           "name": "img_showering_p",
           "group": "",
-          "prompt": "",
+          "prompt": "standing under shower, water cascading over body, wet hair slicked back, steam, bathroom tiles",
           "file": "pose/img_showering_p.jpg"
         },
         "img_bathing_p": {
           "name": "img_bathing_p",
           "group": "",
-          "prompt": "",
+          "prompt": "relaxing in bathtub, partially submerged, head on tub edge, bubbles, warm lighting",
           "file": "pose/img_bathing_p.jpg"
         },
         "img_reading": {
           "name": "img_reading",
           "group": "",
-          "prompt": "",
+          "prompt": "reading book held in hands, eyes on pages, relaxed posture, quiet contemplative expression",
           "file": "pose/img_reading.jpg"
         },
         "img_selfie": {
           "name": "img_selfie",
           "group": "",
-          "prompt": "",
+          "prompt": "taking selfie, arm extended holding phone, looking into phone camera, casual self-portrait",
           "file": "pose/img_selfie.jpg"
         },
         "img_pov_selfie": {
           "name": "img_pov_selfie",
           "group": "",
-          "prompt": "",
+          "prompt": "extreme close-up POV selfie, arm toward camera, face filling frame, looking at lens, intimate",
           "file": "pose/img_pov_selfie.jpg"
         },
         "img_shopping": {
           "name": "img_shopping",
           "group": "",
-          "prompt": "",
+          "prompt": "shopping with bags, in mall or boutique, happy expression, retail setting",
           "file": "pose/img_shopping.jpg"
         },
         "img_working_out": {
           "name": "img_working_out",
           "group": "",
-          "prompt": "",
+          "prompt": "exercising in gym, athletic pose, activewear, muscles engaged, gym equipment visible, determined expression",
           "file": "pose/img_working_out.jpg"
         },
         "img_yoga": {
           "name": "img_yoga",
           "group": "",
-          "prompt": "",
+          "prompt": "yoga pose on mat, flexibility and balance, serene expression, athletic wear",
           "file": "pose/img_yoga.jpg"
         },
         "img_tanning": {
           "name": "img_tanning",
           "group": "",
-          "prompt": "",
+          "prompt": "sunbathing lying outdoors, on beach towel or lounge chair, oiled skin, sunglasses, warm sunny setting",
           "file": "pose/img_tanning.jpg"
         },
         "img_dinner_date": {
           "name": "img_dinner_date",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting at romantic restaurant table, candlelight, wine glasses, dressed up, warm expression, intimate dinner",
           "file": "pose/img_dinner_date.jpg"
         },
         "img_head_tilt": {
           "name": "img_head_tilt",
           "group": "",
-          "prompt": "",
+          "prompt": "head tilted to one side, inquisitive or playful look, neck curved gracefully",
           "file": "pose/img_head_tilt.jpg"
         },
         "img_hand_to_mouth": {
           "name": "img_hand_to_mouth",
           "group": "",
-          "prompt": "",
+          "prompt": "hand raised to mouth, fingertips near lips, delicate gesture, attention to mouth",
           "file": "pose/img_hand_to_mouth.jpg"
         },
         "img_finger_gun": {
           "name": "img_finger_gun",
           "group": "",
-          "prompt": "",
+          "prompt": "finger gun gesture, index finger extended, thumb as hammer, playful confident pose",
           "file": "pose/img_finger_gun.jpg"
         },
         "img_peace_sign": {
           "name": "img_peace_sign",
           "group": "",
-          "prompt": "",
+          "prompt": "V peace sign near face, two fingers spread, bright cheerful expression, cute photo pose",
           "file": "pose/img_peace_sign.jpg"
         },
         "img_waving": {
           "name": "img_waving",
           "group": "",
-          "prompt": "",
+          "prompt": "waving hand in greeting, arm raised, open palm outward, friendly welcoming expression",
           "file": "pose/img_waving.jpg"
         },
         "img_salute": {
           "name": "img_salute",
           "group": "",
-          "prompt": "",
+          "prompt": "playful salute, hand raised to forehead, casual fun military-style gesture, slight smirk",
           "file": "pose/img_salute.jpg"
         },
         "img_blown_kiss": {
           "name": "img_blown_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "blowing kiss toward camera, lips pursed, hand near mouth, flirtatious affectionate gesture",
           "file": "pose/img_blown_kiss.jpg"
         },
         "img_heart_hands": {
           "name": "img_heart_hands",
           "group": "",
-          "prompt": "",
+          "prompt": "forming heart shape with both hands near face, sweet loving cute gesture",
           "file": "pose/img_heart_hands.jpg"
         },
         "img_shushing": {
           "name": "img_shushing",
           "group": "",
-          "prompt": "",
+          "prompt": "index finger pressed to lips, shushing gesture, conspiratorial glint in eyes",
           "file": "pose/img_shushing.jpg"
         },
         "img_nyan_paws": {
           "name": "img_nyan_paws",
           "group": "",
-          "prompt": "",
+          "prompt": "both hands near face, fingers curled like cat paws, cute kawaii cat girl gesture, head tilted",
           "file": "pose/img_nyan_paws.jpg"
         },
         "img_grabbing": {
           "name": "img_grabbing",
           "group": "",
-          "prompt": "",
+          "prompt": "reaching forward toward camera, hand outstretched, pulling viewer closer, dynamic gesture",
           "file": "pose/img_grabbing.jpg"
         },
         "img_holding_hands": {
           "name": "img_holding_hands",
           "group": "",
-          "prompt": "",
+          "prompt": "POV holding hands with viewer, hand extended clasping viewer's hand, warm affectionate",
           "file": "pose/img_holding_hands.jpg"
         },
         "img_incoming_hug": {
           "name": "img_incoming_hug",
           "group": "",
-          "prompt": "",
+          "prompt": "running toward camera, arms spread wide for hug, beaming smile, pure excitement",
           "file": "pose/img_incoming_hug.jpg"
         },
         "img_head_pats": {
           "name": "img_head_pats",
           "group": "",
-          "prompt": "",
+          "prompt": "POV receiving head pats, hand reaching from above, looking up happily, content expression",
           "file": "pose/img_head_pats.jpg"
         },
         "img_lap_pillow": {
           "name": "img_lap_pillow",
           "group": "",
-          "prompt": "",
+          "prompt": "head resting on viewer's lap POV, looking up with peaceful gaze, intimate restful",
           "file": "pose/img_lap_pillow.jpg"
         },
         "img_lip_bite_g": {
           "name": "img_lip_bite_g",
           "group": "",
-          "prompt": "",
+          "prompt": "gently biting lower lip, eyes on viewer, suggestive restraint, subtle provocative, 1girl",
           "file": "pose/img_lip_bite_g.jpg"
         },
         "img_presenting": {
           "name": "img_presenting",
           "group": "",
-          "prompt": "",
+          "prompt": "showing off body to viewer, hands on curves, confident display, inviting pose, 1girl, solo",
           "file": "pose/img_presenting.jpg"
         },
         "img_spread_legs_standing": {
           "name": "img_spread_legs_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing, legs spread wide apart, hands on hips or behind head, bold open stance, 1girl, solo",
           "file": "pose/img_spread_legs_standing.jpg"
         },
         "img_downblouse": {
           "name": "img_downblouse",
           "group": "",
-          "prompt": "",
+          "prompt": "leaning forward, overhead angle reveals cleavage inside loose neckline, breasts visible hanging, 1girl",
           "file": "pose/img_downblouse.jpg"
         },
         "img_upskirt": {
           "name": "img_upskirt",
           "group": "",
-          "prompt": "",
+          "prompt": "low upward angle beneath skirt hem, underwear or bare skin visible from below, thighs visible, 1girl",
           "file": "pose/img_upskirt.jpg"
         },
         "img_flashing": {
           "name": "img_flashing",
           "group": "",
-          "prompt": "",
+          "prompt": "lifting clothing to expose body underneath, shirt pulled up or skirt flipped, naughty daring expression, 1girl",
           "file": "pose/img_flashing.jpg"
         },
         "img_hand_bra_p": {
           "name": "img_hand_bra_p",
           "group": "",
-          "prompt": "",
+          "prompt": "topless, only hands covering bare breasts, each hand cupping one breast, fingers hiding nipples, teasing, 1girl, solo, no penis",
           "file": "pose/img_hand_bra_p.jpg"
         },
         "img_shy_covering": {
           "name": "img_shy_covering",
           "group": "",
-          "prompt": "",
+          "prompt": "nude, shyly covering self, arm across chest hiding breasts, other hand between legs, blushing, 1girl, solo",
           "file": "pose/img_shy_covering.jpg"
         },
         "img_removing_panties": {
           "name": "img_removing_panties",
           "group": "",
-          "prompt": "",
+          "prompt": "pulling panties down legs, thumbs hooked in waistband, underwear sliding down thighs, bending forward, 1girl, solo",
           "file": "pose/img_removing_panties.jpg"
         },
         "img_panty_pull": {
           "name": "img_panty_pull",
           "group": "",
-          "prompt": "",
+          "prompt": "fingers hooking panties pulling them aside, elastic stretched, deliberate exposure, 1girl, solo",
           "file": "pose/img_panty_pull.jpg"
         },
         "img_panty_tease": {
           "name": "img_panty_tease",
           "group": "",
-          "prompt": "",
+          "prompt": "playing with own underwear, snapping waistband, tugging teasingly, fingers along fabric edges, 1girl, solo",
           "file": "pose/img_panty_tease.jpg"
         },
         "img_hand_in_panties": {
           "name": "img_hand_in_panties",
           "group": "",
-          "prompt": "",
+          "prompt": "one hand inside panties, fingers pressing through fabric from inside, self-pleasuring, 1girl, solo, no penis",
           "file": "pose/img_hand_in_panties.jpg"
         },
         "img_breast_grab_self": {
           "name": "img_breast_grab_self",
           "group": "",
-          "prompt": "",
+          "prompt": "grabbing own bare breasts with both hands, fingers squeezing flesh, self-groping display, 1girl, solo, female",
           "file": "pose/img_breast_grab_self.jpg"
         },
         "img_self_touch": {
           "name": "img_self_touch",
           "group": "",
-          "prompt": "",
+          "prompt": "caressing own body, hands trailing along hips waist thighs, self-caressing, eyes on viewer, 1girl, solo",
           "file": "pose/img_self_touch.jpg"
         },
         "img_look_at_my_body": {
           "name": "img_look_at_my_body",
           "group": "",
-          "prompt": "",
+          "prompt": "gesturing to own body, hands framing figure, inviting viewer to look, 1girl, solo",
           "file": "pose/img_look_at_my_body.jpg"
         },
         "img_pillow_hug": {
           "name": "img_pillow_hug",
           "group": "",
-          "prompt": "",
+          "prompt": "straddling pillow between legs, hips grinding against cushion, arms hugging pillow, 1girl, solo",
           "file": "pose/img_pillow_hug.jpg"
         },
         "img_stuck": {
           "name": "img_stuck",
           "group": "",
-          "prompt": "",
+          "prompt": "upper body stuck in window or tight space, lower body visible outside, bare buttocks sticking out, legs dangling, 1girl",
           "file": "pose/img_stuck.jpg"
         },
         "img_pressed_into_glass": {
           "name": "img_pressed_into_glass",
           "group": "",
-          "prompt": "",
+          "prompt": "nude body pressed against clear glass, breasts squished flat on transparent surface, viewed through glass, 1girl",
           "file": "pose/img_pressed_into_glass.jpg"
         },
         "img_splits": {
           "name": "img_splits",
           "group": "",
-          "prompt": "",
+          "prompt": "full front split on floor, legs extended opposite directions, crotch on floor, flexible, 1girl, solo",
           "file": "pose/img_splits.jpg"
         },
         "img_lap_dance_p": {
           "name": "img_lap_dance_p",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl performing lap dance on seated 1boy, grinding on his lap, her back to his chest, erotic dance",
           "file": "pose/img_lap_dance_p.jpg"
         },
         "img_bouncing_boobs": {
           "name": "img_bouncing_boobs",
           "group": "",
-          "prompt": "",
+          "prompt": "bare breasts bouncing and jiggling from movement, natural breast momentum, mid-bounce, 1girl, solo",
           "file": "pose/img_bouncing_boobs.jpg"
         },
         "img_seductive_turn": {
           "name": "img_seductive_turn",
           "group": "",
-          "prompt": "",
+          "prompt": "slowly turning body, looking back over shoulder mid-rotation, showing front side and rear, 1girl, solo",
           "file": "pose/img_seductive_turn.jpg"
         },
         "img_assume_position": {
           "name": "img_assume_position",
           "group": "",
-          "prompt": "",
+          "prompt": "lowering to knees or bending over submissively, transitioning into receptive waiting position, 1girl",
           "file": "pose/img_assume_position.jpg"
         },
         "img_oral_invitation": {
           "name": "img_oral_invitation",
           "group": "",
-          "prompt": "",
+          "prompt": "mouth wide open, tongue extended flat, kneeling looking up, inviting expression, 1girl, solo",
           "file": "pose/img_oral_invitation.jpg"
         },
         "img_masturbation_p": {
           "name": "img_masturbation_p",
           "group": "",
-          "prompt": "",
+          "prompt": "lying back, legs spread, fingers rubbing own pussy, solo female masturbation, 1girl, no penis",
           "file": "pose/img_masturbation_p.jpg"
         },
         "img_clothed_masturbation": {
           "name": "img_clothed_masturbation",
           "group": "",
-          "prompt": "",
+          "prompt": "hand between legs rubbing through clothing, pressing against crotch over panties, 1girl, solo, no penis",
           "file": "pose/img_clothed_masturbation.jpg"
         },
         "img_dildo_riding": {
           "name": "img_dildo_riding",
           "group": "",
-          "prompt": "",
+          "prompt": "sitting on mounted dildo, bouncing on sex toy, knees spread, solo toy riding, 1girl, no penis",
           "file": "pose/img_dildo_riding.jpg"
         },
         "img_dildo_squat": {
           "name": "img_dildo_squat",
           "group": "",
-          "prompt": "",
+          "prompt": "squatting over floor-mounted dildo, lowering onto toy, wide squat, 1girl, solo, no penis",
           "file": "pose/img_dildo_squat.jpg"
         },
         "img_dildo_standing": {
           "name": "img_dildo_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing using handheld dildo, one leg propped up, toy between legs, 1girl, solo, no penis",
           "file": "pose/img_dildo_standing.jpg"
         },
         "img_dildo_lying": {
           "name": "img_dildo_lying",
           "group": "",
-          "prompt": "",
+          "prompt": "lying on back, legs spread, thrusting dildo into pussy with one hand, 1girl, solo, no penis",
           "file": "pose/img_dildo_lying.jpg"
         },
         "img_vibrator_use": {
           "name": "img_vibrator_use",
           "group": "",
-          "prompt": "",
+          "prompt": "pressing vibrator against pussy, body trembling from vibration stimulation, 1girl, solo, no penis",
           "file": "pose/img_vibrator_use.jpg"
         },
         "img_fuck_machine": {
           "name": "img_fuck_machine",
           "group": "",
-          "prompt": "",
+          "prompt": "mounted on mechanical sex machine, motorized piston thrusting, receiving machine penetration, 1girl, solo",
           "file": "pose/img_fuck_machine.jpg"
         },
         "img_pillow_humping": {
           "name": "img_pillow_humping",
           "group": "",
-          "prompt": "",
+          "prompt": "straddling pillow, grinding hips against it, crotch pressing into pillow, 1girl, solo",
           "file": "pose/img_pillow_humping.jpg"
         },
         "img_squirting_solo": {
           "name": "img_squirting_solo",
           "group": "",
-          "prompt": "",
+          "prompt": "squirting orgasm, fluid spraying from between spread legs, back arched, legs trembling, 1girl, solo",
           "file": "pose/img_squirting_solo.jpg"
         },
         "img_fingering_self": {
           "name": "img_fingering_self",
           "group": "",
-          "prompt": "",
+          "prompt": "fingers inserted in own pussy, rhythmic thrusting, legs spread, solo fingering, 1girl, no penis",
           "file": "pose/img_fingering_self.jpg"
         },
         "img_spread_pussy_p": {
           "name": "img_spread_pussy_p",
           "group": "",
-          "prompt": "",
+          "prompt": "spreading own labia apart with fingers, displaying vulva to viewer, explicit solo display, 1girl",
           "file": "pose/img_spread_pussy_p.jpg"
         },
         "img_blowjob_front": {
           "name": "img_blowjob_front",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl kneeling, 1boy standing, her lips on his penis, front view of her face and his cock, oral sex",
           "file": "pose/img_blowjob_front.jpg"
         },
         "img_blowjob_side": {
           "name": "img_blowjob_side",
           "group": "",
-          "prompt": "",
+          "prompt": "side view, 1girl performing oral on 1boy, his penis in her mouth, profile view of blowjob",
           "file": "pose/img_blowjob_side.jpg"
         },
         "img_blowjob_pov": {
           "name": "img_blowjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from above, looking down at 1girl, his penis in her mouth, she looking up, first-person blowjob",
           "file": "pose/img_blowjob_pov.jpg"
         },
         "img_deepthroat": {
           "name": "img_deepthroat",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl deepthroating 1boy, his entire penis in her throat, nose at base, tears in eyes, saliva dripping",
           "file": "pose/img_deepthroat.jpg"
         },
         "img_blowjob_kneeling": {
           "name": "img_blowjob_kneeling",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl kneeling on floor performing oral sex on standing 1boy, looking up at him, hands on his thighs, submissive kneeling position",
           "file": "pose/img_blowjob_kneeling.jpg"
         },
         "img_blowjob_under_table": {
           "name": "img_blowjob_under_table",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy sitting at table, 1girl hidden underneath between his legs, her mouth on his cock under the table",
           "file": "pose/img_blowjob_under_table.jpg"
         },
         "img_double_blowjob": {
           "name": "img_double_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls licking and sucking 1boy's penis together, both faces at his cock, sharing one penis",
           "file": "pose/img_double_blowjob.jpg"
         },
         "img_sloppy_blowjob": {
           "name": "img_sloppy_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "extremely wet messy blowjob, his cock coated in thick saliva, spit strings from her mouth, face soaked",
           "file": "pose/img_sloppy_blowjob.jpg"
         },
         "img_licking_shaft": {
           "name": "img_licking_shaft",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl pressing tongue flat against 1boy's penis shaft, licking from base to tip, long slow lick",
           "file": "pose/img_licking_shaft.jpg"
         },
         "img_penis_kiss": {
           "name": "img_penis_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl placing soft kiss on tip of 1boy's penis, lips gently on cock head, tender oral contact",
           "file": "pose/img_penis_kiss.jpg"
         },
         "img_men penis_on_face": {
           "name": "img_men penis_on_face",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy resting erect penis on 1girl face, shaft laying across cheek and nose, girl looking up, cockslap pose",
           "file": "pose/img_men penis_on_face.jpg"
         },
         "img_post_deepthroat": {
           "name": "img_post_deepthroat",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl pulling back from 1boy's wet penis, saliva strings, mascara running, teary eyes, messy aftermath",
           "file": "pose/img_post_deepthroat.jpg"
         },
         "img_face_fuck": {
           "name": "img_face_fuck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy gripping 1girl's head, thrusting his penis into her mouth aggressively, he controls pace",
           "file": "pose/img_face_fuck.jpg"
         },
         "img_cunnilingus": {
           "name": "img_cunnilingus",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy face between 1girl's spread thighs, his mouth on her pussy, licking her, oral on woman",
           "file": "pose/img_cunnilingus.jpg"
         },
         "img_cunnilingus_behind": {
           "name": "img_cunnilingus_behind",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl bent forward, 1boy's face between her buttocks from behind, tongue on her pussy from rear",
           "file": "pose/img_cunnilingus_behind.jpg"
         },
         "img_face_sitting": {
           "name": "img_face_sitting",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on 1boy's face, straddling his head, her pussy on his mouth, he beneath her",
           "file": "pose/img_face_sitting.jpg"
         },
         "img_face_sitting_pov": {
           "name": "img_face_sitting_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from below, 1girl lowering pussy toward camera, descending to sit on face, view from between her thighs",
           "file": "pose/img_face_sitting_pov.jpg"
         },
         "img_oral_69": {
           "name": "img_oral_69",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl in 69 position, mutual oral sex, his penis in her mouth while he licks her pussy simultaneously",
           "file": "pose/img_oral_69.jpg"
         },
         "img_oral_69_pov": {
           "name": "img_oral_69_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from one participant in 69, partner's genitals in front of face, mutual oral first-person",
           "file": "pose/img_oral_69_pov.jpg"
         },
         "img_oral_69_side": {
           "name": "img_oral_69_side",
           "group": "",
-          "prompt": "",
+          "prompt": "side view of 69, both full bodies visible in profile, head-to-toe, mutual oral simultaneously",
           "file": "pose/img_oral_69_side.jpg"
         },
         "img_glory_hole": {
           "name": "img_glory_hole",
           "group": "",
-          "prompt": "",
+          "prompt": "erect penis protruding through hole in wall, 1girl performing oral on anonymous cock through wall opening",
           "file": "pose/img_glory_hole.jpg"
         },
         "img_prone_blowjob": {
           "name": "img_prone_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl lying face-down, raising head to suck 1boy's penis, her body flat prone, his cock at her face",
           "file": "pose/img_prone_blowjob.jpg"
         },
         "img_handjob": {
           "name": "img_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl gripping 1boy's erect penis, hand wrapped around shaft, stroking up and down",
           "file": "pose/img_handjob.jpg"
         },
         "img_handjob_pov": {
           "name": "img_handjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV looking down, 1girl's hand on viewer's penis, her fingers around shaft, stroking, her face visible",
           "file": "pose/img_handjob_pov.jpg"
         },
         "img_double_handjob": {
           "name": "img_double_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl stroking 2boys' penises simultaneously, one cock in each hand, between two men",
           "file": "pose/img_double_handjob.jpg"
         },
         "img_nursing_handjob": {
           "name": "img_nursing_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl cuddled close to 1boy, softly stroking his penis with gentle touch, intimate warm atmosphere",
           "file": "pose/img_nursing_handjob.jpg"
         },
         "img_straddling_handjob": {
           "name": "img_straddling_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl straddling 1boy's lap, reaching between them to stroke his penis, sitting on his thighs",
           "file": "pose/img_straddling_handjob.jpg"
         },
         "img_titfuck": {
           "name": "img_titfuck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's pressed-together breasts, paizuri, breast sex, her hands pushing breasts around cock",
           "file": "pose/img_titfuck.jpg"
         },
         "img_titfuck_pov": {
           "name": "img_titfuck_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV first-person view of 1girl performing titfuck, breasts wrapped around penis, looking up at viewer, cleavage visible",
           "file": "pose/img_titfuck_pov.jpg"
         },
         "img_titfuck_handjob": {
           "name": "img_titfuck_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's breasts while she also strokes his exposed tip, combined breast and hand",
           "file": "pose/img_titfuck_handjob.jpg"
         },
         "img_footjob": {
           "name": "img_footjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl's bare feet gripping 1boy's penis, soles on shaft, toes curling around cock, foot stimulation",
           "file": "pose/img_footjob.jpg"
         },
         "img_footjob_pov": {
           "name": "img_footjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV first-person view of 1girl giving footjob, bare feet wrapped around shaft, toes gripping, soles visible toward viewer",
           "file": "pose/img_footjob_pov.jpg"
         },
         "img_footjob_from_behind": {
           "name": "img_footjob_from_behind",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl lying on stomach giving footjob from behind, feet raised and soles pressing penis between them, rear view",
           "file": "pose/img_footjob_from_behind.jpg"
         },
         "img_thigh_sex": {
           "name": "img_thigh_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's tightly closed thighs, intercrural sex, cock between pressed legs",
           "file": "pose/img_thigh_sex.jpg"
         },
         "img_thigh_sex_pov": {
           "name": "img_thigh_sex_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV looking down, penis sliding between 1girl's pressed thighs, her legs squeezed together",
           "file": "pose/img_thigh_sex_pov.jpg"
         },
         "img_buttjob": {
           "name": "img_buttjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's bare buttock cheeks, cock in butt cleft, no penetration, assjob",
           "file": "pose/img_buttjob.jpg"
         },
         "img_buttjob_pov": {
           "name": "img_buttjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV first-person view of 1girl performing buttjob, penis sliding between buttocks, girl looking back over shoulder",
           "file": "pose/img_buttjob_pov.jpg"
         },
         "img_fingering": {
           "name": "img_fingering",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy inserting fingers into 1girl's pussy, her legs spread, digital penetration by partner",
           "file": "pose/img_fingering.jpg"
         },
         "img_intimate_fingering": {
           "name": "img_intimate_fingering",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy gently fingering 1girl, bodies close together, faces near, slow intimate pace",
           "file": "pose/img_intimate_fingering.jpg"
         },
         "img_missionary_p": {
           "name": "img_missionary_p",
           "group": "",
-          "prompt": "",
+          "prompt": "missionary sex, 1girl on back legs spread, 1boy on top between her thighs, his penis in her pussy, face to face",
           "file": "pose/img_missionary_p.jpg"
         },
         "img_missionary_pov": {
           "name": "img_missionary_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man on top, looking down at 1girl beneath, his penis in her, her face and body below",
           "file": "pose/img_missionary_pov.jpg"
         },
         "img_missionary_close": {
           "name": "img_missionary_close",
           "group": "",
-          "prompt": "",
+          "prompt": "close-up of missionary penetration, his penis entering her pussy, their genitals joined, anatomical detail",
           "file": "pose/img_missionary_close.jpg"
         },
         "img_missionary_legs_up": {
           "name": "img_missionary_legs_up",
           "group": "",
-          "prompt": "",
+          "prompt": "missionary, 1girl's legs raised on 1boy's shoulders, deep angle penetration, her legs up in air",
           "file": "pose/img_missionary_legs_up.jpg"
         },
         "img_folded_missionary": {
           "name": "img_folded_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "mating press, 1boy pressing down, 1girl's legs pushed to her shoulders, deep penetration, folded beneath him",
           "file": "pose/img_folded_missionary.jpg"
         },
         "img_folded_missionary_pov": {
           "name": "img_folded_missionary_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man pressing down, 1girl folded beneath, her face past raised knees, deep penetration from above",
           "file": "pose/img_folded_missionary_pov.jpg"
         },
         "img_cowgirl_p": {
           "name": "img_cowgirl_p",
           "group": "",
-          "prompt": "",
+          "prompt": "cowgirl, 1boy on back, 1girl sitting on top straddling, riding his penis, face to face, she on top",
           "file": "pose/img_cowgirl_p.jpg"
         },
         "img_cowgirl_bounce": {
           "name": "img_cowgirl_bounce",
           "group": "",
-          "prompt": "",
+          "prompt": "vigorous cowgirl, 1girl bouncing rapidly on 1boy's cock, lifting high and dropping, breasts bouncing",
           "file": "pose/img_cowgirl_bounce.jpg"
         },
         "img_cowgirl_pov": {
           "name": "img_cowgirl_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man on back, looking up at 1girl riding on top, her body above bouncing, underside view",
           "file": "pose/img_cowgirl_pov.jpg"
         },
         "img_reverse_cowgirl": {
           "name": "img_reverse_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "reverse cowgirl, 1boy on back, 1girl on top facing away toward his feet, riding showing her back and ass",
           "file": "pose/img_reverse_cowgirl.jpg"
         },
         "img_reverse_cowgirl_pov": {
           "name": "img_reverse_cowgirl_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man on back, 1girl riding reverse, her back and buttocks visible from below, facing away",
           "file": "pose/img_reverse_cowgirl_pov.jpg"
         },
         "img_squatting_cowgirl": {
           "name": "img_squatting_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl squatting over 1boy, feet flat, riding his penis in deep squat, athletic squatting ride",
           "file": "pose/img_squatting_cowgirl.jpg"
         },
         "img_doggystyle_p": {
           "name": "img_doggystyle_p",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle, 1girl on hands and knees, 1boy behind her, penetrating from rear, gripping her hips",
           "file": "pose/img_doggystyle_p.jpg"
         },
         "img_doggystyle_front": {
           "name": "img_doggystyle_front",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle from front, 1girl on all fours facing camera, 1boy behind penetrating, her face showing pleasure",
           "file": "pose/img_doggystyle_front.jpg"
         },
         "img_doggystyle_side": {
           "name": "img_doggystyle_side",
           "group": "",
-          "prompt": "",
+          "prompt": "side view doggystyle, 1girl on all fours, 1boy behind, both bodies visible in profile, rear entry",
           "file": "pose/img_doggystyle_side.jpg"
         },
         "img_doggystyle_hair_pull": {
           "name": "img_doggystyle_hair_pull",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle, 1boy pulling 1girl's hair back while penetrating from behind, her head pulled up",
           "file": "pose/img_doggystyle_hair_pull.jpg"
         },
         "img_doggystyle_arm_hold": {
           "name": "img_doggystyle_arm_hold",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle, 1boy holding 1girl's wrists behind her back while penetrating, her arms restrained",
           "file": "pose/img_doggystyle_arm_hold.jpg"
         },
         "img_doggystyle_against_wall": {
           "name": "img_doggystyle_against_wall",
           "group": "",
-          "prompt": "",
+          "prompt": "standing doggystyle, 1girl palms on wall, 1boy behind penetrating from rear, both standing",
           "file": "pose/img_doggystyle_against_wall.jpg"
         },
         "img_doggystyle_leashed": {
           "name": "img_doggystyle_leashed",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy penetrating 1girl from behind doggystyle while pulling leather leash attached to her collar, dominant control pose",
           "file": "pose/img_doggystyle_leashed.jpg"
         },
         "img_standing_doggy": {
           "name": "img_standing_doggy",
           "group": "",
-          "prompt": "",
+          "prompt": "standing doggystyle, 1girl bent at waist hands braced, 1boy standing behind penetrating, both upright",
           "file": "pose/img_standing_doggy.jpg"
         },
         "img_prone_bone_p": {
           "name": "img_prone_bone_p",
           "group": "",
-          "prompt": "",
+          "prompt": "prone bone, 1girl face-down flat, 1boy on top from behind, his weight pressing her into bed, rear entry",
           "file": "pose/img_prone_bone_p.jpg"
         },
         "img_spooning_sex": {
           "name": "img_spooning_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "spooning sex, both on sides, 1boy behind 1girl, penetrating from rear in side-lying position, gentle intimate",
           "file": "pose/img_spooning_sex.jpg"
         },
         "img_spooning_leg_hold": {
           "name": "img_spooning_leg_hold",
           "group": "",
-          "prompt": "",
+          "prompt": "spooning sex, 1boy lifting 1girl's top leg for deeper angle while penetrating from behind, side-lying",
           "file": "pose/img_spooning_leg_hold.jpg"
         },
         "img_mating_press": {
           "name": "img_mating_press",
           "group": "",
-          "prompt": "",
+          "prompt": "mating press, 1boy pressing 1girl's legs to her shoulders, deep penetration, full weight on her, breeding",
           "file": "pose/img_mating_press.jpg"
         },
         "img_mating_press_close": {
           "name": "img_mating_press_close",
           "group": "",
-          "prompt": "",
+          "prompt": "close-up mating press penetration, his penis deep in her pussy, bodies flush, maximum depth, anatomical detail",
           "file": "pose/img_mating_press_close.jpg"
         },
         "img_standing_sex": {
           "name": "img_standing_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "standing sex, 1boy holding 1girl against wall, her legs around his waist, his penis inside her, pinned to wall",
           "file": "pose/img_standing_sex.jpg"
         },
         "img_standing_straddle": {
           "name": "img_standing_straddle",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy carrying 1girl in air, she straddling him, legs locked around hips, standing penetration, both upright",
           "file": "pose/img_standing_straddle.jpg"
         },
         "img_standing_piledriver": {
           "name": "img_standing_piledriver",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy holding 1girl inverted upside down, her head toward floor, entering from below, standing piledriver",
           "file": "pose/img_standing_piledriver.jpg"
         },
         "img_full_nelson": {
           "name": "img_full_nelson",
           "group": "",
-          "prompt": "",
+          "prompt": "full nelson, 1boy arms under 1girl's knees holding her suspended, his penis inside, she airborne spread wide",
           "file": "pose/img_full_nelson.jpg"
         },
         "img_amazon_position": {
           "name": "img_amazon_position",
           "group": "",
-          "prompt": "",
+          "prompt": "amazon position, 1boy on back legs raised, 1girl crouching over him, she thrusts down, female dominant",
           "file": "pose/img_amazon_position.jpg"
         },
         "img_amazon_pov": {
           "name": "img_amazon_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV first-person view of amazon position, 1girl on top pinning 1boy down, her hands on his chest, dominant female riding, looking down at viewer",
           "file": "pose/img_amazon_pov.jpg"
         },
         "img_seated_straddle": {
           "name": "img_seated_straddle",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy sitting upright, 1girl straddling his lap facing him, penetration face to face, chest to chest",
           "file": "pose/img_seated_straddle.jpg"
         },
         "img_lotus_position": {
           "name": "img_lotus_position",
           "group": "",
-          "prompt": "",
+          "prompt": "lotus sex, 1boy sitting cross-legged, 1girl on his lap facing him, legs around waist, intimate embrace penetration",
           "file": "pose/img_lotus_position.jpg"
         },
         "img_leg_lock": {
           "name": "img_leg_lock",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl's legs locked around 1boy's waist during sex, ankles crossed behind him, pulling him deeper",
           "file": "pose/img_leg_lock.jpg"
         },
         "img_side_missionary": {
           "name": "img_side_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "lateral missionary position, 1boy and 1girl lying on their sides facing each other, legs intertwined, intimate side-by-side penetration",
           "file": "pose/img_side_missionary.jpg"
         },
         "img_reverse_upright_straddle": {
           "name": "img_reverse_upright_straddle",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on 1boy lap facing away, upright reverse straddle, her back to his chest, riding position",
           "file": "pose/img_reverse_upright_straddle.jpg"
         },
         "img_grinding": {
           "name": "img_grinding",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl grinding pussy against 1boy's penis without penetration, rubbing along shaft, external frottage",
           "file": "pose/img_grinding.jpg"
         },
         "img_anal_doggystyle": {
           "name": "img_anal_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "anal doggystyle, 1girl on hands and knees, 1boy behind, his penis in her anus from rear, anal sex",
           "file": "pose/img_anal_doggystyle.jpg"
         },
         "img_anal_missionary": {
           "name": "img_anal_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "anal missionary, 1girl on back legs raised, 1boy on top, penis in her anus, face-to-face anal",
           "file": "pose/img_anal_missionary.jpg"
         },
         "img_anal_cowgirl": {
           "name": "img_anal_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "anal cowgirl, 1girl on top riding 1boy's cock anally, sitting on his penis in her ass",
           "file": "pose/img_anal_cowgirl.jpg"
         },
         "img_anal_reverse_cowgirl": {
           "name": "img_anal_reverse_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl riding 1boy in reverse cowgirl position, anal penetration, facing away, buttocks visible, bouncing motion",
           "file": "pose/img_anal_reverse_cowgirl.jpg"
         },
         "img_anal_standing": {
           "name": "img_anal_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing anal, 1girl bent forward, 1boy behind inserting penis in her anus, both standing",
           "file": "pose/img_anal_standing.jpg"
         },
         "img_anal_prone": {
           "name": "img_anal_prone",
           "group": "",
-          "prompt": "",
+          "prompt": "anal prone bone, 1girl flat face-down, 1boy on top, penis in her anus from behind, pressing her down",
           "file": "pose/img_anal_prone.jpg"
         },
         "img_anal_full_nelson": {
           "name": "img_anal_full_nelson",
           "group": "",
-          "prompt": "",
+          "prompt": "anal full nelson, 1boy holding 1girl airborne, arms under knees, his penis in her anus, suspended",
           "file": "pose/img_anal_full_nelson.jpg"
         },
         "img_anal_piledriver": {
           "name": "img_anal_piledriver",
           "group": "",
-          "prompt": "",
+          "prompt": "anal piledriver, 1girl inverted, 1boy driving penis into her anus from above, gravity-assisted",
           "file": "pose/img_anal_piledriver.jpg"
         },
         "img_anal_side": {
           "name": "img_anal_side",
           "group": "",
-          "prompt": "",
+          "prompt": "side-lying anal sex, both on their sides, 1boy behind 1girl, spooning anal penetration, intimate close position",
           "file": "pose/img_anal_side.jpg"
         },
         "img_anal_against_wall": {
           "name": "img_anal_against_wall",
           "group": "",
-          "prompt": "",
+          "prompt": "standing anal sex against wall, 1girl pressed face-first into wall, 1boy penetrating from behind, wall support",
           "file": "pose/img_anal_against_wall.jpg"
         },
         "img_spread_ass": {
           "name": "img_spread_ass",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl pulling buttock cheeks apart with hands, exposing anus, bent forward, presenting rear, 1girl",
           "file": "pose/img_spread_ass.jpg"
         },
         "img_anal_insertion": {
           "name": "img_anal_insertion",
           "group": "",
-          "prompt": "",
+          "prompt": "toy or plug being inserted into 1girl's anus, object entering her rear, hands guiding insertion",
           "file": "pose/img_anal_insertion.jpg"
         },
         "img_facial_cumshot": {
           "name": "img_facial_cumshot",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis ejaculating on 1girl's face, thick cum ropes on her cheeks and lips, facial cumshot",
           "file": "pose/img_facial_cumshot.jpg"
         },
         "img_cumshot_body": {
           "name": "img_cumshot_body",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis ejaculating on 1girl's body, cum on her breasts and stomach, body cumshot",
           "file": "pose/img_cumshot_body.jpg"
         },
         "img_cum_on_breasts": {
           "name": "img_cum_on_breasts",
           "group": "",
-          "prompt": "",
+          "prompt": "cum on 1girl's bare breasts, thick white semen on her breast mounds, dripping down curves",
           "file": "pose/img_cum_on_breasts.jpg"
         },
         "img_cumshot_missionary": {
           "name": "img_cumshot_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy pulling out during missionary, ejaculating on 1girl's stomach, cum on her belly",
           "file": "pose/img_cumshot_missionary.jpg"
         },
         "img_cumshot_doggystyle": {
           "name": "img_cumshot_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy pulling out during doggystyle, ejaculating on 1girl's back and buttocks, rear cumshot",
           "file": "pose/img_cumshot_doggystyle.jpg"
         },
         "img_creampie": {
           "name": "img_creampie",
           "group": "",
-          "prompt": "",
+          "prompt": "vaginal creampie, cum leaking from 1girl's pussy after sex, semen oozing from her vagina",
           "file": "pose/img_creampie.jpg"
         },
         "img_anal_creampie": {
           "name": "img_anal_creampie",
           "group": "",
-          "prompt": "",
+          "prompt": "anal creampie, cum leaking from 1girl's anus, semen oozing from her asshole after anal",
           "file": "pose/img_anal_creampie.jpg"
         },
         "img_creampie_inspection": {
           "name": "img_creampie_inspection",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl spreading legs or labia to reveal fresh creampie, cum dripping from opening, inspecting and displaying",
           "file": "pose/img_creampie_inspection.jpg"
         },
         "img_bukkake": {
           "name": "img_bukkake",
           "group": "",
-          "prompt": "",
+          "prompt": "multiple men ejaculating on 1girl, several penises aimed at her, cum from many men coating her",
           "file": "pose/img_bukkake.jpg"
         },
         "img_cum_in_mouth": {
           "name": "img_cum_in_mouth",
           "group": "",
-          "prompt": "",
+          "prompt": "cum in 1girl's open mouth, semen on her tongue, mouth open showing his load before swallowing",
           "file": "pose/img_cum_in_mouth.jpg"
         },
         "img_titfuck_cumshot": {
           "name": "img_titfuck_cumshot",
           "group": "",
-          "prompt": "",
+          "prompt": "cum shooting from between 1girl's pressed breasts, ejaculation during paizuri, cum on neck and chin",
           "file": "pose/img_titfuck_cumshot.jpg"
         },
         "img_throatpie": {
           "name": "img_throatpie",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy ejaculating into 1girl's throat, penis fully buried during orgasm, visible swallowing",
           "file": "pose/img_throatpie.jpg"
         },
         "img_waiting_facial": {
           "name": "img_waiting_facial",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl kneeling, mouth open, tongue out, 1boy's penis aimed at her face ready to ejaculate",
           "file": "pose/img_waiting_facial.jpg"
         },
         "img_cum_drunk": {
           "name": "img_cum_drunk",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl heavily coated in cum, glazed dazed blissful expression, semen dripping from face",
           "file": "pose/img_cum_drunk.jpg"
         },
         "img_cum_bath": {
           "name": "img_cum_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl drenched in excessive amounts of cum, entire body coated white, extreme bukkake result",
           "file": "pose/img_cum_bath.jpg"
         },
         "img_messy_breeding": {
           "name": "img_messy_breeding",
           "group": "",
-          "prompt": "",
+          "prompt": "overflowing creampie, cum gushing out around his cock still inside her, ahegao expression, overflow",
           "file": "pose/img_messy_breeding.jpg"
         },
         "img_aftermath_messy": {
           "name": "img_aftermath_messy",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex messy aftermath, 1girl covered in cum on face and body, disheveled hair, smeared makeup, satisfied exhausted expression",
           "file": "pose/img_aftermath_messy.jpg"
         },
         "img_aftermath_exhausted": {
           "name": "img_aftermath_exhausted",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex exhausted, 1girl lying limp on bed panting, sweaty body, hair stuck to skin, eyes half-closed, completely spent",
           "file": "pose/img_aftermath_exhausted.jpg"
         },
         "img_aftermath_embarrassed": {
           "name": "img_aftermath_embarrassed",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex embarrassment, 1girl covering face with hands or looking away shyly, blushing deeply, cum visible on body, mortified expression",
           "file": "pose/img_aftermath_embarrassed.jpg"
         },
         "img_aftermath_satisfied": {
           "name": "img_aftermath_satisfied",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex satisfied afterglow, 1girl lying back with content smile, relaxed body, glowing skin, happy fulfilled expression, messy hair",
           "file": "pose/img_aftermath_satisfied.jpg"
         },
         "img_morning_after": {
           "name": "img_morning_after",
           "group": "",
-          "prompt": "",
+          "prompt": "morning after sex, 1girl in bed with messy hair, wrapped in rumpled sheets, soft morning sunlight, sleepy satisfied expression",
           "file": "pose/img_morning_after.jpg"
         },
         "img_cuddling_post_sex": {
           "name": "img_cuddling_post_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl cuddling in bed after sex, arms around each other, post-coital afterglow, intimate",
           "file": "pose/img_cuddling_post_sex.jpg"
         },
         "img_ahegao_p": {
           "name": "img_ahegao_p",
           "group": "",
-          "prompt": "",
+          "prompt": "ahegao face during sex, eyes rolled back showing whites, tongue hanging out, drooling, flushed red cheeks, overwhelmed by pleasure, mind-broken expression",
           "file": "pose/img_ahegao_p.jpg"
         },
         "img_ahegao_breeding": {
           "name": "img_ahegao_breeding",
           "group": "",
-          "prompt": "",
+          "prompt": "ahegao during breeding sex, eyes rolled back, tongue out, drooling, womb being filled, ecstatic overwhelmed expression, legs locked around partner",
           "file": "pose/img_ahegao_breeding.jpg"
         },
         "img_orgasm_p": {
           "name": "img_orgasm_p",
           "group": "",
-          "prompt": "",
+          "prompt": "female orgasm moment, body tensed and arching, eyes squeezed shut or rolled back, mouth open in silent scream, trembling, peak climax",
           "file": "pose/img_orgasm_p.jpg"
         },
         "img_squeeze_moan": {
           "name": "img_squeeze_moan",
           "group": "",
-          "prompt": "",
+          "prompt": "moaning during sex, hands gripping sheets or partner tightly, face contorted in pleasure, eyes shut, open mouth moan, body tensing",
           "file": "pose/img_squeeze_moan.jpg"
         },
         "img_gangbang": {
           "name": "img_gangbang",
           "group": "",
-          "prompt": "",
+          "prompt": "gangbang, 1girl surrounded by multiple boys, several penises around her, group sex, many men",
           "file": "pose/img_gangbang.jpg"
         },
         "img_double_penetration": {
           "name": "img_double_penetration",
           "group": "",
-          "prompt": "",
+          "prompt": "double penetration, 1girl between 2boys, one cock in pussy one in anus simultaneously, sandwich",
           "file": "pose/img_double_penetration.jpg"
         },
         "img_triple_penetration": {
           "name": "img_triple_penetration",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl penetrated in all three holes simultaneously by three partners, airtight position, overwhelmed expression",
           "file": "pose/img_triple_penetration.jpg"
         },
         "img_spitroast": {
           "name": "img_spitroast",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl on all fours between two 1boys, oral on one while penetrated from behind by other, spit-roast position",
           "file": "pose/img_spitroast.jpg"
         },
         "img_eiffel_tower": {
           "name": "img_eiffel_tower",
           "group": "",
-          "prompt": "",
+          "prompt": "spitroast side view, 1girl between 2boys, cock in mouth and cock from behind, men high-five above",
           "file": "pose/img_eiffel_tower.jpg"
         },
         "img_eiffel_tower_standing": {
           "name": "img_eiffel_tower_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing spitroast, 1girl bent between 2 standing boys, cock in mouth and one from behind, all standing",
           "file": "pose/img_eiffel_tower_standing.jpg"
         },
         "img_eiffel_tower_pov": {
           "name": "img_eiffel_tower_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from one man in spitroast, looking down at 1girl, his cock in her mouth, other man behind her",
           "file": "pose/img_eiffel_tower_pov.jpg"
         },
         "img_mfm_blowjob": {
           "name": "img_mfm_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl kneeling between two standing 1boys, giving oral to both alternately, two penises near face, MFM threesome",
           "file": "pose/img_mfm_blowjob.jpg"
         },
         "img_mfm_handjob": {
           "name": "img_mfm_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl between 2boys, stroking both penises, one cock in each hand, between two men",
           "file": "pose/img_mfm_handjob.jpg"
         },
         "img_threesome_doggystyle": {
           "name": "img_threesome_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "threesome, 1girl on all fours, 1boy behind penetrating, 1boy at head with cock in her mouth",
           "file": "pose/img_threesome_doggystyle.jpg"
         },
         "img_threesome_missionary": {
           "name": "img_threesome_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "threesome, 1girl in missionary with 1boy, second 1boy at her head with penis in her mouth",
           "file": "pose/img_threesome_missionary.jpg"
         },
         "img_gangbang_bukkake_missionary": {
           "name": "img_gangbang_bukkake_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl in missionary, multiple boys ejaculating on her face and body simultaneously",
           "file": "pose/img_gangbang_bukkake_missionary.jpg"
         },
         "img_gangbang_bukkake_cowgirl": {
           "name": "img_gangbang_bukkake_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl riding 1boy cowgirl, other men ejaculating on her from all sides, active riding with bukkake",
           "file": "pose/img_gangbang_bukkake_cowgirl.jpg"
         },
         "img_clone_sex": {
           "name": "img_clone_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "two identical women having sex with each other, perfect clones, same face and body, yuri self-clone, 2girls identical",
           "file": "pose/img_clone_sex.jpg"
         },
         "img_lesbian_kissing": {
           "name": "img_lesbian_kissing",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls kissing passionately, lips pressed together, tongues touching, hands on each other, yuri, no men, no penis",
           "file": "pose/img_lesbian_kissing.jpg"
         },
         "img_lesbian_fingering": {
           "name": "img_lesbian_fingering",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl fingering another girl's pussy, 2girls, fingers inside her, yuri, no men, no penis",
           "file": "pose/img_lesbian_fingering.jpg"
         },
         "img_lesbian_oral": {
           "name": "img_lesbian_oral",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl performing cunnilingus on another girl, face between thighs, tongue on pussy, 2girls, yuri, no men",
           "file": "pose/img_lesbian_oral.jpg"
         },
         "img_lesbian_69": {
           "name": "img_lesbian_69",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls in 69 position, mutual oral sex simultaneously, head between each other's thighs, yuri, no men",
           "file": "pose/img_lesbian_69.jpg"
         },
         "img_scissoring": {
           "name": "img_scissoring",
           "group": "",
-          "prompt": "",
+          "prompt": "two girls scissoring, legs interlocked, vulvas pressed together, tribbing position, both girls moaning, face to face or angled",
           "file": "pose/img_scissoring.jpg"
         },
         "img_lesbian_riding": {
           "name": "img_lesbian_riding",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl riding another girl's face straddling her, face sitting between women, 2girls, yuri, no men",
           "file": "pose/img_lesbian_riding.jpg"
         },
         "img_lesbian_orgy": {
           "name": "img_lesbian_orgy",
           "group": "",
-          "prompt": "",
+          "prompt": "3+ girls in group sex, multiple women intertwined, all-female orgy, yuri, no men, no penis",
           "file": "pose/img_lesbian_orgy.jpg"
         },
         "img_lesbian_pegging": {
           "name": "img_lesbian_pegging",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl wearing strap-on dildo penetrating another girl, 2girls, strap-on sex, yuri, no men, no real penis",
           "file": "pose/img_lesbian_pegging.jpg"
         },
         "img_lesbian_sandwich": {
           "name": "img_lesbian_sandwich",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sandwiched between 2 other girls, middle girl receiving attention from both, 3girls, yuri, no men",
           "file": "pose/img_lesbian_sandwich.jpg"
         },
         "img_lesbian_wall_pin": {
           "name": "img_lesbian_wall_pin",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl pinning another 1girl against wall, dominant lesbian pose, hands holding wrists above head, bodies pressed together, intense gaze",
           "file": "pose/img_lesbian_wall_pin.jpg"
         },
         "img_lesbian_lap_pillow": {
           "name": "img_lesbian_lap_pillow",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl lying with head in another girl's lap, looking up at her, hair stroked, 2girls, yuri, no men",
           "file": "pose/img_lesbian_lap_pillow.jpg"
         },
         "img_lesbian_back_hug": {
           "name": "img_lesbian_back_hug",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl hugging another from behind, arms around waist, chin on shoulder, 2girls, intimate, yuri, no men",
           "file": "pose/img_lesbian_back_hug.jpg"
         },
         "img_lesbian_double_dildo": {
           "name": "img_lesbian_double_dildo",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls sharing double-ended dildo, each penetrated on one end, facing each other, yuri, no men, no penis",
           "file": "pose/img_lesbian_double_dildo.jpg"
         },
         "img_lesbian_strap_doggystyle": {
           "name": "img_lesbian_strap_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl wearing strap-on penetrating another 1girl from behind in doggystyle, hands on her hips, dominant lesbian sex",
           "file": "pose/img_lesbian_strap_doggystyle.jpg"
         },
         "img_lesbian_face_sitting": {
           "name": "img_lesbian_face_sitting",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on another girl's face, straddling her head, pussy on her mouth, 2girls, yuri, no men",
           "file": "pose/img_lesbian_face_sitting.jpg"
         },
         "img_lesbian_tribbing": {
           "name": "img_lesbian_tribbing",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls scissoring, legs interlocked, pussies grinding together, tribadism, yuri, no men, no penis",
           "file": "pose/img_lesbian_tribbing.jpg"
         },
         "img_bondage_hands_tied": {
           "name": "img_bondage_hands_tied",
           "group": "",
-          "prompt": "",
+          "prompt": "wrists bound together with rope or handcuffs, hands tied, arms restricted, 1girl",
           "file": "pose/img_bondage_hands_tied.jpg"
         },
         "img_bondage_shibari": {
           "name": "img_bondage_shibari",
           "group": "",
-          "prompt": "",
+          "prompt": "elaborate shibari rope bondage, decorative hemp rope patterns on torso and limbs, Japanese bondage, 1girl",
           "file": "pose/img_bondage_shibari.jpg"
         },
         "img_bondage_suspended": {
           "name": "img_bondage_suspended",
           "group": "",
-          "prompt": "",
+          "prompt": "suspended in air by ropes from overhead, body off ground, limbs spread, hanging, 1girl",
           "file": "pose/img_bondage_suspended.jpg"
         },
         "img_bondage_strappado": {
           "name": "img_bondage_strappado",
           "group": "",
-          "prompt": "",
+          "prompt": "strappado, hands tied behind back pulled upward, forced to bend forward, 1girl",
           "file": "pose/img_bondage_strappado.jpg"
         },
         "img_bondage_face_down": {
           "name": "img_bondage_face_down",
           "group": "",
-          "prompt": "",
+          "prompt": "bound face-down, hands behind back, ankles bound, prone restrained, buttocks exposed, 1girl",
           "file": "pose/img_bondage_face_down.jpg"
         },
         "img_pillory": {
           "name": "img_pillory",
           "group": "",
-          "prompt": "",
+          "prompt": "head and hands locked in wooden pillory stocks, bent forward, immobilized, 1girl",
           "file": "pose/img_pillory.jpg"
         },
         "img_spreader_bar": {
           "name": "img_spreader_bar",
           "group": "",
-          "prompt": "",
+          "prompt": "spreader bar between ankles forcing legs wide apart, unable to close legs, exposed, 1girl",
           "file": "pose/img_spreader_bar.jpg"
         },
         "img_sex_swing": {
           "name": "img_sex_swing",
           "group": "",
-          "prompt": "",
+          "prompt": "suspended in sex swing, straps under back and thighs, legs spread in stirrups, accessible, 1girl",
           "file": "pose/img_sex_swing.jpg"
         },
         "img_collar_leash": {
           "name": "img_collar_leash",
           "group": "",
-          "prompt": "",
+          "prompt": "leather collar on neck with leash, dominant partner holding leash, submissive posture, led on leash",
           "file": "pose/img_collar_leash.jpg"
         },
         "img_gagged_ball": {
           "name": "img_gagged_ball",
           "group": "",
-          "prompt": "",
+          "prompt": "ball gag in mouth, rubber ball forcing jaw open, leather straps at back of head, drool dripping",
           "file": "pose/img_gagged_ball.jpg"
         },
         "img_gagged_ring": {
           "name": "img_gagged_ring",
           "group": "",
-          "prompt": "",
+          "prompt": "ring gag holding mouth forced open in O-shape, jaw locked open, drool flowing, mouth wide",
           "file": "pose/img_gagged_ring.jpg"
         },
         "img_gagged_tape": {
           "name": "img_gagged_tape",
           "group": "",
-          "prompt": "",
+          "prompt": "tape sealed over mouth, adhesive strip across lower face, lips pressed shut, silenced",
           "file": "pose/img_gagged_tape.jpg"
         },
         "img_gagged_cleave": {
           "name": "img_gagged_cleave",
           "group": "",
-          "prompt": "",
+          "prompt": "cloth tied through mouth as gag, fabric between teeth knotted behind head, muffled",
           "file": "pose/img_gagged_cleave.jpg"
         },
         "img_blindfolded_p": {
           "name": "img_blindfolded_p",
           "group": "",
-          "prompt": "",
+          "prompt": "opaque blindfold over eyes, vision blocked, remaining senses heightened, vulnerable, 1girl",
           "file": "pose/img_blindfolded_p.jpg"
         },
         "img_butt_plug": {
           "name": "img_butt_plug",
           "group": "",
-          "prompt": "",
+          "prompt": "jeweled butt plug in anus, flared base visible between buttocks, anal plug worn, 1girl",
           "file": "pose/img_butt_plug.jpg"
         },
         "img_spanking_p": {
           "name": "img_spanking_p",
           "group": "",
-          "prompt": "",
+          "prompt": "hand or paddle striking bare buttocks, impact visible, reddening skin, handprint marks, 1girl",
           "file": "pose/img_spanking_p.jpg"
         },
         "img_pegging": {
           "name": "img_pegging",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl wearing strap-on penetrating 1boy from behind, female dominant, role reversal",
           "file": "pose/img_pegging.jpg"
         },
         "img_fondling_from_behind": {
           "name": "img_fondling_from_behind",
           "group": "",
-          "prompt": "",
+          "prompt": "hands reaching from behind groping 1girl's body, arms around her, hands on breasts or between thighs",
           "file": "pose/img_fondling_from_behind.jpg"
         },
         "img_surprise_grope": {
           "name": "img_surprise_grope",
           "group": "",
-          "prompt": "",
+          "prompt": "hands suddenly grabbing 1girl from behind, groping breasts or body, her shocked expression",
           "file": "pose/img_surprise_grope.jpg"
         },
         "img_nipple_clamps": {
           "name": "img_nipple_clamps",
           "group": "",
-          "prompt": "",
+          "prompt": "clamps on 1girl's nipples, spring-loaded clamps pinching, possibly chain between them",
           "file": "pose/img_nipple_clamps.jpg"
         },
         "img_choking": {
           "name": "img_choking",
           "group": "",
-          "prompt": "",
+          "prompt": "hand wrapped around 1girl's throat, fingers on her neck, breath control, dominant choking",
           "file": "pose/img_choking.jpg"
         },
         "img_emotional_kiss": {
           "name": "img_emotional_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl kissing passionately, lips pressed together, eyes closed, hands on each other, romantic",
           "file": "pose/img_emotional_kiss.jpg"
         },
         "img_makeout_on_lap": {
           "name": "img_makeout_on_lap",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on 1boy lap face to face, passionate deep kissing, arms wrapped around each other, intimate makeout session",
           "file": "pose/img_makeout_on_lap.jpg"
         },
         "img_steamy_makeout": {
           "name": "img_steamy_makeout",
           "group": "",
-          "prompt": "",
+          "prompt": "intense passionate makeout, 1boy and 1girl kissing deeply, tongues visible, hands in hair, bodies pressed close, heated passionate moment",
           "file": "pose/img_steamy_makeout.jpg"
         },
         "img_cuddling": {
           "name": "img_cuddling",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl cuddling, arms around each other, faces close, warm affectionate embrace",
           "file": "pose/img_cuddling.jpg"
         },
         "img_spooning": {
           "name": "img_spooning",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl spooning in bed, he behind as big spoon, arm around her waist, cozy intimate",
           "file": "pose/img_spooning.jpg"
         },
         "img_romantic_bath": {
           "name": "img_romantic_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl together in bathtub, warm water and bubbles, intimate embrace, candlelight, romantic shared bath",
           "file": "pose/img_romantic_bath.jpg"
         },
         "img_cooking_together": {
           "name": "img_cooking_together",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy hugging 1girl from behind in kitchen, arms around her waist, chin on shoulder, she cooking",
           "file": "pose/img_cooking_together.jpg"
         },
         "img_pregnancy_tender": {
           "name": "img_pregnancy_tender",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy with hands on pregnant 1girl's belly, both looking at bump, tender anticipating parenthood",
           "file": "pose/img_pregnancy_tender.jpg"
         },
         "img_holding_hands_walking": {
           "name": "img_holding_hands_walking",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl walking holding hands, fingers interlocked, couple walking together, warm smiles",
           "file": "pose/img_holding_hands_walking.jpg"
         },
         "img_nipple_suck": {
           "name": "img_nipple_suck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's mouth on 1girl's nipple, sucking her breast, lips on areola, intimate breast worship",
           "file": "pose/img_nipple_suck.jpg"
         },
         "img_massage_body": {
           "name": "img_massage_body",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy massaging 1girl, oiled hands on her back and shoulders, she lying relaxed, therapeutic sensual",
           "file": "pose/img_massage_body.jpg"
         },
         "img_massage_erotic": {
           "name": "img_massage_erotic",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy giving erotic massage to 1girl, oiled hands on her intimate curves and inner thighs, sensual touch",
           "file": "pose/img_massage_erotic.jpg"
         },
         "img_tentacle_dp": {
           "name": "img_tentacle_dp",
           "group": "",
-          "prompt": "",
+          "prompt": "tentacles penetrating 1girl vaginally and anally simultaneously, slimy tentacles coiled around her body, no men",
           "file": "pose/img_tentacle_dp.jpg"
         },
         "img_tentacle_bath": {
           "name": "img_tentacle_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl submerged with writhing tentacles, tentacles rising from water wrapping around her body and between legs",
           "file": "pose/img_tentacle_bath.jpg"
         },
         "img_tentacle_suspended": {
           "name": "img_tentacle_suspended",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl suspended in air by tentacles, wrapped around wrists ankles and body, spread-eagle off ground",
           "file": "pose/img_tentacle_suspended.jpg"
         },
         "img_tentacle_oral": {
           "name": "img_tentacle_oral",
           "group": "",
-          "prompt": "",
+          "prompt": "thick tentacle in 1girl's mouth, slimy appendage between her lips, drool and slime, tentacle oral",
           "file": "pose/img_tentacle_oral.jpg"
         },
         "img_monster_sex": {
           "name": "img_monster_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "fantasy creature dominating 1girl sexually, non-human entity, inhuman anatomy, interspecies, no real men",
           "file": "pose/img_monster_sex.jpg"
         },
         "img_dragon_dildo": {
           "name": "img_dragon_dildo",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl using fantasy dragon dildo, monster-shaped sex toy with ridges and knots, exotic toy penetration, solo",
           "file": "pose/img_dragon_dildo.jpg"
         },
         "img_feet_worship": {
           "name": "img_feet_worship",
           "group": "",
-          "prompt": "",
+          "prompt": "worshipping feet by kissing and licking, mouth pressed against sole, devoted foot worship",
           "file": "pose/img_feet_worship.jpg"
         },
         "img_feet_on_face": {
           "name": "img_feet_on_face",
           "group": "",
-          "prompt": "",
+          "prompt": "foot pressed onto partner's face, sole covering mouth and nose, toes on cheeks, dominant foot position",
           "file": "pose/img_feet_on_face.jpg"
         },
         "img_toe_sucking": {
           "name": "img_toe_sucking",
           "group": "",
-          "prompt": "",
+          "prompt": "sucking toes, lips wrapped around toes, tongue between them, foot fetish oral attention",
           "file": "pose/img_toe_sucking.jpg"
         },
         "img_lactation": {
           "name": "img_lactation",
           "group": "",
-          "prompt": "",
+          "prompt": "milk leaking from nipples, breast milk flowing from areolae down breasts, engorged heavy breasts, 1girl",
           "file": "pose/img_lactation.jpg"
         },
         "img_size_difference": {
           "name": "img_size_difference",
           "group": "",
-          "prompt": "",
+          "prompt": "extreme size difference between partners, one dramatically larger, stark visual contrast, power dynamic",
           "file": "pose/img_size_difference.jpg"
         },
         "img_goonette": {
           "name": "img_goonette",
           "group": "",
-          "prompt": "",
+          "prompt": "goonette state, crazed pleasure-drunk expression, crossed eyes, slack drooling mouth, mind broken, 1girl",
           "file": "pose/img_goonette.jpg"
         },
         "img_condom_play": {
           "name": "img_condom_play",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl holding condom in mouth or putting condom on 1boy's penis, condom as playful prop",
           "file": "pose/img_condom_play.jpg"
         },
         "img_dildo_ride": {
           "name": "img_dildo_ride",
           "group": "",
-          "prompt": "",
+          "prompt": "riding dildo bouncing up and down, toy fixed below, knees spread, vigorous self-riding, 1girl, solo, no penis",
           "file": "pose/img_dildo_ride.jpg"
         },
         "img_dildo_doggystyle": {
           "name": "img_dildo_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "on all fours using dildo from behind, hand reaching back to thrust toy, 1girl, solo, no penis",
           "file": "pose/img_dildo_doggystyle.jpg"
         },
         "img_dildo_blowjob": {
           "name": "img_dildo_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "sucking dildo sex toy, lips around silicone shaft, treating like real, 1girl, solo, no real penis",
           "file": "pose/img_dildo_blowjob.jpg"
         },
         "img_dildo_from_below": {
           "name": "img_dildo_from_below",
           "group": "",
-          "prompt": "",
+          "prompt": "using dildo viewed from below, low angle looking up, toy entering body, 1girl, solo, no penis",
           "file": "pose/img_dildo_from_below.jpg"
         },
         "img_double_dildo": {
           "name": "img_double_dildo",
           "group": "",
-          "prompt": "",
+          "prompt": "double-ended dildo shared between 2girls, each on one end, pushing toward each other, yuri, no men, no penis",
           "file": "pose/img_double_dildo.jpg"
         },
         "img_vibrator_use_p": {
           "name": "img_vibrator_use_p",
           "group": "",
-          "prompt": "",
+          "prompt": "vibrator pressed against pussy, body trembling, pleasure expression, 1girl, solo, no penis",
           "file": "pose/img_vibrator_use_p.jpg"
         },
         "img_butt_plug_insert": {
           "name": "img_butt_plug_insert",
           "group": "",
-          "prompt": "",
+          "prompt": "inserting butt plug into anus, tapered tip entering, hand guiding, 1girl, solo",
           "file": "pose/img_butt_plug_insert.jpg"
         },
         "img_fuck_machine_p": {
           "name": "img_fuck_machine_p",
           "group": "",
-          "prompt": "",
+          "prompt": "mounted on fuck machine, motorized piston thrusting dildo, overwhelmed by mechanical stimulation, 1girl",
           "file": "pose/img_fuck_machine_p.jpg"
         },
         "img_showering_pose": {
           "name": "img_showering_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "standing under running shower, wet hair slicked back, water streaming down body, steam rising",
           "file": "pose/img_showering_pose.jpg"
         },
         "img_showering_sensual": {
           "name": "img_showering_sensual",
           "group": "",
-          "prompt": "",
+          "prompt": "showering sensually, hands running along wet body, fingers over soap-covered curves, warm water, 1girl",
           "file": "pose/img_showering_sensual.jpg"
         },
         "img_bathing_pose": {
           "name": "img_bathing_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "relaxing in bathtub, body partially submerged, foam bubbles, head on tub edge, peaceful bathing",
           "file": "pose/img_bathing_pose.jpg"
         },
         "img_romantic_bath_p": {
           "name": "img_romantic_bath_p",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl sharing bath, candles, rose petals on water, she leaning against his chest, intimate",
           "file": "pose/img_romantic_bath_p.jpg"
         },
         "img_wet_tshirt": {
           "name": "img_wet_tshirt",
           "group": "",
-          "prompt": "",
+          "prompt": "thin white t-shirt soaked wet, transparent fabric clinging to body, skin visible through wet material",
           "file": "pose/img_wet_tshirt.jpg"
         },
         "img_pool_exit": {
           "name": "img_pool_exit",
           "group": "",
-          "prompt": "",
+          "prompt": "climbing out of pool, water cascading off body, pulling up on edge, glistening wet, hair slicked back",
           "file": "pose/img_pool_exit.jpg"
         },
         "img_waterfall": {
           "name": "img_waterfall",
           "group": "",
-          "prompt": "",
+          "prompt": "dramatic waterfall cascading down tall rocky cliff into churning pool below, white spray and mist, wet mossy rocks, lush green vegetation surrounding",
           "file": "pose/img_waterfall.jpg"
         },
         "img_oil_body": {
           "name": "img_oil_body",
           "group": "",
-          "prompt": "",
+          "prompt": "entire body coated in glistening oil, impossibly shiny skin, oil highlights on every curve, slick, 1girl",
           "file": "pose/img_oil_body.jpg"
         },
         "img_foam_bath": {
           "name": "img_foam_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "in bath overflowing with thick white foam and bubbles, suds partially covering body, playful",
           "file": "pose/img_foam_bath.jpg"
         },
         "img_titty_drop": {
           "name": "img_titty_drop",
           "group": "",
-          "prompt": "",
+          "prompt": "breasts dropping free from lifted top or bra, moment of release, bounce as freed, 1girl, solo",
           "file": "pose/img_titty_drop.jpg"
         },
         "img_slapping_breasts": {
           "name": "img_slapping_breasts",
           "group": "",
-          "prompt": "",
+          "prompt": "slapping own breasts with palms, jiggling from each impact, visible ripple, 1girl, solo",
           "file": "pose/img_slapping_breasts.jpg"
         },
         "img_look_at_my_tits": {
           "name": "img_look_at_my_tits",
           "group": "",
-          "prompt": "",
+          "prompt": "presenting breasts, hands framing or cupping, pushing together for display, arching back, 1girl, solo",
           "file": "pose/img_look_at_my_tits.jpg"
         },
         "img_ready_to_ride": {
           "name": "img_ready_to_ride",
           "group": "",
-          "prompt": "",
+          "prompt": "hovering above partner's lap about to lower down, knees spread straddling, pre-cowgirl mount, 1girl",
           "file": "pose/img_ready_to_ride.jpg"
         },
         "img_posing_nude": {
           "name": "img_posing_nude",
           "group": "",
-          "prompt": "",
+          "prompt": "posing nude, artistic or provocative model poses, confident nudity, full body display, 1girl, solo",
           "file": "pose/img_posing_nude.jpg"
         },
         "img_begging": {
           "name": "img_begging",
           "group": "",
-          "prompt": "",
+          "prompt": "on knees begging, hands clasped reaching upward, wide imploring eyes, desperate submissive, 1girl",
           "file": "pose/img_begging.jpg"
         },
         "img_come_here": {
           "name": "img_come_here",
           "group": "",
-          "prompt": "",
+          "prompt": "beckoning with curling finger, come-hither gesture, seductive inviting gaze, 1girl, solo",
           "file": "pose/img_come_here.jpg"
         },
         "img_yandere_adoration": {
           "name": "img_yandere_adoration",
           "group": "",
-          "prompt": "",
+          "prompt": "yandere obsessive adoration, unnervingly wide intense eyes, unsettling devoted smile, possessive, 1girl",
           "file": "pose/img_yandere_adoration.jpg"
         },
         "img_menacing_meme": {
           "name": "img_menacing_meme",
           "group": "",
-          "prompt": "",
+          "prompt": "JoJo-style menacing pose, dramatic pointing, intense stare, over-the-top anime threatening stance, 1girl",
           "file": "pose/img_menacing_meme.jpg"
         },
         "img_album_pose": {
           "name": "img_album_pose",
           "group": "",
-          "prompt": "",
+          "prompt": "dramatic editorial pose, bold artistic positioning, strong silhouette, album cover energy, 1girl, solo",
           "file": "pose/img_album_pose.jpg"
         }
       }
@@ -5068,793 +5068,793 @@
         "motion_v_hip_sway": {
           "name": "motion_v_hip_sway",
           "group": "",
-          "prompt": "",
+          "prompt": "swaying hips side to side slowly, exaggerated lateral hip movement, seductive S-curves, 1girl",
           "file": "subject/motion_v_hip_sway.jpg"
         },
         "motion_v_groove_flow": {
           "name": "motion_v_groove_flow",
           "group": "",
-          "prompt": "",
+          "prompt": "smooth flowing dance groove, body swaying rhythmically to music, fluid natural hip and shoulder movements, relaxed groove",
           "file": "subject/motion_v_groove_flow.jpg"
         },
         "motion_v_body_wave": {
           "name": "motion_v_body_wave",
           "group": "",
-          "prompt": "",
+          "prompt": "body wave rolling through torso, chest down through stomach to hips, undulating motion, 1girl",
           "file": "subject/motion_v_body_wave.jpg"
         },
         "motion_v_rhythm_pulse": {
           "name": "motion_v_rhythm_pulse",
           "group": "",
-          "prompt": "",
+          "prompt": "pulsing rhythmic body movement, bouncing to the beat, rhythmic head nod and body pulse, feeling the music",
           "file": "subject/motion_v_rhythm_pulse.jpg"
         },
         "motion_v_dance_vibe": {
           "name": "motion_v_dance_vibe",
           "group": "",
-          "prompt": "",
+          "prompt": "casual dance vibes, freestyle dancing with natural body flow, arms moving freely, enjoying music, carefree movement",
           "file": "subject/motion_v_dance_vibe.jpg"
         },
         "motion_v_twerk": {
           "name": "motion_v_twerk",
           "group": "",
-          "prompt": "",
+          "prompt": "twerking, bent forward, rapid buttocks shaking and bouncing, rhythmic hip thrusting, provocative dance, 1girl",
           "file": "subject/motion_v_twerk.jpg"
         },
         "motion_v_twerk_wall": {
           "name": "motion_v_twerk_wall",
           "group": "",
-          "prompt": "",
+          "prompt": "twerking against wall, hands on wall for support, buttocks bouncing rapidly, wall twerk dance, 1girl",
           "file": "subject/motion_v_twerk_wall.jpg"
         },
         "motion_v_twerk_floor": {
           "name": "motion_v_twerk_floor",
           "group": "",
-          "prompt": "",
+          "prompt": "twerking on floor, low squat position, hands on ground, buttocks bouncing upward rapidly, floor twerk, 1girl",
           "file": "subject/motion_v_twerk_floor.jpg"
         },
         "motion_v_lap_dance": {
           "name": "motion_v_lap_dance",
           "group": "",
-          "prompt": "",
+          "prompt": "performing lap dance on seated person, grinding hips on lap, seductive body rolling, intimate erotic dance, 1girl",
           "file": "subject/motion_v_lap_dance.jpg"
         },
         "motion_v_pole_dance": {
           "name": "motion_v_pole_dance",
           "group": "",
-          "prompt": "",
+          "prompt": "pole dancing on chrome pole, spinning and wrapping body around pole, athletic sensual performance, flexible poses, 1girl",
           "file": "subject/motion_v_pole_dance.jpg"
         },
         "motion_v_strip_tease": {
           "name": "motion_v_strip_tease",
           "group": "",
-          "prompt": "",
+          "prompt": "slowly removing clothing piece by piece, seductive striptease, teasing reveal, suggestive movements, 1girl",
           "file": "subject/motion_v_strip_tease.jpg"
         },
         "motion_v_belly_dance": {
           "name": "motion_v_belly_dance",
           "group": "",
-          "prompt": "",
+          "prompt": "belly dancing, isolating hip and torso movements, undulating stomach, flowing arm gestures, middle eastern dance, 1girl",
           "file": "subject/motion_v_belly_dance.jpg"
         },
         "motion_v_dancing": {
           "name": "motion_v_dancing",
           "group": "",
-          "prompt": "",
+          "prompt": "dynamic dancing pose, body twisted or extended at peak of movement, joyful free spirit",
           "file": "subject/motion_v_dancing.jpg"
         },
         "motion_v_butt_shake": {
           "name": "motion_v_butt_shake",
           "group": "",
-          "prompt": "",
+          "prompt": "shaking buttocks side to side, playful butt wiggle, bouncing rear, teasing movement, 1girl",
           "file": "subject/motion_v_butt_shake.jpg"
         },
         "motion_v_chest_bounce": {
           "name": "motion_v_chest_bounce",
           "group": "",
-          "prompt": "",
+          "prompt": "bouncing breasts from movement, chest jiggling, natural breast bounce during motion, 1girl",
           "file": "subject/motion_v_chest_bounce.jpg"
         },
         "motion_v_flirting": {
           "name": "motion_v_flirting",
           "group": "",
-          "prompt": "",
+          "prompt": "flirtatious body language, hair twirling, coy smile, playful glances, suggestive posturing, teasing demeanor, 1girl",
           "file": "subject/motion_v_flirting.jpg"
         },
         "motion_v_blowing_kiss": {
           "name": "motion_v_blowing_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "blowing kiss toward camera, lips pursed, hand near mouth sending kiss, flirtatious affectionate gesture, 1girl",
           "file": "subject/motion_v_blowing_kiss.jpg"
         },
         "motion_v_wink": {
           "name": "motion_v_wink",
           "group": "",
-          "prompt": "",
+          "prompt": "winking one eye, sly confident smile, flirtatious playful gesture",
           "file": "subject/motion_v_wink.jpg"
         },
         "motion_v_lip_bite": {
           "name": "motion_v_lip_bite",
           "group": "",
-          "prompt": "",
+          "prompt": "biting lower lip seductively, teeth pressing into lip, half-lidded eyes, suggestive expression, 1girl",
           "file": "subject/motion_v_lip_bite.jpg"
         },
         "motion_v_begging": {
           "name": "motion_v_begging",
           "group": "",
-          "prompt": "",
+          "prompt": "on knees begging, hands clasped reaching upward, wide imploring eyes, desperate submissive, 1girl",
           "file": "subject/motion_v_begging.jpg"
         },
         "motion_v_come_here": {
           "name": "motion_v_come_here",
           "group": "",
-          "prompt": "",
+          "prompt": "beckoning with curling finger, come-hither gesture, seductive inviting gaze, 1girl, solo",
           "file": "subject/motion_v_come_here.jpg"
         },
         "motion_v_cuddling": {
           "name": "motion_v_cuddling",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl cuddling, arms around each other, faces close, warm affectionate embrace",
           "file": "subject/motion_v_cuddling.jpg"
         },
         "motion_v_incoming_hug": {
           "name": "motion_v_incoming_hug",
           "group": "",
-          "prompt": "",
+          "prompt": "running toward camera, arms spread wide for hug, beaming smile, pure excitement",
           "file": "subject/motion_v_incoming_hug.jpg"
         },
         "motion_v_head_pats": {
           "name": "motion_v_head_pats",
           "group": "",
-          "prompt": "",
+          "prompt": "POV receiving head pats, hand reaching from above, looking up happily, content expression",
           "file": "subject/motion_v_head_pats.jpg"
         },
         "motion_v_walking_towards": {
           "name": "motion_v_walking_towards",
           "group": "",
-          "prompt": "",
+          "prompt": "walking toward camera, eyes on lens, confident forward stride, approaching viewer",
           "file": "subject/motion_v_walking_towards.jpg"
         },
         "motion_v_jogging": {
           "name": "motion_v_jogging",
           "group": "",
-          "prompt": "",
+          "prompt": "light jogging, casual running pace, arms swinging, athletic comfortable form",
           "file": "subject/motion_v_jogging.jpg"
         },
         "motion_v_panty_teasing": {
           "name": "motion_v_panty_teasing",
           "group": "",
-          "prompt": "",
+          "prompt": "teasing with panties, pulling waistband, sliding fingers along edge, playful underwear teasing, 1girl",
           "file": "subject/motion_v_panty_teasing.jpg"
         },
         "motion_v_removing_panties": {
           "name": "motion_v_removing_panties",
           "group": "",
-          "prompt": "",
+          "prompt": "pulling panties down legs, thumbs hooked in waistband, underwear sliding down thighs, bending forward, 1girl, solo",
           "file": "subject/motion_v_removing_panties.jpg"
         },
         "motion_v_flashing": {
           "name": "motion_v_flashing",
           "group": "",
-          "prompt": "",
+          "prompt": "lifting clothing to expose body underneath, shirt pulled up or skirt flipped, naughty daring expression, 1girl",
           "file": "subject/motion_v_flashing.jpg"
         },
         "motion_v_bouncing_boobs": {
           "name": "motion_v_bouncing_boobs",
           "group": "",
-          "prompt": "",
+          "prompt": "bare breasts bouncing and jiggling from movement, natural breast momentum, mid-bounce, 1girl, solo",
           "file": "subject/motion_v_bouncing_boobs.jpg"
         },
         "motion_v_breast_grab": {
           "name": "motion_v_breast_grab",
           "group": "",
-          "prompt": "",
+          "prompt": "grabbing own breasts with hands, squeezing and groping, self-fondling display, 1girl",
           "file": "subject/motion_v_breast_grab.jpg"
         },
         "motion_v_seductive_turns": {
           "name": "motion_v_seductive_turns",
           "group": "",
-          "prompt": "",
+          "prompt": "slowly turning body showing all angles, seductive rotation, displaying figure from front side and rear, 1girl",
           "file": "subject/motion_v_seductive_turns.jpg"
         },
         "motion_v_titty_drop": {
           "name": "motion_v_titty_drop",
           "group": "",
-          "prompt": "",
+          "prompt": "breasts dropping free from lifted top or bra, moment of release, bounce as freed, 1girl, solo",
           "file": "subject/motion_v_titty_drop.jpg"
         },
         "motion_v_posing_nude": {
           "name": "motion_v_posing_nude",
           "group": "",
-          "prompt": "",
+          "prompt": "posing nude, artistic or provocative model poses, confident nudity, full body display, 1girl, solo",
           "file": "subject/motion_v_posing_nude.jpg"
         },
         "motion_v_stuck": {
           "name": "motion_v_stuck",
           "group": "",
-          "prompt": "",
+          "prompt": "upper body stuck in window or tight space, lower body visible outside, bare buttocks sticking out, legs dangling, 1girl",
           "file": "subject/motion_v_stuck.jpg"
         },
         "motion_v_slapping_breasts": {
           "name": "motion_v_slapping_breasts",
           "group": "",
-          "prompt": "",
+          "prompt": "slapping own breasts with palms, jiggling from each impact, visible ripple, 1girl, solo",
           "file": "subject/motion_v_slapping_breasts.jpg"
         },
         "motion_v_downblouse": {
           "name": "motion_v_downblouse",
           "group": "",
-          "prompt": "",
+          "prompt": "leaning forward, overhead angle reveals cleavage inside loose neckline, breasts visible hanging, 1girl",
           "file": "subject/motion_v_downblouse.jpg"
         },
         "motion_v_assume_position": {
           "name": "motion_v_assume_position",
           "group": "",
-          "prompt": "",
+          "prompt": "lowering to knees or bending over submissively, transitioning into receptive waiting position, 1girl",
           "file": "subject/motion_v_assume_position.jpg"
         },
         "motion_v_all_fours_wiggle": {
           "name": "motion_v_all_fours_wiggle",
           "group": "",
-          "prompt": "",
+          "prompt": "on all fours wiggling hips side to side, playful crawling motion, buttocks swaying, teasing on hands and knees, 1girl",
           "file": "subject/motion_v_all_fours_wiggle.jpg"
         },
         "motion_v_masturbation": {
           "name": "motion_v_masturbation",
           "group": "",
-          "prompt": "",
+          "prompt": "female masturbation, touching self between legs, fingers on genitals, self-pleasure, eyes closed in pleasure, 1girl",
           "file": "subject/motion_v_masturbation.jpg"
         },
         "motion_v_pillow_humping": {
           "name": "motion_v_pillow_humping",
           "group": "",
-          "prompt": "",
+          "prompt": "straddling pillow, grinding hips against it, crotch pressing into pillow, 1girl, solo",
           "file": "subject/motion_v_pillow_humping.jpg"
         },
         "motion_v_dildo_ride": {
           "name": "motion_v_dildo_ride",
           "group": "",
-          "prompt": "",
+          "prompt": "riding dildo bouncing up and down, toy fixed below, knees spread, vigorous self-riding, 1girl, solo, no penis",
           "file": "subject/motion_v_dildo_ride.jpg"
         },
         "motion_v_vibrator": {
           "name": "motion_v_vibrator",
           "group": "",
-          "prompt": "",
+          "prompt": "using vibrator on self, buzzing toy pressed against body, trembling from stimulation, self-pleasure with toy, 1girl",
           "file": "subject/motion_v_vibrator.jpg"
         },
         "motion_v_showering": {
           "name": "motion_v_showering",
           "group": "",
-          "prompt": "",
+          "prompt": "showering, water cascading over body, hands running through wet hair, steam, bathroom setting, 1girl",
           "file": "subject/motion_v_showering.jpg"
         },
         "motion_v_bathing": {
           "name": "motion_v_bathing",
           "group": "",
-          "prompt": "",
+          "prompt": "bathing in tub, relaxing in warm water, partially submerged, bubbles, peaceful bathing, 1girl",
           "file": "subject/motion_v_bathing.jpg"
         },
         "motion_v_orgasm": {
           "name": "motion_v_orgasm",
           "group": "",
-          "prompt": "",
+          "prompt": "female orgasm, body tensing and trembling, back arching, moaning expression, climax moment, waves of pleasure, 1girl",
           "file": "subject/motion_v_orgasm.jpg"
         },
         "motion_v_ahegao": {
           "name": "motion_v_ahegao",
           "group": "",
-          "prompt": "",
+          "prompt": "ahegao expression, eyes rolling back, tongue out, drooling, overwhelmed by pleasure, mind-broken face, 1girl",
           "file": "subject/motion_v_ahegao.jpg"
         },
         "motion_v_squirting": {
           "name": "motion_v_squirting",
           "group": "",
-          "prompt": "",
+          "prompt": "female squirting orgasm, fluid ejecting, body convulsing in climax, intense release, 1girl",
           "file": "subject/motion_v_squirting.jpg"
         },
         "motion_v_fingering": {
           "name": "motion_v_fingering",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy inserting fingers into 1girl's pussy, her legs spread, digital penetration by partner",
           "file": "subject/motion_v_fingering.jpg"
         },
         "motion_v_spreading": {
           "name": "motion_v_spreading",
           "group": "",
-          "prompt": "",
+          "prompt": "spreading legs apart, opening and displaying, hands pulling thighs or labia open, revealing pose, 1girl",
           "file": "subject/motion_v_spreading.jpg"
         },
         "motion_v_blowjob": {
           "name": "motion_v_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl performing oral sex on 1boy, head bobbing on shaft, mouth around penis, sucking motion",
           "file": "subject/motion_v_blowjob.jpg"
         },
         "motion_v_blowjob_pov": {
           "name": "motion_v_blowjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from above, looking down at 1girl, his penis in her mouth, she looking up, first-person blowjob",
           "file": "subject/motion_v_blowjob_pov.jpg"
         },
         "motion_v_deepthroat": {
           "name": "motion_v_deepthroat",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl deepthroating 1boy, his entire penis in her throat, nose at base, tears in eyes, saliva dripping",
           "file": "subject/motion_v_deepthroat.jpg"
         },
         "motion_v_sloppy_blowjob": {
           "name": "motion_v_sloppy_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "extremely wet messy blowjob, his cock coated in thick saliva, spit strings from her mouth, face soaked",
           "file": "subject/motion_v_sloppy_blowjob.jpg"
         },
         "motion_v_face_fuck": {
           "name": "motion_v_face_fuck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy gripping 1girl's head, thrusting his penis into her mouth aggressively, he controls pace",
           "file": "subject/motion_v_face_fuck.jpg"
         },
         "motion_v_cunnilingus": {
           "name": "motion_v_cunnilingus",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy face between 1girl's spread thighs, his mouth on her pussy, licking her, oral on woman",
           "file": "subject/motion_v_cunnilingus.jpg"
         },
         "motion_v_face_sitting": {
           "name": "motion_v_face_sitting",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl sitting on 1boy's face, straddling his head, her pussy on his mouth, he beneath her",
           "file": "subject/motion_v_face_sitting.jpg"
         },
         "motion_v_69": {
           "name": "motion_v_69",
           "group": "",
-          "prompt": "",
+          "prompt": "sixty-nine position, mutual simultaneous oral sex, one partner on top inverted, both giving oral, 1boy 1girl",
           "file": "subject/motion_v_69.jpg"
         },
         "motion_v_licking": {
           "name": "motion_v_licking",
           "group": "",
-          "prompt": "",
+          "prompt": "licking shaft or body with tongue, long slow lick, tongue extended along surface, teasing oral, 1girl",
           "file": "subject/motion_v_licking.jpg"
         },
         "motion_v_double_blowjob": {
           "name": "motion_v_double_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls licking and sucking 1boy's penis together, both faces at his cock, sharing one penis",
           "file": "subject/motion_v_double_blowjob.jpg"
         },
         "motion_v_handjob": {
           "name": "motion_v_handjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl gripping 1boy's erect penis, hand wrapped around shaft, stroking up and down",
           "file": "subject/motion_v_handjob.jpg"
         },
         "motion_v_handjob_pov": {
           "name": "motion_v_handjob_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV looking down, 1girl's hand on viewer's penis, her fingers around shaft, stroking, her face visible",
           "file": "subject/motion_v_handjob_pov.jpg"
         },
         "motion_v_titfuck": {
           "name": "motion_v_titfuck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's pressed-together breasts, paizuri, breast sex, her hands pushing breasts around cock",
           "file": "subject/motion_v_titfuck.jpg"
         },
         "motion_v_footjob": {
           "name": "motion_v_footjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl's bare feet gripping 1boy's penis, soles on shaft, toes curling around cock, foot stimulation",
           "file": "subject/motion_v_footjob.jpg"
         },
         "motion_v_buttjob": {
           "name": "motion_v_buttjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis between 1girl's bare buttock cheeks, cock in butt cleft, no penetration, assjob",
           "file": "subject/motion_v_buttjob.jpg"
         },
         "motion_v_thighjob": {
           "name": "motion_v_thighjob",
           "group": "",
-          "prompt": "",
+          "prompt": "thigh sex, penis sliding between pressed-together thighs, intercrural sex motion, thigh squeezing, 1boy 1girl",
           "file": "subject/motion_v_thighjob.jpg"
         },
         "motion_v_missionary": {
           "name": "motion_v_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "missionary position sex, 1boy on top of 1girl, face to face penetration, rhythmic thrusting, intimate position",
           "file": "subject/motion_v_missionary.jpg"
         },
         "motion_v_missionary_pov": {
           "name": "motion_v_missionary_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man on top, looking down at 1girl beneath, his penis in her, her face and body below",
           "file": "subject/motion_v_missionary_pov.jpg"
         },
         "motion_v_folded_missionary": {
           "name": "motion_v_folded_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "mating press, 1boy pressing down, 1girl's legs pushed to her shoulders, deep penetration, folded beneath him",
           "file": "subject/motion_v_folded_missionary.jpg"
         },
         "motion_v_cowgirl": {
           "name": "motion_v_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "cowgirl western outfit, brown leather cowboy hat, plaid flannel shirt tied at waist exposing midriff, denim shorts, leather belt with large buckle, worn cowboy boots",
           "file": "subject/motion_v_cowgirl.jpg"
         },
         "motion_v_cowgirl_bounce": {
           "name": "motion_v_cowgirl_bounce",
           "group": "",
-          "prompt": "",
+          "prompt": "vigorous cowgirl, 1girl bouncing rapidly on 1boy's cock, lifting high and dropping, breasts bouncing",
           "file": "subject/motion_v_cowgirl_bounce.jpg"
         },
         "motion_v_cowgirl_pov": {
           "name": "motion_v_cowgirl_pov",
           "group": "",
-          "prompt": "",
+          "prompt": "POV from man on back, looking up at 1girl riding on top, her body above bouncing, underside view",
           "file": "subject/motion_v_cowgirl_pov.jpg"
         },
         "motion_v_reverse_cowgirl": {
           "name": "motion_v_reverse_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "reverse cowgirl, 1boy on back, 1girl on top facing away toward his feet, riding showing her back and ass",
           "file": "subject/motion_v_reverse_cowgirl.jpg"
         },
         "motion_v_squatting_cowgirl": {
           "name": "motion_v_squatting_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl squatting over 1boy, feet flat, riding his penis in deep squat, athletic squatting ride",
           "file": "subject/motion_v_squatting_cowgirl.jpg"
         },
         "motion_v_doggystyle": {
           "name": "motion_v_doggystyle",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle sex from behind, 1girl on all fours, 1boy thrusting from behind, rear penetration",
           "file": "subject/motion_v_doggystyle.jpg"
         },
         "motion_v_doggystyle_hair_pull": {
           "name": "motion_v_doggystyle_hair_pull",
           "group": "",
-          "prompt": "",
+          "prompt": "doggystyle, 1boy pulling 1girl's hair back while penetrating from behind, her head pulled up",
           "file": "subject/motion_v_doggystyle_hair_pull.jpg"
         },
         "motion_v_standing_doggy": {
           "name": "motion_v_standing_doggy",
           "group": "",
-          "prompt": "",
+          "prompt": "standing doggystyle, 1girl bent at waist hands braced, 1boy standing behind penetrating, both upright",
           "file": "subject/motion_v_standing_doggy.jpg"
         },
         "motion_v_prone_bone": {
           "name": "motion_v_prone_bone",
           "group": "",
-          "prompt": "",
+          "prompt": "prone bone position, 1girl lying flat face down, 1boy on top penetrating from behind, pressed into surface",
           "file": "subject/motion_v_prone_bone.jpg"
         },
         "motion_v_standing_sex": {
           "name": "motion_v_standing_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "standing sex, 1boy holding 1girl against wall, her legs around his waist, his penis inside her, pinned to wall",
           "file": "subject/motion_v_standing_sex.jpg"
         },
         "motion_v_mating_press": {
           "name": "motion_v_mating_press",
           "group": "",
-          "prompt": "",
+          "prompt": "mating press, 1boy pressing 1girl's legs to her shoulders, deep penetration, full weight on her, breeding",
           "file": "subject/motion_v_mating_press.jpg"
         },
         "motion_v_spooning_sex": {
           "name": "motion_v_spooning_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "spooning sex, both on sides, 1boy behind 1girl, penetrating from rear in side-lying position, gentle intimate",
           "file": "subject/motion_v_spooning_sex.jpg"
         },
         "motion_v_full_nelson": {
           "name": "motion_v_full_nelson",
           "group": "",
-          "prompt": "",
+          "prompt": "full nelson, 1boy arms under 1girl's knees holding her suspended, his penis inside, she airborne spread wide",
           "file": "subject/motion_v_full_nelson.jpg"
         },
         "motion_v_lotus": {
           "name": "motion_v_lotus",
           "group": "",
-          "prompt": "",
+          "prompt": "lotus position sex, 1girl sitting on 1boy lap face to face, legs wrapped around, intimate embracing sex",
           "file": "subject/motion_v_lotus.jpg"
         },
         "motion_v_piledriver": {
           "name": "motion_v_piledriver",
           "group": "",
-          "prompt": "",
+          "prompt": "piledriver position, 1girl on shoulders with legs over head, 1boy thrusting downward, extreme folded position",
           "file": "subject/motion_v_piledriver.jpg"
         },
         "motion_v_amazon": {
           "name": "motion_v_amazon",
           "group": "",
-          "prompt": "",
+          "prompt": "amazon position, 1girl on top dominating, pinning 1boy underneath, female-dominant riding, powerful thrusting",
           "file": "subject/motion_v_amazon.jpg"
         },
         "motion_v_seated_straddle": {
           "name": "motion_v_seated_straddle",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy sitting upright, 1girl straddling his lap facing him, penetration face to face, chest to chest",
           "file": "subject/motion_v_seated_straddle.jpg"
         },
         "motion_v_anal_doggy": {
           "name": "motion_v_anal_doggy",
           "group": "",
-          "prompt": "",
+          "prompt": "anal doggystyle, 1boy penetrating 1girl anally from behind, on all fours, rear anal entry",
           "file": "subject/motion_v_anal_doggy.jpg"
         },
         "motion_v_anal_cowgirl": {
           "name": "motion_v_anal_cowgirl",
           "group": "",
-          "prompt": "",
+          "prompt": "anal cowgirl, 1girl on top riding 1boy's cock anally, sitting on his penis in her ass",
           "file": "subject/motion_v_anal_cowgirl.jpg"
         },
         "motion_v_anal_missionary": {
           "name": "motion_v_anal_missionary",
           "group": "",
-          "prompt": "",
+          "prompt": "anal missionary, 1girl on back legs raised, 1boy on top, penis in her anus, face-to-face anal",
           "file": "subject/motion_v_anal_missionary.jpg"
         },
         "motion_v_anal_prone": {
           "name": "motion_v_anal_prone",
           "group": "",
-          "prompt": "",
+          "prompt": "anal prone bone, 1girl flat face-down, 1boy on top, penis in her anus from behind, pressing her down",
           "file": "subject/motion_v_anal_prone.jpg"
         },
         "motion_v_anal_standing": {
           "name": "motion_v_anal_standing",
           "group": "",
-          "prompt": "",
+          "prompt": "standing anal, 1girl bent forward, 1boy behind inserting penis in her anus, both standing",
           "file": "subject/motion_v_anal_standing.jpg"
         },
         "motion_v_anal_full_nelson": {
           "name": "motion_v_anal_full_nelson",
           "group": "",
-          "prompt": "",
+          "prompt": "anal full nelson, 1boy holding 1girl airborne, arms under knees, his penis in her anus, suspended",
           "file": "subject/motion_v_anal_full_nelson.jpg"
         },
         "motion_v_facial": {
           "name": "motion_v_facial",
           "group": "",
-          "prompt": "",
+          "prompt": "facial cumshot, cum landing on 1girl face, eyes closed, mouth open, receiving ejaculation on face",
           "file": "subject/motion_v_facial.jpg"
         },
         "motion_v_cumshot_body": {
           "name": "motion_v_cumshot_body",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's penis ejaculating on 1girl's body, cum on her breasts and stomach, body cumshot",
           "file": "subject/motion_v_cumshot_body.jpg"
         },
         "motion_v_creampie": {
           "name": "motion_v_creampie",
           "group": "",
-          "prompt": "",
+          "prompt": "vaginal creampie, cum leaking from 1girl's pussy after sex, semen oozing from her vagina",
           "file": "subject/motion_v_creampie.jpg"
         },
         "motion_v_anal_creampie": {
           "name": "motion_v_anal_creampie",
           "group": "",
-          "prompt": "",
+          "prompt": "anal creampie, cum leaking from 1girl's anus, semen oozing from her asshole after anal",
           "file": "subject/motion_v_anal_creampie.jpg"
         },
         "motion_v_bukkake": {
           "name": "motion_v_bukkake",
           "group": "",
-          "prompt": "",
+          "prompt": "multiple men ejaculating on 1girl, several penises aimed at her, cum from many men coating her",
           "file": "subject/motion_v_bukkake.jpg"
         },
         "motion_v_throatpie": {
           "name": "motion_v_throatpie",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy ejaculating into 1girl's throat, penis fully buried during orgasm, visible swallowing",
           "file": "subject/motion_v_throatpie.jpg"
         },
         "motion_v_titfuck_cumshot": {
           "name": "motion_v_titfuck_cumshot",
           "group": "",
-          "prompt": "",
+          "prompt": "cum shooting from between 1girl's pressed breasts, ejaculation during paizuri, cum on neck and chin",
           "file": "subject/motion_v_titfuck_cumshot.jpg"
         },
         "motion_v_cum_in_mouth": {
           "name": "motion_v_cum_in_mouth",
           "group": "",
-          "prompt": "",
+          "prompt": "cum in 1girl's open mouth, semen on her tongue, mouth open showing his load before swallowing",
           "file": "subject/motion_v_cum_in_mouth.jpg"
         },
         "motion_v_lesbian_kiss": {
           "name": "motion_v_lesbian_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "two girls kissing passionately, lips locked, tongues touching, intimate lesbian kiss, 2girls",
           "file": "subject/motion_v_lesbian_kiss.jpg"
         },
         "motion_v_lesbian_oral": {
           "name": "motion_v_lesbian_oral",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl performing cunnilingus on another girl, face between thighs, tongue on pussy, 2girls, yuri, no men",
           "file": "subject/motion_v_lesbian_oral.jpg"
         },
         "motion_v_scissoring": {
           "name": "motion_v_scissoring",
           "group": "",
-          "prompt": "",
+          "prompt": "two girls scissoring, legs interlocked, vulvas grinding together, tribbing motion, mutual pleasure, 2girls",
           "file": "subject/motion_v_scissoring.jpg"
         },
         "motion_v_lesbian_69": {
           "name": "motion_v_lesbian_69",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls in 69 position, mutual oral sex simultaneously, head between each other's thighs, yuri, no men",
           "file": "subject/motion_v_lesbian_69.jpg"
         },
         "motion_v_lesbian_fingering": {
           "name": "motion_v_lesbian_fingering",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl fingering another girl's pussy, 2girls, fingers inside her, yuri, no men, no penis",
           "file": "subject/motion_v_lesbian_fingering.jpg"
         },
         "motion_v_lesbian_strap": {
           "name": "motion_v_lesbian_strap",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl penetrating another 1girl with strap-on dildo, thrusting motion, lesbian strap-on sex, 2girls",
           "file": "subject/motion_v_lesbian_strap.jpg"
         },
         "motion_v_lesbian_tribbing": {
           "name": "motion_v_lesbian_tribbing",
           "group": "",
-          "prompt": "",
+          "prompt": "2girls scissoring, legs interlocked, pussies grinding together, tribadism, yuri, no men, no penis",
           "file": "subject/motion_v_lesbian_tribbing.jpg"
         },
         "motion_v_spitroast": {
           "name": "motion_v_spitroast",
           "group": "",
-          "prompt": "",
+          "prompt": "spit-roast position, 1girl between two 1boys, oral on one while penetrated by other, simultaneous",
           "file": "subject/motion_v_spitroast.jpg"
         },
         "motion_v_double_penetration": {
           "name": "motion_v_double_penetration",
           "group": "",
-          "prompt": "",
+          "prompt": "double penetration, 1girl between 2boys, one cock in pussy one in anus simultaneously, sandwich",
           "file": "subject/motion_v_double_penetration.jpg"
         },
         "motion_v_gangbang": {
           "name": "motion_v_gangbang",
           "group": "",
-          "prompt": "",
+          "prompt": "gangbang, 1girl surrounded by multiple boys, several penises around her, group sex, many men",
           "file": "subject/motion_v_gangbang.jpg"
         },
         "motion_v_mfm_blowjob": {
           "name": "motion_v_mfm_blowjob",
           "group": "",
-          "prompt": "",
+          "prompt": "1girl giving oral to two 1boys alternately, two penises near face, MFM threesome blowjob",
           "file": "subject/motion_v_mfm_blowjob.jpg"
         },
         "motion_v_threesome_doggy": {
           "name": "motion_v_threesome_doggy",
           "group": "",
-          "prompt": "",
+          "prompt": "threesome doggystyle, 1girl on all fours penetrated from behind while another partner in front, group sex",
           "file": "subject/motion_v_threesome_doggy.jpg"
         },
         "motion_v_spanking": {
           "name": "motion_v_spanking",
           "group": "",
-          "prompt": "",
+          "prompt": "spanking buttocks with open hand, slapping motion on bare skin, red handprint appearing, disciplinary, 1boy 1girl",
           "file": "subject/motion_v_spanking.jpg"
         },
         "motion_v_bondage_sex": {
           "name": "motion_v_bondage_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "sex while bound, 1girl restrained with ropes or cuffs during penetration, bondage intercourse",
           "file": "subject/motion_v_bondage_sex.jpg"
         },
         "motion_v_choking_sex": {
           "name": "motion_v_choking_sex",
           "group": "",
-          "prompt": "",
+          "prompt": "hand around throat during sex, light choking while thrusting, breath play during intercourse, 1boy 1girl",
           "file": "subject/motion_v_choking_sex.jpg"
         },
         "motion_v_leashed": {
           "name": "motion_v_leashed",
           "group": "",
-          "prompt": "",
+          "prompt": "leash and collar during sex, pulling leash while penetrating from behind, pet play domination, 1boy 1girl",
           "file": "subject/motion_v_leashed.jpg"
         },
         "motion_v_face_slap": {
           "name": "motion_v_face_slap",
           "group": "",
-          "prompt": "",
+          "prompt": "slapping face with hand or penis, impact moment on cheek, dominant degradation gesture",
           "file": "subject/motion_v_face_slap.jpg"
         },
         "motion_v_romantic_kiss": {
           "name": "motion_v_romantic_kiss",
           "group": "",
-          "prompt": "",
+          "prompt": "romantic passionate kiss, tender lip lock, hands cupping face, loving intimate moment, 1boy 1girl",
           "file": "subject/motion_v_romantic_kiss.jpg"
         },
         "motion_v_spooning": {
           "name": "motion_v_spooning",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy and 1girl spooning in bed, he behind as big spoon, arm around her waist, cozy intimate",
           "file": "subject/motion_v_spooning.jpg"
         },
         "motion_v_romantic_bath": {
           "name": "motion_v_romantic_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "couple bathing together romantically, warm water, bubbles, intimate embrace in tub, 1boy 1girl",
           "file": "subject/motion_v_romantic_bath.jpg"
         },
         "motion_v_massage": {
           "name": "motion_v_massage",
           "group": "",
-          "prompt": "",
+          "prompt": "sensual body massage, hands kneading muscles, oil on skin, relaxing intimate touch, 1boy 1girl",
           "file": "subject/motion_v_massage.jpg"
         },
         "motion_v_steamy_makeout": {
           "name": "motion_v_steamy_makeout",
           "group": "",
-          "prompt": "",
+          "prompt": "intense passionate makeout, deep kissing with tongues, hands roaming bodies, heated embrace, 1boy 1girl",
           "file": "subject/motion_v_steamy_makeout.jpg"
         },
         "motion_v_nipple_suck": {
           "name": "motion_v_nipple_suck",
           "group": "",
-          "prompt": "",
+          "prompt": "1boy's mouth on 1girl's nipple, sucking her breast, lips on areola, intimate breast worship",
           "file": "subject/motion_v_nipple_suck.jpg"
         },
         "motion_v_shower_sensual": {
           "name": "motion_v_shower_sensual",
           "group": "",
-          "prompt": "",
+          "prompt": "sensual showering together, water running over two bodies, washing each other, intimate wet embrace, 1boy 1girl",
           "file": "subject/motion_v_shower_sensual.jpg"
         },
         "motion_v_wet_tshirt": {
           "name": "motion_v_wet_tshirt",
           "group": "",
-          "prompt": "",
+          "prompt": "thin white t-shirt soaked wet, transparent fabric clinging to body, skin visible through wet material",
           "file": "subject/motion_v_wet_tshirt.jpg"
         },
         "motion_v_pool_exit": {
           "name": "motion_v_pool_exit",
           "group": "",
-          "prompt": "",
+          "prompt": "climbing out of pool, water cascading off body, pulling up on edge, glistening wet, hair slicked back",
           "file": "subject/motion_v_pool_exit.jpg"
         },
         "motion_v_oil_body": {
           "name": "motion_v_oil_body",
           "group": "",
-          "prompt": "",
+          "prompt": "entire body coated in glistening oil, impossibly shiny skin, oil highlights on every curve, slick, 1girl",
           "file": "subject/motion_v_oil_body.jpg"
         },
         "motion_v_foam_bath": {
           "name": "motion_v_foam_bath",
           "group": "",
-          "prompt": "",
+          "prompt": "in bath overflowing with thick white foam and bubbles, suds partially covering body, playful",
           "file": "subject/motion_v_foam_bath.jpg"
         },
         "motion_v_aftermath_messy": {
           "name": "motion_v_aftermath_messy",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex messy state, cum on body, disheveled hair, smeared makeup, panting, satisfied exhaustion, 1girl",
           "file": "subject/motion_v_aftermath_messy.jpg"
         },
         "motion_v_aftermath_exhausted": {
           "name": "motion_v_aftermath_exhausted",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex exhaustion, lying limp and panting, sweaty body, completely spent and drained, 1girl",
           "file": "subject/motion_v_aftermath_exhausted.jpg"
         },
         "motion_v_aftermath_cuddle": {
           "name": "motion_v_aftermath_cuddle",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex cuddling, wrapped in each other arms, warm afterglow, tender embrace, satisfied couple, 1boy 1girl",
           "file": "subject/motion_v_aftermath_cuddle.jpg"
         },
         "motion_v_aftermath_satisfied": {
           "name": "motion_v_aftermath_satisfied",
           "group": "",
-          "prompt": "",
+          "prompt": "post-sex satisfied glow, content smile, relaxed body, happy fulfilled expression, basking in afterglow, 1girl",
           "file": "subject/motion_v_aftermath_satisfied.jpg"
         }
       }
@@ -6874,79 +6874,79 @@
         "angle_eye_level": {
           "name": "angle_eye_level",
           "group": "",
-          "prompt": "",
+          "prompt": "eye-level neutral perspective, straight horizontal viewpoint, subject at natural eye height, no upward or downward tilt, flat neutral viewing angle",
           "file": "camera/angle_eye_level.jpg"
         },
         "angle_low_angle": {
           "name": "angle_low_angle",
           "group": "",
-          "prompt": "",
+          "prompt": "low upward perspective, viewing from below looking up at subject, subject appears imposing dominant and heroic, low viewpoint looking upward",
           "file": "camera/angle_low_angle.jpg"
         },
         "angle_high_angle": {
           "name": "angle_high_angle",
           "group": "",
-          "prompt": "",
+          "prompt": "high downward perspective, viewing from above looking down at subject, subject appears smaller and vulnerable, elevated viewpoint looking downward",
           "file": "camera/angle_high_angle.jpg"
         },
         "angle_birds_eye": {
           "name": "angle_birds_eye",
           "group": "",
-          "prompt": "",
+          "prompt": "overhead top-down bird's eye perspective, directly above the subject looking straight down, aerial top view showing horizontal plane",
           "file": "camera/angle_birds_eye.jpg"
         },
         "angle_worms_eye": {
           "name": "angle_worms_eye",
           "group": "",
-          "prompt": "",
+          "prompt": "extreme ground-level upward perspective, viewpoint at floor level looking straight up, subject towers above, dramatic upward tilt",
           "file": "camera/angle_worms_eye.jpg"
         },
         "angle_dutch_angle": {
           "name": "angle_dutch_angle",
           "group": "",
-          "prompt": "",
+          "prompt": "dutch angle tilted camera, frame rotated 25-35 degrees diagonally, canted slanted composition",
           "file": "camera/angle_dutch_angle.jpg"
         },
         "angle_over_shoulder": {
           "name": "angle_over_shoulder",
           "group": "",
-          "prompt": "",
+          "prompt": "over-the-shoulder perspective, camera positioned behind one person's shoulder, looking forward past their shoulder at the scene",
           "file": "camera/angle_over_shoulder.jpg"
         },
         "angle_pov_first_person": {
           "name": "angle_pov_first_person",
           "group": "",
-          "prompt": "",
+          "prompt": "first-person immersive subjective perspective, viewer appears physically present in scene, their hands or body partially visible at frame edges, no external observer",
           "file": "camera/angle_pov_first_person.jpg"
         },
         "angle_from_behind": {
           "name": "angle_from_behind",
           "group": "",
-          "prompt": "",
+          "prompt": "rear perspective, subject's back completely facing the viewer, posterior and back fully visible, subject looking away from viewer",
           "file": "camera/angle_from_behind.jpg"
         },
         "angle_from_side": {
           "name": "angle_from_side",
           "group": "",
-          "prompt": "",
+          "prompt": "side profile perspective, subject viewed at 90-degree angle, full profile silhouette visible, neither front nor rear facing",
           "file": "camera/angle_from_side.jpg"
         },
         "angle_three_quarter": {
           "name": "angle_three_quarter",
           "group": "",
-          "prompt": "",
+          "prompt": "three-quarter angle perspective, subject turned 45 degrees, between profile and front-facing, classic angled portrait viewpoint",
           "file": "camera/angle_three_quarter.jpg"
         },
         "angle_selfie_angle": {
           "name": "angle_selfie_angle",
           "group": "",
-          "prompt": "",
+          "prompt": "close personal selfie perspective, arm's-length framing, slight overhead tilt angle, subject's face filling most of frame at close intimate range",
           "file": "camera/angle_selfie_angle.jpg"
         },
         "angle_mirror_reflection": {
           "name": "angle_mirror_reflection",
           "group": "",
-          "prompt": "",
+          "prompt": "mirror reflection perspective, subject viewed as reflection in a mirror, visible mirror frame or edge, reflected image, viewer seeing subject through mirror surface",
           "file": "camera/angle_mirror_reflection.jpg"
         }
       }
