@@ -300,7 +300,15 @@ export class AdminService {
       this.prisma.user.count({ where }),
     ]);
 
-    return { users, total };
+    const userIds = users.map((u) => u.id);
+    const statsMap = await this.getUsersStatsMap(userIds);
+
+    const usersWithStats = users.map((u) => ({
+      ...u,
+      stats: statsMap.get(u.id) ?? { imageCount: 0, videoCount: 0, chatCount: 0, characterCount: 0 },
+    }));
+
+    return { users: usersWithStats, total };
   }
 
   /**
@@ -359,6 +367,63 @@ export class AdminService {
   async resetUserLimits(id: string) {
     await this.getUser(id);
     await this.prisma.usageCounter.deleteMany({ where: { userId: id } });
+  }
+
+  async getUserStats(id: string) {
+    await this.getUser(id);
+
+    const [imageCount, videoCount, chatCount, characterCount, jobs] = await Promise.all([
+      this.prisma.aiJob.count({ where: { userId: id, type: "image" } }),
+      this.prisma.aiJob.count({ where: { userId: id, type: "video" } }),
+      this.prisma.chatSession.count({ where: { userId: id, deletedAt: null } }),
+      this.prisma.character.count({ where: { createdBy: id, deletedAt: null } }),
+      this.prisma.aiJob.findMany({
+        where: { userId: id, type: { in: ["image", "video"] } },
+        select: { type: true, input: true },
+      }),
+    ]);
+
+    const modelFreq = new Map<string, number>();
+    for (const job of jobs) {
+      const input = job.input as Record<string, unknown> | null;
+      const model = (input?.model as string) ?? "unknown";
+      modelFreq.set(model, (modelFreq.get(model) ?? 0) + 1);
+    }
+    const modelsUsed = Array.from(modelFreq.entries())
+      .map(([model, count]) => ({ model, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return { imageCount, videoCount, chatCount, characterCount, modelsUsed };
+  }
+
+  async getUsersStatsMap(userIds: string[]) {
+    if (userIds.length === 0) return new Map<string, any>();
+
+    const [imageCounts, videoCounts, chatCounts, characterCounts] = await Promise.all([
+      this.prisma.aiJob.groupBy({ by: ["userId"], where: { userId: { in: userIds }, type: "image" }, _count: true }),
+      this.prisma.aiJob.groupBy({ by: ["userId"], where: { userId: { in: userIds }, type: "video" }, _count: true }),
+      this.prisma.chatSession.groupBy({ by: ["userId"], where: { userId: { in: userIds }, deletedAt: null }, _count: true }),
+      this.prisma.character.groupBy({ by: ["createdBy"], where: { createdBy: { in: userIds }, deletedAt: null }, _count: true }),
+    ]);
+
+    const toMap = (rows: { userId?: string; createdBy?: string; _count: number }[], key = "userId") =>
+      new Map(rows.map((r) => [(r as any)[key] as string, r._count]));
+
+    const imgMap = toMap(imageCounts as any);
+    const vidMap = toMap(videoCounts as any);
+    const chatMap = toMap(chatCounts as any);
+    const charMap = toMap(characterCounts as any, "createdBy");
+
+    const result = new Map<string, { imageCount: number; videoCount: number; chatCount: number; characterCount: number }>();
+    for (const uid of userIds) {
+      result.set(uid, {
+        imageCount: imgMap.get(uid) ?? 0,
+        videoCount: vidMap.get(uid) ?? 0,
+        chatCount: chatMap.get(uid) ?? 0,
+        characterCount: charMap.get(uid) ?? 0,
+      });
+    }
+    return result;
   }
 
   async deleteUser(id: string) {

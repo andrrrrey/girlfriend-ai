@@ -268,6 +268,11 @@ export class AdminController {
    * @returns Пустое тело ответа (HTTP 204 No Content).
    * @throws {NotFoundException} Если пользователь не найден (HTTP 404).
    */
+  @Get("users/:id/stats")
+  async getUserStats(@Param("id") id: string) {
+    return this.adminService.getUserStats(id);
+  }
+
   @Delete("users/:id/limits")
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetUserLimits(@Param("id") id: string) {

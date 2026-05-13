@@ -12,13 +12,15 @@ import { Module } from "@nestjs/common";
 import { UsersController } from "./users.controller";
 import { UsersService } from "./users.service";
 import { PrismaService } from "../prisma.service";
+import { DemoModule } from "../demo/demo.module";
 
 @Module({
-  controllers: [UsersController], // Обрабатывает HTTP /users/me, /users/me/password и т.д.
+  imports: [DemoModule],
+  controllers: [UsersController],
   providers: [
-    UsersService,   // Бизнес-логика: профиль, смена пароля, соц. ссылки
-    PrismaService,  // Доступ к таблицам User и SocialLink
+    UsersService,
+    PrismaService,
   ],
-  exports: [UsersService], // Доступен для других модулей через DI
+  exports: [UsersService],
 })
 export class UsersModule {}

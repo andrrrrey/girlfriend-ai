@@ -30,6 +30,8 @@ import CameraModal, { DEFAULT_CAMERA_SELECTIONS } from "../components/CameraModa
 import type { CameraSelections } from "../components/CameraModal";
 import PromptDetailsModal, { DEFAULT_PROMPT_DETAILS_SELECTIONS } from "../components/PromptDetailsModal";
 import type { PromptDetailsSelections } from "../components/PromptDetailsModal";
+import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import { ApiError } from "../../lib/api";
 
 const CSS = `
   /* ── Page content ── */
@@ -968,6 +970,7 @@ export default function GenerationPage() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
@@ -1310,7 +1313,15 @@ export default function GenerationPage() {
       }, isVideo ? 4000 : 2000);
     } catch (err: any) {
       setGenerating(false);
-      setError(err.message || "Failed to start generation");
+      if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
+        setPremiumPopup({
+          limitType: err.body.limitType as PremiumLimitType,
+          limit: err.body.limit,
+          used: err.body.used,
+        });
+      } else {
+        setError(err.message || "Failed to start generation");
+      }
     }
   }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels]);
 
@@ -1956,6 +1967,15 @@ export default function GenerationPage() {
         sceneSelections={sceneSelections}
         cameraSelections={cameraSelections}
       />
+
+      {premiumPopup && (
+        <PremiumPopup
+          limitType={premiumPopup.limitType}
+          limit={premiumPopup.limit}
+          used={premiumPopup.used}
+          onClose={() => setPremiumPopup(null)}
+        />
+      )}
     </>
   );
 }

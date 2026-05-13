@@ -151,6 +151,7 @@ export class ChatsController {
   @ApiOperation({ summary: "Create a new chat session with a character" })
   @Post()
   async createChat(@Req() req: any, @Body() dto: CreateChatDto) {
+    await this.demoService.checkChatSessionCreation(req.user.id, req.user.subscription);
     return this.chatsService.createChat(req.user.id, dto.characterId, dto.title);
   }
 
@@ -320,8 +321,8 @@ export class ChatsController {
     @Param("id") id: string,
     @Body() dto: SendMessageDto,
   ) {
-    // Check demo limits (throws 429 if exceeded)
-    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+    // Check free-tier message limit (throws 429 if exceeded)
+    await this.demoService.checkMessageLimit(id, req.user.id, req.user.subscription);
 
     const chat = await this.chatsService.getChat(id, req.user.id);
 
@@ -781,8 +782,8 @@ export class ChatsController {
     @Param("msgId") msgId: string,
     @Body() dto: EditMessageDto,
   ) {
-    // Check demo limits (editing sends a new AI request)
-    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+    // Check free-tier message limit (editing sends a new AI request)
+    await this.demoService.checkMessageLimit(chatId, req.user.id, req.user.subscription);
 
     const chat = await this.chatsService.getChat(chatId, req.user.id);
 
@@ -906,8 +907,8 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
-    // Check demo limits (regenerating counts as a new message)
-    await this.demoService.checkAndIncrementMessage(req.user.id, req.user.subscription);
+    // Check free-tier message limit (regenerating counts as a new message)
+    await this.demoService.checkMessageLimit(chatId, req.user.id, req.user.subscription);
 
     const chat = await this.chatsService.getChat(chatId, req.user.id);
 

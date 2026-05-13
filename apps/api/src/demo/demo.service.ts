@@ -1,83 +1,24 @@
-/**
- * @file demo.service.ts
- * @description Сервис управления лимитами демо-пользователей (бесплатный тарифный план).
- *
- * Логика работы:
- * - Пользователи на тарифе "free" считаются демо-пользователями с ограниченным доступом.
- * - Голосовые функции (STT и TTS) полностью заблокированы для бесплатных пользователей.
- * - Количество сообщений в чате ограничено суточным лимитом ({@link DEMO_LIMITS}).
- * - Счётчик использования хранится в таблице `UsageCounter` в БД.
- * - Счётчик сбрасывается в 23:59:59 текущего дня (по локальному времени сервера).
- *
- * Типы действий (DemoAction):
- * - `chat_message` — отправка сообщения в чат (лимитируется)
- * - `stt` — распознавание речи (полностью заблокировано для free)
- * - `tts` — синтез речи (полностью заблокировано для free)
- */
-
 import { ForbiddenException, HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 
-/**
- * Суточные лимиты для пользователей на бесплатном тарифе.
- * Ключ — тип действия, значение — максимальное количество операций в день.
- */
-export const DEMO_LIMITS = {
-  chat_message: 20,
+export const FREE_LIMITS = {
+  characters: 1,
+  chatSessions: 3,
+  messagesPerChat: 20,
+  imageGenerations: 2,
+  videoGenerations: 1,
 } as const;
 
-/**
- * Тип действия, отслеживаемого системой демо-лимитов.
- * - `chat_message` — отправка текстового сообщения в чат
- * - `stt` — преобразование речи в текст (Speech-to-Text)
- * - `tts` — преобразование текста в речь (Text-to-Speech)
- */
-export type DemoAction = "chat_message" | "stt" | "tts";
+export type LimitType = keyof typeof FREE_LIMITS;
 
-/**
- * Возвращает объект Date, соответствующий концу текущего дня (23:59:59.999).
- * Используется как время сброса счётчика использования.
- *
- * @returns {Date} Конец текущего дня по локальному времени сервера
- */
-function endOfDay(): Date {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
-
-/**
- * Сервис управления лимитами для демо-пользователей (тариф "free").
- *
- * Отвечает за:
- * - Проверку доступа к голосовым функциям
- * - Контроль и инкремент суточного счётчика сообщений
- * - Получение текущей статистики использования по пользователю
- */
 @Injectable()
 export class DemoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Проверяет, является ли пользователь бесплатным (демо).
-   *
-   * @param {string} subscription - Идентификатор тарифного плана пользователя
-   * @returns {boolean} `true`, если пользователь на тарифе "free"
-   */
   private isFree(subscription: string): boolean {
     return subscription === "free";
   }
 
-  /**
-   * Проверяет доступность голосовых функций (STT и TTS) для пользователя.
-   *
-   * Для бесплатных пользователей голосовые функции полностью заблокированы.
-   * Метод должен вызываться перед запуском любой голосовой операции.
-   *
-   * @param {string} subscription - Идентификатор тарифного плана пользователя
-   * @throws {ForbiddenException} Если пользователь на тарифе "free" —
-   *   выбрасывает исключение с кодом `DEMO_FEATURE_BLOCKED`
-   */
   checkVoiceAllowed(subscription: string): void {
     if (this.isFree(subscription)) {
       throw new ForbiddenException({
@@ -88,93 +29,117 @@ export class DemoService {
     }
   }
 
-  /**
-   * Проверяет суточный лимит сообщений для бесплатного пользователя и увеличивает счётчик.
-   *
-   * Алгоритм работы:
-   * 1. Если пользователь не на тарифе "free" — завершает выполнение без действий.
-   * 2. Ищет запись `UsageCounter` для пары (userId, "chat_message").
-   * 3. Если запись не найдена или истёк срок сброса (`resetAt < now`) — создаёт/обновляет
-   *    запись с count=1 и новым временем сброса (конец текущего дня).
-   * 4. Если счётчик достиг лимита — выбрасывает HTTP 429 с деталями превышения.
-   * 5. В противном случае инкрементирует счётчик на 1.
-   *
-   * @param {string} userId - Идентификатор пользователя в системе
-   * @param {string} subscription - Идентификатор тарифного плана пользователя
-   * @returns {Promise<void>} Завершается без значения при успешной проверке
-   * @throws {HttpException} HTTP 429 (Too Many Requests) с кодом `DEMO_LIMIT_REACHED`,
-   *   если пользователь исчерпал дневной лимит сообщений. Тело ответа содержит:
-   *   - `error`: код ошибки `"DEMO_LIMIT_REACHED"`
-   *   - `action`: тип действия `"chat_message"`
-   *   - `limit`: максимальное количество сообщений в день
-   *   - `used`: текущее количество использованных сообщений
-   *   - `message`: читаемое сообщение об ошибке на русском языке
-   *   - `resetAt`: время сброса счётчика
-   */
-  async checkAndIncrementMessage(userId: string, subscription: string): Promise<void> {
+  async checkCharacterCreation(userId: string, subscription: string): Promise<void> {
     if (!this.isFree(subscription)) return;
 
-    const now = new Date();
-    const limit = DEMO_LIMITS.chat_message;
-
-    const counter = await this.prisma.usageCounter.findUnique({
-      where: { userId_action: { userId, action: "chat_message" } },
+    const used = await this.prisma.character.count({
+      where: { createdBy: userId, deletedAt: null },
     });
 
-    // Reset or create counter if expired
-    if (!counter || counter.resetAt < now) {
-      await this.prisma.usageCounter.upsert({
-        where: { userId_action: { userId, action: "chat_message" } },
-        create: { userId, action: "chat_message", count: 1, resetAt: endOfDay() },
-        update: { count: 1, resetAt: endOfDay() },
+    if (used >= FREE_LIMITS.characters) {
+      throw new ForbiddenException({
+        error: "FREE_LIMIT_REACHED",
+        limitType: "characters",
+        limit: FREE_LIMITS.characters,
+        used,
+        message: `Достигнут лимит: можно создать не более ${FREE_LIMITS.characters} персонажа. Оформите подписку для безлимитного доступа.`,
       });
-      return;
     }
+  }
 
-    if (counter.count >= limit) {
+  async checkChatSessionCreation(userId: string, subscription: string): Promise<void> {
+    if (!this.isFree(subscription)) return;
+
+    const used = await this.prisma.chatSession.count({
+      where: { userId, deletedAt: null },
+    });
+
+    if (used >= FREE_LIMITS.chatSessions) {
+      throw new ForbiddenException({
+        error: "FREE_LIMIT_REACHED",
+        limitType: "chatSessions",
+        limit: FREE_LIMITS.chatSessions,
+        used,
+        message: `Достигнут лимит: максимум ${FREE_LIMITS.chatSessions} диалога. Оформите подписку для безлимитного общения.`,
+      });
+    }
+  }
+
+  async checkMessageLimit(chatSessionId: string, userId: string, subscription: string): Promise<void> {
+    if (!this.isFree(subscription)) return;
+
+    const used = await this.prisma.message.count({
+      where: { chatSessionId, role: "user", deletedAt: null },
+    });
+
+    if (used >= FREE_LIMITS.messagesPerChat) {
       throw new HttpException(
         {
-          error: "DEMO_LIMIT_REACHED",
-          action: "chat_message",
-          limit,
-          used: counter.count,
-          message: `Достигнут дневной лимит ${limit} сообщений. Оформите подписку для безлимитного общения.`,
-          resetAt: counter.resetAt,
+          error: "FREE_LIMIT_REACHED",
+          limitType: "messagesPerChat",
+          limit: FREE_LIMITS.messagesPerChat,
+          used,
+          message: `Достигнут лимит ${FREE_LIMITS.messagesPerChat} сообщений в этом чате. Оформите подписку для безлимитного общения.`,
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-
-    await this.prisma.usageCounter.update({
-      where: { userId_action: { userId, action: "chat_message" } },
-      data: { count: { increment: 1 } },
-    });
   }
 
-  /**
-   * Возвращает текущую статистику использования для указанного пользователя.
-   *
-   * Для каждого действия возвращает текущий счётчик, установленный лимит и время сброса.
-   * Если для действия нет записи в БД — оно не будет включено в результат.
-   *
-   * @param {string} userId - Идентификатор пользователя в системе
-   * @returns {Promise<Array<{ action: string; count: number; limit: number; resetAt: Date }>>}
-   *   Массив объектов с информацией об использовании:
-   *   - `action`: тип действия (например, `"chat_message"`)
-   *   - `count`: количество совершённых действий за текущий период
-   *   - `limit`: суточный лимит для данного действия (0 если лимит не задан)
-   *   - `resetAt`: время сброса счётчика
-   */
-  async getUsage(userId: string): Promise<{ action: string; count: number; limit: number; resetAt: Date }[]> {
-    const counters = await this.prisma.usageCounter.findMany({
-      where: { userId },
+  async checkImageGeneration(userId: string, subscription: string): Promise<void> {
+    if (!this.isFree(subscription)) return;
+
+    const used = await this.prisma.aiJob.count({
+      where: { userId, type: "image", status: { not: "failed" } },
     });
 
-    return counters.map((c) => ({
-      action: c.action,
-      count: c.count,
-      limit: DEMO_LIMITS[c.action as keyof typeof DEMO_LIMITS] ?? 0,
-      resetAt: c.resetAt,
-    }));
+    if (used >= FREE_LIMITS.imageGenerations) {
+      throw new ForbiddenException({
+        error: "FREE_LIMIT_REACHED",
+        limitType: "imageGenerations",
+        limit: FREE_LIMITS.imageGenerations,
+        used,
+        message: `Достигнут лимит: ${FREE_LIMITS.imageGenerations} генерации картинок. Оформите подписку для безлимитного доступа.`,
+      });
+    }
+  }
+
+  async checkVideoGeneration(userId: string, subscription: string): Promise<void> {
+    if (!this.isFree(subscription)) return;
+
+    const used = await this.prisma.aiJob.count({
+      where: { userId, type: "video", status: { not: "failed" } },
+    });
+
+    if (used >= FREE_LIMITS.videoGenerations) {
+      throw new ForbiddenException({
+        error: "FREE_LIMIT_REACHED",
+        limitType: "videoGenerations",
+        limit: FREE_LIMITS.videoGenerations,
+        used,
+        message: `Достигнут лимит: ${FREE_LIMITS.videoGenerations} генерация видео. Оформите подписку для безлимитного доступа.`,
+      });
+    }
+  }
+
+  async getUserLimitsStatus(userId: string, subscription: string) {
+    const isPaid = !this.isFree(subscription);
+
+    const [characters, chatSessions, imageGenerations, videoGenerations] = await Promise.all([
+      this.prisma.character.count({ where: { createdBy: userId, deletedAt: null } }),
+      this.prisma.chatSession.count({ where: { userId, deletedAt: null } }),
+      this.prisma.aiJob.count({ where: { userId, type: "image", status: { not: "failed" } } }),
+      this.prisma.aiJob.count({ where: { userId, type: "video", status: { not: "failed" } } }),
+    ]);
+
+    return {
+      subscription,
+      limits: {
+        characters: { used: characters, limit: isPaid ? null : FREE_LIMITS.characters },
+        chatSessions: { used: chatSessions, limit: isPaid ? null : FREE_LIMITS.chatSessions },
+        imageGenerations: { used: imageGenerations, limit: isPaid ? null : FREE_LIMITS.imageGenerations },
+        videoGenerations: { used: videoGenerations, limit: isPaid ? null : FREE_LIMITS.videoGenerations },
+      },
+    };
   }
 }

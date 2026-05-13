@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { DemoService } from "../demo/demo.service";
 import { GenerationService } from "./generation.service";
 import { CreateImageJobDto } from "./dto/create-image-job.dto";
 import { CreateVideoJobDto } from "./dto/create-video-job.dto";
@@ -20,12 +21,16 @@ import { CreateVideoJobDto } from "./dto/create-video-job.dto";
 @ApiTags("generation")
 @Controller("generation")
 export class GenerationController {
-  constructor(private readonly generationService: GenerationService) {}
+  constructor(
+    private readonly generationService: GenerationService,
+    private readonly demoService: DemoService,
+  ) {}
 
   @Post("image")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createImageJob(@Req() req: any, @Body() dto: CreateImageJobDto) {
+    await this.demoService.checkImageGeneration(req.user.id, req.user.subscription);
     return this.generationService.createImageJob(req.user.id, {
       prompt: dto.prompt,
       negativePrompt: dto.negativePrompt,
@@ -39,6 +44,7 @@ export class GenerationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createVideoJob(@Req() req: any, @Body() dto: CreateVideoJobDto) {
+    await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription);
     return this.generationService.createVideoJob(req.user.id, {
       prompt: dto.prompt,
       negativePrompt: dto.negativePrompt,

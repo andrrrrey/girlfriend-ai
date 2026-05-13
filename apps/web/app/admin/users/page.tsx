@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, type AdminUser } from "../../../lib/api";
+import { admin, type AdminUser, type AdminUserDetailedStats } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 
 const pageStyles: Record<string, React.CSSProperties> = {
@@ -156,6 +156,9 @@ export default function AdminUsersPage() {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState("");
   const [actionMsg, setActionMsg] = useState("");
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [detailedStats, setDetailedStats] = useState<AdminUserDetailedStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const LIMIT = 20;
 
@@ -229,17 +232,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleResetLimits = async (u: AdminUser) => {
-    if (!confirm(`Сбросить лимиты пользователя ${u.email}?`)) return;
-    try {
-      await admin.resetUserLimits(u.id);
-      await loadUsers(search, offset);
-      flash(`Лимиты пользователя ${u.email} сброшены`);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   const handleDeleteUser = async (u: AdminUser) => {
     if (!confirm(`Удалить пользователя ${u.email}? Это действие пометит аккаунт как удалённый.`)) return;
     try {
@@ -305,16 +297,19 @@ export default function AdminUsersPage() {
                     <th style={pageStyles.th}>Email / Ник</th>
                     <th style={pageStyles.th}>Подписка</th>
                     <th style={pageStyles.th}>Роль</th>
-                    <th style={pageStyles.th}>Лимиты</th>
+                    <th style={pageStyles.th}>Персонажи</th>
+                    <th style={pageStyles.th}>Чаты</th>
+                    <th style={pageStyles.th}>Картинки</th>
+                    <th style={pageStyles.th}>Видео</th>
                     <th style={pageStyles.th}>Дата регистрации</th>
                     <th style={pageStyles.th}>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => {
-                    const msgCounter = u.usageCounters?.find((c) => c.action === "chat_message");
                     return (
-                      <tr key={u.id} style={pageStyles.tr}>
+                      <React.Fragment key={u.id}>
+                      <tr style={pageStyles.tr}>
                         <td style={pageStyles.td}>
                           <div style={pageStyles.userEmail}>{u.email}</div>
                           {u.nickname && (
@@ -343,13 +338,16 @@ export default function AdminUsersPage() {
                           </span>
                         </td>
                         <td style={pageStyles.td}>
-                          {msgCounter ? (
-                            <span style={pageStyles.limitText}>
-                              {msgCounter.count} / 20 сообщ.
-                            </span>
-                          ) : (
-                            <span style={{ color: "#555", fontSize: 12 }}>—</span>
-                          )}
+                          <span style={{ color: "#ccc", fontSize: 12 }}>{u.stats?.characterCount ?? 0}</span>
+                        </td>
+                        <td style={pageStyles.td}>
+                          <span style={{ color: "#ccc", fontSize: 12 }}>{u.stats?.chatCount ?? 0}</span>
+                        </td>
+                        <td style={pageStyles.td}>
+                          <span style={{ color: "#ccc", fontSize: 12 }}>{u.stats?.imageCount ?? 0}</span>
+                        </td>
+                        <td style={pageStyles.td}>
+                          <span style={{ color: "#ccc", fontSize: 12 }}>{u.stats?.videoCount ?? 0}</span>
                         </td>
                         <td style={pageStyles.td}>
                           <span style={pageStyles.dateText}>
@@ -374,13 +372,6 @@ export default function AdminUsersPage() {
                               {u.subscription === "paid" ? "Убрать Premium" : "Дать Premium"}
                             </button>
                             <button
-                              onClick={() => handleResetLimits(u)}
-                              style={{ ...pageStyles.btn, ...pageStyles.btnSecondary }}
-                              title="Сбросить лимиты"
-                            >
-                              Сбросить лимиты
-                            </button>
-                            <button
                               onClick={() => handleToggleRole(u)}
                               style={{ ...pageStyles.btn, ...pageStyles.btnGhost }}
                               title={u.role === "admin" ? "Снять права администратора" : "Дать права администратора"}
@@ -394,9 +385,53 @@ export default function AdminUsersPage() {
                             >
                               Удалить
                             </button>
+                            <button
+                              onClick={async () => {
+                                if (expandedUser === u.id) {
+                                  setExpandedUser(null);
+                                  setDetailedStats(null);
+                                  return;
+                                }
+                                setExpandedUser(u.id);
+                                setLoadingStats(true);
+                                try {
+                                  const stats = await admin.getUserStats(u.id);
+                                  setDetailedStats(stats);
+                                } catch {
+                                  setDetailedStats(null);
+                                } finally {
+                                  setLoadingStats(false);
+                                }
+                              }}
+                              style={{ ...pageStyles.btn, ...pageStyles.btnGhost }}
+                              title="Показать использованные модели"
+                            >
+                              {expandedUser === u.id ? "Скрыть" : "Модели"}
+                            </button>
                           </div>
                         </td>
                       </tr>
+                      {expandedUser === u.id && (
+                        <tr style={{ borderBottom: "1px solid #1e1e1e" }}>
+                          <td colSpan={9} style={{ padding: "12px 20px", background: "#111" }}>
+                            {loadingStats ? (
+                              <span style={{ color: "#888", fontSize: 12 }}>Загрузка...</span>
+                            ) : detailedStats && detailedStats.modelsUsed.length > 0 ? (
+                              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                                <span style={{ color: "#848484", fontSize: 12 }}>Нейросети:</span>
+                                {detailedStats.modelsUsed.map((m) => (
+                                  <span key={m.model} style={{ color: "#ccc", fontSize: 12, background: "rgba(255,255,255,0.05)", padding: "2px 8px", borderRadius: 6 }}>
+                                    {m.model} <span style={{ color: "#f95bad" }}>({m.count})</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ color: "#555", fontSize: 12 }}>Нет данных о моделях</span>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

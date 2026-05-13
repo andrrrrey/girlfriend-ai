@@ -32,6 +32,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { DemoService } from "../demo/demo.service";
 import { UsersService } from "./users.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
@@ -46,7 +47,10 @@ import { UpsertSocialLinkDto } from "./dto/upsert-social-link.dto";
 @Controller("users")
 @UseGuards(JwtAuthGuard) // Защищает весь контроллер
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly demoService: DemoService,
+  ) {}
 
   /**
    * GET /users/me
@@ -116,6 +120,12 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteSocialLink(@Req() req: any, @Param("provider") provider: string) {
     await this.usersService.deleteSocialLink(req.user.id, provider);
+  }
+
+  @ApiOperation({ summary: "Get current user free-tier limits status" })
+  @Get("me/limits")
+  async getLimits(@Req() req: any) {
+    return this.demoService.getUserLimitsStatus(req.user.id, req.user.subscription);
   }
 
   /** GET /users/check-nickname?nickname=... — check if nickname is available */

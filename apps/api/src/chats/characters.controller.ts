@@ -1,13 +1,17 @@
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
+import { DemoService } from "../demo/demo.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
 import type { Prisma } from "@prisma/client";
 
 @Controller("characters")
 export class CharactersController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly demoService: DemoService,
+  ) {}
 
   @Get()
   async listPublic(
@@ -179,6 +183,8 @@ export class CharactersController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createCharacter(@Req() req: any, @Body() dto: CreateUserCharacterDto) {
+    await this.demoService.checkCharacterCreation(req.user.id, req.user.subscription);
+
     const systemPrompt = generateSystemPrompt(dto);
 
     const personalityJson: Record<string, unknown> = {

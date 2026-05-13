@@ -142,7 +142,7 @@ export async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.message || res.statusText);
+    throw new ApiError(res.status, body.message || res.statusText, body);
   }
 
   if (res.status === 204) return undefined as T; // No Content — нет тела ответа
@@ -155,9 +155,9 @@ export async function apiFetch<T = unknown>(
  */
 export class ApiError extends Error {
   constructor(
-    /** HTTP-статус ответа (401, 403, 422, 429, 500...) */
     public status: number,
     message: string,
+    public body?: any,
   ) {
     super(message);
     this.name = "ApiError";
@@ -501,6 +501,17 @@ export interface AppSetting {
 }
 
 /** Пользователь в admin-панели (расширенный профиль с usage-статистикой). */
+export interface AdminUserStats {
+  imageCount: number;
+  videoCount: number;
+  chatCount: number;
+  characterCount: number;
+}
+
+export interface AdminUserDetailedStats extends AdminUserStats {
+  modelsUsed: { model: string; count: number }[];
+}
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -508,10 +519,11 @@ export interface AdminUser {
   avatarUrl: string | null;
   role: string;
   subscription: string;
-  isDemo: boolean;         // true если subscription === "free"
+  isDemo: boolean;
   lang: string;
   createdAt: string;
   usageCounters?: { action: string; count: number; resetAt: string }[];
+  stats?: AdminUserStats;
 }
 
 /** Персонаж AI (используется и в admin-панели и в публичном каталоге). */
@@ -632,6 +644,10 @@ export const admin = {
 
   async deleteUser(id: string): Promise<void> {
     return apiFetch(`/admin/users/${id}`, { method: "DELETE" });
+  },
+
+  async getUserStats(id: string): Promise<AdminUserDetailedStats> {
+    return apiFetch<AdminUserDetailedStats>(`/admin/users/${id}/stats`);
   },
 
   async getCharacterOptions(category?: string): Promise<CharacterOption[]> {
@@ -942,7 +958,7 @@ export function streamEditMessage(
   content: string,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string, code?: number) => void,
+  onError: (err: string, code?: number, body?: any) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -959,7 +975,7 @@ export function streamEditMessage(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        onError(err.error || res.statusText, res.status);
+        onError(err.error || err.message || res.statusText, res.status, err);
         return;
       }
 
@@ -1174,7 +1190,7 @@ export function streamMessage(
   content: string,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string, code?: number) => void,
+  onError: (err: string, code?: number, body?: any) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -1191,7 +1207,7 @@ export function streamMessage(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        onError(err.error || res.statusText, res.status);
+        onError(err.error || err.message || res.statusText, res.status, err);
         return;
       }
 
@@ -1250,7 +1266,7 @@ export function streamRegenerate(
   messageId: string,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string, code?: number) => void,
+  onError: (err: string, code?: number, body?: any) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -1266,7 +1282,7 @@ export function streamRegenerate(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        onError(err.error || res.statusText, res.status);
+        onError(err.error || err.message || res.statusText, res.status, err);
         return;
       }
 
@@ -1332,7 +1348,7 @@ export function streamVoiceMessage(
   onTranscription: (text: string) => void,
   onDelta: (text: string) => void,
   onDone: () => void,
-  onError: (err: string, code?: number) => void,
+  onError: (err: string, code?: number, body?: any) => void,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -1352,7 +1368,7 @@ export function streamVoiceMessage(
     .then(async (res) => {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Voice request failed" }));
-        onError(err.error || res.statusText, res.status);
+        onError(err.error || err.message || res.statusText, res.status, err);
         return;
       }
 
@@ -1551,4 +1567,18 @@ export async function getPublicShorts(params?: {
 
 export async function getGalleryTags(): Promise<{ tag: string; count: number }[]> {
   return apiFetch<{ tag: string; count: number }[]>("/generation/gallery/tags");
+}
+
+export interface UserLimitsResponse {
+  subscription: string;
+  limits: {
+    characters: { used: number; limit: number | null };
+    chatSessions: { used: number; limit: number | null };
+    imageGenerations: { used: number; limit: number | null };
+    videoGenerations: { used: number; limit: number | null };
+  };
+}
+
+export async function getUserLimits(): Promise<UserLimitsResponse> {
+  return apiFetch<UserLimitsResponse>("/users/me/limits");
 }

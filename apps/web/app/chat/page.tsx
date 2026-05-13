@@ -21,6 +21,7 @@ import {
   type PoseOptionsResponse,
 } from "../../lib/api";
 import ChatPoseModal from "../components/ChatPoseModal";
+import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -43,6 +44,7 @@ function ChatPageInner() {
 
   // Demo banner state
   const [demoBanner, setDemoBanner] = useState<string | null>(null);
+  const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
 
   // Voice recording state
   const [recording, setRecording] = useState(false);
@@ -160,9 +162,13 @@ function ChatPageInner() {
   if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
   if (!user) return null;
 
-  const handleDemoError = (err: string, code?: number) => {
-    if (code === 429) {
-      setDemoBanner(`Достигнут дневной лимит ${DEMO_MESSAGE_LIMIT} сообщений. Оформите подписку для безлимитного общения.`);
+  const handleDemoError = (err: string, code?: number, body?: any) => {
+    if ((code === 429 || code === 403) && body?.error === "FREE_LIMIT_REACHED") {
+      setPremiumPopup({
+        limitType: body.limitType as PremiumLimitType,
+        limit: body.limit,
+        used: body.used,
+      });
     } else if (code === 403) {
       setDemoBanner("Голосовые функции доступны только по подписке.");
     } else if (code === 503) {
@@ -202,11 +208,11 @@ function ChatPageInner() {
         loadChats();
         setStreamContent("");
       },
-      (err, code) => {
+      (err, code, body) => {
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setStreaming(false);
         setStreamContent("");
-        handleDemoError(err, code);
+        handleDemoError(err, code, body);
       },
     );
   };
@@ -232,10 +238,10 @@ function ChatPageInner() {
         loadMessages(activeChat);
         setStreamContent("");
       },
-      (err, code) => {
+      (err, code, body) => {
         setStreaming(false);
         setStreamContent("");
-        handleDemoError(err, code);
+        handleDemoError(err, code, body);
       },
     );
   };
@@ -280,10 +286,10 @@ function ChatPageInner() {
         loadChats();
         setStreamContent("");
       },
-      (err, code) => {
+      (err, code, body) => {
         setStreaming(false);
         setStreamContent("");
-        handleDemoError(err, code);
+        handleDemoError(err, code, body);
         // Reload to restore original message
         if (activeChat) loadMessages(activeChat);
       },
@@ -303,8 +309,14 @@ function ChatPageInner() {
       setShowNewChat(false);
       await loadChats();
       setActiveChat(chat.id);
-    } catch {
-      // error
+    } catch (err: any) {
+      if (err?.status === 403 && err?.body?.error === "FREE_LIMIT_REACHED") {
+        setPremiumPopup({
+          limitType: err.body.limitType as PremiumLimitType,
+          limit: err.body.limit,
+          used: err.body.used,
+        });
+      }
     }
   };
 
@@ -442,11 +454,11 @@ function ChatPageInner() {
         loadChats();
         setStreamContent("");
       },
-      (err, code) => {
+      (err, code, body) => {
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setStreaming(false);
         setStreamContent("");
-        handleDemoError(err, code);
+        handleDemoError(err, code, body);
       },
     );
   };
@@ -1227,6 +1239,15 @@ function ChatPageInner() {
           onClose={() => setShowPoseSelector(false)}
           onGenerate={handleGenerateImage}
           options={poseOptions}
+        />
+      )}
+
+      {premiumPopup && (
+        <PremiumPopup
+          limitType={premiumPopup.limitType}
+          limit={premiumPopup.limit}
+          used={premiumPopup.used}
+          onClose={() => setPremiumPopup(null)}
         />
       )}
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, chats, createImageJob, getJobStatus } from "../../lib/api";
+import { characters, chats, createImageJob, getJobStatus, ApiError } from "../../lib/api";
+import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { PAGE_CSS } from "./styles";
 import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
@@ -671,6 +672,9 @@ export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const initRef = useRef(false);
+  const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
+  const premiumPopupRef = useRef(setPremiumPopup);
+  premiumPopupRef.current = setPremiumPopup;
 
   useEffect(() => {
     if (!user || initRef.current) return;
@@ -769,8 +773,16 @@ export default function CreateCharacterPage() {
       } catch (err: unknown) {
         submitBtn.classList.remove("disabled");
         submitBtn.textContent = "Bring to Life";
-        const msg = err instanceof Error ? err.message : "Failed to create character";
-        alert(msg);
+        if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
+          premiumPopupRef.current({
+            limitType: err.body.limitType as PremiumLimitType,
+            limit: err.body.limit,
+            used: err.body.used,
+          });
+        } else {
+          const msg = err instanceof Error ? err.message : "Failed to create character";
+          alert(msg);
+        }
       }
     });
 
@@ -784,6 +796,14 @@ export default function CreateCharacterPage() {
     <>
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <div className="create-content" dangerouslySetInnerHTML={{ __html: buildContent() }} />
+      {premiumPopup && (
+        <PremiumPopup
+          limitType={premiumPopup.limitType}
+          limit={premiumPopup.limit}
+          used={premiumPopup.used}
+          onClose={() => setPremiumPopup(null)}
+        />
+      )}
     </>
   );
 }
