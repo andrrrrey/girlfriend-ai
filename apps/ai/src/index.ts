@@ -571,8 +571,8 @@ async function generateImageCivitai(params: {
   if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
 
   const model = pool[Math.floor(Math.random() * pool.length)];
-  const w = width || model.width;
-  const h = height || model.height;
+  const w = model.width;
+  const h = model.height;
 
   const requestBody = {
     steps: [{
