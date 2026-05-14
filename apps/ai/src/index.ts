@@ -574,88 +574,71 @@ async function generateImageCivitai(params: {
   const w = width || model.width;
   const h = height || model.height;
 
-  logger.info({ air: model.air, generationStyle, width: w, height: h }, "civitai_image_request");
+  const requestBody = {
+    steps: [{
+      $type: "imageGen",
+      input: {
+        engine: "sdcpp",
+        ecosystem: model.base === "sd1" ? "sd1" : "sdxl",
+        operation: "createImage",
+        model: model.air,
+        prompt,
+        negativePrompt: negativePrompt || "worst quality, low quality, blurry, deformed",
+        width: w,
+        height: h,
+        cfgScale: model.cfgScale,
+        steps: model.steps,
+        clipSkip: model.clipSkip,
+        quantity: 1,
+      },
+    }],
+  };
 
-  const response = await fetch("https://orchestration.civitai.com/v1/consumer/jobs", {
+  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h }, "civitai_image_request");
+
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiToken}`,
     },
-    body: JSON.stringify({
-      $type: "textToImage",
-      input: {
-        model: model.air,
-        additionalNetworks: {},
-        scheduler: model.scheduler,
-        steps: model.steps,
-        cfgScale: model.cfgScale,
-        width: w,
-        height: h,
-        clipSkip: model.clipSkip,
-        prompt,
-        negativePrompt: negativePrompt || "",
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
     const errBody = await response.text();
-    logger.error({ status: response.status, body: errBody }, "civitai_api_error");
+    logger.error({ status: response.status, body: errBody, requestBody }, "civitai_api_error");
     throw new Error(`Civitai Orchestration API error: ${response.status}`);
   }
 
-  const jobResult = await response.json() as {
-    token?: string;
-    jobs?: Array<{
-      jobId?: string;
-      result?: { blobKey?: string; available?: boolean };
+  const result = await response.json() as {
+    status?: string;
+    steps?: Array<{
+      $type?: string;
+      status?: string;
+      output?: {
+        images?: Array<{ id?: string; url?: string }>;
+      };
     }>;
   };
 
-  logger.info({ jobResult }, "civitai_initial_response");
+  logger.info({ status: result.status, stepsCount: result.steps?.length }, "civitai_response");
 
-  const firstJob = jobResult.jobs?.[0];
-  if (firstJob?.result?.available && firstJob.result.blobKey) {
-    return { url: `https://orchestration.civitai.com/v1/consumer/jobs/${firstJob.jobId}/blob` };
-  }
-
-  const jobToken = jobResult.token;
-  if (!jobToken) {
-    throw new Error("Civitai did not return a job token");
-  }
-
-  const maxAttempts = 60;
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const pollResponse = await fetch(`https://orchestration.civitai.com/v1/consumer/jobs?token=${encodeURIComponent(jobToken)}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiToken}` },
-    });
-
-    if (!pollResponse.ok) {
-      logger.warn({ status: pollResponse.status, attempt: i }, "civitai_poll_error");
-      continue;
-    }
-
-    const pollResult = await pollResponse.json() as {
-      jobs?: Array<{
-        jobId?: string;
-        scheduled?: boolean;
-        result?: { blobKey?: string; available?: boolean };
-      }>;
-    };
-
-    const job = pollResult.jobs?.[0];
-    logger.info({ available: job?.result?.available, attempt: i }, "civitai_poll_result");
-
-    if (job?.result?.available && job.jobId) {
-      return { url: `https://orchestration.civitai.com/v1/consumer/jobs/${job.jobId}/blob` };
+  if (result.status === "succeeded" || result.status === "completed") {
+    const imageUrl = result.steps?.[0]?.output?.images?.[0]?.url;
+    if (imageUrl) {
+      return { url: imageUrl };
     }
   }
 
-  throw new Error("Civitai image generation timed out");
+  const stepStatus = result.steps?.[0]?.status;
+  if (stepStatus === "failed") {
+    logger.error({ result }, "civitai_step_failed");
+    throw new Error("Civitai image generation step failed");
+  }
+
+  logger.error({ result }, "civitai_unexpected_response");
+  throw new Error("Civitai image generation: no image URL in response");
 }
 
 async function generateImageAtlasCloud(params: {
@@ -855,9 +838,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         height,
       });
 
-      const imageResponse = await fetch(result.url, {
-        headers: { Authorization: `Bearer ${civitaiToken}` },
-      });
+      const imageResponse = await fetch(result.url);
       if (!imageResponse.ok) {
         return reply.send({ url: result.url });
       }
