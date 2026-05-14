@@ -596,7 +596,7 @@ async function generateImageCivitai(params: {
 
   logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h }, "civitai_image_request");
 
-  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60", {
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
