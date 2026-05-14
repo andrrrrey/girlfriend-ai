@@ -37,6 +37,7 @@ export class GenerationController {
       model: dto.model,
       aspectRatio: dto.aspectRatio,
       provider: dto.provider,
+      generationStyle: dto.generationStyle,
     });
   }
 

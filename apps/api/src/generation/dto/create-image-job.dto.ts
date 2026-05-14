@@ -10,7 +10,7 @@ const ALLOWED_MODELS = [
 
 const ALLOWED_ASPECT_RATIOS = ["1:1", "4:5", "5:4", "9:16", "16:9"] as const;
 
-const ALLOWED_PROVIDERS = ["modelslab", "atlascloud"] as const;
+const ALLOWED_PROVIDERS = ["modelslab", "atlascloud", "civitai"] as const;
 
 export class CreateImageJobDto {
   @IsString()
@@ -23,7 +23,6 @@ export class CreateImageJobDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(ALLOWED_MODELS)
   model?: string;
 
   @IsOptional()
@@ -35,4 +34,8 @@ export class CreateImageJobDto {
   @IsString()
   @IsIn(ALLOWED_PROVIDERS)
   provider?: string;
+
+  @IsOptional()
+  @IsString()
+  generationStyle?: string;
 }

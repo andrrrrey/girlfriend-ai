@@ -108,13 +108,22 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
+const GENERATION_STYLES = [
+  { value: "", label: "— не выбран —" },
+  { value: "realism", label: "Realism" },
+  { value: "mistoon", label: "Mistoon (Anime/Cartoon)" },
+  { value: "wai-ill", label: "WAI-Illustrious (NSFW)" },
+  { value: "furry", label: "Furry" },
+];
+
 interface FormState {
   name: string;
   prompt: string;
   imageUrl: string;
+  generationStyle: string;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageUrl: "" };
+const emptyForm: FormState = { name: "", prompt: "", imageUrl: "", generationStyle: "" };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -154,7 +163,7 @@ export default function AdminCharacterOptionsPage() {
 
   const openEdit = (opt: CharacterOption) => {
     setEditing(opt);
-    setForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "" });
+    setForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "", generationStyle: opt.generationStyle ?? "" });
     setShowForm(true);
     setError("");
   };
@@ -169,6 +178,7 @@ export default function AdminCharacterOptionsPage() {
         name: form.name.trim(),
         prompt: form.prompt.trim() || undefined,
         imageUrl: form.imageUrl || undefined,
+        generationStyle: activeCategory === "STYLE" ? (form.generationStyle || undefined) : undefined,
       };
       if (editing) {
         await admin.updateCharacterOption(editing.id, data);
@@ -248,6 +258,20 @@ export default function AdminCharacterOptionsPage() {
               value={form.prompt}
               onChange={(e) => setForm({ ...form, prompt: e.target.value })}
             />
+            {activeCategory === "STYLE" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ color: "#848484", fontSize: 13, whiteSpace: "nowrap" }}>Стиль генерации:</span>
+                <select
+                  style={{ ...s.input, flex: "unset", minWidth: 200 }}
+                  value={form.generationStyle}
+                  onChange={(e) => setForm({ ...form, generationStyle: e.target.value })}
+                >
+                  {GENERATION_STYLES.map((gs) => (
+                    <option key={gs.value} value={gs.value}>{gs.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
                 type="file"
@@ -294,6 +318,11 @@ export default function AdminCharacterOptionsPage() {
                 : <div style={s.optionImgPlaceholder} />
               }
               <span style={s.optionName}>{opt.name}</span>
+              {activeCategory === "STYLE" && opt.generationStyle && (
+                <span style={{ background: "#2a2a2a", color: "#f95bad", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                  {opt.generationStyle}
+                </span>
+              )}
               <span style={s.optionOrder}>order: {opt.order}</span>
               <button style={s.smallBtn} onClick={() => openEdit(opt)}>Edit</button>
               <button style={s.deleteBtn} onClick={() => handleDelete(opt.id)}>Delete</button>

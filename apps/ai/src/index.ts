@@ -506,12 +506,156 @@ interface ImageGenerateBody {
   negativePrompt?: string;
   /** ID модели */
   model?: string;
-  /** Провайдер: "modelslab" | "atlascloud" */
+  /** Провайдер: "modelslab" | "atlascloud" | "civitai" */
   provider?: string;
   /** Ширина изображения в пикселях */
   width?: number;
   /** Высота изображения в пикселях */
   height?: number;
+  /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
+  generationStyle?: string;
+}
+
+// ─── Civitai RED Orchestration API ─────────────────────────────────────────
+
+interface CivitaiModelConfig {
+  air: string;
+  base: "sd1" | "sdxl";
+  width: number;
+  height: number;
+  steps: number;
+  cfgScale: number;
+  scheduler: string;
+  clipSkip: number;
+}
+
+const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
+  realism: [
+    { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:277058", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:15003", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+  ],
+  mistoon: [
+    { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:1518336", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:715287", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+  ],
+  "wai-ill": [
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1183765", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+  ],
+  furry: [
+    { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:34469", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+  ],
+};
+
+async function generateImageCivitai(params: {
+  apiToken: string;
+  generationStyle: string;
+  prompt: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+}): Promise<{ url: string }> {
+  const { apiToken, generationStyle, prompt, negativePrompt, width, height } = params;
+
+  const pool = CIVITAI_MODELS[generationStyle];
+  if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
+
+  const model = pool[Math.floor(Math.random() * pool.length)];
+  const w = width || model.width;
+  const h = height || model.height;
+
+  logger.info({ air: model.air, generationStyle, width: w, height: h }, "civitai_image_request");
+
+  const response = await fetch("https://orchestration.civitai.com/v1/consumer/jobs", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiToken}`,
+    },
+    body: JSON.stringify({
+      $type: "textToImage",
+      input: {
+        model: model.air,
+        additionalNetworks: {},
+        scheduler: model.scheduler,
+        steps: model.steps,
+        cfgScale: model.cfgScale,
+        width: w,
+        height: h,
+        clipSkip: model.clipSkip,
+        prompt,
+        negativePrompt: negativePrompt || "",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    logger.error({ status: response.status, body: errBody }, "civitai_api_error");
+    throw new Error(`Civitai Orchestration API error: ${response.status}`);
+  }
+
+  const jobResult = await response.json() as {
+    token?: string;
+    jobs?: Array<{
+      jobId?: string;
+      result?: { blobKey?: string; available?: boolean };
+    }>;
+  };
+
+  logger.info({ jobResult }, "civitai_initial_response");
+
+  const firstJob = jobResult.jobs?.[0];
+  if (firstJob?.result?.available && firstJob.result.blobKey) {
+    return { url: `https://orchestration.civitai.com/v1/consumer/jobs/${firstJob.jobId}/blob` };
+  }
+
+  const jobToken = jobResult.token;
+  if (!jobToken) {
+    throw new Error("Civitai did not return a job token");
+  }
+
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const pollResponse = await fetch(`https://orchestration.civitai.com/v1/consumer/jobs?token=${encodeURIComponent(jobToken)}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiToken}` },
+    });
+
+    if (!pollResponse.ok) {
+      logger.warn({ status: pollResponse.status, attempt: i }, "civitai_poll_error");
+      continue;
+    }
+
+    const pollResult = await pollResponse.json() as {
+      jobs?: Array<{
+        jobId?: string;
+        scheduled?: boolean;
+        result?: { blobKey?: string; available?: boolean };
+      }>;
+    };
+
+    const job = pollResult.jobs?.[0];
+    logger.info({ available: job?.result?.available, attempt: i }, "civitai_poll_result");
+
+    if (job?.result?.available && job.jobId) {
+      return { url: `https://orchestration.civitai.com/v1/consumer/jobs/${job.jobId}/blob` };
+    }
+  }
+
+  throw new Error("Civitai image generation timed out");
 }
 
 async function generateImageAtlasCloud(params: {
@@ -691,6 +835,49 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     } catch (err: any) {
       logger.error({ err }, "atlascloud_image_generation_error");
       return reply.status(502).send({ error: "AtlasCloud image generation failed", details: err.message });
+    }
+  }
+
+  // Civitai RED routing
+  if (provider === "civitai") {
+    const civitaiToken = settings.CIVITAI_API_TOKEN;
+    if (!civitaiToken) {
+      return reply.status(503).send({ error: "Civitai API token not configured" });
+    }
+    const generationStyle = req.body.generationStyle || "realism";
+    try {
+      const result = await generateImageCivitai({
+        apiToken: civitaiToken,
+        generationStyle,
+        prompt,
+        negativePrompt,
+        width,
+        height,
+      });
+
+      const imageResponse = await fetch(result.url, {
+        headers: { Authorization: `Bearer ${civitaiToken}` },
+      });
+      if (!imageResponse.ok) {
+        return reply.send({ url: result.url });
+      }
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      const s3 = createS3Client();
+      const bucket = env.S3_BUCKET || "media";
+      if (s3) {
+        try {
+          const key = `images/${randomUUID()}.png`;
+          const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
+          logger.info({ key, generationStyle }, "civitai_image_uploaded_to_s3");
+          return reply.send({ url });
+        } catch (s3Err: any) {
+          logger.warn({ err: s3Err }, "civitai_image_s3_upload_failed");
+        }
+      }
+      return reply.send({ url: result.url });
+    } catch (err: any) {
+      logger.error({ err }, "civitai_image_generation_error");
+      return reply.status(502).send({ error: "Civitai image generation failed", details: err.message });
     }
   }
 

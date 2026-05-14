@@ -374,6 +374,7 @@ export interface CharacterOption {
   prompt?: string | null;
   imageUrl?: string | null;
   order: number;
+  generationStyle?: string | null;
   createdAt: string;
 }
 
@@ -655,14 +656,14 @@ export const admin = {
     return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
   },
 
-  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>("/admin/character-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1450,6 +1451,7 @@ export async function createImageJob(data: {
   negativePrompt?: string;
   aspectRatio?: string;
   provider?: string;
+  generationStyle?: string;
 }) {
   return apiFetch<{ jobId: string; status: string }>("/generation/image", {
     method: "POST",

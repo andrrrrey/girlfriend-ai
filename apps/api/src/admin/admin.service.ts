@@ -444,7 +444,7 @@ export class AdminService {
     });
   }
 
-  async createCharacterOption(dto: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number }) {
+  async createCharacterOption(dto: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }) {
     return this.prisma.characterOption.create({
       data: {
         category: dto.category,
@@ -452,11 +452,12 @@ export class AdminService {
         prompt: dto.prompt,
         imageUrl: dto.imageUrl,
         order: dto.order ?? 0,
+        generationStyle: dto.generationStyle,
       },
     });
   }
 
-  async updateCharacterOption(id: string, dto: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }) {
+  async updateCharacterOption(id: string, dto: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }) {
     const existing = await this.prisma.characterOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
     return this.prisma.characterOption.update({ where: { id }, data: dto });

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, chats, createImageJob, getJobStatus, ApiError } from "../../lib/api";
+import { characters, chats, createImageJob, getJobStatus, getCharacterOptions, ApiError, type CharacterOption } from "../../lib/api";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { PAGE_CSS } from "./styles";
 import {
@@ -65,7 +65,7 @@ function stage01() {
         <div class="slider-track" data-value="25"><div class="slider-fill"><div class="slider-thumb"><div class="slider-tooltip">25</div></div></div></div>
         <span class="slider-max">100</span></div></div>
     <div class="field-style"><div class="field-label">Style</div>
-      <div class="style-row">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}"><span class="name">${s}</span></div>`).join("")}</div></div>
+      <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${s}</span></div>`).join("")}</div></div>
     ${navButtons(1, 2)}
   </div>`;
 }
@@ -261,6 +261,7 @@ function collectFormData() {
   const pers = () => document.querySelector<HTMLElement>(".personality-card.selected")?.dataset?.value;
   const voice = () => document.querySelector<HTMLElement>(".voice-btn.selected")?.querySelector("span")?.textContent?.trim();
   const style = () => document.querySelector<HTMLElement>(".style-card.selected")?.dataset?.value;
+  const genStyle = () => document.querySelector<HTMLElement>(".style-card.selected")?.dataset?.generationStyle;
 
   return {
     name: (document.getElementById("input-name") as HTMLInputElement)?.value || "Character",
@@ -269,6 +270,7 @@ function collectFormData() {
     gender: sel("gender") || "Female",
     orientation: sel("orientation") || "Heterosexual",
     style: style() || "Realistic",
+    generationStyle: genStyle() || "",
     nationality: sel("nationality"),
     language: sel("language"),
     ethnicity: card("ethnicity"),
@@ -501,7 +503,12 @@ async function startAvatarGeneration() {
   if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
 
   try {
-    const job = await createImageJob({ prompt });
+    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt };
+    if (data.generationStyle) {
+      jobPayload.provider = "civitai";
+      jobPayload.generationStyle = data.generationStyle;
+    }
+    const job = await createImageJob(jobPayload);
     previewPollInterval = setInterval(async () => {
       try {
         const status = await getJobStatus(job.jobId);
@@ -679,6 +686,29 @@ export default function CreateCharacterPage() {
   useEffect(() => {
     if (!user || initRef.current) return;
     initRef.current = true;
+
+    // Load dynamic styles from DB
+    getCharacterOptions().then((allOpts) => {
+      const dbStyles = allOpts.filter((o) => o.category === "STYLE").sort((a, b) => a.order - b.order);
+      if (dbStyles.length === 0) return;
+      const container = document.getElementById("style-row-container");
+      if (!container) return;
+      container.innerHTML = dbStyles.map((s, i) => {
+        const imgHtml = s.imageUrl
+          ? `<img src="${s.imageUrl}" alt="${s.name}" class="style-card-img" />`
+          : "";
+        return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
+          ${imgHtml}<span class="name">${s.name}</span></div>`;
+      }).join("");
+      // Re-bind style card click handlers
+      container.querySelectorAll<HTMLElement>(".style-card").forEach((card) => {
+        card.onclick = () => {
+          container.querySelectorAll(".style-card").forEach((c) => { c.classList.remove("selected"); c.classList.add("unselected"); });
+          card.classList.remove("unselected");
+          card.classList.add("selected");
+        };
+      });
+    }).catch(() => {});
 
     // Dropdowns
     document.querySelectorAll<HTMLElement>(".dropdown-container").forEach((container) => {

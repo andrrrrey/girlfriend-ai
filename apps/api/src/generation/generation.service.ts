@@ -18,6 +18,7 @@ const IMAGE_MODELS = [
   { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
   { id: "flux", name: "FLUX", description: "Next-gen quality" },
   { id: "alibaba/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
+  { id: "civitai", name: "Civitai RED", description: "Civitai Orchestration API", provider: "civitai" },
 ];
 
 const VIDEO_MODELS = [
@@ -75,7 +76,7 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -99,6 +100,7 @@ export class GenerationService {
           model: data.model,
           aspectRatio: data.aspectRatio,
           provider: resolvedProvider,
+          generationStyle: data.generationStyle,
         },
       },
     });
@@ -111,6 +113,7 @@ export class GenerationService {
       aspectRatio: data.aspectRatio,
       model: data.model,
       provider: resolvedProvider,
+      generationStyle: data.generationStyle,
     };
 
     await this.queue.add(JOB_NAMES.IMAGE, jobData);

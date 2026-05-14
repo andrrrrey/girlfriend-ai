@@ -20,4 +20,8 @@ export class CreateCharacterOptionDto {
   @IsOptional()
   @IsInt()
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  generationStyle?: string;
 }

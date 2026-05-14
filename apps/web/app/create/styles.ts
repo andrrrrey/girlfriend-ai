@@ -66,6 +66,8 @@ export const PAGE_CSS = `
   .style-card.selected { border: 1px solid #f95bad; }
   .style-card.unselected { border: 1px dashed #969696; }
   .style-card .name { position: relative; z-index: 1; font-weight: 700; font-size: 16px; color: #fff; text-align: center; width: 100%; }
+  .style-card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5; z-index: 0; }
+  .style-card.selected .style-card-img { opacity: 0.7; }
 
   /* Buttons */
   .buttons-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0; }

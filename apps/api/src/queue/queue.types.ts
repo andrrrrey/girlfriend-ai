@@ -122,8 +122,10 @@ export interface ImageJobData {
   aspectRatio?: string;
   /** ID модели: realistic-vision-v51 | sdxl | juggernaut-xl | flux | atlascloud/wan-2.6/text-to-image */
   model?: string;
-  /** Провайдер генерации: "modelslab" | "atlascloud" */
+  /** Провайдер генерации: "modelslab" | "atlascloud" | "civitai" */
   provider?: string;
+  /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
+  generationStyle?: string;
 }
 
 /**

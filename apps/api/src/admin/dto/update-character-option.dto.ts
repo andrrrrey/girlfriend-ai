@@ -22,4 +22,8 @@ export class UpdateCharacterOptionDto {
   @IsOptional()
   @IsInt()
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  generationStyle?: string;
 }

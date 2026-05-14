@@ -41,6 +41,13 @@ const SETTING_GROUPS = [
       { key: "ATLASCLOUD_API_KEY", label: "Ключ API Atlas Cloud", type: "password" },
     ],
   },
+  {
+    title: "Civitai RED",
+    subtitle: "Генерация изображений через Civitai Orchestration API",
+    keys: [
+      { key: "CIVITAI_API_TOKEN", label: "Civitai API Token", type: "password" },
+    ],
+  },
 ];
 
 // Flat list for backward compat
