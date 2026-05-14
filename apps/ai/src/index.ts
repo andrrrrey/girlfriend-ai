@@ -611,24 +611,57 @@ async function generateImageCivitai(params: {
     throw new Error(`Civitai Orchestration API error: ${response.status}`);
   }
 
-  const result = await response.json() as {
+  type CivitaiWorkflow = {
+    id?: string;
     status?: string;
     steps?: Array<{
       $type?: string;
       status?: string;
       output?: {
-        images?: Array<{ id?: string; url?: string }>;
+        images?: Array<{ id?: string; url?: string; available?: boolean }>;
       };
     }>;
   };
 
+  let result = await response.json() as CivitaiWorkflow;
   logger.info({ status: result.status, stepsCount: result.steps?.length }, "civitai_response");
 
+  const extractImageUrl = (r: CivitaiWorkflow): string | undefined => {
+    const img = r.steps?.[0]?.output?.images?.[0];
+    if (img?.url && img.available !== false) return img.url;
+    return undefined;
+  };
+
   if (result.status === "succeeded" || result.status === "completed") {
-    const imageUrl = result.steps?.[0]?.output?.images?.[0]?.url;
-    if (imageUrl) {
-      return { url: imageUrl };
+    const imageUrl = extractImageUrl(result);
+    if (imageUrl) return { url: imageUrl };
+  }
+
+  if ((result.status === "scheduled" || result.status === "processing") && result.id) {
+    const workflowId = result.id;
+    const maxAttempts = 30;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${workflowId}`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+      });
+      if (!pollRes.ok) {
+        logger.warn({ status: pollRes.status, attempt: i }, "civitai_poll_error");
+        continue;
+      }
+      result = await pollRes.json() as CivitaiWorkflow;
+      logger.info({ status: result.status, attempt: i }, "civitai_poll");
+
+      if (result.status === "succeeded" || result.status === "completed") {
+        const imageUrl = extractImageUrl(result);
+        if (imageUrl) return { url: imageUrl };
+      }
+      if (result.status === "failed") {
+        logger.error({ result }, "civitai_step_failed");
+        throw new Error("Civitai image generation failed");
+      }
     }
+    throw new Error("Civitai image generation timed out after polling");
   }
 
   const stepStatus = result.steps?.[0]?.status;
