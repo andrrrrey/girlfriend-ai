@@ -1486,7 +1486,7 @@ export async function saveImageMessage(
 }
 
 export async function getImageStyles() {
-  return apiFetch<{ id: string; name: string; description: string }[]>(
+  return apiFetch<{ id: string; name: string; description: string; provider?: string }[]>(
     "/generation/image/styles",
   );
 }

@@ -535,15 +535,15 @@ const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
     { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:277058", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:15003", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:277058@2514955", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:15003@2681234", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
   ],
   mistoon: [
     { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:1518336", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:715287", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:1518336@2750313", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:715287@2744564", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
   ],
   "wai-ill": [
     { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
@@ -551,7 +551,7 @@ const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   ],
   furry: [
     { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:34469", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
   ],
