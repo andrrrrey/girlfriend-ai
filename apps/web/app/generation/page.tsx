@@ -1271,11 +1271,15 @@ export default function GenerationPage() {
         jobId = result.jobId;
       } else {
         const imageProvider = imageModels.find((m) => m.id === selectedModel)?.provider;
+        const selectedStyleOption = characterOptions.find(
+          (o) => o.category === "STYLE" && o.name === characterSelections.style
+        );
         const result = await createImageJob({
           prompt: compositePrompt,
           negativePrompt,
           model,
           provider: imageProvider,
+          generationStyle: imageProvider === "civitai" ? selectedStyleOption?.generationStyle || undefined : undefined,
         });
         jobId = result.jobId;
       }
@@ -1323,7 +1327,7 @@ export default function GenerationPage() {
         setError(err.message || "Failed to start generation");
       }
     }
-  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels]);
+  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
