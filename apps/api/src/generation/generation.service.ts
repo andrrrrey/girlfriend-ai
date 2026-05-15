@@ -138,7 +138,21 @@ export class GenerationService {
     };
   }
 
-  getImageStyles() {
+  async getImageStyles() {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: "ENABLED_IMAGE_MODELS" },
+    });
+    if (!setting) return IMAGE_MODELS;
+    try {
+      const enabledIds: string[] = JSON.parse(setting.value);
+      const filtered = IMAGE_MODELS.filter((m) => enabledIds.includes(m.id));
+      return filtered.length > 0 ? filtered : IMAGE_MODELS;
+    } catch {
+      return IMAGE_MODELS;
+    }
+  }
+
+  getAllImageModels() {
     return IMAGE_MODELS;
   }
 
@@ -260,7 +274,21 @@ export class GenerationService {
     return { jobId: aiJob.id, status: "pending" };
   }
 
-  getVideoStyles() {
+  async getVideoStyles() {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: "ENABLED_VIDEO_MODELS" },
+    });
+    if (!setting) return VIDEO_MODELS;
+    try {
+      const enabledIds: string[] = JSON.parse(setting.value);
+      const filtered = VIDEO_MODELS.filter((m) => enabledIds.includes(m.id));
+      return filtered.length > 0 ? filtered : VIDEO_MODELS;
+    } catch {
+      return VIDEO_MODELS;
+    }
+  }
+
+  getAllVideoModels() {
     return VIDEO_MODELS;
   }
 

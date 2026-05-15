@@ -69,7 +69,7 @@ export class GenerationController {
   @Get("image/styles")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  getImageStyles() {
+  async getImageStyles() {
     return this.generationService.getImageStyles();
   }
 
@@ -111,7 +111,7 @@ export class GenerationController {
   @Get("video/styles")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  getVideoStyles() {
+  async getVideoStyles() {
     return this.generationService.getVideoStyles();
   }
 

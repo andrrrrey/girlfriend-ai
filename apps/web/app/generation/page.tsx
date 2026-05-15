@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
+import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
   createImageJob,
   createVideoJob,
@@ -724,28 +725,6 @@ const CSS = `
   .btn-delete-selected:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-delete-selected svg { width: 14px; height: 14px; }
 
-  /* Gallery tag chips */
-  .gallery-tags {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-  .gallery-tag {
-    height: 26px;
-    padding: 0 14px;
-    border-radius: 4px;
-    background: transparent;
-    border: 1px solid #313131;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: 'Syne', sans-serif;
-    white-space: nowrap;
-  }
-  .gallery-tag:hover { border-color: #f95bad; }
-  .gallery-tag.active { border-color: #f95bad; color: #f95bad; }
-
   /* Gallery grid */
   .gallery-grid {
     display: grid;
@@ -937,7 +916,24 @@ interface HistoryItem {
 type VideoSubTab = "scratch" | "img2vid" | "continue";
 type GalleryFilter = "all" | "image" | "video";
 
-const GALLERY_TAGS = ["All", "Group Chats", "Teen", "Asian", "Anime", "Blond", "Strong", "Lonely", "Young", "Latina", "Romantic", "Athletic"];
+const GALLERY_TAG_STOP_WORDS = new Set([
+  "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+  "of", "with", "by", "from", "as", "is", "was", "are", "be", "been",
+  "being", "have", "has", "had", "do", "does", "did", "will", "would",
+  "could", "should", "may", "might", "must", "shall", "can", "need",
+  "not", "no", "nor", "so", "if", "then", "than", "too", "very",
+  "just", "about", "above", "after", "again", "all", "also", "any",
+  "because", "before", "between", "both", "each", "few", "her", "here",
+  "him", "his", "how", "its", "let", "more", "most", "my", "new",
+  "now", "old", "only", "other", "our", "out", "own", "same", "she",
+  "some", "still", "such", "tell", "that", "their", "them", "there",
+  "these", "they", "this", "those", "through", "under", "until", "up",
+  "upon", "what", "when", "where", "which", "while", "who", "whom",
+  "why", "you", "your", "into", "over", "down", "off", "once",
+  "during", "without", "within", "along", "among", "around",
+  "style", "quality", "high", "resolution", "detailed", "ultra",
+  "photo", "image", "video", "prompt", "generate", "creating",
+]);
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
@@ -975,7 +971,7 @@ export default function GenerationPage() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
   const [gallerySearch, setGallerySearch] = useState("");
-  const [activeTag, setActiveTag] = useState("All");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1372,9 +1368,32 @@ export default function GenerationPage() {
     }
   }, [selectedItems, history]);
 
+  const galleryTags = useMemo(() => {
+    const freq = new Map<string, number>();
+    for (const item of history) {
+      const prompt = item.input?.prompt;
+      if (!prompt) continue;
+      const words = prompt.toLowerCase().split(/[,\s]+/).filter(
+        (w) => w.length > 2 && w.length < 20 && /^[a-z]+$/.test(w) && !GALLERY_TAG_STOP_WORDS.has(w),
+      );
+      for (const word of words) {
+        freq.set(word, (freq.get(word) ?? 0) + 1);
+      }
+    }
+    return Array.from(freq.entries())
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+      .map(([tag]) => tag);
+  }, [history]);
+
   const filteredHistory = history.filter((item) => {
     if (galleryFilter !== "all" && item.type !== galleryFilter) return false;
     if (gallerySearch && !item.input?.prompt?.toLowerCase().includes(gallerySearch.toLowerCase())) return false;
+    if (selectedTags.length > 0) {
+      const prompt = (item.input?.prompt || "").toLowerCase();
+      if (!selectedTags.some((tag) => prompt.includes(tag.toLowerCase()))) return false;
+    }
     return true;
   });
 
@@ -1822,17 +1841,21 @@ export default function GenerationPage() {
             </div>
 
             {/* Tags row */}
-            <div className="gallery-tags">
-              {GALLERY_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  className={`gallery-tag ${activeTag === tag ? "active" : ""}`}
-                  onClick={() => setActiveTag(tag)}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
+            {galleryTags.length > 0 && (
+              <ScrollableTagsRow
+                tags={galleryTags}
+                selectedTags={selectedTags}
+                onTagToggle={(tag) => {
+                  if (tag === "__ALL__") {
+                    setSelectedTags([]);
+                  } else {
+                    setSelectedTags((prev) =>
+                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                    );
+                  }
+                }}
+              />
+            )}
 
             {/* Gallery grid */}
             {filteredHistory.length === 0 ? (
