@@ -354,10 +354,6 @@ function ChatPageInner() {
 
   const startRecording = async () => {
     if (!activeChat || streaming || recording) return;
-    if (isDemo) {
-      setDemoBanner("Голосовые функции доступны только по подписке.");
-      return;
-    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -467,11 +463,6 @@ function ChatPageInner() {
 
   const handlePlayTTS = async (msgId: string) => {
     if (!activeChat) return;
-
-    if (isDemo) {
-      setDemoBanner("Озвучивание доступно только по подписке.");
-      return;
-    }
 
     if (playingTTSId === msgId) {
       audioRef.current?.pause();
@@ -957,9 +948,8 @@ function ChatPageInner() {
                           <button
                             onClick={() => handlePlayTTS(msg.id)}
                             className="action-btn"
-                            style={isDemo ? { opacity: 0.4, cursor: "default" } : {}}
                             disabled={loadingTTSId === msg.id}
-                            title={isDemo ? "Доступно по подписке" : (playingTTSId === msg.id ? "Остановить" : "Озвучить")}
+                            title={playingTTSId === msg.id ? "Остановить" : "Озвучить"}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5h1.5L6 2.5v7L3.5 7.5H2a.5.5 0 01-.5-.5V5a.5.5 0 01.5-.5z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 4a2.5 2.5 0 010 4" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/><path d="M9.5 2.5a4.5 4.5 0 010 7" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
                           </button>
@@ -1089,10 +1079,9 @@ function ChatPageInner() {
                         onClick={startRecording}
                         disabled={streaming}
                         className="input-icon-btn"
-                        style={isDemo ? { color: "#555", cursor: "default" } : {}}
-                        title={isDemo ? "Голосовые функции доступны по подписке" : "Голосовое сообщение"}
+                        title="Голосовое сообщение"
                       >
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke={isDemo ? "#555" : "#fff"} strokeWidth="1.2" strokeLinecap="round"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                       </button>
                       <button
                         onClick={handleSend}

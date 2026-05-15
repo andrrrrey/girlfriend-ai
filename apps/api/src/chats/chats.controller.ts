@@ -469,9 +469,6 @@ export class ChatsController {
       return;
     }
 
-    // STT/TTS blocked for free/demo users
-    this.demoService.checkVoiceAllowed(req.user.subscription);
-
     try {
       const chat = await this.chatsService.getChat(id, req.user.id);
 
@@ -624,9 +621,6 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
-    // TTS blocked for free/demo users
-    this.demoService.checkVoiceAllowed(req.user.subscription);
-
     try {
       const chat = await this.chatsService.getChat(chatId, req.user.id);
       const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
