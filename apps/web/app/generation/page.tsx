@@ -977,8 +977,18 @@ export default function GenerationPage() {
 
   useEffect(() => {
     if (!user) return;
-    getImageStyles().then(setImageModels).catch(() => {});
-    getVideoStyles().then(setVideoModels).catch(() => {});
+    getImageStyles().then((models) => {
+      setImageModels(models);
+      if (models.length > 0 && !models.some((m) => m.id === selectedModel)) {
+        setSelectedModel(models[0].id);
+      }
+    }).catch(() => {});
+    getVideoStyles().then((models) => {
+      setVideoModels(models);
+      if (models.length > 0 && !models.some((m) => m.id === selectedVideoModel)) {
+        setSelectedVideoModel(models[0].id);
+      }
+    }).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
     getCharacterOptions().then(setCharacterOptions).catch(() => {});
     getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
