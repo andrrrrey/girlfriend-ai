@@ -501,14 +501,22 @@ function MyAICard({
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M14 10a1.3 1.3 0 01-1.3 1.3H4.7L2 13.7V3.3A1.3 1.3 0 013.3 2h9.4A1.3 1.3 0 0114 3.3V10z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     Chat now
                   </button>
-                  <button className="ai-hover-btn secondary">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Save
-                  </button>
                 </>
               ) : (
                 <>
-                  <button className="ai-hover-btn primary">
+                  <button className="ai-hover-btn primary" onClick={(e) => {
+                    e.stopPropagation();
+                    const url = item.url;
+                    if (!url) return;
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${item.type === "Video" ? "video" : "image"}-${item.jobId || Date.now()}.${item.type === "Video" ? "mp4" : "png"}`;
+                    a.target = "_blank";
+                    a.rel = "noopener";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     Download
                   </button>
@@ -534,7 +542,11 @@ function MyAICard({
       <div className={`ai-card${isCharacter ? " char-card" : ""}${item.featured ? " featured" : ""}`}>
         <div className="ai-card-bg">
           {bg ? (
-            <img src={bg} alt={item.name || ""} loading="lazy" />
+            item.type === "Video" ? (
+              <video src={bg} muted loop playsInline preload="metadata" onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <img src={bg} alt={item.name || ""} loading="lazy" />
+            )
           ) : (
             <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)", borderRadius: 8 }} />
           )}
