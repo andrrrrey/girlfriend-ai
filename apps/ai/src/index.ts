@@ -1312,7 +1312,7 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
   const s3 = createS3Client();
   const bucket = env.S3_BUCKET || "media";
 
-  if (s3 && env.S3_PUBLIC_URL) {
+  if (s3) {
     const key = `videos/${randomUUID()}.mp4`;
     try {
       const url = await uploadToS3(s3, bucket, key, videoBuffer, "video/mp4");
