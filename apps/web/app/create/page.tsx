@@ -3,7 +3,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, chats, createImageJob, getJobStatus, getCharacterOptions, ApiError, type CharacterOption } from "../../lib/api";
+import {
+  characters, chats, createImageJob, getJobStatus, getCharacterOptions, ApiError,
+  type CharacterOption,
+  getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
+  type AppearanceOptionsResponse, type PoseOptionsResponse, type SceneOptionsResponse, type CameraOptionsResponse,
+} from "../../lib/api";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { PAGE_CSS } from "./styles";
 import {
@@ -18,6 +23,11 @@ import {
 
 let previewImageUrl: string | null = null;
 let previewPollInterval: ReturnType<typeof setInterval> | null = null;
+
+let cachedAppearanceOptions: AppearanceOptionsResponse | null = null;
+let cachedPoseOptions: PoseOptionsResponse | null = null;
+let cachedSceneOptions: SceneOptionsResponse | null = null;
+let cachedCameraOptions: CameraOptionsResponse | null = null;
 
 /* ── HTML Builders ────────────────────────────── */
 
@@ -585,7 +595,58 @@ function populatePreview() {
 
 /* ── AI Avatar generation ─────────────────────── */
 
-function buildAvatarPrompt(d: ReturnType<typeof collectFormData>): string {
+async function loadGenerationOptions() {
+  if (cachedAppearanceOptions) return;
+  try {
+    const [appearance, pose, scene, camera] = await Promise.all([
+      getAppearanceOptions(),
+      getPoseOptions(),
+      getSceneOptions(),
+      getCameraOptions(),
+    ]);
+    cachedAppearanceOptions = appearance;
+    cachedPoseOptions = pose;
+    cachedSceneOptions = scene;
+    cachedCameraOptions = camera;
+  } catch { /* ignore — will use basic prompt */ }
+}
+
+function pickRandomPrompts(): string[] {
+  const pick = <T,>(arr: T[]): T | undefined => arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+  const prompts: string[] = [];
+
+  if (cachedAppearanceOptions) {
+    const allOutfits = cachedAppearanceOptions.OUTFITS.flatMap(c => c.options);
+    const outfit = pick(allOutfits);
+    if (outfit?.prompt) prompts.push(outfit.prompt);
+  }
+
+  if (cachedPoseOptions) {
+    const expressions = cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options);
+    const expr = pick(expressions);
+    if (expr?.prompt) prompts.push(expr.prompt);
+
+    const poses = cachedPoseOptions.POSE.flatMap(c => c.options);
+    const pose = pick(poses);
+    if (pose?.prompt) prompts.push(pose.prompt);
+  }
+
+  if (cachedSceneOptions) {
+    const locations = cachedSceneOptions.LOCATION.flatMap(c => c.options);
+    const loc = pick(locations);
+    if (loc?.prompt) prompts.push(loc.prompt);
+  }
+
+  if (cachedCameraOptions) {
+    const framings = cachedCameraOptions.FRAMING;
+    const framing = pick(framings);
+    if (framing?.prompt) prompts.push(framing.prompt);
+  }
+
+  return prompts;
+}
+
+function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: string[] = []): string {
   const parts = [
     d.style === "Anime" ? "anime style" : "photorealistic",
     d.gender?.toLowerCase() ?? "female",
@@ -595,14 +656,17 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>): string {
     d.hairStyle ? `${d.hairStyle} hairstyle` : "",
     d.eyeColor ? `${d.eyeColor} eyes` : "",
     d.bodyType ? `${d.bodyType} body` : "",
-    "portrait, beautiful, high quality, detailed",
+    ...extraPrompts,
+    "beautiful, high quality, detailed",
   ].filter(Boolean);
   return parts.join(", ");
 }
 
 async function startAvatarGeneration() {
   const data = collectFormData();
-  const prompt = buildAvatarPrompt(data);
+  await loadGenerationOptions();
+  const extraPrompts = pickRandomPrompts();
+  const prompt = buildAvatarPrompt(data, extraPrompts);
 
   const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
   const spinner = document.getElementById("s9-avatar-spinner");
