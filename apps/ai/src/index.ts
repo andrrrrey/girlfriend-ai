@@ -177,6 +177,19 @@ function createOpenAIClient(apiKey: string): OpenAI {
  */
 app.get("/health", async (): Promise<HealthResponse> => ({ ok: true, service: "ai" }));
 
+app.get("/ai/debug/env", async () => {
+  const s3 = createS3Client();
+  return {
+    S3_ENDPOINT: env.S3_ENDPOINT || "(not set)",
+    S3_PUBLIC_URL: (env as any).S3_PUBLIC_URL || "(not set)",
+    S3_REGION: env.S3_REGION || "(not set)",
+    S3_BUCKET: env.S3_BUCKET || "(not set)",
+    S3_ACCESS_KEY: env.S3_ACCESS_KEY ? `${env.S3_ACCESS_KEY.slice(0, 3)}***` : "(not set)",
+    S3_SECRET_KEY: env.S3_SECRET_KEY ? "***set***" : "(not set)",
+    s3ClientCreated: !!s3,
+  };
+});
+
 /**
  * Тело запроса для Chat Completions.
  */
@@ -1302,15 +1315,17 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
   }
 
   if (!videoResponse || !videoResponse.ok) {
-    logger.warn({ videoUrl, status: videoResponse?.status }, "video_download_failed_returning_direct_url");
+    logger.error({ videoUrl, status: videoResponse?.status, statusText: videoResponse?.statusText }, "video_download_failed_returning_direct_url");
     return videoUrl;
   }
   const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+  logger.info({ videoBufferSize: videoBuffer.length, contentType: videoResponse.headers.get("content-type") }, "video_downloaded_successfully");
 
   // Загружаем в S3 только если задан S3_PUBLIC_URL — иначе URL будет внутренним docker-адресом
   // и браузер не сможет воспроизвести видео. S3_PUBLIC_URL = публичный адрес MinIO/S3 для браузера.
   const s3 = createS3Client();
   const bucket = env.S3_BUCKET || "media";
+  logger.info({ s3Available: !!s3, bucket, s3Endpoint: env.S3_ENDPOINT, videoBufferSize: videoBuffer.length }, "video_s3_upload_attempt");
 
   if (s3) {
     const key = `videos/${randomUUID()}.mp4`;
@@ -1319,8 +1334,10 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
       logger.info({ key }, "video_uploaded_to_s3");
       return url;
     } catch (s3Err: any) {
-      logger.warn({ err: s3Err }, "video_s3_upload_failed");
+      logger.error({ err: s3Err.message, code: s3Err.Code || s3Err.code, endpoint: env.S3_ENDPOINT }, "video_s3_upload_failed");
     }
+  } else {
+    logger.error({ s3Endpoint: env.S3_ENDPOINT, hasAccessKey: !!env.S3_ACCESS_KEY, hasSecretKey: !!env.S3_SECRET_KEY }, "video_s3_client_not_created");
   }
 
   return videoUrl;
