@@ -592,23 +592,31 @@ function ChatPageInner() {
     ]);
 
     try {
-      const { jobId } = await createImageJob({
+      const charStyle = activeCharPersonality.generationStyle as string | undefined;
+      const useCivitai = !!charStyle;
+      const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
-        model: "alibaba/wan-2.6/text-to-image",
         negativePrompt: "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo",
-        provider: "atlascloud",
-      });
+        ...(useCivitai
+          ? { provider: "civitai", generationStyle: charStyle }
+          : { model: "alibaba/wan-2.6/text-to-image", provider: "atlascloud" }),
+      };
+      const { jobId } = await createImageJob(jobPayload);
 
       const chatIdSnapshot = activeChat;
+      let imageSaved = false;
       imagePollingRef.current = setInterval(async () => {
         try {
           const status = await getJobStatus(jobId);
           if (status.status === "completed" && status.output?.url) {
             if (imagePollingRef.current) clearInterval(imagePollingRef.current);
             imagePollingRef.current = null;
-            await saveImageMessage(chatIdSnapshot, status.output.url, poseName);
-            const res = await chats.getMessages(chatIdSnapshot);
-            setMessages(res.items);
+            if (!imageSaved) {
+              imageSaved = true;
+              await saveImageMessage(chatIdSnapshot, status.output.url, poseName);
+              const res = await chats.getMessages(chatIdSnapshot);
+              setMessages(res.items);
+            }
             setGeneratingImage(false);
           } else if (status.status === "failed") {
             if (imagePollingRef.current) clearInterval(imagePollingRef.current);
