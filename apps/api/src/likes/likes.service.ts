@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
+import { S3Service } from "../s3/s3.service";
+import { loadEnv } from "@repo/config";
+
+const env = loadEnv();
 
 @Injectable()
 export class LikesService {
@@ -92,6 +96,24 @@ export class LikesService {
     return result;
   }
 
+  private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
+    if (!url) return null;
+    const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
+    if (!publicBase) return url;
+    const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
+    if (!key) return url;
+    return `/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+  }
+
+  private async signOutput(output: unknown): Promise<unknown> {
+    if (!output || typeof output !== "object") return output;
+    const o = output as Record<string, unknown>;
+    if (typeof o["url"] === "string") {
+      return { ...o, url: await this.toSignedUrl(o["url"] as string) };
+    }
+    return output;
+  }
+
   async getMyLiked(
     userId: string,
     targetType: string,
@@ -131,9 +153,13 @@ export class LikesService {
         include: { user: { select: { id: true, nickname: true, avatarUrl: true } } },
       });
       const jobMap = new Map(jobs.map((j) => [j.id, j]));
-      items = likes
+      const rawItems = likes
         .map((l) => jobMap.get(l.targetId))
-        .filter(Boolean);
+        .filter((j): j is NonNullable<typeof j> => !!j);
+      items = await Promise.all(rawItems.map(async (job) => ({
+        ...job,
+        output: await this.signOutput(job.output),
+      })));
     }
 
     return { items, total };
