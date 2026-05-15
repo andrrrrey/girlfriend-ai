@@ -35,9 +35,9 @@ export class GenerationService {
     private readonly s3: S3Service,
   ) {}
 
-  /** Заменяет публичный URL на путь через media-прокси API, если S3 настроен. */
+  /** Заменяет S3 URL на путь через media-прокси API. */
   private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
-    if (!url || !this.s3.isConfigured()) return url ?? null;
+    if (!url) return null;
     const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
     if (!publicBase) return url;
     const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
