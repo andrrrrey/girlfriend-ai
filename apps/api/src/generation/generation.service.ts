@@ -35,14 +35,18 @@ export class GenerationService {
     private readonly s3: S3Service,
   ) {}
 
-  /** Заменяет S3 URL на путь через media-прокси API. */
+  /** Заменяет S3 URL на путь через media-прокси API. Внешние URL проксируются через /media/proxy. */
   private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
     if (!url) return null;
     const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
-    if (!publicBase) return url;
-    const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
-    if (!key) return url;
-    return `/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+    if (publicBase) {
+      const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
+      if (key) return `/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+    }
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return `/api-proxy/media/proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
   }
 
   /** Заменяет url в объекте output на presigned, возвращает новый output. */

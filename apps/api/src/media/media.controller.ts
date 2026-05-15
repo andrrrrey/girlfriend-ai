@@ -48,6 +48,36 @@ export class MediaController {
     }
   }
 
+  @ApiOperation({ summary: "Proxy an external media URL (server-side fetch)" })
+  @Get("proxy")
+  async proxyMedia(@Query("url") url: string, @Res() res: Response) {
+    if (!url) {
+      throw new BadRequestException("url is required");
+    }
+    try {
+      const parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new BadRequestException("Invalid URL protocol");
+      }
+    } catch {
+      throw new BadRequestException("Invalid URL");
+    }
+    try {
+      const upstream = await fetch(url);
+      if (!upstream.ok) {
+        throw new NotFoundException("Upstream media not found");
+      }
+      const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      res.send(buffer);
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err;
+      throw new ServiceUnavailableException("Failed to fetch upstream media");
+    }
+  }
+
   @ApiOperation({ summary: "Get presigned URL for a media key" })
   @UseGuards(JwtAuthGuard)
   @Get("signed-url")
