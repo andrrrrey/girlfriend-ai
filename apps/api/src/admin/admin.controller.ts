@@ -492,4 +492,21 @@ export class AdminController {
   async deleteCameraOption(@Param("id") id: string) {
     await this.adminService.deleteCameraOption(id);
   }
+
+  // ─── Generations ───────────────────────────────────────────
+
+  @Get("generations")
+  async getGenerations(
+    @Query("type") type?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+    @Query("search") search?: string,
+  ) {
+    return this.adminService.getGenerations({
+      type,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+      search,
+    });
+  }
 }

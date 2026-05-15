@@ -834,6 +834,15 @@ export const admin = {
   async deleteCameraOption(id: string): Promise<void> {
     return apiFetch(`/admin/camera-options/${id}`, { method: "DELETE" });
   },
+
+  async getGenerations(params?: { type?: string; limit?: number; offset?: number; search?: string }): Promise<{ items: any[]; total: number }> {
+    const qs = new URLSearchParams();
+    if (params?.type) qs.set("type", params.type);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    if (params?.search) qs.set("search", params.search);
+    return apiFetch(`/admin/generations?${qs}`);
+  },
 };
 
 // ─── Chat API ────────────────────────────────────────────────

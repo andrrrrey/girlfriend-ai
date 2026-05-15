@@ -96,6 +96,7 @@ export default function AdminCharactersPage() {
           <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
           <a href="/admin/scene-options" style={adminStyles.tab}>Scene</a>
           <a href="/admin/camera-options" style={adminStyles.tab}>Camera</a>
+          <a href="/admin/generations" style={adminStyles.tab}>Генерации</a>
         </div>
 
         {editing ? (

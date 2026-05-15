@@ -22,6 +22,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
+import { S3Service } from "../s3/s3.service";
+import { loadEnv } from "@repo/config";
+
+const env = loadEnv();
 
 /**
  * Набор полей пользователя, возвращаемых администратору.
@@ -700,5 +704,67 @@ export class AdminService {
     const existing = await this.prisma.cameraOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CameraOption "${id}" not found`);
     await this.prisma.cameraOption.delete({ where: { id } });
+  }
+
+  // ─── Generations ───────────────────────────────────────────
+
+  async getGenerations(opts: { type?: string; limit?: number; offset?: number; search?: string }) {
+    const { type, limit = 50, offset = 0, search } = opts;
+    const where: any = {
+      status: "completed",
+      type: { in: ["image", "video"] },
+    };
+    if (type === "image" || type === "video") {
+      where.type = type;
+    }
+    if (search) {
+      where.OR = [
+        { input: { path: ["prompt"], string_contains: search } },
+        { user: { nickname: { contains: search, mode: "insensitive" } } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.aiJob.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          user: { select: { id: true, nickname: true, email: true, avatarUrl: true } },
+        },
+      }),
+      this.prisma.aiJob.count({ where }),
+    ]);
+
+    const signedItems = await Promise.all(items.map(async (item) => ({
+      ...item,
+      output: await this.signOutput(item.output),
+    })));
+
+    return { items: signedItems, total };
+  }
+
+  private async signOutput(output: unknown): Promise<unknown> {
+    if (!output || typeof output !== "object") return output;
+    const o = output as Record<string, unknown>;
+    if (typeof o["url"] === "string") {
+      return { ...o, url: await this.toSignedUrl(o["url"] as string) };
+    }
+    return output;
+  }
+
+  private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
+    if (!url) return null;
+    const publicBase = (env as any).S3_PUBLIC_URL || env.S3_ENDPOINT;
+    if (publicBase) {
+      const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
+      if (key) return `/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+    }
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return `/api-proxy/media/proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
   }
 }

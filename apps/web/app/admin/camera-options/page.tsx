@@ -213,6 +213,7 @@ export default function AdminCameraOptionsPage() {
             { href: "/admin/pose-options", label: "Pose" },
             { href: "/admin/scene-options", label: "Scene" },
             { href: "/admin/camera-options", label: "Camera" },
+            { href: "/admin/generations", label: "Генерации" },
           ] as { href: string; label: string }[]).map((item) => (
             <a
               key={item.href}
