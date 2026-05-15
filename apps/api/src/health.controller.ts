@@ -61,6 +61,17 @@ export class HealthController {
     return { api: apiEnv, ai: aiEnv };
   }
 
+  @Get("/debug/s3-test")
+  async debugS3Test() {
+    try {
+      const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
+      const res = await fetch(`${AI_BASE}/ai/debug/s3-test`);
+      return await res.json();
+    } catch (err: any) {
+      return { error: err.message };
+    }
+  }
+
   @Get("/ready")
   async ready(): Promise<HealthResponse> {
     try {

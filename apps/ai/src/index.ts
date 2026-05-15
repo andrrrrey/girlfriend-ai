@@ -190,6 +190,20 @@ app.get("/ai/debug/env", async () => {
   };
 });
 
+app.get("/ai/debug/s3-test", async () => {
+  const s3 = createS3Client();
+  if (!s3) return { error: "S3 client not created" };
+  const bucket = env.S3_BUCKET || "media";
+  const key = `test/debug-${Date.now()}.txt`;
+  const body = Buffer.from("test upload " + new Date().toISOString());
+  try {
+    const url = await uploadToS3(s3, bucket, key, body, "text/plain");
+    return { ok: true, uploadedUrl: url, key };
+  } catch (err: any) {
+    return { ok: false, error: err.message, code: err.Code || err.code, name: err.name };
+  }
+});
+
 /**
  * Тело запроса для Chat Completions.
  */
