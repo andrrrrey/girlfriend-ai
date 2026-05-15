@@ -380,6 +380,117 @@ function clearValidationErrors(stageNum: number) {
   stageEl.querySelectorAll(".stage-validation-error").forEach((el) => el.remove());
 }
 
+/* ── Randomize stage fields ──────────────────── */
+
+const RANDOM_NAMES = ["Aria", "Luna", "Mia", "Zara", "Nina", "Lexi", "Ivy", "Jade", "Chloe", "Ruby", "Stella", "Nora", "Alex", "Max", "Kai", "Leo", "Finn", "Suki", "Hana", "Yuki"];
+
+function randomizeStage(n: number) {
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  const pickN = <T,>(arr: readonly T[], min: number, max: number): T[] => {
+    const count = min + Math.floor(Math.random() * (max - min + 1));
+    const shuffled = [...arr].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  };
+
+  const selectCard = (field: string, value: string) => {
+    const grid = document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${field}"]`);
+    if (!grid) return;
+    grid.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+    const card = grid.querySelector<HTMLElement>(`.ethnicity-card[data-value="${value}"]`);
+    card?.classList.add("selected");
+  };
+
+  const selectChips = (field: string, values: string[]) => {
+    const wrap = document.querySelector<HTMLElement>(`.tags-wrap[data-field="${field}"]`);
+    if (!wrap) return;
+    wrap.querySelectorAll(".tag-chip").forEach((c) => c.classList.remove("selected"));
+    for (const v of values) {
+      wrap.querySelector<HTMLElement>(`.tag-chip[data-value="${v}"]`)?.classList.add("selected");
+    }
+  };
+
+  const setDropdown = (field: string, value: string) => {
+    const container = document.querySelector<HTMLElement>(`.dropdown-container[data-field="${field}"]`);
+    if (!container) return;
+    container.dataset.selected = value;
+    const valEl = container.querySelector<HTMLElement>(".val");
+    if (valEl) valEl.textContent = value;
+  };
+
+  switch (n) {
+    case 1: {
+      const nameInput = document.getElementById("input-name") as HTMLInputElement | null;
+      if (nameInput) nameInput.value = pick(RANDOM_NAMES);
+      nameInput?.classList.remove("field-error-ring");
+      const age = 18 + Math.floor(Math.random() * 33);
+      const track = document.querySelector<HTMLElement>(".slider-track");
+      const fill = document.querySelector<HTMLElement>(".slider-fill");
+      const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
+      if (track && fill && tooltip) {
+        const pct = (age - 18) / 82;
+        fill.style.width = pct * 100 + "%";
+        tooltip.textContent = String(age);
+        track.dataset.value = String(age);
+      }
+      setDropdown("gender", pick(GENDERS));
+      setDropdown("orientation", pick(ORIENTATIONS));
+      const styleRow = document.getElementById("style-row-container");
+      if (styleRow) {
+        const cards = styleRow.querySelectorAll<HTMLElement>(".style-card");
+        const idx = Math.floor(Math.random() * cards.length);
+        cards.forEach((c, i) => {
+          c.classList.remove("selected", "unselected");
+          c.classList.add(i === idx ? "selected" : "unselected");
+        });
+      }
+      break;
+    }
+    case 2:
+      selectCard("ethnicity", pick(ETHNICITIES));
+      setDropdown("nationality", pick(NATIONALITIES));
+      setDropdown("language", pick(LANGUAGES));
+      const voiceBtns = document.querySelectorAll<HTMLElement>(".voice-btn");
+      if (voiceBtns.length) {
+        const idx = Math.floor(Math.random() * voiceBtns.length);
+        voiceBtns.forEach((b) => b.classList.remove("selected"));
+        voiceBtns[idx].classList.add("selected");
+      }
+      break;
+    case 3:
+      selectCard("eyeColor", pick(EYE_COLORS));
+      selectCard("hairStyle", pick(HAIR_STYLES));
+      selectCard("hairColor", pick(HAIR_COLORS));
+      break;
+    case 4:
+      selectCard("bodyType", pick(BODY_TYPES));
+      selectCard("breastSize", pick(BREAST_SIZES));
+      selectCard("buttSize", pick(BUTT_SIZES));
+      break;
+    case 5: {
+      const persGrid = document.querySelector<HTMLElement>(".personality-grid");
+      if (persGrid) {
+        const cards = persGrid.querySelectorAll<HTMLElement>(".personality-card");
+        const idx = Math.floor(Math.random() * cards.length);
+        cards.forEach((c) => c.classList.remove("selected"));
+        cards[idx]?.classList.add("selected");
+      }
+      setDropdown("relationshipType", pick(RELATIONSHIP_TYPES));
+      setDropdown("familyStatus", pick(FAMILY_STATUSES));
+      break;
+    }
+    case 6:
+      selectCard("lifestyle", pick(LIFESTYLES));
+      selectChips("work", pickN(WORKS, 1, 3));
+      selectChips("hobbies", pickN(HOBBIES, 1, 3));
+      break;
+    case 7:
+      selectChips("kinks1", pickN(KINKS_1, 1, 3));
+      selectChips("kinks2", pickN(KINKS_2, 1, 2));
+      selectChips("kinks3", pickN(KINKS_3, 1, 2));
+      break;
+  }
+}
+
 /* ── Populate stage-09 preview ────────────────── */
 
 function row(icon: string, label: string, value: string) {
@@ -786,6 +897,17 @@ export default function CreateCharacterPage() {
         }
 
         goToStage(target);
+      });
+    });
+
+    // Generate Random buttons
+    document.querySelectorAll<HTMLElement>(".btn-generate").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.classList.contains("disabled")) return;
+        const stageEl = btn.closest<HTMLElement>(".stage-content");
+        if (!stageEl) return;
+        const stageNum = parseInt(stageEl.id.replace("stage-", "").replace("-content", ""));
+        if (!isNaN(stageNum)) randomizeStage(stageNum);
       });
     });
 

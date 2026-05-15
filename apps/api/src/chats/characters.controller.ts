@@ -192,6 +192,7 @@ export class CharactersController {
       orientation: dto.orientation,
       age: dto.age,
       style: dto.style,
+      generationStyle: dto.generationStyle,
       surname: dto.surname,
       nationality: dto.nationality,
       language: dto.language,

@@ -36,6 +36,10 @@ export class CreateUserCharacterDto {
 
   @IsOptional()
   @IsString()
+  generationStyle?: string;
+
+  @IsOptional()
+  @IsString()
   nationality?: string;
 
   @IsOptional()

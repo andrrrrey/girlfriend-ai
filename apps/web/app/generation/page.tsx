@@ -1251,6 +1251,77 @@ export default function GenerationPage() {
     cameraSelections, cameraOptions,
   ]);
 
+  const handleRandomize = useCallback(() => {
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const pickN = <T,>(arr: T[], min: number, max: number): T[] => {
+      const n = min + Math.floor(Math.random() * (max - min + 1));
+      const shuffled = [...arr].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, n);
+    };
+    const byCategory = (cat: string) => characterOptions.filter((o) => o.category === cat);
+    const nameOf = (opts: CharacterOption[]) => opts.length ? pick(opts).name : undefined;
+
+    const styles = byCategory("STYLE");
+    const genders = byCategory("GENDER");
+    const races = byCategory("HUMAN_RACE");
+    const eyes = byCategory("EYE_COLOR");
+    const hairStyles = byCategory("HAIR_STYLE");
+    const hairColors = byCategory("HAIR_COLOR");
+    const bodyTypes = byCategory("BODY_TYPE");
+    const breastSizes = byCategory("BREAST_SIZE");
+    const buttSizes = byCategory("BUTT_SIZE");
+    const heights = byCategory("HEIGHT");
+    const hairLengths = byCategory("HAIR_LENGTH");
+
+    setCharacterSelections({
+      style: nameOf(styles),
+      age: 18 + Math.floor(Math.random() * 33),
+      gender: nameOf(genders),
+      humanRace: nameOf(races),
+      eyeColor: nameOf(eyes),
+      eyeFeatures: [],
+      faceFeatures: [],
+      hairStyle: nameOf(hairStyles),
+      hairLength: nameOf(hairLengths),
+      hairColor: nameOf(hairColors),
+      bodyType: nameOf(bodyTypes),
+      breastSize: nameOf(breastSizes),
+      buttSize: nameOf(buttSizes),
+      height: nameOf(heights),
+    });
+
+    const allExpressions = poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options);
+    const allPoses = poseOptions.POSE.flatMap((c) => c.options);
+    setPoseSelections({
+      facialExpressions: allExpressions.length ? pickN(allExpressions, 1, 2).map((o) => o.name) : [],
+      poses: allPoses.length ? pickN(allPoses, 1, 2).map((o) => o.name) : [],
+    });
+
+    const allOutfits = appearanceOptions.OUTFITS.flatMap((c) => c.options);
+    setAppearanceSelections({
+      outfits: allOutfits.length ? pickN(allOutfits, 1, 2).map((o) => o.name) : [],
+      outfitDetails: [],
+      condition: [],
+    });
+
+    const allLocations = sceneOptions.LOCATION.flatMap((c) => c.options);
+    setSceneSelections({
+      locations: allLocations.length ? [pick(allLocations).name] : [],
+      timeOfDay: [],
+      weather: [],
+      particles: [],
+      environmentEffects: [],
+      props: "",
+    });
+
+    setCameraSelections({
+      framing: cameraOptions.FRAMING.length ? [pick(cameraOptions.FRAMING).name] : [],
+      cameraAngle: cameraOptions.CAMERA_ANGLE.length ? [pick(cameraOptions.CAMERA_ANGLE).name] : [],
+      lens: [],
+      lighting: [],
+    });
+  }, [characterOptions, poseOptions, appearanceOptions, sceneOptions, cameraOptions]);
+
   const handleGenerate = useCallback(async () => {
     if ((!prompt.trim() && !hasAnySelection) || generating) return;
     setError(null);
@@ -1297,16 +1368,19 @@ export default function GenerationPage() {
             if (pollingRef.current) clearInterval(pollingRef.current);
             pollingRef.current = null;
             setGenerating(false);
-            setHistory((prev) => [
-              {
-                jobId: status.jobId,
-                type: isVideo ? "video" : "image",
-                output: status.output,
-                input: status.input || { prompt: prompt.trim(), model },
-                createdAt: status.createdAt,
-              },
-              ...prev,
-            ]);
+            setHistory((prev) => {
+              if (prev.some((h) => h.jobId === status.jobId)) return prev;
+              return [
+                {
+                  jobId: status.jobId,
+                  type: isVideo ? "video" : "image",
+                  output: status.output,
+                  input: status.input || { prompt: prompt.trim(), model },
+                  createdAt: status.createdAt,
+                },
+                ...prev,
+              ];
+            });
             setPrompt("");
           } else if (status.status === "failed") {
             if (pollingRef.current) clearInterval(pollingRef.current);
@@ -1575,7 +1649,7 @@ export default function GenerationPage() {
                 </div>
               )}
             </div>
-            <div className="btn-random">
+            <div className="btn-random" onClick={handleRandomize}>
               <svg viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
               Generate Random
             </div>
