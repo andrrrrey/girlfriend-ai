@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DemoService } from "../demo/demo.service";
@@ -55,6 +56,7 @@ export class GenerationController {
     });
   }
 
+  @SkipThrottle()
   @Get("jobs/:jobId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -122,6 +124,8 @@ export class GenerationController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
     @Query("userId") userId?: string,
+    @Query("gender") gender?: string,
+    @Query("style") style?: string,
   ) {
     return this.generationService.getGallery(
       limit ? parseInt(limit, 10) : 50,
@@ -129,6 +133,8 @@ export class GenerationController {
       sortBy,
       page ? parseInt(page, 10) : 1,
       userId,
+      gender,
+      style,
     );
   }
 

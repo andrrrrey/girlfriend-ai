@@ -354,12 +354,16 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
       <div className="g-card" onClick={() => { if (url) onOpen(item); }}>
         {url ? (
           isVideo ? (
-            <video className="g-card-thumb" src={url} muted loop preload="metadata" playsInline />
+            <video className="g-card-thumb" src={url} muted loop preload="metadata" playsInline
+              onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }} />
           ) : (
-            <img className="g-card-thumb" src={url} alt="" loading="lazy" />
+            <img className="g-card-thumb" src={url} alt="" loading="lazy"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
           )
         ) : (
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+          </div>
         )}
         <div className="g-card-overlay" />
         <div className="g-card-type-badge">
@@ -375,10 +379,15 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function GalleryPage() {
   const { user, loading } = useAuth();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("all");
   const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
@@ -387,24 +396,48 @@ export default function GalleryPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const fetchItems = useCallback(() => {
-    setFetching(true);
-    const params: Record<string, any> = { sortBy };
+  const fetchItems = useCallback((pageNum: number, append: boolean) => {
+    if (append) setLoadingMore(true); else setFetching(true);
+    const params: Record<string, any> = { sortBy, page: pageNum, limit: PAGE_SIZE };
     if (activeTab !== "all") params.type = activeTab;
     if (gender) params.gender = gender;
     if (style) params.style = style;
 
     getPublicGallery(params)
-      .then((data) => setItems(data.items || []))
-      .catch(() => setItems([]))
-      .finally(() => setFetching(false));
+      .then((data) => {
+        const newItems = data.items || [];
+        if (append) {
+          setItems((prev) => [...prev, ...newItems]);
+        } else {
+          setItems(newItems);
+        }
+        setHasMore(newItems.length >= PAGE_SIZE);
+      })
+      .catch(() => { if (!append) setItems([]); })
+      .finally(() => { setFetching(false); setLoadingMore(false); });
   }, [activeTab, gender, style, sortBy]);
 
   useEffect(() => {
     if (loading) return;
-    fetchItems();
-  }, [loading, fetchItems]);
+    setPage(1);
+    setHasMore(true);
+    fetchItems(1, false);
+  }, [loading, activeTab, gender, style, sortBy]);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasMore && !loadingMore) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchItems(nextPage, true);
+      }
+    }, { threshold: 0.1 });
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, fetching, loadingMore, page, fetchItems]);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -513,6 +546,10 @@ export default function GalleryPage() {
               <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} likeStatus={likeStatuses[item.jobId]} />
             ))
           )}
+          {loadingMore && Array.from({ length: 4 }).map((_, i) => (
+            <div className="g-card-skeleton" key={`loading-${i}`} />
+          ))}
+          {hasMore && !fetching && <div ref={sentinelRef} style={{ width: "100%", height: 1 }} />}
         </div>
 
         <div

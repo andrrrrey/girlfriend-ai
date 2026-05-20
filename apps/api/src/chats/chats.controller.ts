@@ -480,6 +480,8 @@ export class ChatsController {
         new Blob([audioBuffer], { type: file.mimetype }),
         file.originalname || "audio.webm",
       );
+      const language = req.body?.language;
+      if (language) formData.append("language", language);
 
       const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
         method: "POST",

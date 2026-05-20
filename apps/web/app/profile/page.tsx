@@ -609,6 +609,10 @@ function AccountTab() {
         const p = detectProvider(url);
         return users.upsertSocialLink(p, url);
       }));
+      const originalProviders = new Set(user?.socialLinks?.map((l) => l.provider) ?? []);
+      const currentProviders = new Set(nonEmpty.map((url) => detectProvider(url)));
+      const removedProviders = [...originalProviders].filter((p) => !currentProviders.has(p));
+      await Promise.all(removedProviders.map((p) => users.deleteSocialLink(p)));
       await refreshProfile();
       setMsg({ text: "Saved successfully", ok: true });
     } catch (err: any) {

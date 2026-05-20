@@ -59,6 +59,12 @@ export class S3Service {
     if (url.startsWith(prefix)) {
       return url.slice(prefix.length);
     }
+    // Fallback: try to extract key from any URL containing /{bucket}/ pattern
+    const bucketPattern = `/${bucket}/`;
+    const bucketIdx = url.indexOf(bucketPattern);
+    if (bucketIdx !== -1) {
+      return url.slice(bucketIdx + bucketPattern.length);
+    }
     return null;
   }
 }

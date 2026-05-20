@@ -456,6 +456,7 @@ function ChatPageInner() {
         setStreamContent("");
         handleDemoError(err, code, body);
       },
+      user?.lang || undefined,
     );
   };
 

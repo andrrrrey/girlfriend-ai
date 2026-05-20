@@ -41,7 +41,7 @@ import { UnauthorizedException } from "@nestjs/common";
  * Тег "auth" группирует эндпоинты в Swagger UI.
  */
 // Жёсткий лимит для auth: 10 запросов в минуту с одного IP (защита от brute-force)
-@Throttle({ default: { ttl: 60_000, limit: 10 } })
+@Throttle({ default: { ttl: 60_000, limit: 15 } })
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
@@ -101,6 +101,7 @@ export class AuthController {
    * @returns TokenPair — новая пара (старый refreshToken инвалидирован)
    */
   @ApiOperation({ summary: "Refresh access token using refresh token" })
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshDto) {

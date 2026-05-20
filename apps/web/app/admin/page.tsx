@@ -48,6 +48,14 @@ const SETTING_GROUPS = [
       { key: "CIVITAI_API_TOKEN", label: "Civitai API Token", type: "password" },
     ],
   },
+  {
+    title: "System Prompt",
+    subtitle: "Глобальный шаблон системного промпта для всех AI-персонажей",
+    keys: [
+      { key: "GLOBAL_SYSTEM_PROMPT_TEMPLATE", label: "Глобальный шаблон промпта (добавляется перед промптом каждого персонажа)", type: "textarea" },
+      { key: "DEFAULT_STT_LANGUAGE", label: "Язык STT по умолчанию (en, ru, etc.)", type: "text" },
+    ],
+  },
 ];
 
 const ALL_IMAGE_MODELS = [
@@ -148,6 +156,13 @@ export default function AdminSettingsPage() {
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
+                ) : type === "textarea" ? (
+                  <textarea
+                    value={settings[key] || ""}
+                    onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+                    style={{ ...adminStyles.input, minHeight: 200, resize: "vertical", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5 }}
+                    placeholder={key}
+                  />
                 ) : (
                   <input
                     type={type}

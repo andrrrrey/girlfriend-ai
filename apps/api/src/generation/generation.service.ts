@@ -322,7 +322,7 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
@@ -340,6 +340,17 @@ export class GenerationService {
     };
     if (userId) {
       where["userId"] = userId;
+    }
+
+    const andConditions: Record<string, unknown>[] = [];
+    if (gender) {
+      andConditions.push({ input: { path: ["prompt"], string_contains: gender.toLowerCase() } });
+    }
+    if (style) {
+      andConditions.push({ input: { path: ["prompt"], string_contains: style.toLowerCase() } });
+    }
+    if (andConditions.length > 0) {
+      where["AND"] = andConditions;
     }
 
     const [jobs, total] = await Promise.all([

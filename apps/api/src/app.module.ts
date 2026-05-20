@@ -34,8 +34,8 @@ import { CommentsModule } from "./comments/comments.module";
 
 @Module({
   imports: [
-    // 120 запросов в минуту с одного IP по умолчанию
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // 300 запросов в минуту с одного IP по умолчанию
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     QueueModule,    // Глобальный модуль BullMQ-очереди (регистрирует AI_QUEUE токен)
     AuthModule,     // JWT-аутентификация и управление сессиями
     UsersModule,    // Операции с профилем текущего пользователя

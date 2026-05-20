@@ -365,7 +365,11 @@ async function handleVideoJob(job: Job): Promise<void> {
     throw new Error(`Video generation service returned ${response.status}: ${errText}`);
   }
 
-  const result = await response.json() as { url: string };
+  const result = await response.json() as { url: string; status?: string };
+
+  if (!result.url) {
+    throw new Error("Video generation returned empty URL — provider may still be processing");
+  }
 
   await updateJobStatus(jobId, "completed", { output: { url: result.url } });
   await logUsage(userId, "generation");
@@ -405,6 +409,9 @@ const worker = new Worker(
         await handleImageJob(job);
         break;
       case JOB_NAMES.VIDEO:
+        if (!job.opts.attempts || job.opts.attempts < 6) {
+          job.opts.attempts = 6;
+        }
         await handleVideoJob(job);
         break;
       default:

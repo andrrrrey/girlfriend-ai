@@ -131,6 +131,11 @@ export async function apiFetch<T = unknown>(
 
   let res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
+  // If 429, do NOT attempt refresh — just throw immediately
+  if (res.status === 429) {
+    throw new ApiError(429, "Too Many Requests — please wait a moment and try again");
+  }
+
   // If 401, try refreshing the token once — transparent token rotation
   if (res.status === 401 && tokens?.refreshToken) {
     const newAccessToken = await refreshAccessToken();
@@ -1359,12 +1364,14 @@ export function streamVoiceMessage(
   onDelta: (text: string) => void,
   onDone: () => void,
   onError: (err: string, code?: number, body?: any) => void,
+  language?: string,
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
 
   const formData = new FormData();
   formData.append("audio", audioBlob, "recording.webm");
+  if (language) formData.append("language", language);
 
   fetch(`${API_BASE}/chats/${chatId}/voice`, {
     method: "POST",
@@ -1553,6 +1560,8 @@ export async function getPublicGallery(params?: {
   page?: number;
   limit?: number;
   userId?: string;
+  gender?: string;
+  style?: string;
 }): Promise<{ items: GalleryItem[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.type) query.set("type", params.type);
@@ -1560,6 +1569,8 @@ export async function getPublicGallery(params?: {
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.userId) query.set("userId", params.userId);
+  if (params?.gender) query.set("gender", params.gender);
+  if (params?.style) query.set("style", params.style);
   const qs = query.toString();
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
 }

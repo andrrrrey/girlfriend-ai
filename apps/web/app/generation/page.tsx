@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
@@ -12,27 +13,30 @@ import {
   getVideoStyles,
   getGenerationHistory,
   deleteGenerationJob,
-  getCharacterOptions,
-  getAppearanceOptions,
-  getPoseOptions,
-  getSceneOptions,
-  getCameraOptions,
 } from "../../lib/api";
+import {
+  getCachedCharacterOptions,
+  getCachedAppearanceOptions,
+  getCachedPoseOptions,
+  getCachedSceneOptions,
+  getCachedCameraOptions,
+} from "../../lib/options-cache";
 import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse } from "../../lib/api";
-import CharacterModal, { DEFAULT_CHARACTER_SELECTIONS } from "../components/CharacterModal";
-import type { CharacterSelections } from "../components/CharacterModal";
-import AppearanceModal, { DEFAULT_APPEARANCE_SELECTIONS } from "../components/AppearanceModal";
-import type { AppearanceSelections } from "../components/AppearanceModal";
-import PoseModal, { DEFAULT_POSE_SELECTIONS } from "../components/PoseModal";
-import type { PoseSelections } from "../components/PoseModal";
-import SceneModal, { DEFAULT_SCENE_SELECTIONS } from "../components/SceneModal";
-import type { SceneSelections } from "../components/SceneModal";
-import CameraModal, { DEFAULT_CAMERA_SELECTIONS } from "../components/CameraModal";
-import type { CameraSelections } from "../components/CameraModal";
-import PromptDetailsModal, { DEFAULT_PROMPT_DETAILS_SELECTIONS } from "../components/PromptDetailsModal";
-import type { PromptDetailsSelections } from "../components/PromptDetailsModal";
+import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections } from "../components/CharacterModal";
+import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
+import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
+import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
+import { DEFAULT_CAMERA_SELECTIONS, type CameraSelections } from "../components/CameraModal";
+import { DEFAULT_PROMPT_DETAILS_SELECTIONS, type PromptDetailsSelections } from "../components/PromptDetailsModal";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { ApiError } from "../../lib/api";
+
+const CharacterModal = dynamic(() => import("../components/CharacterModal"), { ssr: false });
+const AppearanceModal = dynamic(() => import("../components/AppearanceModal"), { ssr: false });
+const PoseModal = dynamic(() => import("../components/PoseModal"), { ssr: false });
+const SceneModal = dynamic(() => import("../components/SceneModal"), { ssr: false });
+const CameraModal = dynamic(() => import("../components/CameraModal"), { ssr: false });
+const PromptDetailsModal = dynamic(() => import("../components/PromptDetailsModal"), { ssr: false });
 
 const CSS = `
   /* ── Page content ── */
@@ -990,11 +994,11 @@ export default function GenerationPage() {
       }
     }).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
-    getCharacterOptions().then(setCharacterOptions).catch(() => {});
-    getAppearanceOptions().then(setAppearanceOptions).catch(() => {});
-    getPoseOptions().then(setPoseOptions).catch(() => {});
-    getSceneOptions().then(setSceneOptions).catch(() => {});
-    getCameraOptions().then(setCameraOptions).catch(() => {});
+    getCachedCharacterOptions().then(setCharacterOptions).catch(() => {});
+    getCachedAppearanceOptions().then(setAppearanceOptions).catch(() => {});
+    getCachedPoseOptions().then(setPoseOptions).catch(() => {});
+    getCachedSceneOptions().then(setSceneOptions).catch(() => {});
+    getCachedCameraOptions().then(setCameraOptions).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -1361,9 +1365,12 @@ export default function GenerationPage() {
         jobId = result.jobId;
       }
 
-      pollingRef.current = setInterval(async () => {
+      let pollErrors = 0;
+      let pollInterval = isVideo ? 5000 : 3000;
+      const poll = async () => {
         try {
           const status = await getJobStatus(jobId);
+          pollErrors = 0;
           if (status.status === "completed") {
             if (pollingRef.current) clearInterval(pollingRef.current);
             pollingRef.current = null;
@@ -1389,12 +1396,16 @@ export default function GenerationPage() {
             setError(status.error || `${isVideo ? "Video" : "Image"} generation failed`);
           }
         } catch {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          pollingRef.current = null;
-          setGenerating(false);
-          setError("Failed to check job status");
+          pollErrors++;
+          if (pollErrors >= 3) {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setGenerating(false);
+            setError("Failed to check job status");
+          }
         }
-      }, isVideo ? 4000 : 2000);
+      };
+      pollingRef.current = setInterval(poll, pollInterval);
     } catch (err: any) {
       setGenerating(false);
       if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
