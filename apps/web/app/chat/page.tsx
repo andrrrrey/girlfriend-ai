@@ -41,6 +41,10 @@ function ChatPageInner() {
   const [showNewChat, setShowNewChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
+  // Chat search state
+  const [chatSearch, setChatSearch] = useState("");
 
   // Demo banner state
   const [demoBanner, setDemoBanner] = useState<string | null>(null);
@@ -130,6 +134,8 @@ function ChatPageInner() {
       if (chat?.lastMessage) {
         localStorage.setItem(`chat-read-${activeChat}`, chat.lastMessage.createdAt);
       }
+      // Auto-focus the message input
+      setTimeout(() => chatInputRef.current?.focus(), 100);
     }
   }, [activeChat, loadMessages, chatList]);
 
@@ -207,12 +213,14 @@ function ChatPageInner() {
         loadMessages(activeChat);
         loadChats();
         setStreamContent("");
+        chatInputRef.current?.focus();
       },
       (err, code, body) => {
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setStreaming(false);
         setStreamContent("");
         handleDemoError(err, code, body);
+        chatInputRef.current?.focus();
       },
     );
   };
@@ -767,7 +775,24 @@ function ChatPageInner() {
 
         <div className="chats-search">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
-          <span>Search for a profile</span>
+          <input
+            type="text"
+            placeholder="Search for a profile"
+            value={chatSearch}
+            onChange={(e) => setChatSearch(e.target.value)}
+            style={{
+              flex: 1, background: "transparent", border: "none", outline: "none",
+              color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Syne', sans-serif",
+            }}
+          />
+          {chatSearch && (
+            <button
+              onClick={() => setChatSearch("")}
+              style={{ background: "none", border: "none", color: "#848484", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {showNewChat && (
@@ -797,7 +822,13 @@ function ChatPageInner() {
         )}
 
         <div className="chats-list">
-          {chatList.map((c) => (
+          {chatList.filter((c) => {
+            if (!chatSearch.trim()) return true;
+            const q = chatSearch.trim().toLowerCase();
+            const name = (c.character?.name || "").toLowerCase();
+            const preview = (c.lastMessage?.content || c.title || "").toLowerCase();
+            return name.includes(q) || preview.includes(q);
+          }).map((c) => (
             <div
               key={c.id}
               onClick={() => setActiveChat(c.id)}
@@ -1069,12 +1100,14 @@ function ChatPageInner() {
                   {inputMode === "ask" ? (
                     <>
                       <input
+                        ref={chatInputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         className="chat-text-input"
                         placeholder="Leave a message..."
                         disabled={streaming}
+                        autoFocus
                       />
                       <button
                         onClick={startRecording}
