@@ -28,7 +28,24 @@ interface GenerationNotification {
   timestamp: number;
 }
 
-const MAX_CONCURRENT_GENERATIONS = 2;
+const MAX_CONCURRENT = 2;
+const LS_KEY = "gen_active_jobs";
+
+function loadJobs(): ActiveJob[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveJobs(jobs: ActiveJob[]) {
+  try {
+    if (jobs.length === 0) localStorage.removeItem(LS_KEY);
+    else localStorage.setItem(LS_KEY, JSON.stringify(jobs));
+  } catch {}
+}
 
 interface GenerationContextValue {
   activeJobs: ActiveJob[];
@@ -43,14 +60,21 @@ interface GenerationContextValue {
 const GenerationContext = createContext<GenerationContextValue | null>(null);
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
-  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => loadJobs());
   const [notifications, setNotifications] = useState<GenerationNotification[]>([]);
   const pollErrorsRef = useRef<Map<string, number>>(new Map());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dismissTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const activeJobsRef = useRef<ActiveJob[]>(activeJobs);
+
+  // Keep ref in sync + persist to localStorage
+  useEffect(() => {
+    activeJobsRef.current = activeJobs;
+    saveJobs(activeJobs);
+  }, [activeJobs]);
 
   const completedCount = notifications.filter((n) => n.status === "completed").length;
-  const canGenerate = activeJobs.length < MAX_CONCURRENT_GENERATIONS;
+  const canGenerate = activeJobs.length < MAX_CONCURRENT;
 
   const addNotification = useCallback((n: Omit<GenerationNotification, "id" | "timestamp">) => {
     const notif: GenerationNotification = {
@@ -77,10 +101,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const startGeneration = useCallback((jobId: string, type: "image" | "video", prompt: string, model: string) => {
-    setActiveJobs((prev) => [
-      ...prev,
-      { jobId, type, prompt, model, startedAt: new Date().toISOString() },
-    ]);
+    setActiveJobs((prev) => {
+      const next = [...prev, { jobId, type, prompt, model, startedAt: new Date().toISOString() }];
+      return next;
+    });
     addNotification({ jobId, type, status: "started" });
   }, [addNotification]);
 
@@ -95,9 +119,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     }
   }, [notifications, dismissNotification]);
 
-  // Polling for active jobs
+  // Polling — uses ref to always read fresh activeJobs
   useEffect(() => {
-    if (activeJobs.length === 0) {
+    const jobs = activeJobsRef.current;
+    if (jobs.length === 0) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -106,8 +131,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     }
 
     const poll = async () => {
-      const jobsCopy = [...activeJobs];
-      for (const job of jobsCopy) {
+      const currentJobs = [...activeJobsRef.current];
+      if (currentJobs.length === 0) return;
+
+      for (const job of currentJobs) {
         try {
           const status = await getJobStatus(job.jobId);
           pollErrorsRef.current.set(job.jobId, 0);
