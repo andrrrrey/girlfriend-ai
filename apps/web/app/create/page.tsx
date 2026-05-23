@@ -933,16 +933,23 @@ async function startAvatarGeneration() {
           clearInterval(previewPollInterval!);
           previewPollInterval = null;
           previewImageUrl = (status.output as any).url;
-          if (img) { img.src = previewImageUrl!; img.style.display = "block"; }
-          if (spinner) spinner.style.display = "none";
-          if (regenBtn) regenBtn.removeAttribute("disabled");
-          if (submitBtn) submitBtn.classList.remove("disabled");
+          // Re-query DOM elements each poll (they may have been re-created)
+          const curImg = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
+          const curSpinner = document.getElementById("s9-avatar-spinner");
+          const curRegen = document.getElementById("s9-regen-btn");
+          const curSubmit = document.getElementById("btn-submit");
+          if (curImg) { curImg.src = previewImageUrl!; curImg.style.display = "block"; }
+          if (curSpinner) curSpinner.style.display = "none";
+          if (curRegen) curRegen.removeAttribute("disabled");
+          if (curSubmit) curSubmit.classList.remove("disabled");
           saveFormState(9);
         } else if (status.status === "failed") {
           clearInterval(previewPollInterval!);
           previewPollInterval = null;
-          if (spinner) spinner.style.display = "none";
-          if (regenBtn) regenBtn.removeAttribute("disabled");
+          const curSpinner = document.getElementById("s9-avatar-spinner");
+          const curRegen = document.getElementById("s9-regen-btn");
+          if (curSpinner) curSpinner.style.display = "none";
+          if (curRegen) curRegen.removeAttribute("disabled");
         }
       } catch { /* ignore poll errors */ }
     }, 2500);
@@ -1334,7 +1341,9 @@ export default function CreateCharacterPage() {
       submitBtn.textContent = "Creating...";
       try {
         const data = collectFormData();
-        const newChar = await characters.create({ ...data, avatarUrl: previewImageUrl ?? undefined });
+        // Remove prompt fields — they're only used for image generation, not character creation API
+        const { ethnicityPrompt, hairStylePrompt, bodyTypePrompt, generationStyle, ...charData } = data;
+        const newChar = await characters.create({ ...charData, avatarUrl: previewImageUrl ?? undefined });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);
         router.push(`/chat?sessionId=${newChat.id}`);
