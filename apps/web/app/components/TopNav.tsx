@@ -6,7 +6,8 @@ import { useGeneration } from "../../context/generation";
 
 export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, logout } = useAuth();
-  const { completedCount, dismissAllNotifications } = useGeneration();
+  const { activeJobs, completedCount, dismissAllNotifications } = useGeneration();
+  const isGenerating = activeJobs.length > 0;
 
   function handleLogout() {
     logout();
@@ -45,17 +46,23 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <button className="topnav-search-icon-btn" aria-label="Search">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>
-        {user && completedCount > 0 && (
+        {user && (
           <button
-            className="topnav-bell-btn"
+            className={`topnav-bell-btn${isGenerating ? " generating" : ""}`}
             onClick={() => { dismissAllNotifications(); window.location.href = "/gallery"; }}
             aria-label="Notifications"
           >
+            {isGenerating && (
+              <svg className="topnav-bell-spinner" width="38" height="38" viewBox="0 0 38 38">
+                <circle cx="19" cy="19" r="17" fill="none" stroke="url(#bell-grad)" strokeWidth="2" strokeDasharray="80 27" strokeLinecap="round"/>
+                <defs><linearGradient id="bell-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f95bad"/><stop offset="100%" stopColor="#ff0084"/></linearGradient></defs>
+              </svg>
+            )}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
-            <span className="topnav-bell-badge">{completedCount}</span>
+            {completedCount > 0 && <span className="topnav-bell-badge">{completedCount}</span>}
           </button>
         )}
         {!user && <button className="btn-primary" onClick={() => { window.location.href = "/register"; }}>Create Free Account</button>}

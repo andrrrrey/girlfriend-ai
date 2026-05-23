@@ -941,7 +941,7 @@ const GALLERY_TAG_STOP_WORDS = new Set([
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
-  const { activeJobs, startGeneration } = useGeneration();
+  const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
   const [videoSubTab, setVideoSubTab] = useState<VideoSubTab>("scratch");
@@ -969,7 +969,6 @@ export default function GenerationPage() {
   const [promptDetailsOpen, setPromptDetailsOpen] = useState(false);
   const [promptDetailsSelections, setPromptDetailsSelections] = useState<PromptDetailsSelections>(DEFAULT_PROMPT_DETAILS_SELECTIONS);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const generating = activeJobs.length > 0;
   const [error, setError] = useState<string | null>(null);
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -1329,7 +1328,7 @@ export default function GenerationPage() {
   }, [characterOptions, poseOptions, appearanceOptions, sceneOptions, cameraOptions]);
 
   const handleGenerate = useCallback(async () => {
-    if ((!prompt.trim() && !hasAnySelection) || generating) return;
+    if ((!prompt.trim() && !hasAnySelection) || !canGenerate) return;
     setError(null);
 
     const isVideo = activeTab === "video";
@@ -1379,7 +1378,7 @@ export default function GenerationPage() {
         setError(err.message || "Failed to start generation");
       }
     }
-  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1811,10 +1810,10 @@ export default function GenerationPage() {
             <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
             <button
               className="btn-generate"
-              disabled={(!prompt.trim() && !hasAnySelection) || generating}
+              disabled={(!prompt.trim() && !hasAnySelection) || !canGenerate}
               onClick={handleGenerate}
             >
-              {generating
+              {!canGenerate
                 ? "Generating..."
                 : `Generate ${activeTab === "video" ? "Video" : "Image"}`
               }
@@ -1822,10 +1821,10 @@ export default function GenerationPage() {
           </div>
 
           {/* Spinner */}
-          {generating && (
+          {activeJobs.length > 0 && (
             <div className="spinner-container">
               <div className="spinner" />
-              <span>Creating your {activeTab === "video" ? "video" : "image"}...</span>
+              <span>Creating your {activeTab === "video" ? "video" : "image"}... ({activeJobs.length}/{2})</span>
             </div>
           )}
 

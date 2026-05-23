@@ -28,10 +28,13 @@ interface GenerationNotification {
   timestamp: number;
 }
 
+const MAX_CONCURRENT_GENERATIONS = 2;
+
 interface GenerationContextValue {
   activeJobs: ActiveJob[];
   notifications: GenerationNotification[];
   completedCount: number;
+  canGenerate: boolean;
   startGeneration: (jobId: string, type: "image" | "video", prompt: string, model: string) => void;
   dismissNotification: (id: string) => void;
   dismissAllNotifications: () => void;
@@ -47,6 +50,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const dismissTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const completedCount = notifications.filter((n) => n.status === "completed").length;
+  const canGenerate = activeJobs.length < MAX_CONCURRENT_GENERATIONS;
 
   const addNotification = useCallback((n: Omit<GenerationNotification, "id" | "timestamp">) => {
     const notif: GenerationNotification = {
@@ -157,7 +161,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <GenerationContext.Provider
-      value={{ activeJobs, notifications, completedCount, startGeneration, dismissNotification, dismissAllNotifications }}
+      value={{ activeJobs, notifications, completedCount, canGenerate, startGeneration, dismissNotification, dismissAllNotifications }}
     >
       {children}
       {notifications.length > 0 && (

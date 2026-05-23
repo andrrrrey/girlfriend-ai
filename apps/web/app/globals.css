@@ -466,6 +466,18 @@ body {
   flex-shrink: 0;
 }
 .topnav-bell-btn:hover { border-color: #f95bad; }
+.topnav-bell-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: bell-spin 1s linear infinite;
+  pointer-events: none;
+}
+@keyframes bell-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
 .topnav-bell-badge {
   position: absolute;
   top: -4px;
