@@ -121,7 +121,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       </div>
                       <div className="bell-item-body">
                         <div className="bell-item-title">
-                          {job.source === "character-creation" ? "Character" : job.type === "video" ? "Video" : "Image"} generating...
+                          {job.source === "character-creation" ? "Character" : job.source === "chat" ? "Chat image" : job.type === "video" ? "Video" : "Image"} generating...
                         </div>
                         <div className="bell-item-time">{formatTimeAgo(new Date(job.startedAt).getTime())}</div>
                       </div>
@@ -134,7 +134,9 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       onClick={n.status === "completed" ? () => {
                         dismissHistoryItem(n.id);
                         setBellOpen(false);
-                        window.location.href = n.source === "character-creation" ? "/create" : "/gallery";
+                        if (n.source === "character-creation") window.location.href = "/create";
+                        else if (n.source === "chat" && n.metadata?.chatId) window.location.href = `/chat?sessionId=${n.metadata.chatId}`;
+                        else window.location.href = "/gallery";
                       } : undefined}
                     >
                       <div className="bell-item-icon">
@@ -152,8 +154,8 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       <div className="bell-item-body">
                         <div className="bell-item-title">
                           {n.status === "completed"
-                            ? `${n.source === "character-creation" ? "Character" : n.type === "video" ? "Video" : "Image"} ready!`
-                            : `${n.source === "character-creation" ? "Character" : n.type === "video" ? "Video" : "Image"} failed`}
+                            ? `${n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : n.type === "video" ? "Video" : "Image"} ready!`
+                            : `${n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : n.type === "video" ? "Video" : "Image"} failed`}
                         </div>
                         <div className="bell-item-time">{formatTimeAgo(n.timestamp)}</div>
                       </div>

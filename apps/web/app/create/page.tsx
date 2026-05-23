@@ -1342,7 +1342,7 @@ export default function CreateCharacterPage() {
       try {
         const data = collectFormData();
         // Remove prompt fields — they're only used for image generation, not character creation API
-        const { ethnicityPrompt, hairStylePrompt, bodyTypePrompt, generationStyle, ...charData } = data;
+        const { ethnicityPrompt, hairStylePrompt, bodyTypePrompt, ...charData } = data;
         const newChar = await characters.create({ ...charData, avatarUrl: previewImageUrl ?? undefined });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);

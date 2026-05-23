@@ -13,7 +13,6 @@ import {
   fetchTTS,
   getPoseOptions,
   createImageJob,
-  getJobStatus,
   saveImageMessage,
   type ChatSession,
   type Message,
@@ -22,12 +21,14 @@ import {
 } from "../../lib/api";
 import ChatPoseModal from "../components/ChatPoseModal";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import { useGeneration } from "../../context/generation";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
 function ChatPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { startGeneration, notifications } = useGeneration();
   const isDemo = !user || user.subscription === "free";
   const searchParams = useSearchParams();
 
@@ -71,8 +72,6 @@ function ChatPageInner() {
   const [showInputModeDropdown, setShowInputModeDropdown] = useState(false);
   const [showPoseSelector, setShowPoseSelector] = useState(false);
   const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse | null>(null);
-  const [generatingImage, setGeneratingImage] = useState(false);
-  const imagePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load chat list
   const loadChats = useCallback(async () => {
@@ -521,6 +520,27 @@ function ChatPageInner() {
   const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
 
+  const handledJobsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const n of notifications) {
+      if (n.source !== "chat" || handledJobsRef.current.has(n.jobId)) continue;
+      const chatId = n.metadata?.chatId as string | undefined;
+      if (!chatId) continue;
+
+      if (n.status === "completed" && n.output?.url) {
+        handledJobsRef.current.add(n.jobId);
+        const poseName = (n.metadata?.poseName as string) || "image";
+        saveImageMessage(chatId, n.output.url, poseName).then(() => {
+          if (chatId === activeChat) {
+            chats.getMessages(chatId).then((res) => setMessages(res.items));
+          }
+        }).catch(() => {});
+      } else if (n.status === "failed") {
+        handledJobsRef.current.add(n.jobId);
+      }
+    }
+  }, [notifications, activeChat]);
+
   const buildChatImagePrompt = (personality: Record<string, unknown>, posePrompt: string): string => {
     const parts: string[] = ["masterpiece", "best quality", "highres", "nsfw", "explicit"];
 
@@ -571,25 +591,10 @@ function ChatPageInner() {
   };
 
   const handleGenerateImage = async (poseName: string, posePrompt: string) => {
-    if (!activeChat || generatingImage) return;
+    if (!activeChat) return;
     setShowPoseSelector(false);
-    setGeneratingImage(true);
 
     const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
-    const tempId = `temp-img-${Date.now()}`;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: tempId,
-        role: "assistant",
-        content: `Генерация изображения: ${poseName}...`,
-        type: "image",
-        mediaUrl: null,
-        metadata: null,
-        createdAt: new Date().toISOString(),
-      } as Message,
-    ]);
 
     try {
       const charStyle = activeCharPersonality.generationStyle as string | undefined;
@@ -603,38 +608,11 @@ function ChatPageInner() {
       };
       const { jobId } = await createImageJob(jobPayload);
 
-      const chatIdSnapshot = activeChat;
-      let imageSaved = false;
-      imagePollingRef.current = setInterval(async () => {
-        try {
-          const status = await getJobStatus(jobId);
-          if (status.status === "completed" && status.output?.url) {
-            if (imagePollingRef.current) clearInterval(imagePollingRef.current);
-            imagePollingRef.current = null;
-            if (!imageSaved) {
-              imageSaved = true;
-              await saveImageMessage(chatIdSnapshot, status.output.url, poseName);
-              const res = await chats.getMessages(chatIdSnapshot);
-              setMessages(res.items);
-            }
-            setGeneratingImage(false);
-          } else if (status.status === "failed") {
-            if (imagePollingRef.current) clearInterval(imagePollingRef.current);
-            imagePollingRef.current = null;
-            setMessages((prev) => prev.filter((m) => m.id !== tempId));
-            setGeneratingImage(false);
-          }
-        } catch {
-          if (imagePollingRef.current) clearInterval(imagePollingRef.current);
-          imagePollingRef.current = null;
-          setMessages((prev) => prev.filter((m) => m.id !== tempId));
-          setGeneratingImage(false);
-        }
-      }, 3000);
-    } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setGeneratingImage(false);
-    }
+      startGeneration(jobId, "image", prompt, useCivitai ? charStyle! : "alibaba/wan-2.6", "chat", {
+        chatId: activeChat,
+        poseName,
+      });
+    } catch {}
   };
 
   const handleRegenerateImage = (poseName: string) => {
@@ -651,16 +629,6 @@ function ChatPageInner() {
     const pose = allPoses.find((o) => o.name === poseName);
     if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
   };
-
-  // Cleanup polling on unmount or chat switch
-  useEffect(() => {
-    return () => {
-      if (imagePollingRef.current) {
-        clearInterval(imagePollingRef.current);
-        imagePollingRef.current = null;
-      }
-    };
-  }, [activeChat]);
 
   return (
     <div className="chat-content">
@@ -968,7 +936,7 @@ function ChatPageInner() {
                               if (poseName) handleRegenerateImage(poseName);
                             }}
                             className="action-btn"
-                            disabled={streaming || generatingImage}
+                            disabled={streaming}
                             title="Перегенерировать"
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1128,10 +1096,10 @@ function ChatPageInner() {
                   ) : (
                     <button
                       onClick={handleOpenPoseSelector}
-                      disabled={generatingImage || streaming}
+                      disabled={streaming}
                       className="choose-pose-btn"
                     >
-                      {generatingImage ? "Генерация..." : "Выбрать позу"}
+                      Выбрать позу
                     </button>
                   )}
                 </>

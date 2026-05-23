@@ -16,7 +16,8 @@ interface ActiveJob {
   prompt: string;
   model: string;
   startedAt: string;
-  source?: string; // "character-creation" | "generation" etc.
+  source?: string; // "character-creation" | "generation" | "chat" etc.
+  metadata?: Record<string, unknown>;
 }
 
 interface GenerationNotification {
@@ -28,6 +29,7 @@ interface GenerationNotification {
   error?: string | null;
   timestamp: number;
   source?: string;
+  metadata?: Record<string, unknown>;
 }
 
 const MAX_CONCURRENT = 2;
@@ -72,7 +74,7 @@ interface GenerationContextValue {
   notificationHistory: GenerationNotification[];
   completedCount: number;
   canGenerate: boolean;
-  startGeneration: (jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void;
+  startGeneration: (jobId: string, type: "image" | "video", prompt: string, model: string, source?: string, metadata?: Record<string, unknown>) => void;
   dismissNotification: (id: string) => void;
   dismissAllNotifications: () => void;
   dismissHistoryItem: (id: string) => void;
@@ -140,12 +142,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     setNotificationHistory([]);
   }, []);
 
-  const startGeneration = useCallback((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => {
+  const startGeneration = useCallback((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string, metadata?: Record<string, unknown>) => {
     setActiveJobs((prev) => {
-      const next = [...prev, { jobId, type, prompt, model, startedAt: new Date().toISOString(), source }];
+      const next = [...prev, { jobId, type, prompt, model, startedAt: new Date().toISOString(), source, metadata }];
       return next;
     });
-    addNotification({ jobId, type, status: "started", source });
+    addNotification({ jobId, type, status: "started", source, metadata });
   }, [addNotification]);
 
   // Auto-dismiss notifications after 5 seconds
@@ -188,6 +190,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               status: "completed",
               output: status.output,
               source: job.source,
+              metadata: job.metadata,
             });
           } else if (status.status === "failed") {
             setActiveJobs((prev) => prev.filter((j) => j.jobId !== job.jobId));
@@ -198,6 +201,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               status: "failed",
               error: status.error,
               source: job.source,
+              metadata: job.metadata,
             });
           }
         } catch {
@@ -212,6 +216,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               status: "failed",
               error: "Failed to check job status",
               source: job.source,
+              metadata: job.metadata,
             });
           }
         }
@@ -246,7 +251,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               className={`gen-toast ${n.status}${n.status === "completed" ? " clickable" : ""}`}
               onClick={n.status === "completed" ? () => {
                 dismissNotification(n.id);
-                window.location.href = n.source === "character-creation" ? "/create" : "/gallery";
+                if (n.source === "character-creation") window.location.href = "/create";
+                else if (n.source === "chat" && n.metadata?.chatId) window.location.href = `/chat?sessionId=${n.metadata.chatId}`;
+                else window.location.href = "/gallery";
               } : undefined}
             >
               <div className="gen-toast-icon">
@@ -268,13 +275,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               </div>
               <div className="gen-toast-body">
                 <div className="gen-toast-title">
-                  {n.status === "started" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation started`}
-                  {n.status === "completed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation completed!`}
-                  {n.status === "failed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation failed`}
+                  {n.status === "started" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation started`}
+                  {n.status === "completed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation completed!`}
+                  {n.status === "failed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation failed`}
                 </div>
                 {n.status === "completed" && (
                   <div className="gen-toast-subtitle">
-                    {n.source === "character-creation" ? "Click to continue creating" : "Click to view in gallery"}
+                    {n.source === "character-creation" ? "Click to continue creating" : n.source === "chat" ? "Click to view in chat" : "Click to view in gallery"}
                   </div>
                 )}
                 {n.status === "failed" && n.error && <div className="gen-toast-subtitle">{n.error}</div>}
