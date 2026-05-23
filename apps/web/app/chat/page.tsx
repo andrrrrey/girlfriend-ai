@@ -28,7 +28,7 @@ const DEMO_MESSAGE_LIMIT = 20;
 function ChatPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const { startGeneration, notifications } = useGeneration();
+  const { startGeneration, notifications, activeJobs } = useGeneration();
   const isDemo = !user || user.subscription === "free";
   const searchParams = useSearchParams();
 
@@ -143,7 +143,7 @@ function ChatPageInner() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, streamContent]);
+  }, [messages, streamContent, activeJobs.length]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -519,6 +519,7 @@ function ChatPageInner() {
   const activeChatData = chatList.find((c) => c.id === activeChat);
   const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
+  const generatingInThisChat = activeJobs.some((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
 
   const handledJobsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -591,7 +592,7 @@ function ChatPageInner() {
   };
 
   const handleGenerateImage = async (poseName: string, posePrompt: string) => {
-    if (!activeChat) return;
+    if (!activeChat || generatingInThisChat) return;
     setShowPoseSelector(false);
 
     const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
@@ -936,7 +937,7 @@ function ChatPageInner() {
                               if (poseName) handleRegenerateImage(poseName);
                             }}
                             className="action-btn"
-                            disabled={streaming}
+                            disabled={streaming || generatingInThisChat}
                             title="Перегенерировать"
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1004,6 +1005,15 @@ function ChatPageInner() {
                 <div className="message from-ai">
                   <div className="message-bubble">{streamContent}</div>
                   <span className="message-time">печатает...</span>
+                </div>
+              )}
+
+              {generatingInThisChat && (
+                <div className="message from-ai">
+                  <div className="message-bubble generating-indicator">
+                    <div className="generating-spinner" />
+                    <span>Генерация изображения...</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1074,12 +1084,12 @@ function ChatPageInner() {
                         onKeyDown={handleKeyDown}
                         className="chat-text-input"
                         placeholder="Leave a message..."
-                        disabled={streaming}
+                        disabled={streaming || generatingInThisChat}
                         autoFocus
                       />
                       <button
                         onClick={startRecording}
-                        disabled={streaming}
+                        disabled={streaming || generatingInThisChat}
                         className="input-icon-btn"
                         title="Голосовое сообщение"
                       >
@@ -1087,7 +1097,7 @@ function ChatPageInner() {
                       </button>
                       <button
                         onClick={handleSend}
-                        disabled={streaming || !input.trim()}
+                        disabled={streaming || generatingInThisChat || !input.trim()}
                         className="input-icon-btn send"
                       >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1096,10 +1106,10 @@ function ChatPageInner() {
                   ) : (
                     <button
                       onClick={handleOpenPoseSelector}
-                      disabled={streaming}
+                      disabled={streaming || generatingInThisChat}
                       className="choose-pose-btn"
                     >
-                      Выбрать позу
+                      {generatingInThisChat ? "Генерация..." : "Выбрать позу"}
                     </button>
                   )}
                 </>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth";
+import { useGeneration } from "../../context/generation";
 import { chats } from "../../lib/api";
 import Logo from "./Logo";
 
@@ -17,6 +18,7 @@ export default function Sidebar({
   onClose?: () => void;
 }) {
   const { user } = useAuth();
+  const { notificationHistory } = useGeneration();
   // Read token synchronously so the label is correct on the very first render
   // (avoids flicker while useAuth's async profile fetch is in-flight)
   const [hasToken] = useState(() =>
@@ -24,6 +26,10 @@ export default function Sidebar({
   );
   const isLoggedIn = user != null || hasToken;
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const chatImageCompleted = notificationHistory.filter(
+    (n) => n.source === "chat" && n.status === "completed",
+  ).length;
 
   useEffect(() => {
     if (!user) return;
@@ -36,7 +42,7 @@ export default function Sidebar({
       }).length;
       setUnreadCount(count);
     }).catch(() => {});
-  }, [user]);
+  }, [user, chatImageCompleted]);
 
   const navLinkClass = (page: ActivePage) =>
     `nav-link${activePage === page ? " active" : ""}`;
