@@ -1116,6 +1116,7 @@ export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const initRef = useRef(false);
+  const contentHtml = useRef(buildContent());
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const premiumPopupRef = useRef(setPremiumPopup);
   premiumPopupRef.current = setPremiumPopup;
@@ -1366,7 +1367,7 @@ export default function CreateCharacterPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
-      <div className="create-content" dangerouslySetInnerHTML={{ __html: buildContent() }} />
+      <div className="create-content" dangerouslySetInnerHTML={{ __html: contentHtml.current }} />
       {premiumPopup && (
         <PremiumPopup
           limitType={premiumPopup.limitType}
