@@ -1116,7 +1116,7 @@ export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const initRef = useRef(false);
-  const contentHtml = useRef(buildContent());
+  const containerRef = useRef<HTMLDivElement>(null);
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const premiumPopupRef = useRef(setPremiumPopup);
   premiumPopupRef.current = setPremiumPopup;
@@ -1127,6 +1127,11 @@ export default function CreateCharacterPage() {
   useEffect(() => {
     if (!user || initRef.current) return;
     initRef.current = true;
+
+    // Set HTML content via ref — React will never touch this DOM on re-renders
+    if (containerRef.current) {
+      containerRef.current.innerHTML = buildContent();
+    }
 
     // Bridge GenerationContext to module-level functions
     generationContextStartFn = startGenRef.current;
@@ -1367,7 +1372,7 @@ export default function CreateCharacterPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
-      <div className="create-content" dangerouslySetInnerHTML={{ __html: contentHtml.current }} />
+      <div className="create-content" ref={containerRef} />
       {premiumPopup && (
         <PremiumPopup
           limitType={premiumPopup.limitType}
