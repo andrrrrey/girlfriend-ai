@@ -25,6 +25,7 @@ import {
 let previewImageUrl: string | null = null;
 let previewPollInterval: ReturnType<typeof setInterval> | null = null;
 let avatarGenerated = false;
+let lastAvatarJobId: string | null = null;
 
 let generationContextStartFn: ((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void) | null = null;
 
@@ -342,6 +343,7 @@ interface CreateDraft {
   formData: ReturnType<typeof collectFormData>;
   previewImageUrl: string | null;
   avatarGenerated: boolean;
+  lastAvatarJobId: string | null;
 }
 
 function saveFormState(stageNum: number) {
@@ -352,6 +354,7 @@ function saveFormState(stageNum: number) {
       formData: data,
       previewImageUrl,
       avatarGenerated,
+      lastAvatarJobId,
     };
     localStorage.setItem(DRAFT_LS_KEY, JSON.stringify(draft));
   } catch { /* ignore */ }
@@ -473,6 +476,13 @@ function restoreFormState(): boolean {
     // Restore module-level state
     if (draft.previewImageUrl) previewImageUrl = draft.previewImageUrl;
     if (draft.avatarGenerated) avatarGenerated = draft.avatarGenerated;
+    if (draft.lastAvatarJobId) lastAvatarJobId = draft.lastAvatarJobId;
+
+    // If we have a jobId but no image yet, poll for the result
+    if (draft.lastAvatarJobId && !draft.previewImageUrl && draft.currentStage === 9) {
+      avatarGenerated = true;
+      pollForAvatarResult(draft.lastAvatarJobId);
+    }
 
     // Navigate to saved stage
     if (draft.currentStage > 1) {
@@ -853,10 +863,43 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
   return parts.join(", ");
 }
 
+function pollForAvatarResult(jobId: string) {
+  if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
+
+  const checkJob = async () => {
+    try {
+      const status = await getJobStatus(jobId);
+      if (status.status === "completed" && (status.output as any)?.url) {
+        if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
+        previewImageUrl = (status.output as any).url;
+        const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
+        const spinner = document.getElementById("s9-avatar-spinner");
+        const regenBtn = document.getElementById("s9-regen-btn");
+        const submitBtn = document.getElementById("btn-submit");
+        if (img) { img.src = previewImageUrl!; img.style.display = "block"; }
+        if (spinner) spinner.style.display = "none";
+        if (regenBtn) regenBtn.removeAttribute("disabled");
+        if (submitBtn) submitBtn.classList.remove("disabled");
+        saveFormState(9);
+      } else if (status.status === "failed") {
+        if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
+        const spinner = document.getElementById("s9-avatar-spinner");
+        const regenBtn = document.getElementById("s9-regen-btn");
+        if (spinner) spinner.style.display = "none";
+        if (regenBtn) regenBtn.removeAttribute("disabled");
+      }
+    } catch { /* ignore */ }
+  };
+
+  checkJob();
+  previewPollInterval = setInterval(checkJob, 2500);
+}
+
 async function startAvatarGeneration() {
   avatarGenerated = true;
   const data = collectFormData();
-  await loadGenerationOptions();
+  // Don't await — use cached options if available, load in background for next time
+  loadGenerationOptions();
   const extraPrompts = pickRandomPrompts();
   const prompt = buildAvatarPrompt(data, extraPrompts);
 
@@ -878,9 +921,11 @@ async function startAvatarGeneration() {
       jobPayload.generationStyle = data.generationStyle;
     }
     const job = await createImageJob(jobPayload);
+    lastAvatarJobId = job.jobId;
     if (generationContextStartFn) {
       generationContextStartFn(job.jobId, "image", prompt, data.generationStyle || "default", "character-creation");
     }
+    saveFormState(9);
     previewPollInterval = setInterval(async () => {
       try {
         const status = await getJobStatus(job.jobId);
@@ -1055,10 +1100,14 @@ function initInteractive() {
     };
   });
 
-  // Regenerate avatar button
-  document.getElementById("s9-regen-btn")?.addEventListener("click", () => {
-    startAvatarGeneration();
-  });
+  // Regenerate avatar button (use onclick to avoid stacking handlers)
+  const regenBtnEl = document.getElementById("s9-regen-btn");
+  if (regenBtnEl) {
+    regenBtnEl.onclick = (e) => {
+      e.stopPropagation();
+      startAvatarGeneration();
+    };
+  }
 }
 
 /* ── Component ────────────────────────────────── */
@@ -1080,6 +1129,9 @@ export default function CreateCharacterPage() {
 
     // Bridge GenerationContext to module-level functions
     generationContextStartFn = startGenRef.current;
+
+    // Pre-load generation options (appearance, pose, scene, camera) so they're cached before Stage 09
+    loadGenerationOptions();
 
     // Load dynamic options from DB
     getCharacterOptions().then((allOpts) => {
@@ -1262,6 +1314,7 @@ export default function CreateCharacterPage() {
         localStorage.removeItem(DRAFT_LS_KEY);
         previewImageUrl = null;
         avatarGenerated = false;
+        lastAvatarJobId = null;
         if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
         window.location.href = "/create";
       });
