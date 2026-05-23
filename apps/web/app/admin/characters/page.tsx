@@ -60,10 +60,12 @@ export default function AdminCharactersPage() {
     setSaving(true);
     setError("");
     try {
+      const { name, systemPrompt, personality, tags, avatarUrl, voiceId, isPublic } = editing;
+      const payload = { name, systemPrompt, personality, tags, avatarUrl, voiceId, isPublic };
       if (editing.id) {
-        await admin.updateCharacter(editing.id, editing);
+        await admin.updateCharacter(editing.id, payload);
       } else {
-        await admin.createCharacter(editing);
+        await admin.createCharacter(payload);
       }
       setEditing(null);
       loadChars();

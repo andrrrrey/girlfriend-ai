@@ -295,10 +295,17 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     finalSystemPrompt = uncensoredPreamble + behaviorPostamble;
   }
 
-  // Фильтруем системные сообщения из истории — system_prompt передаётся отдельным полем
+  // Фильтруем системные сообщения из пользовательской истории
   const chatMessages = messages
     .filter((m) => m.role !== "system")
     .map((m) => ({ role: m.role, content: m.content }));
+
+  // Вставляем system prompt как первое сообщение с role=system в messages —
+  // некоторые модели (Qwen и др.) игнорируют отдельное поле system_prompt,
+  // но читают system-сообщение из массива messages
+  if (finalSystemPrompt) {
+    chatMessages.unshift({ role: "system", content: finalSystemPrompt });
+  }
 
   // AbortController для отмены запроса при разрыве соединения клиентом
   const abortController = new AbortController();
