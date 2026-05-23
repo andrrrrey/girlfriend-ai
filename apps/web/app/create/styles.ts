@@ -27,6 +27,14 @@ export const PAGE_CSS = `
     font-weight: 500; font-size: 12px; color: #fff; white-space: nowrap;
   }
   .btn-generate .icon { width: 16px; height: 16px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .btn-reset {
+    height: 30px; background: transparent; border: 1px solid #313131; border-radius: 4px;
+    display: flex; gap: 8px; align-items: center; justify-content: center;
+    padding: 8px 14px; cursor: pointer; flex-shrink: 0;
+    font-weight: 500; font-size: 12px; color: #969696; white-space: nowrap;
+  }
+  .btn-reset:hover { color: #fff; border-color: #e36466; }
   .form-sep { width: 100%; height: 0; flex-shrink: 0; border-top: 1px solid #313131; }
 
   /* Fields */
@@ -122,6 +130,11 @@ export const PAGE_CSS = `
   }
   .ethnicity-card.selected { border: 1px solid #f95bad; background: #1a1316; }
   .ethnicity-card .card-name { position: relative; z-index: 1; font-weight: 700; font-size: 14px; color: #fff; text-align: center; }
+  .ethnicity-card-img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0.4; z-index: 0; border-radius: 8px;
+  }
+  .ethnicity-card.selected .ethnicity-card-img { opacity: 0.65; }
   .facial-grid { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
   .facial-grid .ethnicity-card { width: 120px; flex-shrink: 0; }
   .facial-scroll {

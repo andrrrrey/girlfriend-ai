@@ -16,6 +16,7 @@ interface ActiveJob {
   prompt: string;
   model: string;
   startedAt: string;
+  source?: string; // "character-creation" | "generation" etc.
 }
 
 interface GenerationNotification {
@@ -26,10 +27,12 @@ interface GenerationNotification {
   output?: { url?: string } | null;
   error?: string | null;
   timestamp: number;
+  source?: string;
 }
 
 const MAX_CONCURRENT = 2;
 const LS_KEY = "gen_active_jobs";
+const HISTORY_LS_KEY = "gen_notification_history";
 
 function loadJobs(): ActiveJob[] {
   try {
@@ -47,14 +50,33 @@ function saveJobs(jobs: ActiveJob[]) {
   } catch {}
 }
 
+function loadHistory(): GenerationNotification[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: GenerationNotification[]) {
+  try {
+    if (history.length === 0) localStorage.removeItem(HISTORY_LS_KEY);
+    else localStorage.setItem(HISTORY_LS_KEY, JSON.stringify(history));
+  } catch {}
+}
+
 interface GenerationContextValue {
   activeJobs: ActiveJob[];
   notifications: GenerationNotification[];
+  notificationHistory: GenerationNotification[];
   completedCount: number;
   canGenerate: boolean;
-  startGeneration: (jobId: string, type: "image" | "video", prompt: string, model: string) => void;
+  startGeneration: (jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void;
   dismissNotification: (id: string) => void;
   dismissAllNotifications: () => void;
+  dismissHistoryItem: (id: string) => void;
+  clearNotificationHistory: () => void;
 }
 
 const GenerationContext = createContext<GenerationContextValue | null>(null);
@@ -62,6 +84,7 @@ const GenerationContext = createContext<GenerationContextValue | null>(null);
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => loadJobs());
   const [notifications, setNotifications] = useState<GenerationNotification[]>([]);
+  const [notificationHistory, setNotificationHistory] = useState<GenerationNotification[]>(() => loadHistory());
   const pollErrorsRef = useRef<Map<string, number>>(new Map());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dismissTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -73,6 +96,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     saveJobs(activeJobs);
   }, [activeJobs]);
 
+  // Persist notification history
+  useEffect(() => {
+    saveHistory(notificationHistory);
+  }, [notificationHistory]);
+
   const completedCount = notifications.filter((n) => n.status === "completed").length;
   const canGenerate = activeJobs.length < MAX_CONCURRENT;
 
@@ -83,6 +111,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       timestamp: Date.now(),
     };
     setNotifications((prev) => [...prev, notif]);
+    // Also add to persistent history (only completed and failed)
+    if (n.status === "completed" || n.status === "failed") {
+      setNotificationHistory((prev) => [...prev, notif]);
+    }
   }, []);
 
   const dismissNotification = useCallback((id: string) => {
@@ -100,12 +132,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     dismissTimersRef.current.clear();
   }, []);
 
-  const startGeneration = useCallback((jobId: string, type: "image" | "video", prompt: string, model: string) => {
+  const dismissHistoryItem = useCallback((id: string) => {
+    setNotificationHistory((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const clearNotificationHistory = useCallback(() => {
+    setNotificationHistory([]);
+  }, []);
+
+  const startGeneration = useCallback((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => {
     setActiveJobs((prev) => {
-      const next = [...prev, { jobId, type, prompt, model, startedAt: new Date().toISOString() }];
+      const next = [...prev, { jobId, type, prompt, model, startedAt: new Date().toISOString(), source }];
       return next;
     });
-    addNotification({ jobId, type, status: "started" });
+    addNotification({ jobId, type, status: "started", source });
   }, [addNotification]);
 
   // Auto-dismiss notifications after 5 seconds
@@ -147,6 +187,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               type: job.type,
               status: "completed",
               output: status.output,
+              source: job.source,
             });
           } else if (status.status === "failed") {
             setActiveJobs((prev) => prev.filter((j) => j.jobId !== job.jobId));
@@ -156,6 +197,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               type: job.type,
               status: "failed",
               error: status.error,
+              source: job.source,
             });
           }
         } catch {
@@ -169,6 +211,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               type: job.type,
               status: "failed",
               error: "Failed to check job status",
+              source: job.source,
             });
           }
         }
@@ -188,7 +231,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <GenerationContext.Provider
-      value={{ activeJobs, notifications, completedCount, canGenerate, startGeneration, dismissNotification, dismissAllNotifications }}
+      value={{
+        activeJobs, notifications, notificationHistory, completedCount, canGenerate,
+        startGeneration, dismissNotification, dismissAllNotifications,
+        dismissHistoryItem, clearNotificationHistory,
+      }}
     >
       {children}
       {notifications.length > 0 && (
@@ -197,7 +244,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             <div
               key={n.id}
               className={`gen-toast ${n.status}${n.status === "completed" ? " clickable" : ""}`}
-              onClick={n.status === "completed" ? () => { dismissNotification(n.id); window.location.href = "/gallery"; } : undefined}
+              onClick={n.status === "completed" ? () => {
+                dismissNotification(n.id);
+                window.location.href = n.source === "character-creation" ? "/create" : "/gallery";
+              } : undefined}
             >
               <div className="gen-toast-icon">
                 {n.status === "started" && (
@@ -218,11 +268,15 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               </div>
               <div className="gen-toast-body">
                 <div className="gen-toast-title">
-                  {n.status === "started" && `${n.type === "video" ? "Video" : "Image"} generation started`}
-                  {n.status === "completed" && `${n.type === "video" ? "Video" : "Image"} generation completed!`}
-                  {n.status === "failed" && `${n.type === "video" ? "Video" : "Image"} generation failed`}
+                  {n.status === "started" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation started`}
+                  {n.status === "completed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation completed!`}
+                  {n.status === "failed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : "Image"} generation failed`}
                 </div>
-                {n.status === "completed" && <div className="gen-toast-subtitle">Click to view in gallery</div>}
+                {n.status === "completed" && (
+                  <div className="gen-toast-subtitle">
+                    {n.source === "character-creation" ? "Click to continue creating" : "Click to view in gallery"}
+                  </div>
+                )}
                 {n.status === "failed" && n.error && <div className="gen-toast-subtitle">{n.error}</div>}
               </div>
               <button className="gen-toast-close" onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}>

@@ -1,18 +1,45 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/auth";
 import { useGeneration } from "../../context/generation";
 
+function formatTimeAgo(timestamp: number): string {
+  const diff = Math.floor((Date.now() - timestamp) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
 export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, logout } = useAuth();
-  const { activeJobs, completedCount, dismissAllNotifications } = useGeneration();
+  const {
+    activeJobs, completedCount, notificationHistory,
+    dismissAllNotifications, dismissHistoryItem, clearNotificationHistory,
+  } = useGeneration();
   const isGenerating = activeJobs.length > 0;
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [bellOpen]);
 
   function handleLogout() {
     logout();
     window.location.href = "/login";
   }
+
+  const historyCount = notificationHistory.length + activeJobs.length;
 
   return (
     <header className="topnav">
@@ -47,23 +74,103 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>
         {user && (
-          <button
-            className={`topnav-bell-btn${isGenerating ? " generating" : ""}`}
-            onClick={() => { dismissAllNotifications(); window.location.href = "/gallery"; }}
-            aria-label="Notifications"
-          >
-            {isGenerating && (
-              <svg className="topnav-bell-spinner" width="38" height="38" viewBox="0 0 38 38">
-                <circle cx="19" cy="19" r="17" fill="none" stroke="url(#bell-grad)" strokeWidth="2" strokeDasharray="80 27" strokeLinecap="round"/>
-                <defs><linearGradient id="bell-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f95bad"/><stop offset="100%" stopColor="#ff0084"/></linearGradient></defs>
+          <div className="topnav-bell-wrap" ref={bellRef}>
+            <button
+              className={`topnav-bell-btn${isGenerating ? " generating" : ""}`}
+              onClick={() => setBellOpen((prev) => !prev)}
+              aria-label="Notifications"
+            >
+              {isGenerating && (
+                <svg className="topnav-bell-spinner" width="38" height="38" viewBox="0 0 38 38">
+                  <circle cx="19" cy="19" r="17" fill="none" stroke="url(#bell-grad)" strokeWidth="2" strokeDasharray="80 27" strokeLinecap="round"/>
+                  <defs><linearGradient id="bell-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f95bad"/><stop offset="100%" stopColor="#ff0084"/></linearGradient></defs>
+                </svg>
+              )}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
+              {(completedCount > 0 || historyCount > 0) && (
+                <span className="topnav-bell-badge">{completedCount || historyCount}</span>
+              )}
+            </button>
+
+            {bellOpen && (
+              <div className="bell-dropdown">
+                <div className="bell-dropdown-header">
+                  <span className="bell-dropdown-title">Notifications</span>
+                  {(notificationHistory.length > 0 || activeJobs.length > 0) && (
+                    <button
+                      className="bell-clear-btn"
+                      onClick={(e) => { e.stopPropagation(); clearNotificationHistory(); dismissAllNotifications(); }}
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="bell-dropdown-list">
+                  {activeJobs.length === 0 && notificationHistory.length === 0 && (
+                    <div className="bell-dropdown-empty">No notifications</div>
+                  )}
+                  {activeJobs.map((job) => (
+                    <div key={job.jobId} className="bell-dropdown-item started">
+                      <div className="bell-item-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                      </div>
+                      <div className="bell-item-body">
+                        <div className="bell-item-title">
+                          {job.source === "character-creation" ? "Character" : job.type === "video" ? "Video" : "Image"} generating...
+                        </div>
+                        <div className="bell-item-time">{formatTimeAgo(new Date(job.startedAt).getTime())}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {[...notificationHistory].reverse().map((n) => (
+                    <div
+                      key={n.id}
+                      className={`bell-dropdown-item ${n.status}${n.status === "completed" ? " clickable" : ""}`}
+                      onClick={n.status === "completed" ? () => {
+                        dismissHistoryItem(n.id);
+                        setBellOpen(false);
+                        window.location.href = n.source === "character-creation" ? "/create" : "/gallery";
+                      } : undefined}
+                    >
+                      <div className="bell-item-icon">
+                        {n.status === "completed" && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                        {n.status === "failed" && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e36466" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="bell-item-body">
+                        <div className="bell-item-title">
+                          {n.status === "completed"
+                            ? `${n.source === "character-creation" ? "Character" : n.type === "video" ? "Video" : "Image"} ready!`
+                            : `${n.source === "character-creation" ? "Character" : n.type === "video" ? "Video" : "Image"} failed`}
+                        </div>
+                        <div className="bell-item-time">{formatTimeAgo(n.timestamp)}</div>
+                      </div>
+                      <button
+                        className="bell-item-dismiss"
+                        onClick={(e) => { e.stopPropagation(); dismissHistoryItem(n.id); }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            {completedCount > 0 && <span className="topnav-bell-badge">{completedCount}</span>}
-          </button>
+          </div>
         )}
         {!user && <button className="btn-primary" onClick={() => { window.location.href = "/register"; }}>Create Free Account</button>}
         {user ? (

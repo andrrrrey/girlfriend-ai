@@ -10,6 +10,7 @@ import {
   type AppearanceOptionsResponse, type PoseOptionsResponse, type SceneOptionsResponse, type CameraOptionsResponse,
 } from "../../lib/api";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import { useGeneration } from "../../context/generation";
 import { PAGE_CSS } from "./styles";
 import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
@@ -23,6 +24,9 @@ import {
 
 let previewImageUrl: string | null = null;
 let previewPollInterval: ReturnType<typeof setInterval> | null = null;
+let avatarGenerated = false;
+
+let generationContextStartFn: ((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void) | null = null;
 
 let cachedAppearanceOptions: AppearanceOptionsResponse | null = null;
 let cachedPoseOptions: PoseOptionsResponse | null = null;
@@ -45,6 +49,28 @@ function cardGrid(field: string, items: string[], scrollable = false) {
   return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}">${cards}</div>`;
 }
 
+function imageCardGrid(field: string, containerId: string, scrollable = false) {
+  return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}" id="${containerId}"></div>`;
+}
+
+function populateImageCards(containerId: string, options: CharacterOption[]) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = options.map((o) => {
+    const imgHtml = o.imageUrl
+      ? `<img src="${o.imageUrl}" alt="${o.name}" class="ethnicity-card-img" />`
+      : "";
+    return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${o.name}</span></div>`;
+  }).join("");
+  container.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+    card.onclick = () => {
+      container.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+      card.classList.add("selected");
+      container.classList.remove("field-error-ring");
+    };
+  });
+}
+
 function chips(field: string, items: string[]) {
   return `<div class="tags-wrap" data-field="${field}">${items.map((v) => `<div class="tag-chip" data-value="${v}">${v}</div>`).join("")}</div>`;
 }
@@ -52,12 +78,15 @@ function chips(field: string, items: string[]) {
 function stageHeader(num: number, title: string, genDisabled = false) {
   return `<div class="form-header"><div class="stage-info"><div class="stage-label">Stage ${pad(num)}</div>
     <div class="stage-title">${title}</div></div>
-    <div class="btn-generate${genDisabled ? " disabled" : ""}">${GENERATE_BTN_SVG}<span>Generate Random</span></div></div><div class="form-sep"></div>`;
+    <div class="header-actions">
+      <div class="btn-reset">Reset</div>
+      <div class="btn-generate${genDisabled ? " disabled" : ""}">${GENERATE_BTN_SVG}<span>Generate Random</span></div>
+    </div></div><div class="form-sep"></div>`;
 }
 
 function navButtons(prev: number, next: number | "submit") {
   const right = next === "submit"
-    ? `<div class="btn-bring-to-life" id="btn-submit">Bring to Life</div>`
+    ? `<div class="btn-bring-to-life disabled" id="btn-submit">Bring to Life</div>`
     : `<div class="btn-continue" data-goto="${next}">Continue</div>`;
   return `<div class="buttons-row"><div class="btn-cancel" data-goto="${prev}">Cancel</div>${right}</div>`;
 }
@@ -84,7 +113,7 @@ function stage02() {
   return `<div class="stage-content" id="stage-02-content">
     ${stageHeader(2, "Origin")}
     <div class="dropdown-row">${dropdown("nationality", "Nationality", NATIONALITIES, "American")}${dropdown("language", "Language", LANGUAGES, "English")}</div>
-    <div class="ethnicity-section"><div class="field-label">Ethnicity</div>${cardGrid("ethnicity", ETHNICITIES)}</div>
+    <div class="ethnicity-section"><div class="field-label">Ethnicity</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
     <div class="voice-section"><div class="field-label">Voice</div>
       <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${v}</span></div>`).join("")}</div></div>
     ${navButtons(1, 3)}
@@ -96,7 +125,7 @@ function stage03() {
     ${stageHeader(3, "Facial")}
     <div class="facial-scroll">
       <div class="ethnicity-section"><div class="field-label">Eye color</div>${cardGrid("eyeColor", EYE_COLORS, true)}</div>
-      <div class="ethnicity-section"><div class="field-label">Hair style</div>${cardGrid("hairStyle", HAIR_STYLES, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">Hair style</div>${imageCardGrid("hairStyle", "hairstyle-grid-container", true)}</div>
       <div class="ethnicity-section"><div class="field-label">Hair color</div>${cardGrid("hairColor", HAIR_COLORS, true)}</div>
     </div>
     ${navButtons(2, 4)}
@@ -107,7 +136,7 @@ function stage04() {
   return `<div class="stage-content" id="stage-04-content">
     ${stageHeader(4, "Body type")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">Body type</div>${cardGrid("bodyType", BODY_TYPES, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">Body type</div>${imageCardGrid("bodyType", "bodytype-grid-container", true)}</div>
       <div class="ethnicity-section"><div class="field-label">Breast size</div>${cardGrid("breastSize", BREAST_SIZES, true)}</div>
       <div class="ethnicity-section"><div class="field-label">Butt size</div>${cardGrid("buttSize", BUTT_SIZES, true)}</div>
     </div>
@@ -167,7 +196,6 @@ function stage08() {
 }
 
 function stage09() {
-  const editIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
   return `<div class="stage-content" id="stage-09-content">
     <div class="s9-header">
       <div class="stage-info"><div class="stage-label">Stage 09</div><div class="stage-title">Final preview</div></div>
@@ -188,13 +216,10 @@ function stage09() {
         </div>
         <div class="s9-name-row">
           <span id="preview-name" class="s9-name">Character</span>
-          <button class="s9-edit-btn" title="Edit name">${editIconSvg}</button>
         </div>
         <div class="s9-age-row">
           <span id="preview-age" class="s9-age">25 yo</span>
-          <button class="s9-edit-btn" title="Edit age">${editIconSvg}</button>
         </div>
-        <button class="s9-manage-tags-btn">Manage tags</button>
       </div>
       <!-- RIGHT: tabs + attribute grid -->
       <div class="s9-attrs-col">
@@ -267,6 +292,7 @@ function buildContent() {
 function collectFormData() {
   const sel = (f: string) => document.querySelector<HTMLElement>(`[data-field="${f}"]`)?.dataset?.selected;
   const card = (f: string) => document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${f}"] .ethnicity-card.selected`)?.dataset?.value;
+  const cardPrompt = (f: string) => document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${f}"] .ethnicity-card.selected`)?.dataset?.prompt || undefined;
   const chipVals = (f: string) => Array.from(document.querySelectorAll<HTMLElement>(`.tags-wrap[data-field="${f}"] .tag-chip.selected`)).map((c) => c.dataset.value!);
   const pers = () => document.querySelector<HTMLElement>(".personality-card.selected")?.dataset?.value;
   const voice = () => document.querySelector<HTMLElement>(".voice-btn.selected")?.querySelector("span")?.textContent?.trim();
@@ -284,11 +310,14 @@ function collectFormData() {
     nationality: sel("nationality"),
     language: sel("language"),
     ethnicity: card("ethnicity"),
+    ethnicityPrompt: cardPrompt("ethnicity"),
     voice: voice(),
     eyeColor: card("eyeColor"),
     hairStyle: card("hairStyle"),
+    hairStylePrompt: cardPrompt("hairStyle"),
     hairColor: card("hairColor"),
     bodyType: card("bodyType"),
+    bodyTypePrompt: cardPrompt("bodyType"),
     breastSize: card("breastSize"),
     buttSize: card("buttSize"),
     personality: pers(),
@@ -302,6 +331,158 @@ function collectFormData() {
     lifeStory: (document.getElementById("memory-lifestory") as HTMLTextAreaElement)?.value || undefined,
     phobias: (document.getElementById("memory-phobias") as HTMLTextAreaElement)?.value || undefined,
   };
+}
+
+/* ── Form state persistence ─────────────────── */
+
+const DRAFT_LS_KEY = "create_character_draft";
+
+interface CreateDraft {
+  currentStage: number;
+  formData: ReturnType<typeof collectFormData>;
+  previewImageUrl: string | null;
+  avatarGenerated: boolean;
+}
+
+function saveFormState(stageNum: number) {
+  try {
+    const data = collectFormData();
+    const draft: CreateDraft = {
+      currentStage: stageNum,
+      formData: data,
+      previewImageUrl,
+      avatarGenerated,
+    };
+    localStorage.setItem(DRAFT_LS_KEY, JSON.stringify(draft));
+  } catch { /* ignore */ }
+}
+
+function restoreFormState(): boolean {
+  try {
+    const raw = localStorage.getItem(DRAFT_LS_KEY);
+    if (!raw) return false;
+    const draft: CreateDraft = JSON.parse(raw);
+    if (!draft || !draft.formData) return false;
+    const d = draft.formData;
+
+    // Restore inputs
+    const nameInput = document.getElementById("input-name") as HTMLInputElement | null;
+    if (nameInput && d.name) nameInput.value = d.name;
+    const surnameInput = document.getElementById("input-surname") as HTMLInputElement | null;
+    if (surnameInput && d.surname) surnameInput.value = d.surname;
+
+    // Restore age slider
+    if (d.age) {
+      const track = document.querySelector<HTMLElement>(".slider-track");
+      const fill = document.querySelector<HTMLElement>(".slider-fill");
+      const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
+      if (track && fill && tooltip) {
+        const pct = (d.age - 18) / 82;
+        fill.style.width = Math.max(0, Math.min(100, pct * 100)) + "%";
+        tooltip.textContent = String(d.age);
+        track.dataset.value = String(d.age);
+      }
+    }
+
+    // Restore dropdowns
+    const restoreDropdown = (field: string, value: string | undefined | null) => {
+      if (!value) return;
+      const container = document.querySelector<HTMLElement>(`.dropdown-container[data-field="${field}"]`);
+      if (!container) return;
+      container.dataset.selected = value;
+      const valEl = container.querySelector<HTMLElement>(".val");
+      if (valEl) valEl.textContent = value;
+    };
+    restoreDropdown("gender", d.gender);
+    restoreDropdown("orientation", d.orientation);
+    restoreDropdown("nationality", d.nationality);
+    restoreDropdown("language", d.language);
+    restoreDropdown("relationshipType", d.relationshipType);
+    restoreDropdown("familyStatus", d.familyStatus);
+
+    // Restore style selection
+    if (d.style) {
+      const styleRow = document.getElementById("style-row-container");
+      if (styleRow) {
+        styleRow.querySelectorAll<HTMLElement>(".style-card").forEach((c) => {
+          c.classList.remove("selected", "unselected");
+          c.classList.add(c.dataset.value === d.style ? "selected" : "unselected");
+        });
+      }
+    }
+
+    // Restore card selections (ethnicity, eyeColor, hairStyle, hairColor, bodyType, breastSize, buttSize, lifestyle)
+    const restoreCard = (field: string, value: string | undefined | null) => {
+      if (!value) return;
+      const grid = document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${field}"]`);
+      if (!grid) return;
+      grid.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+      const card = grid.querySelector<HTMLElement>(`.ethnicity-card[data-value="${value}"]`);
+      card?.classList.add("selected");
+    };
+    restoreCard("ethnicity", d.ethnicity);
+    restoreCard("eyeColor", d.eyeColor);
+    restoreCard("hairStyle", d.hairStyle);
+    restoreCard("hairColor", d.hairColor);
+    restoreCard("bodyType", d.bodyType);
+    restoreCard("breastSize", d.breastSize);
+    restoreCard("buttSize", d.buttSize);
+    restoreCard("lifestyle", d.lifestyle);
+
+    // Restore voice
+    if (d.voice) {
+      document.querySelectorAll<HTMLElement>(".voice-btn").forEach((b) => {
+        const name = b.querySelector("span")?.textContent?.trim();
+        b.classList.toggle("selected", name === d.voice);
+      });
+    }
+
+    // Restore personality
+    if (d.personality) {
+      document.querySelectorAll<HTMLElement>(".personality-card").forEach((c) => {
+        c.classList.toggle("selected", c.dataset.value === d.personality);
+      });
+    }
+
+    // Restore chips (work, hobbies, kinks)
+    const restoreChips = (field: string, values: string[] | undefined) => {
+      if (!values || values.length === 0) return;
+      const wrap = document.querySelector<HTMLElement>(`.tags-wrap[data-field="${field}"]`);
+      if (!wrap) return;
+      wrap.querySelectorAll<HTMLElement>(".tag-chip").forEach((chip) => {
+        chip.classList.toggle("selected", values.includes(chip.dataset.value || ""));
+      });
+    };
+    restoreChips("work", d.work);
+    restoreChips("hobbies", d.hobbies);
+    // Kinks are stored as combined array — need to restore across all 3 fields
+    if (d.kinks && d.kinks.length > 0) {
+      restoreChips("kinks1", d.kinks);
+      restoreChips("kinks2", d.kinks);
+      restoreChips("kinks3", d.kinks);
+    }
+
+    // Restore textareas
+    const memChildhood = document.getElementById("memory-childhood") as HTMLTextAreaElement | null;
+    if (memChildhood && d.childhoodMemory) memChildhood.value = d.childhoodMemory;
+    const memLifestory = document.getElementById("memory-lifestory") as HTMLTextAreaElement | null;
+    if (memLifestory && d.lifeStory) memLifestory.value = d.lifeStory;
+    const memPhobias = document.getElementById("memory-phobias") as HTMLTextAreaElement | null;
+    if (memPhobias && d.phobias) memPhobias.value = d.phobias;
+
+    // Restore module-level state
+    if (draft.previewImageUrl) previewImageUrl = draft.previewImageUrl;
+    if (draft.avatarGenerated) avatarGenerated = draft.avatarGenerated;
+
+    // Navigate to saved stage
+    if (draft.currentStage > 1) {
+      goToStage(draft.currentStage);
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /* ── Stage validation ────────────────────────── */
@@ -410,6 +591,16 @@ function randomizeStage(n: number) {
     card?.classList.add("selected");
   };
 
+  const selectRandomCard = (field: string) => {
+    const grid = document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${field}"]`);
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ethnicity-card"));
+    if (cards.length === 0) return;
+    const idx = Math.floor(Math.random() * cards.length);
+    cards.forEach((c) => c.classList.remove("selected"));
+    cards[idx].classList.add("selected");
+  };
+
   const selectChips = (field: string, values: string[]) => {
     const wrap = document.querySelector<HTMLElement>(`.tags-wrap[data-field="${field}"]`);
     if (!wrap) return;
@@ -456,7 +647,7 @@ function randomizeStage(n: number) {
       break;
     }
     case 2:
-      selectCard("ethnicity", pick(ETHNICITIES));
+      selectRandomCard("ethnicity");
       setDropdown("nationality", pick(NATIONALITIES));
       setDropdown("language", pick(LANGUAGES));
       const voiceBtns = document.querySelectorAll<HTMLElement>(".voice-btn");
@@ -468,11 +659,11 @@ function randomizeStage(n: number) {
       break;
     case 3:
       selectCard("eyeColor", pick(EYE_COLORS));
-      selectCard("hairStyle", pick(HAIR_STYLES));
+      selectRandomCard("hairStyle");
       selectCard("hairColor", pick(HAIR_COLORS));
       break;
     case 4:
-      selectCard("bodyType", pick(BODY_TYPES));
+      selectRandomCard("bodyType");
       selectCard("breastSize", pick(BREAST_SIZES));
       selectCard("buttSize", pick(BUTT_SIZES));
       break;
@@ -651,11 +842,11 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
     d.style === "Anime" ? "anime style" : "photorealistic",
     d.gender?.toLowerCase() ?? "female",
     d.age ? `${d.age} years old` : "",
-    d.ethnicity ?? "",
+    d.ethnicityPrompt || d.ethnicity || "",
     d.hairColor ? `${d.hairColor} hair` : "",
-    d.hairStyle ? `${d.hairStyle} hairstyle` : "",
+    d.hairStylePrompt || (d.hairStyle ? `${d.hairStyle} hairstyle` : ""),
     d.eyeColor ? `${d.eyeColor} eyes` : "",
-    d.bodyType ? `${d.bodyType} body` : "",
+    d.bodyTypePrompt || (d.bodyType ? `${d.bodyType} body` : ""),
     ...extraPrompts,
     "beautiful, high quality, detailed",
   ].filter(Boolean);
@@ -663,6 +854,7 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
 }
 
 async function startAvatarGeneration() {
+  avatarGenerated = true;
   const data = collectFormData();
   await loadGenerationOptions();
   const extraPrompts = pickRandomPrompts();
@@ -671,9 +863,11 @@ async function startAvatarGeneration() {
   const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
   const spinner = document.getElementById("s9-avatar-spinner");
   const regenBtn = document.getElementById("s9-regen-btn");
+  const submitBtn = document.getElementById("btn-submit");
   if (img) { img.style.display = "none"; }
   if (spinner) { spinner.style.display = "flex"; }
   if (regenBtn) { regenBtn.setAttribute("disabled", "true"); }
+  if (submitBtn) { submitBtn.classList.add("disabled"); }
 
   if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
 
@@ -684,6 +878,9 @@ async function startAvatarGeneration() {
       jobPayload.generationStyle = data.generationStyle;
     }
     const job = await createImageJob(jobPayload);
+    if (generationContextStartFn) {
+      generationContextStartFn(job.jobId, "image", prompt, data.generationStyle || "default", "character-creation");
+    }
     previewPollInterval = setInterval(async () => {
       try {
         const status = await getJobStatus(job.jobId);
@@ -694,6 +891,8 @@ async function startAvatarGeneration() {
           if (img) { img.src = previewImageUrl!; img.style.display = "block"; }
           if (spinner) spinner.style.display = "none";
           if (regenBtn) regenBtn.removeAttribute("disabled");
+          if (submitBtn) submitBtn.classList.remove("disabled");
+          saveFormState(9);
         } else if (status.status === "failed") {
           clearInterval(previewPollInterval!);
           previewPollInterval = null;
@@ -773,8 +972,22 @@ function goToStage(n: number) {
   }
 
   initInteractive();
-  if (n === 9) populatePreview();
-  if (n === 9) startAvatarGeneration();
+  if (n === 9) {
+    populatePreview();
+    if (previewImageUrl) {
+      const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
+      const spinner = document.getElementById("s9-avatar-spinner");
+      const regenBtn = document.getElementById("s9-regen-btn");
+      const submitBtn = document.getElementById("btn-submit");
+      if (img) { img.src = previewImageUrl; img.style.display = "block"; }
+      if (spinner) spinner.style.display = "none";
+      if (regenBtn) regenBtn.removeAttribute("disabled");
+      if (submitBtn) submitBtn.classList.remove("disabled");
+    } else if (!avatarGenerated) {
+      startAvatarGeneration();
+    }
+  }
+  saveFormState(n);
 }
 
 /* ── Interactive handlers ─────────────────────── */
@@ -857,33 +1070,101 @@ export default function CreateCharacterPage() {
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const premiumPopupRef = useRef(setPremiumPopup);
   premiumPopupRef.current = setPremiumPopup;
+  const { startGeneration } = useGeneration();
+  const startGenRef = useRef(startGeneration);
+  startGenRef.current = startGeneration;
 
   useEffect(() => {
     if (!user || initRef.current) return;
     initRef.current = true;
 
-    // Load dynamic styles from DB
+    // Bridge GenerationContext to module-level functions
+    generationContextStartFn = startGenRef.current;
+
+    // Load dynamic options from DB
     getCharacterOptions().then((allOpts) => {
+      // STYLE cards
       const dbStyles = allOpts.filter((o) => o.category === "STYLE").sort((a, b) => a.order - b.order);
-      if (dbStyles.length === 0) return;
-      const container = document.getElementById("style-row-container");
-      if (!container) return;
-      container.innerHTML = dbStyles.map((s, i) => {
-        const imgHtml = s.imageUrl
-          ? `<img src="${s.imageUrl}" alt="${s.name}" class="style-card-img" />`
-          : "";
-        return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
-          ${imgHtml}<span class="name">${s.name}</span></div>`;
-      }).join("");
-      // Re-bind style card click handlers
-      container.querySelectorAll<HTMLElement>(".style-card").forEach((card) => {
-        card.onclick = () => {
-          container.querySelectorAll(".style-card").forEach((c) => { c.classList.remove("selected"); c.classList.add("unselected"); });
-          card.classList.remove("unselected");
-          card.classList.add("selected");
-        };
-      });
-    }).catch(() => {});
+      if (dbStyles.length > 0) {
+        const styleContainer = document.getElementById("style-row-container");
+        if (styleContainer) {
+          styleContainer.innerHTML = dbStyles.map((s, i) => {
+            const imgHtml = s.imageUrl
+              ? `<img src="${s.imageUrl}" alt="${s.name}" class="style-card-img" />`
+              : "";
+            return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
+              ${imgHtml}<span class="name">${s.name}</span></div>`;
+          }).join("");
+          styleContainer.querySelectorAll<HTMLElement>(".style-card").forEach((card) => {
+            card.onclick = () => {
+              styleContainer.querySelectorAll(".style-card").forEach((c) => { c.classList.remove("selected"); c.classList.add("unselected"); });
+              card.classList.remove("unselected");
+              card.classList.add("selected");
+            };
+          });
+        }
+      }
+
+      // HUMAN_RACE -> ethnicity (Stage 02)
+      const humanRaceOpts = allOpts.filter((o) => o.category === "HUMAN_RACE").sort((a, b) => a.order - b.order);
+      if (humanRaceOpts.length > 0) {
+        populateImageCards("ethnicity-grid-container", humanRaceOpts);
+      } else {
+        // Fallback to hardcoded
+        const fallbackContainer = document.getElementById("ethnicity-grid-container");
+        if (fallbackContainer) {
+          fallbackContainer.innerHTML = ETHNICITIES.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${v}</span></div>`).join("");
+          fallbackContainer.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+            card.onclick = () => {
+              fallbackContainer.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+              card.classList.add("selected");
+              fallbackContainer.classList.remove("field-error-ring");
+            };
+          });
+        }
+      }
+
+      // HAIR_STYLE -> hairStyle (Stage 03)
+      const hairStyleOpts = allOpts.filter((o) => o.category === "HAIR_STYLE").sort((a, b) => a.order - b.order);
+      if (hairStyleOpts.length > 0) {
+        populateImageCards("hairstyle-grid-container", hairStyleOpts);
+      } else {
+        const fallbackContainer = document.getElementById("hairstyle-grid-container");
+        if (fallbackContainer) {
+          fallbackContainer.innerHTML = HAIR_STYLES.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${v}</span></div>`).join("");
+          fallbackContainer.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+            card.onclick = () => {
+              fallbackContainer.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+              card.classList.add("selected");
+              fallbackContainer.classList.remove("field-error-ring");
+            };
+          });
+        }
+      }
+
+      // BODY_TYPE -> bodyType (Stage 04)
+      const bodyTypeOpts = allOpts.filter((o) => o.category === "BODY_TYPE").sort((a, b) => a.order - b.order);
+      if (bodyTypeOpts.length > 0) {
+        populateImageCards("bodytype-grid-container", bodyTypeOpts);
+      } else {
+        const fallbackContainer = document.getElementById("bodytype-grid-container");
+        if (fallbackContainer) {
+          fallbackContainer.innerHTML = BODY_TYPES.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${v}</span></div>`).join("");
+          fallbackContainer.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+            card.onclick = () => {
+              fallbackContainer.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+              card.classList.add("selected");
+              fallbackContainer.classList.remove("field-error-ring");
+            };
+          });
+        }
+      }
+      // Restore saved form state after all DB grids are populated
+      restoreFormState();
+    }).catch(() => {
+      // Even on failure, try to restore
+      restoreFormState();
+    });
 
     // Dropdowns
     document.querySelectorAll<HTMLElement>(".dropdown-container").forEach((container) => {
@@ -975,6 +1256,17 @@ export default function CreateCharacterPage() {
       });
     });
 
+    // Reset buttons
+    document.querySelectorAll<HTMLElement>(".btn-reset").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        localStorage.removeItem(DRAFT_LS_KEY);
+        previewImageUrl = null;
+        avatarGenerated = false;
+        if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
+        window.location.href = "/create";
+      });
+    });
+
     // Submit
     document.getElementById("btn-submit")?.addEventListener("click", async () => {
       const submitBtn = document.getElementById("btn-submit");
@@ -984,6 +1276,7 @@ export default function CreateCharacterPage() {
       try {
         const data = collectFormData();
         const newChar = await characters.create({ ...data, avatarUrl: previewImageUrl ?? undefined });
+        localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);
         router.push(`/chat?sessionId=${newChat.id}`);
       } catch (err: unknown) {
@@ -1003,6 +1296,15 @@ export default function CreateCharacterPage() {
     });
 
     initInteractive();
+
+    // Cleanup on unmount
+    return () => {
+      if (previewPollInterval) {
+        clearInterval(previewPollInterval);
+        previewPollInterval = null;
+      }
+      generationContextStartFn = null;
+    };
   }, [user, router]);
 
   if (loading) return null;
