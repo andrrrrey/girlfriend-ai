@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useGeneration } from "../../context/generation";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
@@ -8,7 +9,6 @@ import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
   createImageJob,
   createVideoJob,
-  getJobStatus,
   getImageStyles,
   getVideoStyles,
   getGenerationHistory,
@@ -941,6 +941,7 @@ const GALLERY_TAG_STOP_WORDS = new Set([
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
+  const { activeJobs, startGeneration } = useGeneration();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
   const [videoSubTab, setVideoSubTab] = useState<VideoSubTab>("scratch");
@@ -968,7 +969,7 @@ export default function GenerationPage() {
   const [promptDetailsOpen, setPromptDetailsOpen] = useState(false);
   const [promptDetailsSelections, setPromptDetailsSelections] = useState<PromptDetailsSelections>(DEFAULT_PROMPT_DETAILS_SELECTIONS);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const generating = activeJobs.length > 0;
   const [error, setError] = useState<string | null>(null);
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -977,7 +978,6 @@ export default function GenerationPage() {
   const [gallerySearch, setGallerySearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -1001,11 +1001,13 @@ export default function GenerationPage() {
     getCachedCameraOptions().then(setCameraOptions).catch(() => {});
   }, [user]);
 
+  const prevActiveCountRef = useRef(activeJobs.length);
   useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, []);
+    if (prevActiveCountRef.current > 0 && activeJobs.length < prevActiveCountRef.current) {
+      getGenerationHistory().then(setHistory).catch(() => {});
+    }
+    prevActiveCountRef.current = activeJobs.length;
+  }, [activeJobs.length]);
 
   const hasAnySelection = useMemo(() => {
     if (characterSelections.humanRace || characterSelections.fantasyRace ||
@@ -1329,7 +1331,6 @@ export default function GenerationPage() {
   const handleGenerate = useCallback(async () => {
     if ((!prompt.trim() && !hasAnySelection) || generating) return;
     setError(null);
-    setGenerating(true);
 
     const isVideo = activeTab === "video";
     const model = isVideo ? selectedVideoModel : selectedModel;
@@ -1365,49 +1366,9 @@ export default function GenerationPage() {
         jobId = result.jobId;
       }
 
-      let pollErrors = 0;
-      let pollInterval = isVideo ? 5000 : 3000;
-      const poll = async () => {
-        try {
-          const status = await getJobStatus(jobId);
-          pollErrors = 0;
-          if (status.status === "completed") {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            setGenerating(false);
-            setHistory((prev) => {
-              if (prev.some((h) => h.jobId === status.jobId)) return prev;
-              return [
-                {
-                  jobId: status.jobId,
-                  type: isVideo ? "video" : "image",
-                  output: status.output,
-                  input: status.input || { prompt: prompt.trim(), model },
-                  createdAt: status.createdAt,
-                },
-                ...prev,
-              ];
-            });
-            setPrompt("");
-          } else if (status.status === "failed") {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            setGenerating(false);
-            setError(status.error || `${isVideo ? "Video" : "Image"} generation failed`);
-          }
-        } catch {
-          pollErrors++;
-          if (pollErrors >= 3) {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            setGenerating(false);
-            setError("Failed to check job status");
-          }
-        }
-      };
-      pollingRef.current = setInterval(poll, pollInterval);
+      startGeneration(jobId, isVideo ? "video" : "image", prompt.trim(), model);
+      setPrompt("");
     } catch (err: any) {
-      setGenerating(false);
       if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
         setPremiumPopup({
           limitType: err.body.limitType as PremiumLimitType,
@@ -1418,7 +1379,7 @@ export default function GenerationPage() {
         setError(err.message || "Failed to start generation");
       }
     }
-  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style]);
+  }, [prompt, selectedModel, selectedVideoModel, generating, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {

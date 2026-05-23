@@ -2,9 +2,11 @@
 
 import React from "react";
 import { useAuth } from "../../context/auth";
+import { useGeneration } from "../../context/generation";
 
 export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, logout } = useAuth();
+  const { completedCount, dismissAllNotifications } = useGeneration();
 
   function handleLogout() {
     logout();
@@ -43,6 +45,19 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <button className="topnav-search-icon-btn" aria-label="Search">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>
+        {user && completedCount > 0 && (
+          <button
+            className="topnav-bell-btn"
+            onClick={() => { dismissAllNotifications(); window.location.href = "/gallery"; }}
+            aria-label="Notifications"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span className="topnav-bell-badge">{completedCount}</span>
+          </button>
+        )}
         {!user && <button className="btn-primary" onClick={() => { window.location.href = "/register"; }}>Create Free Account</button>}
         {user ? (
           <button className="btn-secondary" onClick={handleLogout}>Log out <span style={{width:6,height:6,borderRadius:'50%',background:'#E36466',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(227,100,102,0.6)'}}></span></button>

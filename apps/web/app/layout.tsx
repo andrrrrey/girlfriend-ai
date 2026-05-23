@@ -1,4 +1,5 @@
 import { AuthProvider } from "../context/auth";
+import { GenerationProvider } from "../context/generation";
 import LayoutShell from "./components/LayoutShell";
 import "./globals.css";
 
@@ -11,7 +12,9 @@ export default function RootLayout({ children }: { children: import("react").Rea
     <html lang="ru">
       <body>
         <AuthProvider>
-          <LayoutShell>{children}</LayoutShell>
+          <GenerationProvider>
+            <LayoutShell>{children}</LayoutShell>
+          </GenerationProvider>
         </AuthProvider>
       </body>
     </html>

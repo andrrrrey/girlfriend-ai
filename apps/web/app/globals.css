@@ -392,6 +392,98 @@ body {
   flex-shrink: 0;
 }
 
+/* ─── Generation Toast Notifications ────────── */
+.gen-toast-container {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.gen-toast {
+  background: rgba(18, 18, 18, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #313131;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Syne', sans-serif;
+  color: #fff;
+  min-width: 260px;
+  max-width: 340px;
+  pointer-events: auto;
+  animation: gen-toast-in 0.3s ease-out;
+  cursor: default;
+}
+.gen-toast.clickable { cursor: pointer; }
+.gen-toast.clickable:hover { border-color: #f95bad; }
+.gen-toast-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.gen-toast-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.gen-toast-title { font-weight: 600; font-size: 12px; }
+.gen-toast-subtitle { font-size: 10px; color: #848484; }
+.gen-toast-close {
+  background: none;
+  border: none;
+  color: #848484;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.gen-toast-close:hover { color: #fff; }
+.gen-toast.completed .gen-toast-icon { color: #4ade80; }
+.gen-toast.failed .gen-toast-icon { color: #e36466; }
+.gen-toast.started .gen-toast-icon { color: #f95bad; animation: gen-toast-spin 1.2s linear infinite; }
+@keyframes gen-toast-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes gen-toast-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── TopNav Bell ──────────────────────────── */
+.topnav-bell-btn {
+  position: relative;
+  background: transparent;
+  border: 1px solid #313131;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  flex-shrink: 0;
+}
+.topnav-bell-btn:hover { border-color: #f95bad; }
+.topnav-bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: linear-gradient(to right, #f95bad, #ff0084);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
 /* ─── Responsive breakpoints ─────────────────── */
 @media (max-width: 768px) {
   .sidebar {
@@ -436,4 +528,6 @@ body {
     display: flex;
   }
   .mobile-overlay.visible { display: block; }
+  .gen-toast-container { right: 12px; top: 64px; left: 12px; }
+  .gen-toast { min-width: unset; max-width: unset; }
 }

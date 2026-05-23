@@ -929,14 +929,12 @@ function UnauthContent() {
    ProfileContent (authenticated)
 ═══════════════════════════════════════ */
 function ProfileContent() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("subscription");
   const isAdmin = user?.role === "admin";
 
-  function handleLogout() { logout(); window.location.href = "/login"; }
-
   const displayName = user?.nickname ?? user?.email?.split("@")[0] ?? "User";
-  const handle = `@${(user?.email ?? "user").split("@")[0]}`;
+  const handle = `@${user?.nickname ?? (user?.email ?? "user").split("@")[0]}`;
 
   return (
     <>
@@ -967,9 +965,6 @@ function ProfileContent() {
           <div className="pp-hero-name">{displayName}</div>
           <div className="pp-hero-handle">{handle}</div>
         </div>
-        <button className="pp-hero-logout" onClick={handleLogout}>
-          <IcoLogout /> Logout Account
-        </button>
       </div>
 
       {/* Tabs */}

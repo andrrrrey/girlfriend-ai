@@ -16,7 +16,7 @@ export default function Sidebar({
   mobileOpen?: boolean;
   onClose?: () => void;
 }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   // Read token synchronously so the label is correct on the very first render
   // (avoids flicker while useAuth's async profile fetch is in-flight)
   const [hasToken] = useState(() =>
@@ -115,10 +115,6 @@ export default function Sidebar({
         <a className="nav-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <span className="label">Help center</span>
-        </a>
-        <a className="nav-link logout" onClick={() => { logout(); window.location.href = "/login"; }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span className="label">Logout Account</span>
         </a>
       </nav>
 
