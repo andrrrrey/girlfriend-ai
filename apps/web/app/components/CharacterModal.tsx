@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { CharacterOption } from "../../lib/api";
 
 export interface CharacterSelections {
@@ -35,7 +35,14 @@ interface Props {
   options: CharacterOption[];
 }
 
-type Tab = "style" | "age" | "face" | "body";
+type Section = "style" | "age" | "face" | "body";
+const SECTION_LABELS: Record<Section, string> = {
+  style: "Graphic Style",
+  age: "Age and Ethnicity",
+  face: "Face and Hair",
+  body: "Body type",
+};
+const SECTIONS: Section[] = ["style", "age", "face", "body"];
 
 const EYE_COLORS = [
   { name: "Blue", color: "#4A90D9" },
@@ -79,9 +86,36 @@ const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
 const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 
 export default function CharacterModal({ open, onClose, selections, onSave, options }: Props) {
-  const [tab, setTab] = useState<Tab>("style");
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [raceSubTab, setRaceSubTab] = useState<"human" | "fantasy">("human");
+  const [activeSection, setActiveSection] = useState<Section>("style");
+
+  const sectionRefs = {
+    style: useRef<HTMLDivElement>(null),
+    age: useRef<HTMLDivElement>(null),
+    face: useRef<HTMLDivElement>(null),
+    body: useRef<HTMLDivElement>(null),
+  };
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const containerTop = container.getBoundingClientRect().top;
+      let closest: Section = "style";
+      let closestDist = Infinity;
+      for (const s of SECTIONS) {
+        const el = sectionRefs[s].current;
+        if (!el) continue;
+        const dist = Math.abs(el.getBoundingClientRect().top - containerTop);
+        if (dist < closestDist) { closestDist = dist; closest = s; }
+      }
+      setActiveSection(closest);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  });
 
   if (!open) return null;
 
@@ -90,6 +124,11 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
   const toggle = (arr: string[], val: string): string[] =>
     arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
+  const scrollTo = (section: Section) => {
+    setActiveSection(section);
+    sectionRefs[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -97,39 +136,35 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
         <div style={styles.header}>
           <span style={styles.title}>Character</span>
           <div style={styles.headerActions}>
-            <button style={styles.headerBtn}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="#fff" strokeWidth="1.3"/><path d="M10.5 10.5L14 14" stroke="#fff" strokeWidth="1.3" strokeLinecap="round"/></svg>
-              Search Character
-            </button>
-            <button style={styles.headerBtn}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
-            </button>
             <button style={styles.closeBtn} onClick={onClose}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          {(["style", "age", "face", "body"] as Tab[]).map((t) => {
-            const labels: Record<Tab, string> = { style: "Graphic Style", age: "Age and Ethnicity", face: "Face and Hair", body: "Body type" };
-            return (
-              <button key={t} style={{ ...styles.tabBtn, ...(tab === t ? styles.tabBtnActive : {}) }} onClick={() => setTab(t)}>
-                {labels[t]}
-                {tab === t && <div style={styles.tabUnderline} />}
-              </button>
-            );
-          })}
-        </div>
+        {/* Body: sidebar + content */}
+        <div style={styles.body}>
+          {/* Sidebar */}
+          <div style={styles.sidebar}>
+            <nav style={styles.sidebarNav}>
+              {SECTIONS.map((s) => (
+                <button key={s} style={{ ...styles.sidebarItem, ...(activeSection === s ? styles.sidebarItemActive : {}) }} onClick={() => scrollTo(s)}>
+                  {SECTION_LABELS[s]}
+                </button>
+              ))}
+            </nav>
+            <div style={styles.sidebarDivider} />
+            <button style={styles.sidebarGenerate}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
+              Generate Random
+            </button>
+          </div>
 
-        {/* Content */}
-        <div style={styles.content}>
-          {/* ── Graphic Style ── */}
-          {tab === "style" && (
-            <div>
-              <div style={styles.sectionLabel}>Style</div>
+          {/* Scrollable content */}
+          <div style={styles.content} ref={contentRef}>
+            {/* ── Graphic Style ── */}
+            <div ref={sectionRefs.style} style={styles.section}>
+              <div style={styles.sectionTitle}>Graphic Style</div>
               <div style={styles.imageGrid}>
                 {byCategory("STYLE").map((opt) => (
                   <button key={opt.id} style={{ ...styles.imgCard, ...(draft.style === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
@@ -140,203 +175,193 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 {byCategory("STYLE").length === 0 && <div style={styles.emptyHint}>No styles added yet. Add them in the admin panel.</div>}
               </div>
             </div>
-          )}
 
-          {/* ── Age and Ethnicity ── */}
-          {tab === "age" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {/* Age slider */}
-              <div>
-                <div style={styles.sectionLabel}>Age</div>
-                <div style={{ position: "relative", padding: "8px 0" }}>
-                  <div style={{ ...styles.sliderTooltip, left: `${((draft.age - 18) / 82) * 100}%` }}>{draft.age}</div>
-                  <input
-                    type="range" min={18} max={100} value={draft.age}
-                    onChange={(e) => setDraft({ ...draft, age: Number(e.target.value) })}
-                    style={styles.slider}
-                  />
-                  <div style={styles.sliderLabels}><span>18</span><span>100</span></div>
+            {/* ── Age and Ethnicity ── */}
+            <div ref={sectionRefs.age} style={styles.section}>
+              <div style={styles.sectionTitle}>Age and Ethnicity</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  <div style={styles.sectionLabel}>Age</div>
+                  <div style={{ position: "relative", padding: "8px 0" }}>
+                    <div style={{ ...styles.sliderTooltip, left: `${((draft.age - 18) / 82) * 100}%` }}>{draft.age}</div>
+                    <input
+                      type="range" min={18} max={100} value={draft.age}
+                      onChange={(e) => setDraft({ ...draft, age: Number(e.target.value) })}
+                      style={styles.slider}
+                    />
+                    <div style={styles.sliderLabels}><span>18</span><span>100</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={styles.sectionLabel}>Gender</div>
+                  <div style={styles.pillRow}>
+                    {GENDERS.map((g) => (
+                      <button key={g} style={{ ...styles.pill, ...(draft.gender === g ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={styles.raceTabRow}>
+                    <button style={{ ...styles.raceTab, ...(raceSubTab === "human" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("human")}>Human Race</button>
+                    <button style={{ ...styles.raceTab, ...(raceSubTab === "fantasy" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("fantasy")}>Fantasy Race</button>
+                  </div>
+                  <div style={styles.imageRowScroll}>
+                    {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").map((opt) => {
+                      const selected = raceSubTab === "human" ? draft.humanRace === opt.name : draft.fantasyRace === opt.name;
+                      return (
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardActive : {}) }} onClick={() => {
+                          if (raceSubTab === "human") setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name });
+                          else setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name });
+                        }}>
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          <span style={styles.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
+                    {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").length === 0 && (
+                      <div style={styles.emptyHint}>No options added yet.</div>
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Gender */}
-              <div>
-                <div style={styles.sectionLabel}>Gender</div>
-                <div style={styles.pillRow}>
-                  {GENDERS.map((g) => (
-                    <button key={g} style={{ ...styles.pill, ...(draft.gender === g ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
-                      {g}
-                    </button>
-                  ))}
+            {/* ── Face and Hair ── */}
+            <div ref={sectionRefs.face} style={styles.section}>
+              <div style={styles.sectionTitle}>Face and Hair</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <div>
+                  <div style={styles.sectionLabel}>Eye Color</div>
+                  <div style={styles.colorPillRow}>
+                    {EYE_COLORS.map((ec) => (
+                      <button key={ec.name} style={{ ...styles.colorPill, ...(draft.eyeColor === ec.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
+                        <span style={{ ...styles.colorDot, background: ec.color }} />
+                        {ec.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Race sub-tabs */}
-              <div>
-                <div style={styles.raceTabRow}>
-                  <button style={{ ...styles.raceTab, ...(raceSubTab === "human" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("human")}>Human Race</button>
-                  <button style={{ ...styles.raceTab, ...(raceSubTab === "fantasy" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("fantasy")}>Fantasy Race</button>
+                <div>
+                  <div style={styles.sectionLabel}>Eye Features</div>
+                  <div style={styles.pillRow}>
+                    {EYE_FEATURES.map((f) => (
+                      <button key={f} style={{ ...styles.pill, ...(draft.eyeFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, eyeFeatures: toggle(draft.eyeFeatures, f) })}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={styles.imageRowScroll}>
-                  {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").map((opt) => {
-                    const selected = raceSubTab === "human" ? draft.humanRace === opt.name : draft.fantasyRace === opt.name;
-                    return (
-                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardActive : {}) }} onClick={() => {
-                        if (raceSubTab === "human") setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name });
-                        else setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name });
-                      }}>
+
+                <div>
+                  <div style={styles.sectionLabel}>Face Features</div>
+                  <div style={styles.pillRow}>
+                    {FACE_FEATURES.map((f) => (
+                      <button key={f} style={{ ...styles.pill, ...(draft.faceFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, faceFeatures: toggle(draft.faceFeatures, f) })}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={styles.sectionLabel}>Hair Style</div>
+                  <div style={styles.imageRowScroll}>
+                    {byCategory("HAIR_STYLE").map((opt) => (
+                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.hairStyle === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
                         <span style={styles.imgCardLabel}>{opt.name}</span>
                       </button>
-                    );
-                  })}
-                  {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").length === 0 && (
-                    <div style={styles.emptyHint}>No options added yet.</div>
-                  )}
+                    ))}
+                    {byCategory("HAIR_STYLE").length === 0 && <div style={styles.emptyHint}>No hair styles added yet.</div>}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={styles.sectionLabel}>Hair Length</div>
+                  <div style={styles.pillRow}>
+                    {HAIR_LENGTHS.map((l) => (
+                      <button key={l} style={{ ...styles.pill, ...(draft.hairLength === l ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, hairLength: draft.hairLength === l ? undefined : l })}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={styles.sectionLabel}>Hair Color</div>
+                  <div style={styles.colorPillRow}>
+                    {HAIR_COLORS.map((hc) => (
+                      <button key={hc.name} style={{ ...styles.colorPill, ...(draft.hairColor === hc.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
+                        <span style={{ ...styles.colorDot, background: hc.color }} />
+                        {hc.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* ── Face and Hair ── */}
-          {tab === "face" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              {/* Eye Color */}
-              <div>
-                <div style={styles.sectionLabel}>Eye Color</div>
-                <div style={styles.colorPillRow}>
-                  {EYE_COLORS.map((ec) => (
-                    <button key={ec.name} style={{ ...styles.colorPill, ...(draft.eyeColor === ec.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
-                      <span style={{ ...styles.colorDot, background: ec.color }} />
-                      {ec.name}
-                    </button>
-                  ))}
+            {/* ── Body type ── */}
+            <div ref={sectionRefs.body} style={styles.section}>
+              <div style={styles.sectionTitle}>Body type</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  <div style={styles.sectionLabel}>Body type</div>
+                  <div style={styles.imageRowScroll}>
+                    {byCategory("BODY_TYPE").map((opt) => (
+                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.bodyType === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
+                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                        <span style={styles.imgCardLabel}>{opt.name}</span>
+                      </button>
+                    ))}
+                    {byCategory("BODY_TYPE").length === 0 && <div style={styles.emptyHint}>No body types added yet.</div>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Eye Features */}
-              <div>
-                <div style={styles.sectionLabel}>Eye Features</div>
-                <div style={styles.pillRow}>
-                  {EYE_FEATURES.map((f) => (
-                    <button key={f} style={{ ...styles.pill, ...(draft.eyeFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, eyeFeatures: toggle(draft.eyeFeatures, f) })}>
-                      {f}
-                    </button>
-                  ))}
+                <div>
+                  <div style={styles.sectionLabel}>Breast size</div>
+                  <div style={styles.imageRowScroll}>
+                    {byCategory("BREAST_SIZE").map((opt) => (
+                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.breastSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
+                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                        <span style={styles.imgCardLabel}>{opt.name}</span>
+                      </button>
+                    ))}
+                    {byCategory("BREAST_SIZE").length === 0 && <div style={styles.emptyHint}>No breast sizes added yet.</div>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Face Features */}
-              <div>
-                <div style={styles.sectionLabel}>Face Features</div>
-                <div style={styles.pillRow}>
-                  {FACE_FEATURES.map((f) => (
-                    <button key={f} style={{ ...styles.pill, ...(draft.faceFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, faceFeatures: toggle(draft.faceFeatures, f) })}>
-                      {f}
-                    </button>
-                  ))}
+                <div>
+                  <div style={styles.sectionLabel}>Butt size</div>
+                  <div style={styles.imageRowScroll}>
+                    {byCategory("BUTT_SIZE").map((opt) => (
+                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.buttSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
+                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                        <span style={styles.imgCardLabel}>{opt.name}</span>
+                      </button>
+                    ))}
+                    {byCategory("BUTT_SIZE").length === 0 && <div style={styles.emptyHint}>No butt sizes added yet.</div>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Hair Style */}
-              <div>
-                <div style={styles.sectionLabel}>Hair Style</div>
-                <div style={styles.imageRowScroll}>
-                  {byCategory("HAIR_STYLE").map((opt) => (
-                    <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.hairStyle === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
-                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                      <span style={styles.imgCardLabel}>{opt.name}</span>
-                    </button>
-                  ))}
-                  {byCategory("HAIR_STYLE").length === 0 && <div style={styles.emptyHint}>No hair styles added yet.</div>}
-                </div>
-              </div>
-
-              {/* Hair Length */}
-              <div>
-                <div style={styles.sectionLabel}>Hair Length</div>
-                <div style={styles.pillRow}>
-                  {HAIR_LENGTHS.map((l) => (
-                    <button key={l} style={{ ...styles.pill, ...(draft.hairLength === l ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, hairLength: draft.hairLength === l ? undefined : l })}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hair Color */}
-              <div>
-                <div style={styles.sectionLabel}>Hair Color</div>
-                <div style={styles.colorPillRow}>
-                  {HAIR_COLORS.map((hc) => (
-                    <button key={hc.name} style={{ ...styles.colorPill, ...(draft.hairColor === hc.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
-                      <span style={{ ...styles.colorDot, background: hc.color }} />
-                      {hc.name}
-                    </button>
-                  ))}
+                <div>
+                  <div style={styles.sectionLabel}>Height</div>
+                  <div style={styles.pillRow}>
+                    {HEIGHTS.map((h) => (
+                      <button key={h} style={{ ...styles.pill, ...(draft.height === h ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, height: draft.height === h ? undefined : h })}>
+                        {h}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* ── Body type ── */}
-          {tab === "body" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {/* Body type */}
-              <div>
-                <div style={styles.sectionLabel}>Body type</div>
-                <div style={styles.imageRowScroll}>
-                  {byCategory("BODY_TYPE").map((opt) => (
-                    <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.bodyType === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
-                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                      <span style={styles.imgCardLabel}>{opt.name}</span>
-                    </button>
-                  ))}
-                  {byCategory("BODY_TYPE").length === 0 && <div style={styles.emptyHint}>No body types added yet.</div>}
-                </div>
-              </div>
-
-              {/* Breast size */}
-              <div>
-                <div style={styles.sectionLabel}>Breast size</div>
-                <div style={styles.imageRowScroll}>
-                  {byCategory("BREAST_SIZE").map((opt) => (
-                    <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.breastSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
-                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                      <span style={styles.imgCardLabel}>{opt.name}</span>
-                    </button>
-                  ))}
-                  {byCategory("BREAST_SIZE").length === 0 && <div style={styles.emptyHint}>No breast sizes added yet.</div>}
-                </div>
-              </div>
-
-              {/* Butt size */}
-              <div>
-                <div style={styles.sectionLabel}>Butt size</div>
-                <div style={styles.imageRowScroll}>
-                  {byCategory("BUTT_SIZE").map((opt) => (
-                    <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.buttSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
-                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                      <span style={styles.imgCardLabel}>{opt.name}</span>
-                    </button>
-                  ))}
-                  {byCategory("BUTT_SIZE").length === 0 && <div style={styles.emptyHint}>No butt sizes added yet.</div>}
-                </div>
-              </div>
-
-              {/* Height */}
-              <div>
-                <div style={styles.sectionLabel}>Height</div>
-                <div style={styles.pillRow}>
-                  {HEIGHTS.map((h) => (
-                    <button key={h} style={{ ...styles.pill, ...(draft.height === h ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, height: draft.height === h ? undefined : h })}>
-                      {h}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -384,7 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
   modal: {
     background: "#111",
     borderRadius: 16,
-    width: "min(860px, 95vw)",
+    width: "min(960px, 95vw)",
     maxHeight: "90vh",
     display: "flex",
     flexDirection: "column",
@@ -409,18 +434,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 8,
   },
-  headerBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "7px 14px",
-    borderRadius: 8,
-    border: "1px solid #3a3a3a",
-    background: "transparent",
-    color: "#fff",
-    fontSize: 13,
-    cursor: "pointer",
-  },
   closeBtn: {
     width: 32,
     height: 32,
@@ -433,37 +446,76 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
-  tabs: {
+  body: {
     display: "flex",
-    borderBottom: "1px solid #2a2a2a",
-    flexShrink: 0,
+    flex: 1,
+    overflow: "hidden",
   },
-  tabBtn: {
-    position: "relative",
-    padding: "14px 20px",
+  sidebar: {
+    width: 200,
+    flexShrink: 0,
+    background: "#151515",
+    borderRight: "1px solid #2a2a2a",
+    display: "flex",
+    flexDirection: "column",
+    padding: "16px 0",
+  },
+  sidebarNav: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  sidebarItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 20px",
     background: "transparent",
     border: "none",
+    borderLeft: "3px solid transparent",
     color: "#888",
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: 500,
     cursor: "pointer",
-    whiteSpace: "nowrap" as const,
+    textAlign: "left" as const,
+    transition: "all 0.15s",
   },
-  tabBtnActive: {
-    color: "#fff",
+  sidebarItemActive: {
+    color: "#f95bad",
+    borderLeft: "3px solid #f95bad",
+    background: "rgba(249,91,173,0.06)",
   },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    background: "#f95bad",
-    borderRadius: "2px 2px 0 0",
+  sidebarDivider: {
+    height: 1,
+    background: "#2a2a2a",
+    margin: "12px 16px",
+  },
+  sidebarGenerate: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "12px 20px",
+    background: "transparent",
+    border: "none",
+    color: "#C1F0AA",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    textAlign: "left" as const,
   },
   content: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px 24px",
+    padding: "24px",
+  },
+  section: {
+    marginBottom: 36,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 700,
+    marginBottom: 16,
+    paddingBottom: 10,
+    borderBottom: "1px solid #2a2a2a",
   },
   sectionLabel: {
     color: "#aaa",
