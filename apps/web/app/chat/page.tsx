@@ -974,9 +974,13 @@ function ChatPageInner() {
                             onClick={() => handlePlayTTS(msg.id)}
                             className="action-btn"
                             disabled={loadingTTSId === msg.id}
-                            title={playingTTSId === msg.id ? "Остановить" : "Озвучить"}
+                            title={playingTTSId === msg.id ? "Пауза" : "Озвучить"}
                           >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5h1.5L6 2.5v7L3.5 7.5H2a.5.5 0 01-.5-.5V5a.5.5 0 01.5-.5z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 4a2.5 2.5 0 010 4" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/><path d="M9.5 2.5a4.5 4.5 0 010 7" stroke="#fff" strokeWidth="0.8" strokeLinecap="round"/></svg>
+                            {playingTTSId === msg.id ? (
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.5" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/><rect x="7" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/></svg>
+                            ) : (
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1.5v9l7-4.5-7-4.5z" fill="#fff"/></svg>
+                            )}
                           </button>
                           <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>

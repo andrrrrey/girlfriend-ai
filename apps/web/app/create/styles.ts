@@ -11,7 +11,7 @@ export const PAGE_CSS = `
   .page-title .pink { color: #ff99ce; }
   .create-body { display: flex; gap: 38px; width: 100%; max-width: 1172px; margin-top: 16px; }
   .form-card {
-    width: 934px; height: 668px; background: #090909;
+    width: 934px; min-height: 668px; height: calc(100vh - 46px - 20px - 38px - 16px); background: #090909;
     border: 1px solid #313131; border-radius: 8px;
     display: flex; flex-direction: column; gap: 22px; padding: 24px; overflow: hidden;
   }
@@ -123,7 +123,7 @@ export const PAGE_CSS = `
   .ethnicity-section { display: flex; flex-direction: column; gap: 16px; width: 100%; flex: 1; min-height: 0; }
   .ethnicity-grid { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; overflow-y: auto; overflow-x: hidden; }
   .ethnicity-card {
-    width: calc(20% - 8px); height: 120px; border-radius: 8px; position: relative;
+    width: calc(20% - 8px); aspect-ratio: 1; border-radius: 8px; position: relative;
     display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
     border: 1px dashed #969696; background: #121212;
   }

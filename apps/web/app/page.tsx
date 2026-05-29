@@ -57,6 +57,7 @@ const PAGE_CSS = `
       display: flex; flex-direction: column; align-items: flex-start;
       justify-content: space-between; padding: 12px; gap: 8px;
       opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+      z-index: 4;
     }
     .card-featured-wrap:hover .hover-panel { opacity: 1; pointer-events: auto; }
     .card-featured-wrap:hover .card.featured { border-color: #5b5b5b; }
