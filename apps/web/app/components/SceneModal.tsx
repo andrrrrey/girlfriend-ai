@@ -61,6 +61,17 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
     props: selections.props,
   });
   const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    setDraft({
+      locations: [...selections.locations],
+      timeOfDay: [...selections.timeOfDay],
+      weather: [...selections.weather],
+      particles: [...selections.particles],
+      environmentEffects: [...selections.environmentEffects],
+      props: selections.props,
+    });
+  }, [selections]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,8 +108,8 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
       locations: allLocations.length ? [pick(allLocations).name] : [],
       timeOfDay: [pick(ATMOSPHERE_SECTIONS[0].options)],
       weather: [pick(ATMOSPHERE_SECTIONS[1].options)],
-      particles: Math.random() > 0.5 ? [pick(ATMOSPHERE_SECTIONS[2].options)] : [],
-      environmentEffects: Math.random() > 0.5 ? [pick(ATMOSPHERE_SECTIONS[3].options)] : [],
+      particles: [pick(ATMOSPHERE_SECTIONS[2].options)],
+      environmentEffects: [pick(ATMOSPHERE_SECTIONS[3].options)],
       props: "",
     });
   };

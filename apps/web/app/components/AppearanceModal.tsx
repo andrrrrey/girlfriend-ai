@@ -46,6 +46,10 @@ function SelectedOverlay() {
 export default function AppearanceModal({ open, onClose, selections, onSave, options }: Props) {
   const [draft, setDraft] = useState<AppearanceSelections>({ outfits: [...selections.outfits], outfitDetails: [...selections.outfitDetails], condition: [...selections.condition] });
   const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    setDraft({ outfits: [...selections.outfits], outfitDetails: [...selections.outfitDetails], condition: [...selections.condition] });
+  }, [selections]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

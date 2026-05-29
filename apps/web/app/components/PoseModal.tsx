@@ -40,6 +40,10 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
     poses: [...selections.poses],
   });
   const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    setDraft({ facialExpressions: [...selections.facialExpressions], poses: [...selections.poses] });
+  }, [selections]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

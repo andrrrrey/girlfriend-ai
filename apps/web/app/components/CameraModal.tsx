@@ -82,6 +82,10 @@ export default function CameraModal({ open, onClose, selections, onSave, options
   });
   const [activeSection, setActiveSection] = useState<Section>("framing");
 
+  useEffect(() => {
+    setDraft({ framing: [...selections.framing], cameraAngle: [...selections.cameraAngle], lens: [...selections.lens], lighting: [...selections.lighting] });
+  }, [selections]);
+
   const sectionRefs = {
     framing: useRef<HTMLDivElement>(null),
     cameraAngle: useRef<HTMLDivElement>(null),

@@ -36,15 +36,6 @@ interface Props {
   onRandomize?: () => void;
 }
 
-type Section = "style" | "age" | "face" | "body";
-const SECTION_LABELS: Record<Section, string> = {
-  style: "Graphic Style",
-  age: "Age and Ethnicity",
-  face: "Face and Hair",
-  body: "Body type",
-};
-const SECTIONS: Section[] = ["style", "age", "face", "body"];
-
 export const EYE_COLORS = [
   { name: "Blue", color: "#4A90D9" },
   { name: "Brown", color: "#8B4513" },
@@ -96,84 +87,34 @@ function SelectedOverlay() {
   );
 }
 
-function ScrollRow({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [showLeft, setShowLeft] = useState(false);
-  const [showRight, setShowRight] = useState(false);
-
-  const update = () => {
-    const el = ref.current;
-    if (!el) return;
-    setShowLeft(el.scrollLeft > 0);
-    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  };
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    update();
-    el.addEventListener("scroll", update);
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
-  }, [children]);
-
-  const scroll = (dir: number) => {
-    ref.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
-  };
-
-  return (
-    <div style={styles.scrollRowWrapper}>
-      {showLeft && (
-        <button style={{ ...styles.scrollArrow, ...styles.scrollArrowLeft }} onClick={() => scroll(-1)}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      )}
-      <div ref={ref} style={styles.imageRowScroll}>
-        {children}
-      </div>
-      {showRight && (
-        <button style={{ ...styles.scrollArrow, ...styles.scrollArrowRight }} onClick={() => scroll(1)}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      )}
-    </div>
-  );
-}
+const toggle = (arr: string[], val: string): string[] =>
+  arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
 export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
-  const [raceSubTab, setRaceSubTab] = useState<"human" | "fantasy">("human");
-  const [activeSection, setActiveSection] = useState<Section>("style");
+  const [activeId, setActiveId] = useState<string>("style");
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft({ ...selections });
   }, [selections]);
-
-  const sectionRefs = {
-    style: useRef<HTMLDivElement>(null),
-    age: useRef<HTMLDivElement>(null),
-    face: useRef<HTMLDivElement>(null),
-    body: useRef<HTMLDivElement>(null),
-  };
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
     const handleScroll = () => {
       const containerTop = container.getBoundingClientRect().top;
-      let closest: Section = "style";
+      const sections = container.querySelectorAll<HTMLElement>("[data-section-id]");
+      let closest = "";
       let closestDist = Infinity;
-      for (const s of SECTIONS) {
-        const el = sectionRefs[s].current;
-        if (!el) continue;
+      sections.forEach((el) => {
         const dist = Math.abs(el.getBoundingClientRect().top - containerTop);
-        if (dist < closestDist) { closestDist = dist; closest = s; }
-      }
-      setActiveSection(closest);
+        if (dist < closestDist) { closestDist = dist; closest = el.dataset.sectionId || ""; }
+      });
+      setActiveId(closest);
     };
     container.addEventListener("scroll", handleScroll);
+    handleScroll();
     return () => container.removeEventListener("scroll", handleScroll);
   });
 
@@ -181,87 +122,100 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
   const byCategory = (cat: string) => options.filter((o) => o.category === cat).sort((a, b) => a.order - b.order);
 
-  const toggle = (arr: string[], val: string): string[] =>
-    arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
-
-  const scrollTo = (section: Section) => {
-    setActiveSection(section);
-    sectionRefs[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollTo = (id: string) => {
+    setActiveId(id);
+    const el = contentRef.current?.querySelector<HTMLElement>(`[data-section-id="${id}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
+  const sidebarItems: SidebarEntry[] = [
+    { type: "item", id: "style", label: "Graphic Style" },
+    { type: "header", label: "Character" },
+    { type: "item", id: "age-gender", label: "Age & Gender" },
+    { type: "item", id: "human-race", label: "Human Race" },
+    { type: "item", id: "fantasy-race", label: "Fantasy Race" },
+    { type: "header", label: "Face & Hair" },
+    { type: "item", id: "eyes-face", label: "Eyes & Face" },
+    { type: "item", id: "hair-style", label: "Hair Style" },
+    { type: "item", id: "hair-details", label: "Hair Details" },
+    { type: "header", label: "Body" },
+    { type: "item", id: "body-type", label: "Body Type" },
+    { type: "item", id: "breast-size", label: "Breast Size" },
+    { type: "item", id: "butt-size", label: "Butt Size" },
+  ];
+
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div className="char-modal" style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={styles.header}>
-          <span style={styles.title}>Character</span>
-          <div style={styles.headerActions}>
-            <button style={styles.closeBtn} onClick={onClose}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            </button>
-          </div>
+    <div style={s.overlay} onClick={onClose}>
+      <div className="char-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={s.header}>
+          <span style={s.title}>Character</span>
+          <button style={s.closeBtn} onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
         </div>
 
-        {/* Body: sidebar + content */}
-        <div style={styles.body}>
-          {/* Sidebar */}
-          <div style={styles.sidebar}>
-            <nav style={styles.sidebarNav}>
-              {SECTIONS.map((s) => (
-                <button key={s} style={{ ...styles.sidebarItem, ...(activeSection === s ? styles.sidebarItemActive : {}) }} onClick={() => scrollTo(s)}>
-                  {SECTION_LABELS[s]}
-                </button>
-              ))}
+        <div style={s.body}>
+          <div style={s.sidebar}>
+            <nav style={s.sidebarNav}>
+              {sidebarItems.map((entry, i) =>
+                entry.type === "header" ? (
+                  <div key={i} style={s.sidebarHeader}>{entry.label}</div>
+                ) : (
+                  <button key={entry.id} style={{ ...s.sidebarItem, ...(activeId === entry.id ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(entry.id)}>
+                    {entry.label}
+                  </button>
+                )
+              )}
             </nav>
-            <div style={styles.sidebarDivider} />
-            <button style={styles.sidebarGenerate} onClick={onRandomize}>
+            <div style={s.sidebarDivider} />
+            <button style={s.sidebarGenerate} onClick={onRandomize}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
               Generate Random
             </button>
           </div>
 
-          {/* Scrollable content */}
-          <div style={styles.content} ref={contentRef}>
+          <div style={s.content} ref={contentRef}>
             {/* ── Graphic Style ── */}
-            <div ref={sectionRefs.style} style={styles.section}>
-              <div style={styles.sectionTitle}>Graphic Style</div>
-              <div style={styles.imageGrid}>
+            <div data-section-id="style" style={s.section}>
+              <div style={s.sectionTitle}>Graphic Style</div>
+              <div style={s.imageGrid}>
                 {byCategory("STYLE").map((opt) => {
                   const selected = draft.style === opt.name;
                   return (
-                    <button key={opt.id} style={{ ...styles.imgCard, ...(selected ? styles.imgCardSelected : styles.imgCardUnselected) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
-                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
                       {selected && <SelectedOverlay />}
-                      <span style={styles.imgCardLabel}>{opt.name}</span>
+                      <span style={s.imgCardLabel}>{opt.name}</span>
                     </button>
                   );
                 })}
-                {byCategory("STYLE").length === 0 && <div style={styles.emptyHint}>No styles added yet. Add them in the admin panel.</div>}
+                {byCategory("STYLE").length === 0 && <div style={s.emptyHint}>No styles added yet. Add them in the admin panel.</div>}
               </div>
             </div>
 
-            {/* ── Age and Ethnicity ── */}
-            <div ref={sectionRefs.age} style={styles.section}>
-              <div style={styles.sectionTitle}>Age and Ethnicity</div>
+            {/* ── Age & Gender ── */}
+            <div data-section-id="age-gender" style={s.section}>
+              <div style={s.sectionTitle}>Age & Gender</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <div style={styles.sectionLabel}>Age</div>
+                  <div style={s.sectionLabel}>Age</div>
                   <div style={{ position: "relative", padding: "8px 0" }}>
-                    <div style={{ ...styles.sliderTooltip, left: `${((draft.age - 18) / 82) * 100}%` }}>{draft.age}</div>
+                    <div style={{ ...s.sliderTooltip, left: `${((draft.age - 18) / 82) * 100}%` }}>{draft.age}</div>
                     <input
                       type="range" min={18} max={100} value={draft.age}
                       onChange={(e) => setDraft({ ...draft, age: Number(e.target.value) })}
-                      style={styles.slider}
+                      style={s.slider}
                     />
-                    <div style={styles.sliderLabels}><span>18</span><span>100</span></div>
+                    <div style={s.sliderLabels}><span>18</span><span>100</span></div>
                   </div>
                 </div>
 
                 <div>
-                  <div style={styles.sectionLabel}>Gender</div>
-                  <div style={styles.pillRow}>
+                  <div style={s.sectionLabel}>Gender</div>
+                  <div style={s.pillRow}>
                     {GENDERS.map((g) => (
-                      <button key={g} style={{ ...styles.pill, ...(draft.gender === g ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
+                      <button key={g} style={{ ...s.pill, ...(draft.gender === g ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
                         {g}
                       </button>
                     ))}
@@ -269,42 +223,64 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={styles.raceTabRow}>
-                    <button style={{ ...styles.raceTab, ...(raceSubTab === "human" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("human")}>Human Race</button>
-                    <button style={{ ...styles.raceTab, ...(raceSubTab === "fantasy" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("fantasy")}>Fantasy Race</button>
+                  <div style={s.sectionLabel}>Height</div>
+                  <div style={s.pillRow}>
+                    {HEIGHTS.map((h) => (
+                      <button key={h} style={{ ...s.pill, ...(draft.height === h ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, height: draft.height === h ? undefined : h })}>
+                        {h}
+                      </button>
+                    ))}
                   </div>
-                  <ScrollRow>
-                    {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").map((opt) => {
-                      const selected = raceSubTab === "human" ? draft.humanRace === opt.name : draft.fantasyRace === opt.name;
-                      return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => {
-                          if (raceSubTab === "human") setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name });
-                          else setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name });
-                        }}>
-                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                          {selected && <SelectedOverlay />}
-                          <span style={styles.imgCardLabel}>{opt.name}</span>
-                        </button>
-                      );
-                    })}
-                    {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").length === 0 && (
-                      <div style={styles.emptyHint}>No options added yet.</div>
-                    )}
-                  </ScrollRow>
                 </div>
               </div>
             </div>
 
-            {/* ── Face and Hair ── */}
-            <div ref={sectionRefs.face} style={styles.section}>
-              <div style={styles.sectionTitle}>Face and Hair</div>
+            {/* ── Human Race ── */}
+            <div data-section-id="human-race" style={s.section}>
+              <div style={s.sectionTitle}>Human Race</div>
+              <div style={s.imageGrid}>
+                {byCategory("HUMAN_RACE").map((opt) => {
+                  const selected = draft.humanRace === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("HUMAN_RACE").length === 0 && <div style={s.emptyHint}>No human races added yet. Add them in the admin panel.</div>}
+              </div>
+            </div>
+
+            {/* ── Fantasy Race ── */}
+            <div data-section-id="fantasy-race" style={s.section}>
+              <div style={s.sectionTitle}>Fantasy Race</div>
+              <div style={s.imageGrid}>
+                {byCategory("FANTASY_RACE").map((opt) => {
+                  const selected = draft.fantasyRace === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("FANTASY_RACE").length === 0 && <div style={s.emptyHint}>No fantasy races added yet. Add them in the admin panel.</div>}
+              </div>
+            </div>
+
+            {/* ── Eyes & Face ── */}
+            <div data-section-id="eyes-face" style={s.section}>
+              <div style={s.sectionTitle}>Eyes & Face</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <div>
-                  <div style={styles.sectionLabel}>Eye Color</div>
-                  <div style={styles.colorPillRow}>
+                  <div style={s.sectionLabel}>Eye Color</div>
+                  <div style={s.colorPillRow}>
                     {EYE_COLORS.map((ec) => (
-                      <button key={ec.name} style={{ ...styles.colorPill, ...(draft.eyeColor === ec.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
-                        <span style={{ ...styles.colorDot, background: ec.color }} />
+                      <button key={ec.name} style={{ ...s.colorPill, ...(draft.eyeColor === ec.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
+                        <span style={{ ...s.colorDot, background: ec.color }} />
                         {ec.name}
                       </button>
                     ))}
@@ -312,10 +288,10 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={styles.sectionLabel}>Eye Features</div>
-                  <div style={styles.pillRow}>
+                  <div style={s.sectionLabel}>Eye Features</div>
+                  <div style={s.pillRow}>
                     {EYE_FEATURES.map((f) => (
-                      <button key={f} style={{ ...styles.pill, ...(draft.eyeFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, eyeFeatures: toggle(draft.eyeFeatures, f) })}>
+                      <button key={f} style={{ ...s.pill, ...(draft.eyeFeatures.includes(f) ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, eyeFeatures: toggle(draft.eyeFeatures, f) })}>
                         {f}
                       </button>
                     ))}
@@ -323,38 +299,45 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={styles.sectionLabel}>Face Features</div>
-                  <div style={styles.pillRow}>
+                  <div style={s.sectionLabel}>Face Features</div>
+                  <div style={s.pillRow}>
                     {FACE_FEATURES.map((f) => (
-                      <button key={f} style={{ ...styles.pill, ...(draft.faceFeatures.includes(f) ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, faceFeatures: toggle(draft.faceFeatures, f) })}>
+                      <button key={f} style={{ ...s.pill, ...(draft.faceFeatures.includes(f) ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, faceFeatures: toggle(draft.faceFeatures, f) })}>
                         {f}
                       </button>
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div>
-                  <div style={styles.sectionLabel}>Hair Style</div>
-                  <ScrollRow>
-                    {byCategory("HAIR_STYLE").map((opt) => {
-                      const selected = draft.hairStyle === opt.name;
-                      return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
-                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                          {selected && <SelectedOverlay />}
-                          <span style={styles.imgCardLabel}>{opt.name}</span>
-                        </button>
-                      );
-                    })}
-                    {byCategory("HAIR_STYLE").length === 0 && <div style={styles.emptyHint}>No hair styles added yet.</div>}
-                  </ScrollRow>
-                </div>
+            {/* ── Hair Style ── */}
+            <div data-section-id="hair-style" style={s.section}>
+              <div style={s.sectionTitle}>Hair Style</div>
+              <div style={s.imageGrid}>
+                {byCategory("HAIR_STYLE").map((opt) => {
+                  const selected = draft.hairStyle === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("HAIR_STYLE").length === 0 && <div style={s.emptyHint}>No hair styles added yet. Add them in the admin panel.</div>}
+              </div>
+            </div>
 
+            {/* ── Hair Details ── */}
+            <div data-section-id="hair-details" style={s.section}>
+              <div style={s.sectionTitle}>Hair Details</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <div>
-                  <div style={styles.sectionLabel}>Hair Length</div>
-                  <div style={styles.pillRow}>
+                  <div style={s.sectionLabel}>Hair Length</div>
+                  <div style={s.pillRow}>
                     {HAIR_LENGTHS.map((l) => (
-                      <button key={l} style={{ ...styles.pill, ...(draft.hairLength === l ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, hairLength: draft.hairLength === l ? undefined : l })}>
+                      <button key={l} style={{ ...s.pill, ...(draft.hairLength === l ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, hairLength: draft.hairLength === l ? undefined : l })}>
                         {l}
                       </button>
                     ))}
@@ -362,11 +345,11 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={styles.sectionLabel}>Hair Color</div>
-                  <div style={styles.colorPillRow}>
+                  <div style={s.sectionLabel}>Hair Color</div>
+                  <div style={s.colorPillRow}>
                     {HAIR_COLORS.map((hc) => (
-                      <button key={hc.name} style={{ ...styles.colorPill, ...(draft.hairColor === hc.name ? styles.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
-                        <span style={{ ...styles.colorDot, background: hc.color }} />
+                      <button key={hc.name} style={{ ...s.colorPill, ...(draft.hairColor === hc.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
+                        <span style={{ ...s.colorDot, background: hc.color }} />
                         {hc.name}
                       </button>
                     ))}
@@ -375,80 +358,65 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
               </div>
             </div>
 
-            {/* ── Body type ── */}
-            <div ref={sectionRefs.body} style={styles.section}>
-              <div style={styles.sectionTitle}>Body type</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <div style={styles.sectionLabel}>Body type</div>
-                  <ScrollRow>
-                    {byCategory("BODY_TYPE").map((opt) => {
-                      const selected = draft.bodyType === opt.name;
-                      return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
-                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                          {selected && <SelectedOverlay />}
-                          <span style={styles.imgCardLabel}>{opt.name}</span>
-                        </button>
-                      );
-                    })}
-                    {byCategory("BODY_TYPE").length === 0 && <div style={styles.emptyHint}>No body types added yet.</div>}
-                  </ScrollRow>
-                </div>
+            {/* ── Body Type ── */}
+            <div data-section-id="body-type" style={s.section}>
+              <div style={s.sectionTitle}>Body Type</div>
+              <div style={s.imageGrid}>
+                {byCategory("BODY_TYPE").map((opt) => {
+                  const selected = draft.bodyType === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("BODY_TYPE").length === 0 && <div style={s.emptyHint}>No body types added yet. Add them in the admin panel.</div>}
+              </div>
+            </div>
 
-                <div>
-                  <div style={styles.sectionLabel}>Breast size</div>
-                  <ScrollRow>
-                    {byCategory("BREAST_SIZE").map((opt) => {
-                      const selected = draft.breastSize === opt.name;
-                      return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
-                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                          {selected && <SelectedOverlay />}
-                          <span style={styles.imgCardLabel}>{opt.name}</span>
-                        </button>
-                      );
-                    })}
-                    {byCategory("BREAST_SIZE").length === 0 && <div style={styles.emptyHint}>No breast sizes added yet.</div>}
-                  </ScrollRow>
-                </div>
+            {/* ── Breast Size ── */}
+            <div data-section-id="breast-size" style={s.section}>
+              <div style={s.sectionTitle}>Breast Size</div>
+              <div style={s.imageGrid}>
+                {byCategory("BREAST_SIZE").map((opt) => {
+                  const selected = draft.breastSize === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("BREAST_SIZE").length === 0 && <div style={s.emptyHint}>No breast sizes added yet. Add them in the admin panel.</div>}
+              </div>
+            </div>
 
-                <div>
-                  <div style={styles.sectionLabel}>Butt size</div>
-                  <ScrollRow>
-                    {byCategory("BUTT_SIZE").map((opt) => {
-                      const selected = draft.buttSize === opt.name;
-                      return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
-                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                          {selected && <SelectedOverlay />}
-                          <span style={styles.imgCardLabel}>{opt.name}</span>
-                        </button>
-                      );
-                    })}
-                    {byCategory("BUTT_SIZE").length === 0 && <div style={styles.emptyHint}>No butt sizes added yet.</div>}
-                  </ScrollRow>
-                </div>
-
-                <div>
-                  <div style={styles.sectionLabel}>Height</div>
-                  <div style={styles.pillRow}>
-                    {HEIGHTS.map((h) => (
-                      <button key={h} style={{ ...styles.pill, ...(draft.height === h ? styles.pillActive : {}) }} onClick={() => setDraft({ ...draft, height: draft.height === h ? undefined : h })}>
-                        {h}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* ── Butt Size ── */}
+            <div data-section-id="butt-size" style={s.section}>
+              <div style={s.sectionTitle}>Butt Size</div>
+              <div style={s.imageGrid}>
+                {byCategory("BUTT_SIZE").map((opt) => {
+                  const selected = draft.buttSize === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={s.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
+                {byCategory("BUTT_SIZE").length === 0 && <div style={s.emptyHint}>No butt sizes added yet. Add them in the admin panel.</div>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={styles.footer}>
-          <button style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={styles.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+        <div style={s.footer}>
+          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
         </div>
       </div>
 
@@ -471,7 +439,6 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
           border: 2px solid #f95bad;
           cursor: pointer;
         }
-        .char-modal-scroll::-webkit-scrollbar { display: none; }
         .char-modal *::-webkit-scrollbar { width: 6px; height: 6px; }
         .char-modal *::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 3px; }
         .char-modal *::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 3px; }
@@ -482,348 +449,42 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.7)",
-    zIndex: 1000,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modal: {
-    background: "#111",
-    borderRadius: 16,
-    width: "min(960px, 95vw)",
-    maxHeight: "90vh",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    border: "1px solid #2a2a2a",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "20px 24px 16px",
-    borderBottom: "1px solid #2a2a2a",
-    flexShrink: 0,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: 700,
-  },
-  headerActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    border: "1px solid #3a3a3a",
-    background: "transparent",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  body: {
-    display: "flex",
-    flex: 1,
-    overflow: "hidden",
-  },
-  sidebar: {
-    width: 200,
-    flexShrink: 0,
-    background: "#151515",
-    borderRight: "1px solid #2a2a2a",
-    display: "flex",
-    flexDirection: "column",
-    padding: "16px 0",
-  },
-  sidebarNav: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  sidebarItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "12px 20px",
-    background: "transparent",
-    border: "none",
-    borderLeft: "3px solid transparent",
-    color: "#888",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    textAlign: "left" as const,
-    transition: "all 0.15s",
-  },
-  sidebarItemActive: {
-    color: "#f95bad",
-    borderLeft: "3px solid #f95bad",
-    background: "rgba(249,91,173,0.06)",
-  },
-  sidebarDivider: {
-    height: 1,
-    background: "#2a2a2a",
-    margin: "12px 16px",
-  },
-  sidebarGenerate: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "12px 20px",
-    background: "transparent",
-    border: "none",
-    color: "#C1F0AA",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    textAlign: "left" as const,
-  },
-  content: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "24px",
-  },
-  section: {
-    marginBottom: 36,
-  },
-  sectionTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 700,
-    marginBottom: 16,
-    paddingBottom: 10,
-    borderBottom: "1px solid #2a2a2a",
-  },
-  sectionLabel: {
-    color: "#aaa",
-    fontSize: 13,
-    fontWeight: 600,
-    marginBottom: 10,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-  },
-  imageGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 10,
-  },
-  scrollRowWrapper: {
-    position: "relative",
-  },
-  scrollArrow: {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    background: "rgba(249,91,173,0.85)",
-    border: "none",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-    transition: "background 0.15s",
-  },
-  scrollArrowLeft: {
-    left: -4,
-  },
-  scrollArrowRight: {
-    right: -4,
-  },
-  imageRowScroll: {
-    display: "flex",
-    gap: 10,
-    overflowX: "auto",
-    paddingBottom: 4,
-  },
-  imgCard: {
-    position: "relative",
-    aspectRatio: "3/4",
-    borderRadius: 10,
-    overflow: "hidden",
-    border: "2px solid #2a2a2a",
-    cursor: "pointer",
-    background: "#1a1a1a",
-    padding: 0,
-  },
-  imgCardSm: {
-    position: "relative",
-    width: 130,
-    minWidth: 130,
-    height: 170,
-    borderRadius: 10,
-    overflow: "hidden",
-    border: "2px solid #2a2a2a",
-    cursor: "pointer",
-    background: "#1a1a1a",
-    padding: 0,
-    flexShrink: 0,
-  },
-  imgCardSelected: {
-    border: "2px solid #555",
-  },
-  imgCardUnselected: {
-    border: "2px solid #2a2a2a",
-  },
-  imgCardSmSelected: {
-    border: "2px solid #555",
-  },
-  imgCardSmUnselected: {
-    border: "2px solid #2a2a2a",
-  },
-  imgCardImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover" as const,
-  },
-  imgCardLabel: {
-    position: "absolute",
-    bottom: 8,
-    left: 0,
-    right: 0,
-    textAlign: "center" as const,
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 600,
-    textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-  },
-  pillRow: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 8,
-  },
-  pill: {
-    padding: "6px 14px",
-    borderRadius: 8,
-    border: "1px solid #3a3a3a",
-    background: "#1a1a1a",
-    color: "#ccc",
-    fontSize: 13,
-    cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  pillActive: {
-    border: "1px solid #f95bad",
-    background: "rgba(249,91,173,0.12)",
-    color: "#f95bad",
-  },
-  colorPillRow: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 8,
-  },
-  colorPill: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid #3a3a3a",
-    background: "#1a1a1a",
-    color: "#ccc",
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  colorPillActive: {
-    border: "1px solid #f95bad",
-    background: "rgba(249,91,173,0.12)",
-    color: "#f95bad",
-  },
-  colorDot: {
-    width: 14,
-    height: 14,
-    borderRadius: "50%",
-    flexShrink: 0,
-    border: "1px solid rgba(255,255,255,0.15)",
-  },
-  sliderTooltip: {
-    position: "absolute",
-    top: -8,
-    transform: "translateX(-50%)",
-    background: "#f95bad",
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: 700,
-    padding: "2px 8px",
-    borderRadius: 6,
-    pointerEvents: "none" as const,
-    zIndex: 1,
-  },
-  slider: {
-    width: "100%",
-    marginTop: 12,
-  },
-  sliderLabels: {
-    display: "flex",
-    justifyContent: "space-between",
-    color: "#666",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  raceTabRow: {
-    display: "flex",
-    gap: 0,
-    borderBottom: "1px solid #2a2a2a",
-    marginBottom: 14,
-  },
-  raceTab: {
-    padding: "8px 20px",
-    background: "transparent",
-    border: "none",
-    borderBottom: "2px solid transparent",
-    color: "#888",
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  raceTabActive: {
-    color: "#fff",
-    borderBottom: "2px solid #f95bad",
-  },
-  emptyHint: {
-    color: "#555",
-    fontSize: 13,
-    fontStyle: "italic",
-    padding: "8px 0",
-  },
-  footer: {
-    display: "flex",
-    gap: 12,
-    padding: "16px 24px",
-    borderTop: "1px solid #2a2a2a",
-    flexShrink: 0,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: "12px 0",
-    borderRadius: 10,
-    border: "1px solid #3a3a3a",
-    background: "transparent",
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  saveBtn: {
-    flex: 2,
-    padding: "12px 0",
-    borderRadius: 10,
-    border: "none",
-    background: "linear-gradient(135deg, #f95bad, #c940a0)",
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-  },
+const s: Record<string, React.CSSProperties> = {
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" },
+  modal: { background: "#111", borderRadius: 16, width: "min(960px, 95vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #2a2a2a" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #2a2a2a", flexShrink: 0 },
+  title: { color: "#fff", fontSize: 20, fontWeight: 700 },
+  closeBtn: { width: 32, height: 32, borderRadius: 8, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  body: { display: "flex", flex: 1, overflow: "hidden" },
+  sidebar: { width: 200, flexShrink: 0, background: "#151515", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto" },
+  sidebarNav: { display: "flex", flexDirection: "column" },
+  sidebarHeader: { padding: "8px 20px 4px", color: "#666", fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em" },
+  sidebarItem: { display: "flex", alignItems: "center", padding: "10px 20px", background: "transparent", border: "none", borderLeft: "3px solid transparent", color: "#888", fontSize: 13, fontWeight: 500, cursor: "pointer", textAlign: "left" as const, transition: "all 0.15s", fontFamily: "inherit" },
+  sidebarItemActive: { color: "#f95bad", borderLeft: "3px solid #f95bad", background: "rgba(249,91,173,0.06)" },
+  sidebarDivider: { height: 1, background: "#2a2a2a", margin: "12px 16px" },
+  sidebarGenerate: { display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", background: "transparent", border: "none", color: "#C1F0AA", fontSize: 13, fontWeight: 500, cursor: "pointer", textAlign: "left" as const, fontFamily: "inherit" },
+  content: { flex: 1, overflowY: "auto", padding: "24px" },
+  section: { marginBottom: 36 },
+  sectionTitle: { color: "#fff", fontSize: 16, fontWeight: 700, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #2a2a2a" },
+  sectionLabel: { color: "#aaa", fontSize: 13, fontWeight: 600, marginBottom: 10 },
+  imageGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 },
+  imgCard: { position: "relative", aspectRatio: "1 / 1", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "#1a1a1a", padding: 0 },
+  imgCardSelected: { border: "2px solid #555" },
+  imgCardUnselected: { border: "2px solid #2a2a2a" },
+  imgCardImg: { width: "100%", height: "100%", objectFit: "cover" as const },
+  imgCardLabel: { position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center" as const, color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)", zIndex: 2 },
+  pillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
+  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
+  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  colorPillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
+  colorPill: { display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, border: "1px solid #3a3a3a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
+  colorPillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  colorDot: { width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: "1px solid rgba(255,255,255,0.15)" },
+  sliderTooltip: { position: "absolute", top: -8, transform: "translateX(-50%)", background: "#f95bad", color: "#fff", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, pointerEvents: "none" as const, zIndex: 1 },
+  slider: { width: "100%", marginTop: 12 },
+  sliderLabels: { display: "flex", justifyContent: "space-between", color: "#666", fontSize: 12, marginTop: 4 },
+  emptyHint: { color: "#555", fontSize: 13, padding: "20px 0" },
+  footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },
+  cancelBtn: { flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+  saveBtn: { flex: 2, padding: "12px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #f95bad, #c940a0)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
 };
