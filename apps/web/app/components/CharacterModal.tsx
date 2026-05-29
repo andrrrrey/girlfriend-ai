@@ -86,6 +86,16 @@ export const HAIR_COLORS = [
 export const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
 export const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 
+function SelectedOverlay() {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 1 }}>
+      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f95bad", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+  );
+}
+
 function ScrollRow({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
@@ -216,12 +226,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
             <div ref={sectionRefs.style} style={styles.section}>
               <div style={styles.sectionTitle}>Graphic Style</div>
               <div style={styles.imageGrid}>
-                {byCategory("STYLE").map((opt) => (
-                  <button key={opt.id} style={{ ...styles.imgCard, ...(draft.style === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
-                    {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                    <span style={styles.imgCardLabel}>{opt.name}</span>
-                  </button>
-                ))}
+                {byCategory("STYLE").map((opt) => {
+                  const selected = draft.style === opt.name;
+                  return (
+                    <button key={opt.id} style={{ ...styles.imgCard, ...(selected ? styles.imgCardSelected : styles.imgCardUnselected) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
+                      {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                      {selected && <SelectedOverlay />}
+                      <span style={styles.imgCardLabel}>{opt.name}</span>
+                    </button>
+                  );
+                })}
                 {byCategory("STYLE").length === 0 && <div style={styles.emptyHint}>No styles added yet. Add them in the admin panel.</div>}
               </div>
             </div>
@@ -263,11 +277,12 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").map((opt) => {
                       const selected = raceSubTab === "human" ? draft.humanRace === opt.name : draft.fantasyRace === opt.name;
                       return (
-                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardActive : {}) }} onClick={() => {
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => {
                           if (raceSubTab === "human") setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name });
                           else setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name });
                         }}>
                           {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          {selected && <SelectedOverlay />}
                           <span style={styles.imgCardLabel}>{opt.name}</span>
                         </button>
                       );
@@ -321,12 +336,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 <div>
                   <div style={styles.sectionLabel}>Hair Style</div>
                   <ScrollRow>
-                    {byCategory("HAIR_STYLE").map((opt) => (
-                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.hairStyle === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                        <span style={styles.imgCardLabel}>{opt.name}</span>
-                      </button>
-                    ))}
+                    {byCategory("HAIR_STYLE").map((opt) => {
+                      const selected = draft.hairStyle === opt.name;
+                      return (
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          {selected && <SelectedOverlay />}
+                          <span style={styles.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
                     {byCategory("HAIR_STYLE").length === 0 && <div style={styles.emptyHint}>No hair styles added yet.</div>}
                   </ScrollRow>
                 </div>
@@ -363,12 +382,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 <div>
                   <div style={styles.sectionLabel}>Body type</div>
                   <ScrollRow>
-                    {byCategory("BODY_TYPE").map((opt) => (
-                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.bodyType === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                        <span style={styles.imgCardLabel}>{opt.name}</span>
-                      </button>
-                    ))}
+                    {byCategory("BODY_TYPE").map((opt) => {
+                      const selected = draft.bodyType === opt.name;
+                      return (
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          {selected && <SelectedOverlay />}
+                          <span style={styles.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
                     {byCategory("BODY_TYPE").length === 0 && <div style={styles.emptyHint}>No body types added yet.</div>}
                   </ScrollRow>
                 </div>
@@ -376,12 +399,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 <div>
                   <div style={styles.sectionLabel}>Breast size</div>
                   <ScrollRow>
-                    {byCategory("BREAST_SIZE").map((opt) => (
-                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.breastSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                        <span style={styles.imgCardLabel}>{opt.name}</span>
-                      </button>
-                    ))}
+                    {byCategory("BREAST_SIZE").map((opt) => {
+                      const selected = draft.breastSize === opt.name;
+                      return (
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          {selected && <SelectedOverlay />}
+                          <span style={styles.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
                     {byCategory("BREAST_SIZE").length === 0 && <div style={styles.emptyHint}>No breast sizes added yet.</div>}
                   </ScrollRow>
                 </div>
@@ -389,12 +416,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 <div>
                   <div style={styles.sectionLabel}>Butt size</div>
                   <ScrollRow>
-                    {byCategory("BUTT_SIZE").map((opt) => (
-                      <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.buttSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
-                        <span style={styles.imgCardLabel}>{opt.name}</span>
-                      </button>
-                    ))}
+                    {byCategory("BUTT_SIZE").map((opt) => {
+                      const selected = draft.buttSize === opt.name;
+                      return (
+                        <button key={opt.id} style={{ ...styles.imgCardSm, ...(selected ? styles.imgCardSmSelected : styles.imgCardSmUnselected) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
+                          {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
+                          {selected && <SelectedOverlay />}
+                          <span style={styles.imgCardLabel}>{opt.name}</span>
+                        </button>
+                      );
+                    })}
                     {byCategory("BUTT_SIZE").length === 0 && <div style={styles.emptyHint}>No butt sizes added yet.</div>}
                   </ScrollRow>
                 </div>
@@ -640,8 +671,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     flexShrink: 0,
   },
-  imgCardActive: {
-    border: "2px solid #f95bad",
+  imgCardSelected: {
+    border: "2px solid #555",
+  },
+  imgCardUnselected: {
+    border: "2px solid #2a2a2a",
+  },
+  imgCardSmSelected: {
+    border: "2px solid #555",
+  },
+  imgCardSmUnselected: {
+    border: "2px solid #2a2a2a",
   },
   imgCardImg: {
     width: "100%",

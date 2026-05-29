@@ -60,6 +60,16 @@ export const LIGHTING_OPTIONS = [
   "Ultraviolet",
 ];
 
+function SelectedOverlay() {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 1 }}>
+      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f95bad", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+  );
+}
+
 const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
@@ -163,6 +173,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, framing: toggle(draft.framing, opt.name) })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>
                     );
@@ -183,6 +194,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, cameraAngle: toggle(draft.cameraAngle, opt.name) })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>
                     );
@@ -260,8 +272,8 @@ const s: Record<string, React.CSSProperties> = {
   sectionTitle: { color: "#fff", fontSize: 16, fontWeight: 700, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #2a2a2a" },
   imageGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 },
   imgCard: { position: "relative", aspectRatio: "1 / 1", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "#1a1a1a", padding: 0 },
-  imgCardSelected: { border: "2px solid #f95bad" },
-  imgCardUnselected: { border: "1px dashed rgba(255,255,255,0.3)" },
+  imgCardSelected: { border: "2px solid #555" },
+  imgCardUnselected: { border: "2px solid #2a2a2a" },
   imgCardImg: { width: "100%", height: "100%", objectFit: "cover" as const },
   imgCardLabel: { position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center" as const, color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)" },
   pillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
