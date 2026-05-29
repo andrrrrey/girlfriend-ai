@@ -91,6 +91,10 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
   const [raceSubTab, setRaceSubTab] = useState<"human" | "fantasy">("human");
   const [activeSection, setActiveSection] = useState<Section>("style");
 
+  useEffect(() => {
+    setDraft({ ...selections });
+  }, [selections]);
+
   const sectionRefs = {
     style: useRef<HTMLDivElement>(null),
     age: useRef<HTMLDivElement>(null),
