@@ -22,7 +22,7 @@ import {
   getCachedCameraOptions,
 } from "../../lib/options-cache";
 import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse } from "../../lib/api";
-import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections } from "../components/CharacterModal";
+import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, GENDERS, HEIGHTS } from "../components/CharacterModal";
 import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
 import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
 import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
@@ -1267,32 +1267,27 @@ export default function GenerationPage() {
     const nameOf = (opts: CharacterOption[]) => opts.length ? pick(opts).name : undefined;
 
     const styles = byCategory("STYLE");
-    const genders = byCategory("GENDER");
     const races = byCategory("HUMAN_RACE");
-    const eyes = byCategory("EYE_COLOR");
     const hairStyles = byCategory("HAIR_STYLE");
-    const hairColors = byCategory("HAIR_COLOR");
     const bodyTypes = byCategory("BODY_TYPE");
     const breastSizes = byCategory("BREAST_SIZE");
     const buttSizes = byCategory("BUTT_SIZE");
-    const heights = byCategory("HEIGHT");
-    const hairLengths = byCategory("HAIR_LENGTH");
 
     setCharacterSelections({
       style: nameOf(styles),
       age: 18 + Math.floor(Math.random() * 33),
-      gender: nameOf(genders),
+      gender: pick(GENDERS),
       humanRace: nameOf(races),
-      eyeColor: nameOf(eyes),
-      eyeFeatures: [],
-      faceFeatures: [],
+      eyeColor: pick(EYE_COLORS).name,
+      eyeFeatures: pickN(EYE_FEATURES, 0, 2),
+      faceFeatures: pickN(FACE_FEATURES.filter((f) => f !== "None"), 0, 3),
       hairStyle: nameOf(hairStyles),
-      hairLength: nameOf(hairLengths),
-      hairColor: nameOf(hairColors),
+      hairLength: pick(HAIR_LENGTHS),
+      hairColor: pick(HAIR_COLORS).name,
       bodyType: nameOf(bodyTypes),
       breastSize: nameOf(breastSizes),
       buttSize: nameOf(buttSizes),
-      height: nameOf(heights),
+      height: pick(HEIGHTS),
     });
 
     const allExpressions = poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options);

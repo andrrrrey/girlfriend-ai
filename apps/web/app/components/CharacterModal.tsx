@@ -45,7 +45,7 @@ const SECTION_LABELS: Record<Section, string> = {
 };
 const SECTIONS: Section[] = ["style", "age", "face", "body"];
 
-const EYE_COLORS = [
+export const EYE_COLORS = [
   { name: "Blue", color: "#4A90D9" },
   { name: "Brown", color: "#8B4513" },
   { name: "Green", color: "#228B22" },
@@ -62,10 +62,10 @@ const EYE_COLORS = [
   { name: "Multicolor", color: "conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" },
 ];
 
-const EYE_FEATURES = ["Normal", "Vertical pupils", "Long eyelashes", "Heart-shaped pupils", "Glowing", "Empty", "Sparkling", "Tsurime", "Tareme", "Through hair"];
-const FACE_FEATURES = ["None", "Freckles", "Moles", "Mole under the eye", "Nose piercing", "Lip piercing", "Eyebrow piercing", "Face tattoo", "Facial scar", "Glasses", "Dimples", "Beauty mark", "Face paint", "Sharp jawline", "Soft features", "High cheekbones", "Full lips", "Thin lips"];
-const HAIR_LENGTHS = ["Short", "Medium", "Long", "Very Long"];
-const HAIR_COLORS = [
+export const EYE_FEATURES = ["Normal", "Vertical pupils", "Long eyelashes", "Heart-shaped pupils", "Glowing", "Empty", "Sparkling", "Tsurime", "Tareme", "Through hair"];
+export const FACE_FEATURES = ["None", "Freckles", "Moles", "Mole under the eye", "Nose piercing", "Lip piercing", "Eyebrow piercing", "Face tattoo", "Facial scar", "Glasses", "Dimples", "Beauty mark", "Face paint", "Sharp jawline", "Soft features", "High cheekbones", "Full lips", "Thin lips"];
+export const HAIR_LENGTHS = ["Short", "Medium", "Long", "Very Long"];
+export const HAIR_COLORS = [
   { name: "Black", color: "#1a1a1a" },
   { name: "Dark brown", color: "#3B1F0F" },
   { name: "Brown", color: "#6B3A2A" },
@@ -83,8 +83,8 @@ const HAIR_COLORS = [
   { name: "Ombre", color: "linear-gradient(135deg, #1a1a1a 40%, #F5DEB3 100%)" },
   { name: "Multicolor", color: "conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" },
 ];
-const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
-const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
+export const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
+export const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 
 export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
