@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { CharacterSelections } from "./CharacterModal";
 import type { AppearanceSelections } from "./AppearanceModal";
 import type { PoseSelections } from "./PoseModal";
@@ -28,7 +28,12 @@ interface Props {
   cameraSelections: CameraSelections;
 }
 
-type Tab = "prompt" | "negativePrompt";
+type Section = "prompt" | "negativePrompt";
+const SECTIONS: Section[] = ["prompt", "negativePrompt"];
+const SECTION_LABELS: Record<Section, string> = {
+  prompt: "Prompt",
+  negativePrompt: "Negative Prompt",
+};
 
 const NEGATIVE_PROMPT_OPTIONS = [
   "blurry", "out of focus", "low quality", "bad quality", "worst quality",
@@ -70,15 +75,44 @@ export default function PromptDetailsModal({
   open, onClose, prompt, selections, onSave,
   characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections,
 }: Props) {
-  const [tab, setTab] = useState<Tab>("prompt");
   const [draftPrompt, setDraftPrompt] = useState(prompt);
   const [draft, setDraft] = useState<PromptDetailsSelections>({
     negativePromptTerms: [...selections.negativePromptTerms],
   });
+  const [activeSection, setActiveSection] = useState<Section>("prompt");
+
+  const sectionRefs = {
+    prompt: useRef<HTMLDivElement>(null),
+    negativePrompt: useRef<HTMLDivElement>(null),
+  };
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const containerTop = container.getBoundingClientRect().top;
+      let closest: Section = "prompt";
+      let closestDist = Infinity;
+      for (const sec of SECTIONS) {
+        const el = sectionRefs[sec].current;
+        if (!el) continue;
+        const dist = Math.abs(el.getBoundingClientRect().top - containerTop);
+        if (dist < closestDist) { closestDist = dist; closest = sec; }
+      }
+      setActiveSection(closest);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  });
 
   if (!open) return null;
 
-  // Compute breakdown values
+  const scrollTo = (section: Section) => {
+    setActiveSection(section);
+    sectionRefs[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const subject = [
     characterSelections.style,
     characterSelections.age ? `${characterSelections.age}-year-old` : "",
@@ -126,8 +160,7 @@ export default function PromptDetailsModal({
 
   return (
     <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-
+      <div className="pd-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={s.header}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -135,86 +168,73 @@ export default function PromptDetailsModal({
             <span dangerouslySetInnerHTML={{ __html: GEM }} />
           </div>
           <button style={s.closeBtn} onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
 
-        <div style={{ borderBottom: "1px solid #2a2a2a" }} />
+        {/* Body */}
+        <div style={s.body}>
+          {/* Sidebar */}
+          <div style={s.sidebar}>
+            <nav style={s.sidebarNav}>
+              {SECTIONS.map((sec) => (
+                <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>
+                  {SECTION_LABELS[sec]}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-        {/* Tabs */}
-        <div style={s.tabRow}>
-          {(["prompt", "negativePrompt"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }}
-              onClick={() => setTab(t)}
-            >
-              {t === "prompt" ? "Prompt" : "Negative Prompt"}
-              {tab === t && <div style={s.tabUnderline} />}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div style={s.content} className="pd-modal-scroll">
-
-          {tab === "prompt" && (
-            <>
-              {/* Prompt Preview */}
-              <div style={s.section}>
-                <div style={s.sectionTitle}>
-                  Prompt Preview
-                  <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
-                </div>
-                <textarea
-                  style={s.promptTextarea}
-                  value={draftPrompt}
-                  onChange={(e) => setDraftPrompt(e.target.value)}
-                  placeholder="No prompt entered yet."
-                  className="pd-prompt-textarea"
-                />
+          {/* Content */}
+          <div style={s.content} ref={contentRef}>
+            {/* ── Prompt ── */}
+            <div ref={sectionRefs.prompt} style={s.section}>
+              <div style={s.sectionTitle}>
+                Prompt Preview
+                <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
               </div>
+              <textarea
+                style={s.promptTextarea}
+                value={draftPrompt}
+                onChange={(e) => setDraftPrompt(e.target.value)}
+                placeholder="No prompt entered yet."
+                className="pd-prompt-textarea"
+              />
 
-              {/* Prompt Breakdown */}
-              <div style={s.section}>
-                <div style={s.sectionTitle}>
-                  Prompt Breakdown
-                  <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
+              <div style={{ ...s.sectionTitle, marginTop: 28 }}>
+                Prompt Breakdown
+                <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
+              </div>
+              <div style={s.conditionNote}>
+                *Selected conditions apply to all selected clothing in the prompt.
+              </div>
+              <div style={s.breakdownGrid}>
+                <div style={s.col}>
+                  <div style={s.colTitle}>Character</div>
+                  <BreakdownField label="Subject" value={subject} />
+                  <BreakdownField label="Hair" value={hair} />
+                  <BreakdownField label="Face" value={face} />
+                  <BreakdownField label="Expression" value={expression} />
                 </div>
-                <div style={s.conditionNote}>
-                  *Selected conditions apply to all selected clothing in the prompt.
+                <div style={s.col}>
+                  <div style={s.colTitle}>Appearance</div>
+                  <BreakdownField label="Body" value={body} />
+                  <BreakdownField label="Clothing" value={clothing} />
+                  <BreakdownField label="Accessories" value={accessories} />
+                  <BreakdownField label="Pose" value={pose} />
                 </div>
-                <div style={s.breakdownGrid}>
-                  <div style={s.col}>
-                    <div style={s.colTitle}>Character</div>
-                    <BreakdownField label="Subject" value={subject} />
-                    <BreakdownField label="Hair" value={hair} />
-                    <BreakdownField label="Face" value={face} />
-                    <BreakdownField label="Expression" value={expression} />
-                  </div>
-                  <div style={s.col}>
-                    <div style={s.colTitle}>Appearance</div>
-                    <BreakdownField label="Body" value={body} />
-                    <BreakdownField label="Clothing" value={clothing} />
-                    <BreakdownField label="Accessories" value={accessories} />
-                    <BreakdownField label="Pose" value={pose} />
-                  </div>
-                  <div style={s.col}>
-                    <div style={s.colTitle}>Camera</div>
-                    <BreakdownField label="Quality / Style" value="" />
-                    <BreakdownField label="Scene" value={scene} />
-                    <BreakdownField label="Framing" value={framing} />
-                    <BreakdownField label="Lighting" value={lighting} />
-                  </div>
+                <div style={s.col}>
+                  <div style={s.colTitle}>Camera</div>
+                  <BreakdownField label="Quality / Style" value="" />
+                  <BreakdownField label="Scene" value={scene} />
+                  <BreakdownField label="Framing" value={framing} />
+                  <BreakdownField label="Lighting" value={lighting} />
                 </div>
               </div>
-            </>
-          )}
+            </div>
 
-          {tab === "negativePrompt" && (
-            <div style={s.section}>
+            {/* ── Negative Prompt ── */}
+            <div ref={sectionRefs.negativePrompt} style={s.section}>
               <div style={s.sectionTitle}>
                 Negative Prompt
                 <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
@@ -223,18 +243,14 @@ export default function PromptDetailsModal({
                 {NEGATIVE_PROMPT_OPTIONS.map((opt) => {
                   const selected = draft.negativePromptTerms.includes(opt);
                   return (
-                    <button
-                      key={opt}
-                      style={{ ...s.pill, ...(selected ? s.pillActive : {}) }}
-                      onClick={() => setDraft({ ...draft, negativePromptTerms: toggle(draft.negativePromptTerms, opt) })}
-                    >
+                    <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, negativePromptTerms: toggle(draft.negativePromptTerms, opt) })}>
                       {opt}
                     </button>
                   );
                 })}
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -245,189 +261,41 @@ export default function PromptDetailsModal({
       </div>
 
       <style>{`
-        .pd-modal-scroll::-webkit-scrollbar { width: 4px; }
-        .pd-modal-scroll::-webkit-scrollbar-track { background: transparent; }
-        .pd-modal-scroll::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
+        .pd-modal *::-webkit-scrollbar { width: 6px; height: 6px; }
+        .pd-modal *::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 3px; }
+        .pd-modal *::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 3px; }
+        .pd-modal *::-webkit-scrollbar-thumb:hover { background: #ff7cc8; }
+        .pd-modal { scrollbar-color: #f95bad #1a1a1a; scrollbar-width: thin; }
         .pd-prompt-textarea::placeholder { color: #555; }
         .pd-prompt-textarea:focus { border-color: #3a3a3a !important; }
-        .pd-prompt-textarea::-webkit-scrollbar { width: 4px; }
-        .pd-prompt-textarea::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 2px; }
       `}</style>
     </div>
   );
 }
 
 const s: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.75)",
-    zIndex: 1000,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modal: {
-    background: "#111",
-    borderRadius: 16,
-    width: "min(1020px, 96vw)",
-    maxHeight: "92vh",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    border: "1px solid #2a2a2a",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "20px 24px 16px",
-    flexShrink: 0,
-  },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" },
+  modal: { background: "#111", borderRadius: 16, width: "min(1020px, 96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #2a2a2a" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #2a2a2a", flexShrink: 0 },
   title: { color: "#fff", fontSize: 20, fontWeight: 700 },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    border: "1px solid #3a3a3a",
-    background: "transparent",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabRow: {
-    display: "flex",
-    borderBottom: "1px solid #2a2a2a",
-    flexShrink: 0,
-  },
-  tab: {
-    flex: 1,
-    padding: "14px 20px",
-    background: "transparent",
-    border: "none",
-    color: "#848484",
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    position: "relative",
-    transition: "color 0.15s",
-  },
-  tabActive: { color: "#fff" },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    background: "#f95bad",
-    borderRadius: "2px 2px 0 0",
-  },
-  content: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 28,
-  },
-  section: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-  },
-  sectionTitle: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 700,
-    display: "flex",
-    alignItems: "center",
-  },
-  conditionNote: {
-    color: "#f95bad",
-    fontSize: 12,
-  },
-  promptTextarea: {
-    background: "#1a1a1a",
-    borderRadius: 10,
-    padding: "16px",
-    fontSize: 13,
-    lineHeight: 1.7,
-    minHeight: 100,
-    width: "100%",
-    boxSizing: "border-box" as const,
-    resize: "vertical" as const,
-    border: "1px solid transparent",
-    color: "#fff",
-    fontFamily: "inherit",
-    outline: "none",
-  },
-  breakdownGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 20,
-  },
-  col: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  colTitle: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 600,
-    marginBottom: 2,
-  },
-  pillGrid: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 8,
-  },
-  pill: {
-    padding: "8px 16px",
-    borderRadius: 8,
-    border: "1px solid #2a2a2a",
-    background: "#1a1a1a",
-    color: "#ccc",
-    fontSize: 13,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  },
-  pillActive: {
-    border: "1px solid #f95bad",
-    background: "rgba(249,91,173,0.12)",
-    color: "#f95bad",
-  },
-  footer: {
-    display: "flex",
-    gap: 12,
-    padding: "16px 24px",
-    borderTop: "1px solid #2a2a2a",
-    flexShrink: 0,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: "12px",
-    borderRadius: 12,
-    border: "1px solid #2a2a2a",
-    background: "transparent",
-    color: "#fff",
-    fontSize: 14,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  },
-  saveBtn: {
-    flex: 1,
-    padding: "12px",
-    borderRadius: 12,
-    border: "none",
-    background: "linear-gradient(135deg, #f95bad 0%, #e0429a 100%)",
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  },
+  closeBtn: { width: 32, height: 32, borderRadius: 8, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  body: { display: "flex", flex: 1, overflow: "hidden" },
+  sidebar: { width: 200, flexShrink: 0, background: "#151515", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", padding: "16px 0" },
+  sidebarNav: { display: "flex", flexDirection: "column" },
+  sidebarItem: { display: "flex", alignItems: "center", padding: "12px 20px", background: "transparent", border: "none", borderLeft: "3px solid transparent", color: "#888", fontSize: 13, fontWeight: 500, cursor: "pointer", textAlign: "left" as const, transition: "all 0.15s", fontFamily: "inherit" },
+  sidebarItemActive: { color: "#f95bad", borderLeft: "3px solid #f95bad", background: "rgba(249,91,173,0.06)" },
+  content: { flex: 1, overflowY: "auto", padding: "24px" },
+  section: { marginBottom: 36 },
+  sectionTitle: { color: "#fff", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", marginBottom: 14, paddingBottom: 10, borderBottom: "1px solid #2a2a2a" },
+  conditionNote: { color: "#f95bad", fontSize: 12, marginBottom: 14 },
+  promptTextarea: { background: "#1a1a1a", borderRadius: 10, padding: "16px", fontSize: 13, lineHeight: 1.7, minHeight: 100, width: "100%", boxSizing: "border-box" as const, resize: "vertical" as const, border: "1px solid transparent", color: "#fff", fontFamily: "inherit", outline: "none" },
+  breakdownGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 },
+  col: { display: "flex", flexDirection: "column", gap: 10 },
+  colTitle: { color: "#fff", fontSize: 14, fontWeight: 600, marginBottom: 2 },
+  pillGrid: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
+  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
+  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },
+  cancelBtn: { flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+  saveBtn: { flex: 2, padding: "12px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #f95bad, #c940a0)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
 };
