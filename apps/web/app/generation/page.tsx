@@ -2003,6 +2003,7 @@ export default function GenerationPage() {
         selections={characterSelections}
         onSave={(s) => setCharacterSelections(s)}
         options={characterOptions}
+        onRandomize={handleRandomize}
       />
 
       <AppearanceModal

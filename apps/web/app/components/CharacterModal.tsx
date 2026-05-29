@@ -33,6 +33,7 @@ interface Props {
   selections: CharacterSelections;
   onSave: (selections: CharacterSelections) => void;
   options: CharacterOption[];
+  onRandomize?: () => void;
 }
 
 type Section = "style" | "age" | "face" | "body";
@@ -85,7 +86,7 @@ const HAIR_COLORS = [
 const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
 const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 
-export default function CharacterModal({ open, onClose, selections, onSave, options }: Props) {
+export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [raceSubTab, setRaceSubTab] = useState<"human" | "fantasy">("human");
   const [activeSection, setActiveSection] = useState<Section>("style");
@@ -154,7 +155,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
               ))}
             </nav>
             <div style={styles.sidebarDivider} />
-            <button style={styles.sidebarGenerate}>
+            <button style={styles.sidebarGenerate} onClick={onRandomize}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
               Generate Random
             </button>
