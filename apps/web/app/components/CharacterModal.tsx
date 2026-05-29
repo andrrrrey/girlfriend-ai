@@ -86,6 +86,51 @@ export const HAIR_COLORS = [
 export const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
 export const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 
+function ScrollRow({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
+
+  const update = () => {
+    const el = ref.current;
+    if (!el) return;
+    setShowLeft(el.scrollLeft > 0);
+    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    update();
+    el.addEventListener("scroll", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [children]);
+
+  const scroll = (dir: number) => {
+    ref.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
+  };
+
+  return (
+    <div style={styles.scrollRowWrapper}>
+      {showLeft && (
+        <button style={{ ...styles.scrollArrow, ...styles.scrollArrowLeft }} onClick={() => scroll(-1)}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      )}
+      <div ref={ref} style={styles.imageRowScroll}>
+        {children}
+      </div>
+      {showRight && (
+        <button style={{ ...styles.scrollArrow, ...styles.scrollArrowRight }} onClick={() => scroll(1)}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [raceSubTab, setRaceSubTab] = useState<"human" | "fantasy">("human");
@@ -136,7 +181,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className="char-modal" style={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={styles.header}>
           <span style={styles.title}>Character</span>
@@ -214,7 +259,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button style={{ ...styles.raceTab, ...(raceSubTab === "human" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("human")}>Human Race</button>
                     <button style={{ ...styles.raceTab, ...(raceSubTab === "fantasy" ? styles.raceTabActive : {}) }} onClick={() => setRaceSubTab("fantasy")}>Fantasy Race</button>
                   </div>
-                  <div style={styles.imageRowScroll}>
+                  <ScrollRow>
                     {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").map((opt) => {
                       const selected = raceSubTab === "human" ? draft.humanRace === opt.name : draft.fantasyRace === opt.name;
                       return (
@@ -230,7 +275,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     {byCategory(raceSubTab === "human" ? "HUMAN_RACE" : "FANTASY_RACE").length === 0 && (
                       <div style={styles.emptyHint}>No options added yet.</div>
                     )}
-                  </div>
+                  </ScrollRow>
                 </div>
               </div>
             </div>
@@ -275,7 +320,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
                 <div>
                   <div style={styles.sectionLabel}>Hair Style</div>
-                  <div style={styles.imageRowScroll}>
+                  <ScrollRow>
                     {byCategory("HAIR_STYLE").map((opt) => (
                       <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.hairStyle === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
@@ -283,7 +328,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                       </button>
                     ))}
                     {byCategory("HAIR_STYLE").length === 0 && <div style={styles.emptyHint}>No hair styles added yet.</div>}
-                  </div>
+                  </ScrollRow>
                 </div>
 
                 <div>
@@ -317,7 +362,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
                   <div style={styles.sectionLabel}>Body type</div>
-                  <div style={styles.imageRowScroll}>
+                  <ScrollRow>
                     {byCategory("BODY_TYPE").map((opt) => (
                       <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.bodyType === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
@@ -325,12 +370,12 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                       </button>
                     ))}
                     {byCategory("BODY_TYPE").length === 0 && <div style={styles.emptyHint}>No body types added yet.</div>}
-                  </div>
+                  </ScrollRow>
                 </div>
 
                 <div>
                   <div style={styles.sectionLabel}>Breast size</div>
-                  <div style={styles.imageRowScroll}>
+                  <ScrollRow>
                     {byCategory("BREAST_SIZE").map((opt) => (
                       <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.breastSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === opt.name ? undefined : opt.name })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
@@ -338,12 +383,12 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                       </button>
                     ))}
                     {byCategory("BREAST_SIZE").length === 0 && <div style={styles.emptyHint}>No breast sizes added yet.</div>}
-                  </div>
+                  </ScrollRow>
                 </div>
 
                 <div>
                   <div style={styles.sectionLabel}>Butt size</div>
-                  <div style={styles.imageRowScroll}>
+                  <ScrollRow>
                     {byCategory("BUTT_SIZE").map((opt) => (
                       <button key={opt.id} style={{ ...styles.imgCardSm, ...(draft.buttSize === opt.name ? styles.imgCardActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === opt.name ? undefined : opt.name })}>
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={styles.imgCardImg} />}
@@ -351,7 +396,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                       </button>
                     ))}
                     {byCategory("BUTT_SIZE").length === 0 && <div style={styles.emptyHint}>No butt sizes added yet.</div>}
-                  </div>
+                  </ScrollRow>
                 </div>
 
                 <div>
@@ -396,6 +441,11 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
           cursor: pointer;
         }
         .char-modal-scroll::-webkit-scrollbar { display: none; }
+        .char-modal *::-webkit-scrollbar { width: 6px; height: 6px; }
+        .char-modal *::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 3px; }
+        .char-modal *::-webkit-scrollbar-thumb { background: #f95bad; border-radius: 3px; }
+        .char-modal *::-webkit-scrollbar-thumb:hover { background: #ff7cc8; }
+        .char-modal { scrollbar-color: #f95bad #1a1a1a; scrollbar-width: thin; }
       `}</style>
     </div>
   );
@@ -535,13 +585,37 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: "repeat(4, 1fr)",
     gap: 10,
   },
+  scrollRowWrapper: {
+    position: "relative",
+  },
+  scrollArrow: {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: "rgba(249,91,173,0.85)",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+    transition: "background 0.15s",
+  },
+  scrollArrowLeft: {
+    left: -4,
+  },
+  scrollArrowRight: {
+    right: -4,
+  },
   imageRowScroll: {
     display: "flex",
     gap: 10,
     overflowX: "auto",
     paddingBottom: 4,
-    scrollbarWidth: "none" as const,
-    msOverflowStyle: "none" as const,
   },
   imgCard: {
     position: "relative",
