@@ -52,10 +52,10 @@ const PAGE_CSS = `
     .card-featured-wrap:hover { z-index: 5; }
     .hover-panel {
       position: absolute; left: 0; top: 0; width: 220px; height: 300px;
-      background: rgba(9,9,9,0.7); backdrop-filter: blur(2px);
+      background: rgba(9,9,9,0.75); backdrop-filter: blur(2px);
       border: 0.8px solid rgba(228,0,120,0.2); border-radius: 8px; overflow: hidden;
       display: flex; flex-direction: column; align-items: flex-start;
-      justify-content: space-between; padding: 12px;
+      justify-content: space-between; padding: 12px; gap: 8px;
       opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
     }
     .card-featured-wrap:hover .hover-panel { opacity: 1; pointer-events: auto; }
@@ -73,7 +73,11 @@ const PAGE_CSS = `
       background: rgba(255,153,206,0.6); backdrop-filter: blur(2px);
       border-radius: 4px; padding: 4px 8px; font-size: 8px; font-weight: 500; color: #fff; white-space: nowrap;
     }
-    .hover-description { font-size: 10px; font-weight: 500; color: #fff; line-height: 1.3; width: 100%; }
+    .hover-description { font-size: 10px; font-weight: 500; color: #fff; line-height: 1.3; width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .hover-actions { display: flex; gap: 6px; width: 100%; }
+    .hover-btn { flex: 1; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 10px; font-weight: 600; color: #fff; cursor: pointer; white-space: nowrap; }
+    .hover-btn.primary { background: linear-gradient(90deg, #f95bad, #ff0084); }
+    .hover-btn.secondary { background: rgba(48,39,43,0.6); border: 1px solid rgba(255,255,255,0.12); }
     .hover-stats { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; white-space: nowrap; }
     .hover-stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
     .hover-stat-value { font-size: 16px; font-weight: 700; color: #fff; }
@@ -170,6 +174,10 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       <div class="hover-stat"><span class="hover-stat-value">${likeCount}</span><span class="hover-stat-label">likes</span></div>
       <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">comments</span></div>
       <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">generated</span></div>
+    </div>
+    <div class="hover-actions">
+      <div class="hover-btn primary" data-action="view">View</div>
+      <div class="hover-btn secondary" data-action="chat">Chat</div>
     </div>
   </div>
   <div class="card-actions">
@@ -274,6 +282,15 @@ export default function HomePage() {
       return;
     }
     if (target.closest(".card-action-btn")) return;
+    const chatBtn = target.closest('.hover-btn[data-action="chat"]') as HTMLElement | null;
+    if (chatBtn) {
+      e.preventDefault();
+      const wrap = chatBtn.closest(".card-featured-wrap") as HTMLElement | null;
+      if (wrap?.dataset.charId) {
+        window.location.href = `/chat?characterId=${wrap.dataset.charId}`;
+      }
+      return;
+    }
     const wrap = target.closest(".card-featured-wrap") as HTMLElement | null;
     if (!wrap) return;
     const idx = Number(wrap.dataset.charIdx);

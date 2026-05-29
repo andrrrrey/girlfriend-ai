@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
@@ -73,6 +73,9 @@ function ChatPageInner() {
   const [showPoseSelector, setShowPoseSelector] = useState(false);
   const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse | null>(null);
 
+  // Profile gallery carousel state
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
   // Load chat list
   const loadChats = useCallback(async () => {
     try {
@@ -128,6 +131,7 @@ function ChatPageInner() {
   useEffect(() => {
     if (activeChat) {
       loadMessages(activeChat);
+      setGalleryIndex(0);
       // Mark chat as read
       const chat = chatList.find((c) => c.id === activeChat);
       if (chat?.lastMessage) {
@@ -521,6 +525,18 @@ function ChatPageInner() {
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
   const generatingInThisChat = activeJobs.some((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
 
+  const galleryImages = useMemo(() => {
+    const imgs: { url: string; label: string }[] = [];
+    const avatarUrl = activeChatData?.character?.avatarUrl;
+    if (avatarUrl) imgs.push({ url: avatarUrl, label: "Avatar" });
+    for (const msg of messages) {
+      if (msg.type === "image" && msg.mediaUrl) {
+        imgs.push({ url: msg.mediaUrl, label: msg.content || "Generated" });
+      }
+    }
+    return imgs;
+  }, [messages, activeChatData]);
+
   const handledJobsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     for (const n of notifications) {
@@ -533,7 +549,11 @@ function ChatPageInner() {
         const poseName = (n.metadata?.poseName as string) || "image";
         saveImageMessage(chatId, n.output.url, poseName).then(() => {
           if (chatId === activeChat) {
-            chats.getMessages(chatId).then((res) => setMessages(res.items));
+            chats.getMessages(chatId).then((res) => {
+              setMessages(res.items);
+              const imgCount = res.items.filter((m: Message) => m.type === "image" && m.mediaUrl).length;
+              setGalleryIndex(imgCount);
+            });
           }
         }).catch(() => {});
       } else if (n.status === "failed") {
@@ -647,14 +667,14 @@ function ChatPageInner() {
 .chat-item-preview { font-size: 10px; font-weight: 500; color: #848484; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-item-dots { width: 24px; height: 24px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: transparent; border: none; color: #969696; font-size: 14px; }
 .chat-center { flex: 1; display: flex; min-width: 0; padding: 0 18px; }
-.chat-center-inner { width: 100%; max-width: 696px; display: flex; flex-direction: column; height: calc(100vh - 46px); }
+.chat-center-inner { width: 100%; display: flex; flex-direction: column; height: calc(100vh - 46px); }
 .chat-header { display: flex; align-items: center; gap: 20px; padding: 20px 0 0 0; }
 .chat-header-avatar { width: 46px; height: 46px; border-radius: 8px; border: 1px solid #313131; background: #313131; }
 .chat-header-name { flex: 1; font-size: 24px; font-weight: 700; }
 .chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; gap: 8px; }
 .message { display: flex; flex-direction: column; gap: 4px; }
-.message.from-ai { align-items: flex-start; max-width: 330px; }
-.message.from-me { align-items: flex-end; align-self: flex-end; max-width: 330px; }
+.message.from-ai { align-items: flex-start; max-width: 65%; }
+.message.from-me { align-items: flex-end; align-self: flex-end; max-width: 65%; }
 .message.from-ai .message-bubble { background: #1e1e1e; border-radius: 8px 8px 8px 1px; }
 .message.from-me .message-bubble { background: linear-gradient(to right, #f95bad, #ff0084); border-radius: 8px 8px 1px 8px; }
 .message-bubble { padding: 10px 12px; font-size: 10px; font-weight: 500; line-height: 1.3; word-break: break-word; }
@@ -727,6 +747,10 @@ function ChatPageInner() {
 .info-card-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .info-card-label { font-size: 7px; font-weight: 500; text-transform: uppercase; color: #848484; line-height: 1.2; }
 .info-card-value { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
+.gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; color: #fff; }
+.gallery-nav:hover { background: rgba(0,0,0,0.7); }
+.gallery-nav-left { left: 8px; }
+.gallery-nav-right { right: 8px; }
 @media (max-width: 1024px) { .right-panel { display: none; } }
 @media (max-width: 768px) {
   .chat-content { flex-direction: column; }
@@ -1136,18 +1160,50 @@ function ChatPageInner() {
       {activeChat && (
         <aside className="right-panel">
           {/* Profile Gallery */}
-          <div className="profile-gallery" style={activeChatData?.character?.avatarUrl ? {backgroundImage:`url(${activeChatData.character.avatarUrl})`,backgroundSize:'cover',backgroundPosition:'center'} : {}}>
-            <div className="gallery-bg" style={activeChatData?.character?.avatarUrl ? {display:'none'} : {}}>
-              <div className="gallery-bg-overlay" />
-            </div>
-            {activeChatData?.character?.avatarUrl && <div className="gallery-bg-overlay" style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8))',borderRadius:8}} />}
-            {/* small-avatar temporarily hidden */}
+          <div
+            className="profile-gallery"
+            style={galleryImages[galleryIndex]
+              ? { backgroundImage: `url(${galleryImages[galleryIndex].url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : {}
+            }
+          >
+            {!galleryImages[galleryIndex] && (
+              <div className="gallery-bg">
+                <div className="gallery-bg-overlay" />
+              </div>
+            )}
+            {galleryImages[galleryIndex] && (
+              <div className="gallery-bg-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(9,9,9,0) 56%, rgba(9,9,9,0.8))', borderRadius: 8 }} />
+            )}
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  className="gallery-nav gallery-nav-left"
+                  onClick={() => setGalleryIndex((i) => (i - 1 + galleryImages.length) % galleryImages.length)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  className="gallery-nav gallery-nav-right"
+                  onClick={() => setGalleryIndex((i) => (i + 1) % galleryImages.length)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </>
+            )}
             <div className="profile-slider">
-              <div className="slider-bar active"><div className="slider-bar-inner" /></div>
-              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
-              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
-              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
-              <div className="slider-bar inactive"><div className="slider-bar-inner" /></div>
+              {galleryImages.length > 0 ? galleryImages.map((_, i) => (
+                <div
+                  key={i}
+                  className={`slider-bar ${i === galleryIndex ? 'active' : 'inactive'}`}
+                  onClick={() => setGalleryIndex(i)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="slider-bar-inner" />
+                </div>
+              )) : (
+                <div className="slider-bar active"><div className="slider-bar-inner" /></div>
+              )}
             </div>
           </div>
 

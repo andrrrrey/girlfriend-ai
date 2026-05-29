@@ -1,17 +1,16 @@
 export const PAGE_CSS = `
-  .create-content { position: relative; min-height: calc(100vh - 46px); overflow: hidden; }
+  .create-content { min-height: calc(100vh - 46px); overflow: hidden; display: flex; flex-direction: column; align-items: center; padding: 20px 36px 0; }
+  .create-header { width: 100%; max-width: 1172px; display: flex; flex-direction: column; gap: 4px; }
   .breadcrumb {
-    position: absolute; left: 36px; top: 20px;
     font-weight: 500; font-size: 10px; color: #969696;
     text-transform: uppercase; line-height: 1.2;
   }
   .page-title {
-    position: absolute; left: 274px; top: 20px;
-    font-weight: 700; font-size: 32px; line-height: 1.1; width: 696px;
+    font-weight: 700; font-size: 32px; line-height: 1.1; padding-left: 238px;
   }
   .page-title .pink { color: #ff99ce; }
+  .create-body { display: flex; gap: 38px; width: 100%; max-width: 1172px; margin-top: 16px; }
   .form-card {
-    position: absolute; left: 274px; top: 78px;
     width: 934px; height: 668px; background: #090909;
     border: 1px solid #313131; border-radius: 8px;
     display: flex; flex-direction: column; gap: 22px; padding: 24px; overflow: hidden;
@@ -135,8 +134,8 @@ export const PAGE_CSS = `
     object-fit: cover; opacity: 0.4; z-index: 0; border-radius: 8px;
   }
   .ethnicity-card.selected .ethnicity-card-img { opacity: 0.65; }
-  .facial-grid { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
-  .facial-grid .ethnicity-card { width: 120px; flex-shrink: 0; }
+  .facial-grid { flex-wrap: wrap; overflow-x: hidden; overflow-y: hidden; }
+  .facial-grid .ethnicity-card { width: calc(25% - 8px); flex-shrink: 0; }
   .facial-scroll {
     display: flex; flex-direction: column; gap: 22px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   }
@@ -233,8 +232,7 @@ export const PAGE_CSS = `
 
   /* Stages panel */
   .stages-panel {
-    position: absolute; left: 36px; top: 78px;
-    width: 200px; display: flex; flex-direction: column; align-items: flex-end;
+    width: 200px; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end;
   }
   .progress-stage { display: flex; gap: 8px; align-items: center; width: 200px; }
   .stage-icon-wrap { display: flex; align-items: center; align-self: stretch; }
@@ -371,10 +369,11 @@ export const PAGE_CSS = `
   }
 
   @media (max-width: 900px) {
+    .create-content { padding: 20px 16px 0; }
     .stages-panel { display: none; }
-    .page-title { left: 16px; right: 16px; width: auto; font-size: 22px; }
-    .form-card { left: 16px; right: 16px; width: auto; top: 90px; }
-    .breadcrumb { left: 16px; }
+    .page-title { padding-left: 0; font-size: 22px; }
+    .create-body { gap: 0; }
+    .form-card { width: 100%; }
     .mobile-progress-dots { display: flex; }
   }
   @media (max-width: 600px) {

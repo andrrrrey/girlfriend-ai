@@ -43,27 +43,28 @@ const CSS = `
   .page-content {
     flex: 1;
     overflow-y: auto;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 36px 0;
   }
   .generate-content {
-    position: absolute;
-    left: 274px;
-    top: 20px;
     width: 696px;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     gap: 22px;
     padding-bottom: 40px;
   }
   .page-label {
-    position: absolute;
-    left: 36px;
-    top: 26px;
+    width: 696px;
+    max-width: 100%;
     font-size: 10px;
     font-weight: 500;
     color: #969696;
     text-transform: uppercase;
     line-height: 1.2;
+    margin-bottom: 6px;
   }
 
   /* Title */
@@ -84,7 +85,7 @@ const CSS = `
     background: #1e1e1e;
     border-radius: 4px;
     padding: 3px;
-    width: 696px;
+    width: 100%;
   }
   .seg-tab {
     flex: 1;
@@ -390,7 +391,7 @@ const CSS = `
   .chips-row {
     display: flex;
     gap: 4px;
-    width: 696px;
+    width: 100%;
   }
   .chip {
     display: flex;
@@ -871,17 +872,13 @@ const CSS = `
 
   /* ── Responsive ── */
   @media (max-width: 1100px) {
-    .generate-content { left: 0; width: 100%; padding: 0 20px; }
-    .seg-tabs { width: 100%; }
-    .chips-row { width: 100%; flex-wrap: wrap; }
+    .chips-row { flex-wrap: wrap; }
   }
   @media (max-width: 768px) {
-    .generate-content { left: 0; width: 100%; padding: 0 16px; top: 10px; }
-    .page-label { left: 16px; }
-    .seg-tabs { width: 100%; }
+    .page-content { padding: 10px 16px 0; }
     .editor-section { grid-template-columns: repeat(2, 1fr); }
     .editor-card { height: 160px; }
-    .chips-row { width: 100%; flex-wrap: wrap; }
+    .chips-row { flex-wrap: wrap; }
     .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   }
 `;

@@ -281,11 +281,15 @@ function mobileDots() {
 }
 
 function buildContent() {
-  return `<div class="breadcrumb">Create Character</div>
-    <div class="page-title"><span class="pink">Create </span>Your Character</div>
+  return `<div class="create-header">
+      <div class="breadcrumb">Create Character</div>
+      <div class="page-title"><span class="pink">Create </span>Your Character</div>
+    </div>
     ${mobileDots()}
-    <div class="form-card">${stage01()}${stage02()}${stage03()}${stage04()}${stage05()}${stage06()}${stage07()}${stage08()}${stage09()}</div>
-    ${stagesPanel()}`;
+    <div class="create-body">
+      ${stagesPanel()}
+      <div class="form-card">${stage01()}${stage02()}${stage03()}${stage04()}${stage05()}${stage06()}${stage07()}${stage08()}${stage09()}</div>
+    </div>`;
 }
 
 /* ── Collect form data from DOM ───────────────── */
