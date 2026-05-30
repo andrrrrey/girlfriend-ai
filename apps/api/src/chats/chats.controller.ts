@@ -639,8 +639,21 @@ export class ChatsController {
       });
 
       if (!ttsRes.ok) {
-        const err = await ttsRes.json().catch(() => ({ error: "TTS failed" }));
-        res.status(ttsRes.status || 502).json(err);
+        // Пробрасываем текст ошибки от AI-сервиса как есть — это видно
+        // в DevTools → Network → Response и помогает диагностировать без
+        // доступа к серверным логам (ElevenLabs key, quota, voiceId и т.д.).
+        const errBody = await ttsRes.text().catch(() => "");
+        let parsed: any;
+        try { parsed = errBody ? JSON.parse(errBody) : null; } catch { parsed = null; }
+        // eslint-disable-next-line no-console
+        console.error("[tts] ai-service error", {
+          chatId, msgId, voiceId,
+          upstreamStatus: ttsRes.status,
+          upstreamBody: errBody?.slice(0, 500),
+        });
+        res.status(ttsRes.status || 502).json(
+          parsed ?? { error: "TTS failed", upstreamStatus: ttsRes.status, upstreamBody: errBody?.slice(0, 500) },
+        );
         return;
       }
 
@@ -651,9 +664,37 @@ export class ChatsController {
       // so we fetch the audio here and proxy it as binary to the client.
       if (contentType.includes("application/json")) {
         const data = await ttsRes.json() as { url: string; key: string };
-        const audioRes = await fetch(data.url);
+        let audioRes: Awaited<ReturnType<typeof fetch>>;
+        try {
+          audioRes = await fetch(data.url);
+        } catch (fetchErr: any) {
+          // Самая частая причина 502 на проде: S3_PUBLIC_URL указывает
+          // на внешний адрес, до которого сам API-контейнер не может
+          // достучаться (DNS / TLS / firewall).
+          // eslint-disable-next-line no-console
+          console.error("[tts] storage fetch threw", { url: data.url, key: data.key, err: fetchErr?.message });
+          res.status(502).json({
+            error: "Failed to reach audio storage",
+            details: fetchErr?.message,
+            url: data.url,
+            hint: "API container cannot reach S3_PUBLIC_URL. Check that S3_PUBLIC_URL is resolvable AND reachable from inside the API container (DNS, TLS, network policy).",
+          });
+          return;
+        }
         if (!audioRes.ok) {
-          res.status(502).json({ error: "Failed to fetch audio from storage" });
+          const storageBody = await audioRes.text().catch(() => "");
+          // eslint-disable-next-line no-console
+          console.error("[tts] storage non-2xx", {
+            url: data.url, key: data.key,
+            storageStatus: audioRes.status,
+            storageBody: storageBody?.slice(0, 500),
+          });
+          res.status(502).json({
+            error: "Failed to fetch audio from storage",
+            storageStatus: audioRes.status,
+            storageBody: storageBody?.slice(0, 500),
+            url: data.url,
+          });
           return;
         }
         const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
@@ -674,6 +715,8 @@ export class ChatsController {
       // Re-throw NestJS HTTP exceptions (404, 403, etc.) so they are handled
       // by the global exception filter with the correct status code.
       if (err instanceof HttpException) throw err;
+      // eslint-disable-next-line no-console
+      console.error("[tts] unexpected error", { chatId, msgId, err: err?.message });
       if (!res.headersSent) {
         res.status(500).json({ error: "TTS processing failed", details: err.message });
       }

@@ -47,8 +47,10 @@ function ChatPageInner() {
   // Chat search state
   const [chatSearch, setChatSearch] = useState("");
 
-  // Demo banner state
-  const [demoBanner, setDemoBanner] = useState<string | null>(null);
+  // Demo banner state. `subscribeCta` controls whether the banner shows the
+  // "Оформить подписку" button — we only want it for actual subscription/limit
+  // errors, not for generic network/AI errors.
+  const [demoBanner, setDemoBanner] = useState<{ message: string; subscribeCta: boolean } | null>(null);
   const [premiumPopup, setPremiumPopup] = useState<{ limitType: PremiumLimitType; limit: number; used: number } | null>(null);
 
   // Voice recording state
@@ -194,12 +196,20 @@ function ChatPageInner() {
         limit: body.limit,
         used: body.used,
       });
-    } else if (code === 403) {
-      setDemoBanner("Голосовые функции доступны только по подписке.");
+    } else if (code === 403 && body?.error === "DEMO_FEATURE_BLOCKED") {
+      setDemoBanner({ message: "Голосовые функции доступны только по подписке.", subscribeCta: true });
     } else if (code === 503) {
-      setDemoBanner("AI-сервис временно недоступен. Попробуйте позже.");
+      setDemoBanner({
+        message: "AI-сервис временно недоступен. Попробуйте через минуту.",
+        subscribeCta: false,
+      });
+    } else if (code === 502 || code === 504) {
+      setDemoBanner({
+        message: "Не удалось получить ответ от AI. Попробуйте ещё раз.",
+        subscribeCta: false,
+      });
     } else {
-      setDemoBanner(`Ошибка: ${err}`);
+      setDemoBanner({ message: `Ошибка: ${err}`, subscribeCta: false });
     }
   };
 
@@ -896,9 +906,11 @@ function ChatPageInner() {
             {/* Demo banner */}
             {demoBanner && (
               <div className="demo-banner">
-                <span>{demoBanner}</span>
+                <span>{demoBanner.message}</span>
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <a href="/profile" className="demo-banner-btn">Оформить подписку</a>
+                  {demoBanner.subscribeCta && (
+                    <a href="/profile" className="demo-banner-btn">Оформить подписку</a>
+                  )}
                   <button onClick={() => setDemoBanner(null)} className="demo-banner-close">Закрыть</button>
                 </div>
               </div>
