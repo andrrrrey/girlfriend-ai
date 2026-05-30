@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, type CharacterOption } from "../../../lib/api";
+import { admin, streamUrlForKey, type CharacterOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 
 const CATEGORIES = [
@@ -119,11 +119,13 @@ const GENERATION_STYLES = [
 interface FormState {
   name: string;
   prompt: string;
-  imageUrl: string;
+  imageThumbKey: string;
+  imageFullKey: string;
+  previewUrl: string;
   generationStyle: string;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageUrl: "", generationStyle: "" };
+const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", generationStyle: "" };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -163,7 +165,14 @@ export default function AdminCharacterOptionsPage() {
 
   const openEdit = (opt: CharacterOption) => {
     setEditing(opt);
-    setForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "", generationStyle: opt.generationStyle ?? "" });
+    setForm({
+      name: opt.name,
+      prompt: opt.prompt ?? "",
+      imageThumbKey: opt.imageThumbKey ?? "",
+      imageFullKey: opt.imageFullKey ?? "",
+      previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
+      generationStyle: opt.generationStyle ?? "",
+    });
     setShowForm(true);
     setError("");
   };
@@ -177,7 +186,8 @@ export default function AdminCharacterOptionsPage() {
         category: activeCategory,
         name: form.name.trim(),
         prompt: form.prompt.trim() || undefined,
-        imageUrl: form.imageUrl || undefined,
+        imageThumbKey: form.imageThumbKey || undefined,
+        imageFullKey: form.imageFullKey || undefined,
         generationStyle: activeCategory === "STYLE" ? (form.generationStyle || undefined) : undefined,
       };
       if (editing) {
@@ -278,22 +288,28 @@ export default function AdminCharacterOptionsPage() {
                 accept="image/*"
                 id="char-opt-img"
                 style={{ display: "none" }}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => setForm((f) => ({ ...f, imageUrl: reader.result as string }));
-                  reader.readAsDataURL(file);
+                  const localPreview = URL.createObjectURL(file);
+                  setForm((f) => ({ ...f, previewUrl: localPreview }));
+                  try {
+                    const { thumbKey, fullKey } = await admin.uploadOptionImage(file);
+                    setForm((f) => ({ ...f, imageThumbKey: thumbKey, imageFullKey: fullKey }));
+                  } catch {
+                    setError("Image upload failed");
+                    setForm((f) => ({ ...f, previewUrl: "" }));
+                  }
                 }}
               />
               <label htmlFor="char-opt-img" style={{ ...s.cancelBtn, cursor: "pointer" }}>
-                {form.imageUrl ? "Change image" : "Upload image"}
+                {form.previewUrl ? "Change image" : "Upload image"}
               </label>
-              {form.imageUrl && (
-                <img src={form.imageUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
+              {form.previewUrl && (
+                <img src={form.previewUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
               )}
-              {form.imageUrl && (
-                <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}>✕</button>
+              {form.previewUrl && (
+                <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}>✕</button>
               )}
             </div>
             {error && <p style={{ color: "#e36466", fontSize: 12, margin: 0 }}>{error}</p>}
@@ -311,10 +327,12 @@ export default function AdminCharacterOptionsPage() {
               No options yet. Click "+ Add New" to add the first one.
             </p>
           )}
-          {options.map((opt) => (
+          {options.map((opt) => {
+            const imgSrc = streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl;
+            return (
             <div key={opt.id} style={s.optionRow}>
-              {opt.imageUrl
-                ? <img src={opt.imageUrl} alt={opt.name} style={s.optionImg} />
+              {imgSrc
+                ? <img src={imgSrc} alt={opt.name} style={s.optionImg} loading="lazy" decoding="async" />
                 : <div style={s.optionImgPlaceholder} />
               }
               <span style={s.optionName}>{opt.name}</span>
@@ -327,7 +345,8 @@ export default function AdminCharacterOptionsPage() {
               <button style={s.smallBtn} onClick={() => openEdit(opt)}>Edit</button>
               <button style={s.deleteBtn} onClick={() => handleDelete(opt.id)}>Delete</button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

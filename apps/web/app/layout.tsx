@@ -1,6 +1,7 @@
 import { AuthProvider } from "../context/auth";
 import { GenerationProvider } from "../context/generation";
 import LayoutShell from "./components/LayoutShell";
+import ServiceWorkerInit from "./components/ServiceWorkerInit";
 import "./globals.css";
 
 export const metadata = {
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: import("react").Rea
   return (
     <html lang="ru">
       <body>
+        <ServiceWorkerInit />
         <AuthProvider>
           <GenerationProvider>
             <LayoutShell>{children}</LayoutShell>

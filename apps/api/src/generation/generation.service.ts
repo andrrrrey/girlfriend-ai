@@ -35,6 +35,23 @@ export class GenerationService {
     private readonly s3: S3Service,
   ) {}
 
+  /** Возвращает публичный URL объекта S3 через /media/stream. */
+  private keyToStreamUrl(key: string | null | undefined): string | null {
+    if (!key) return null;
+    return `/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+  }
+
+  /** Добавляет imageThumbUrl/imageFullUrl к опции на основе ключей S3. */
+  private withOptionImageUrls<T extends { imageThumbKey?: string | null; imageFullKey?: string | null }>(
+    opt: T,
+  ): T & { imageThumbUrl: string | null; imageFullUrl: string | null } {
+    return {
+      ...opt,
+      imageThumbUrl: this.keyToStreamUrl(opt.imageThumbKey),
+      imageFullUrl: this.keyToStreamUrl(opt.imageFullKey),
+    };
+  }
+
   /** Заменяет S3 URL на путь через media-прокси API. Внешние URL проксируются через /media/proxy. */
   private async toSignedUrl(url: string | undefined | null): Promise<string | null> {
     if (!url) return null;
@@ -161,10 +178,11 @@ export class GenerationService {
   }
 
   async getCharacterOptions(category?: string) {
-    return this.prisma.characterOption.findMany({
+    const options = await this.prisma.characterOption.findMany({
       where: category ? { category } : undefined,
       orderBy: [{ category: "asc" }, { order: "asc" }, { createdAt: "asc" }],
     });
+    return options.map((o) => this.withOptionImageUrls(o));
   }
 
   async getAppearanceOptions() {
@@ -174,11 +192,15 @@ export class GenerationService {
         options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const result: { OUTFITS: typeof categories; OUTFIT_DETAILS: typeof categories } = {
+    const mapped = categories.map((cat) => ({
+      ...cat,
+      options: cat.options.map((o) => this.withOptionImageUrls(o)),
+    }));
+    const result: { OUTFITS: typeof mapped; OUTFIT_DETAILS: typeof mapped } = {
       OUTFITS: [],
       OUTFIT_DETAILS: [],
     };
-    for (const cat of categories) {
+    for (const cat of mapped) {
       if (cat.tab === "OUTFITS") result.OUTFITS.push(cat);
       else if (cat.tab === "OUTFIT_DETAILS") result.OUTFIT_DETAILS.push(cat);
     }
@@ -192,11 +214,15 @@ export class GenerationService {
         options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const result: { FACIAL_EXPRESSION: typeof categories; POSE: typeof categories } = {
+    const mapped = categories.map((cat) => ({
+      ...cat,
+      options: cat.options.map((o) => this.withOptionImageUrls(o)),
+    }));
+    const result: { FACIAL_EXPRESSION: typeof mapped; POSE: typeof mapped } = {
       FACIAL_EXPRESSION: [],
       POSE: [],
     };
-    for (const cat of categories) {
+    for (const cat of mapped) {
       if (cat.tab === "FACIAL_EXPRESSION") result.FACIAL_EXPRESSION.push(cat);
       else if (cat.tab === "POSE") result.POSE.push(cat);
     }
@@ -210,8 +236,12 @@ export class GenerationService {
         options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const result: { LOCATION: typeof categories } = { LOCATION: [] };
-    for (const cat of categories) {
+    const mapped = categories.map((cat) => ({
+      ...cat,
+      options: cat.options.map((o) => this.withOptionImageUrls(o)),
+    }));
+    const result: { LOCATION: typeof mapped } = { LOCATION: [] };
+    for (const cat of mapped) {
       if (cat.tab === "LOCATION") result.LOCATION.push(cat);
     }
     return result;
@@ -221,11 +251,12 @@ export class GenerationService {
     const options = await this.prisma.cameraOption.findMany({
       orderBy: [{ section: "asc" }, { order: "asc" }, { createdAt: "asc" }],
     });
-    const result: { FRAMING: typeof options; CAMERA_ANGLE: typeof options } = {
+    const mapped = options.map((o) => this.withOptionImageUrls(o));
+    const result: { FRAMING: typeof mapped; CAMERA_ANGLE: typeof mapped } = {
       FRAMING: [],
       CAMERA_ANGLE: [],
     };
-    for (const opt of options) {
+    for (const opt of mapped) {
       if (opt.section === "FRAMING") result.FRAMING.push(opt);
       else if (opt.section === "CAMERA_ANGLE") result.CAMERA_ANGLE.push(opt);
     }

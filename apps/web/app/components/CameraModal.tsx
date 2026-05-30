@@ -176,7 +176,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                     const selected = draft.framing.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, framing: toggle(draft.framing, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>
@@ -197,7 +197,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                     const selected = draft.cameraAngle.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, cameraAngle: toggle(draft.cameraAngle, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>

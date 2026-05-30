@@ -41,7 +41,7 @@ export class MediaController {
     try {
       const { body, contentType } = await this.s3.getObject(key);
       res.setHeader("Content-Type", contentType || "application/octet-stream");
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       body.pipe(res);
     } catch {
       throw new NotFoundException("Media not found");

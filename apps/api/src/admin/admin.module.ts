@@ -15,8 +15,10 @@
 
 import { Module } from "@nestjs/common";
 import { AdminController } from "./admin.controller";
+import { AdminUploadController } from "./upload.controller";
 import { AdminService } from "./admin.service";
 import { PrismaService } from "../prisma.service";
+import { S3Module } from "../s3/s3.module";
 
 /**
  * Модуль администрирования.
@@ -29,7 +31,8 @@ import { PrismaService } from "../prisma.service";
  * в других модулях приложения.
  */
 @Module({
-  controllers: [AdminController],
+  imports: [S3Module],
+  controllers: [AdminController, AdminUploadController],
   providers: [AdminService, PrismaService],
   exports: [AdminService],
 })

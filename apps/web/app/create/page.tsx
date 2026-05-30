@@ -58,8 +58,9 @@ function populateImageCards(containerId: string, options: CharacterOption[]) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = options.map((o) => {
-    const imgHtml = o.imageUrl
-      ? `<img src="${o.imageUrl}" alt="${o.name}" class="ethnicity-card-img" />`
+    const src = o.imageThumbUrl || o.imageUrl;
+    const imgHtml = src
+      ? `<img src="${src}" alt="${o.name}" class="ethnicity-card-img" loading="lazy" decoding="async" />`
       : "";
     return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${o.name}</span></div>`;
   }).join("");
@@ -1158,8 +1159,9 @@ export default function CreateCharacterPage() {
         const styleContainer = document.getElementById("style-row-container");
         if (styleContainer) {
           styleContainer.innerHTML = dbStyles.map((s, i) => {
-            const imgHtml = s.imageUrl
-              ? `<img src="${s.imageUrl}" alt="${s.name}" class="style-card-img" />`
+            const src = s.imageThumbUrl || s.imageUrl;
+            const imgHtml = src
+              ? `<img src="${src}" alt="${s.name}" class="style-card-img" loading="lazy" decoding="async" />`
               : "";
             return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
               ${imgHtml}<span class="name">${s.name}</span></div>`;

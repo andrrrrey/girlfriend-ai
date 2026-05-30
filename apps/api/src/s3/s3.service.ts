@@ -1,5 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { Readable } from "stream";
 import { loadEnv } from "@repo/config";
@@ -51,6 +55,24 @@ export class S3Service {
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
     const response = await this.s3.send(command);
     return { body: response.Body as Readable, contentType: response.ContentType };
+  }
+
+  /** Загружает буфер в S3 по указанному ключу. */
+  async putObject(
+    key: string,
+    body: Buffer,
+    contentType: string,
+    cacheControl = "public, max-age=31536000, immutable",
+  ): Promise<void> {
+    if (!this.s3) throw new Error("S3 is not configured");
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: cacheControl,
+    });
+    await this.s3.send(command);
   }
 
   /** Извлекает S3-ключ из полного публичного URL */

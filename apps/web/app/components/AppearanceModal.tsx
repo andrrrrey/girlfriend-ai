@@ -143,7 +143,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                     const selected = draft.outfits.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, outfits: toggle(draft.outfits, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>
@@ -166,7 +166,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                     const selected = draft.outfitDetails.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, outfitDetails: toggle(draft.outfitDetails, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>

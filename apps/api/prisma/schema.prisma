@@ -198,11 +198,13 @@ model UsageLog {
 // ─── Character Options (image generation) ────────────────────
 
 model CharacterOption {
-  id        String   @id @default(cuid())
-  category  String   // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
-  name      String
-  prompt    String?
-  imageUrl  String?  @map("image_url")
+  id              String   @id @default(cuid())
+  category        String   // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
+  name            String
+  prompt          String?
+  imageUrl        String?  @map("image_url")
+  imageThumbKey   String?  @map("image_thumb_key")
+  imageFullKey    String?  @map("image_full_key")
   order           Int      @default(0)
   generationStyle String?  @map("generation_style")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -227,13 +229,15 @@ model AppearanceCategory {
 }
 
 model AppearanceOption {
-  id         String   @id @default(cuid())
-  categoryId String   @map("category_id")
-  name       String
-  prompt     String?
-  imageUrl   String?  @map("image_url")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  categoryId    String   @map("category_id")
+  name          String
+  prompt        String?
+  imageUrl      String?  @map("image_url")
+  imageThumbKey String?  @map("image_thumb_key")
+  imageFullKey  String?  @map("image_full_key")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   category AppearanceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -257,13 +261,15 @@ model PoseCategory {
 }
 
 model PoseOption {
-  id         String   @id @default(cuid())
-  categoryId String   @map("category_id")
-  name       String
-  prompt     String?
-  imageUrl   String?  @map("image_url")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  categoryId    String   @map("category_id")
+  name          String
+  prompt        String?
+  imageUrl      String?  @map("image_url")
+  imageThumbKey String?  @map("image_thumb_key")
+  imageFullKey  String?  @map("image_full_key")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   category PoseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -287,13 +293,15 @@ model SceneCategory {
 }
 
 model SceneOption {
-  id         String   @id @default(cuid())
-  categoryId String   @map("category_id")
-  name       String
-  prompt     String?
-  imageUrl   String?  @map("image_url")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  categoryId    String   @map("category_id")
+  name          String
+  prompt        String?
+  imageUrl      String?  @map("image_url")
+  imageThumbKey String?  @map("image_thumb_key")
+  imageFullKey  String?  @map("image_full_key")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   category SceneCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -304,13 +312,15 @@ model SceneOption {
 // ─── Camera Options (image generation) ───────────────────────
 
 model CameraOption {
-  id        String   @id @default(cuid())
-  section   String   // FRAMING | CAMERA_ANGLE
-  name      String
-  prompt    String?
-  imageUrl  String?  @map("image_url")
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  section       String   // FRAMING | CAMERA_ANGLE
+  name          String
+  prompt        String?
+  imageUrl      String?  @map("image_url")
+  imageThumbKey String?  @map("image_thumb_key")
+  imageFullKey  String?  @map("image_full_key")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([section])
   @@map("camera_options")

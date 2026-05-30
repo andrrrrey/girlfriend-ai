@@ -24,6 +24,15 @@
 const API_BASE = "/api-proxy";
 
 /**
+ * Превращает S3-ключ в URL медиа-стрима (с долгим immutable-кешем).
+ * Используется на админских страницах, где сервер возвращает ключи, но не URL.
+ */
+export function streamUrlForKey(key: string | null | undefined): string | null {
+  if (!key) return null;
+  return `${API_BASE}/media/stream?key=${encodeURIComponent(key)}`;
+}
+
+/**
  * Пара JWT-токенов, возвращаемая при входе/регистрации/обновлении.
  * accessToken — короткоживущий JWT (7 дней).
  * refreshToken — долгоживущий UUID (30 дней), хранится в БД.
@@ -378,6 +387,10 @@ export interface CharacterOption {
   name: string;
   prompt?: string | null;
   imageUrl?: string | null;
+  imageThumbKey?: string | null;
+  imageFullKey?: string | null;
+  imageThumbUrl?: string | null;
+  imageFullUrl?: string | null;
   order: number;
   generationStyle?: string | null;
   createdAt: string;
@@ -395,6 +408,10 @@ export interface AppearanceOption {
   name: string;
   prompt?: string | null;
   imageUrl?: string | null;
+  imageThumbKey?: string | null;
+  imageFullKey?: string | null;
+  imageThumbUrl?: string | null;
+  imageFullUrl?: string | null;
   order: number;
   createdAt: string;
 }
@@ -425,6 +442,10 @@ export interface PoseOption {
   name: string;
   prompt?: string | null;
   imageUrl?: string | null;
+  imageThumbKey?: string | null;
+  imageFullKey?: string | null;
+  imageThumbUrl?: string | null;
+  imageFullUrl?: string | null;
   order: number;
   createdAt: string;
 }
@@ -455,6 +476,10 @@ export interface SceneOption {
   name: string;
   prompt?: string | null;
   imageUrl?: string | null;
+  imageThumbKey?: string | null;
+  imageFullKey?: string | null;
+  imageThumbUrl?: string | null;
+  imageFullUrl?: string | null;
   order: number;
   createdAt: string;
 }
@@ -484,6 +509,10 @@ export interface CameraOption {
   name: string;
   prompt?: string | null;
   imageUrl?: string | null;
+  imageThumbKey?: string | null;
+  imageFullKey?: string | null;
+  imageThumbUrl?: string | null;
+  imageFullUrl?: string | null;
   order: number;
   createdAt: string;
 }
@@ -661,14 +690,14 @@ export const admin = {
     return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
   },
 
-  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
+  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>("/admin/character-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -707,14 +736,14 @@ export const admin = {
     return apiFetch<AppearanceOption[]>(`/admin/appearance-options${q}`);
   },
 
-  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>("/admin/appearance-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<AppearanceOption> {
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -753,14 +782,14 @@ export const admin = {
     return apiFetch<PoseOption[]>(`/admin/pose-options${q}`);
   },
 
-  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<PoseOption> {
     return apiFetch<PoseOption>("/admin/pose-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<PoseOption> {
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<PoseOption> {
     return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -799,14 +828,14 @@ export const admin = {
     return apiFetch<SceneOption[]>(`/admin/scene-options${q}`);
   },
 
-  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<SceneOption> {
     return apiFetch<SceneOption>("/admin/scene-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<SceneOption> {
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<SceneOption> {
     return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -822,14 +851,14 @@ export const admin = {
     return apiFetch<CameraOption[]>(`/admin/camera-options${q}`);
   },
 
-  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<CameraOption> {
     return apiFetch<CameraOption>("/admin/camera-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; order?: number }): Promise<CameraOption> {
+  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<CameraOption> {
     return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -838,6 +867,28 @@ export const admin = {
 
   async deleteCameraOption(id: string): Promise<void> {
     return apiFetch(`/admin/camera-options/${id}`, { method: "DELETE" });
+  },
+
+  /**
+   * Загружает оригинал картинки опции — API ресайзит в WebP (thumb+full)
+   * и складывает в S3. Возвращает ключи S3 для сохранения в опции.
+   */
+  async uploadOptionImage(file: File): Promise<{ thumbKey: string; fullKey: string }> {
+    const tokens = (typeof window !== "undefined")
+      ? { accessToken: localStorage.getItem("accessToken") }
+      : null;
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/admin/upload-option-image`, {
+      method: "POST",
+      headers: tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined,
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, body.message || res.statusText, body);
+    }
+    return res.json();
   },
 
   async getGenerations(params?: { type?: string; limit?: number; offset?: number; search?: string }): Promise<{ items: any[]; total: number }> {

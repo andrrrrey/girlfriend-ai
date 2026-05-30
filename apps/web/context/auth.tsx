@@ -42,6 +42,7 @@ import React, {
   useCallback,
 } from "react";
 import { auth as authApi, users, type UserProfile } from "../lib/api";
+import { usePrefetchAllOptions } from "../lib/use-prefetch-all-options";
 
 /**
  * Значение контекста аутентификации.
@@ -146,6 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await authApi.logout();
     setUser(null);
   };
+
+  // После успешной авторизации запускаем фоновую подгрузку картинок
+  // для попапов генерации и шагов создания персонажа.
+  usePrefetchAllOptions(!!user);
 
   return (
     <AuthContext.Provider

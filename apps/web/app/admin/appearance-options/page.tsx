@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, type AppearanceCategory, type AppearanceOption } from "../../../lib/api";
+import { admin, streamUrlForKey, type AppearanceCategory, type AppearanceOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 
 const TABS = [
@@ -122,9 +122,15 @@ const s: Record<string, React.CSSProperties> = {
 };
 
 interface CatForm { name: string }
-interface OptForm { name: string; prompt: string; imageUrl: string }
+interface OptForm {
+  name: string;
+  prompt: string;
+  imageThumbKey: string;
+  imageFullKey: string;
+  previewUrl: string;
+}
 const emptyCatForm: CatForm = { name: "" };
-const emptyOptForm: OptForm = { name: "", prompt: "", imageUrl: "" };
+const emptyOptForm: OptForm = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "" };
 
 export default function AdminAppearanceOptionsPage() {
   const { user, loading } = useAuth();
@@ -233,7 +239,13 @@ export default function AdminAppearanceOptionsPage() {
   const openEditOpt = (opt: AppearanceOption, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingOpt(opt);
-    setOptForm({ name: opt.name, prompt: opt.prompt ?? "", imageUrl: opt.imageUrl ?? "" });
+    setOptForm({
+      name: opt.name,
+      prompt: opt.prompt ?? "",
+      imageThumbKey: opt.imageThumbKey ?? "",
+      imageFullKey: opt.imageFullKey ?? "",
+      previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
+    });
     setShowOptForm(opt.categoryId);
     setOptError("");
   };
@@ -248,7 +260,8 @@ export default function AdminAppearanceOptionsPage() {
         categoryId: showOptForm,
         name: optForm.name.trim(),
         prompt: optForm.prompt.trim() || undefined,
-        imageUrl: optForm.imageUrl || undefined,
+        imageThumbKey: optForm.imageThumbKey || undefined,
+        imageFullKey: optForm.imageFullKey || undefined,
       };
       if (editingOpt) {
         await admin.updateAppearanceOption(editingOpt.id, data);
@@ -394,22 +407,28 @@ export default function AdminAppearanceOptionsPage() {
                             accept="image/*"
                             id="app-opt-img"
                             style={{ display: "none" }}
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = () => setOptForm((f) => ({ ...f, imageUrl: reader.result as string }));
-                              reader.readAsDataURL(file);
+                              const localPreview = URL.createObjectURL(file);
+                              setOptForm((f) => ({ ...f, previewUrl: localPreview }));
+                              try {
+                                const { thumbKey, fullKey } = await admin.uploadOptionImage(file);
+                                setOptForm((f) => ({ ...f, imageThumbKey: thumbKey, imageFullKey: fullKey }));
+                              } catch {
+                                setOptError("Image upload failed");
+                                setOptForm((f) => ({ ...f, previewUrl: "" }));
+                              }
                             }}
                           />
                           <label htmlFor="app-opt-img" style={{ ...s.cancelBtn, cursor: "pointer" }}>
-                            {optForm.imageUrl ? "Change image" : "Upload image"}
+                            {optForm.previewUrl ? "Change image" : "Upload image"}
                           </label>
-                          {optForm.imageUrl && (
-                            <img src={optForm.imageUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
+                          {optForm.previewUrl && (
+                            <img src={optForm.previewUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
                           )}
-                          {optForm.imageUrl && (
-                            <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setOptForm((f) => ({ ...f, imageUrl: "" }))}>✕</button>
+                          {optForm.previewUrl && (
+                            <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setOptForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}>✕</button>
                           )}
                         </div>
                         {optError && <p style={s.errorText}>{optError}</p>}
@@ -423,10 +442,12 @@ export default function AdminAppearanceOptionsPage() {
                     )}
 
                     {/* Options list */}
-                    {opts.map((opt) => (
+                    {opts.map((opt) => {
+                      const imgSrc = streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl;
+                      return (
                       <div key={opt.id} style={s.optionRow}>
-                        {opt.imageUrl ? (
-                          <img src={opt.imageUrl} alt={opt.name} style={s.optionImg} />
+                        {imgSrc ? (
+                          <img src={imgSrc} alt={opt.name} style={s.optionImg} loading="lazy" decoding="async" />
                         ) : (
                           <div style={s.optionImgPlaceholder}>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -441,7 +462,8 @@ export default function AdminAppearanceOptionsPage() {
                         <button style={s.smallBtn} onClick={(e) => openEditOpt(opt, e)}>Edit</button>
                         <button style={s.deleteBtn} onClick={(e) => handleDeleteOpt(opt, e)}>Delete</button>
                       </div>
-                    ))}
+                      );
+                    })}
                     {opts.length === 0 && !showOptForm && (
                       <p style={{ color: "#555", fontSize: 12, fontStyle: "italic", margin: 0 }}>No options yet.</p>
                     )}

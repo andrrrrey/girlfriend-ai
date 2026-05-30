@@ -28,7 +28,10 @@ import { Client } from "pg";
 import { spawn } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
 import * as bcrypt from "bcrypt";
+import sharp from "sharp";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const env = loadEnv();
 const logger = createLogger({ service: "migrator", env: env.ENV, level: env.LOG_LEVEL });
@@ -406,6 +409,114 @@ async function seedGenerationElements(client: Client, workspaceRoot: string): Pr
 }
 
 /**
+ * Одноразово (идемпотентно) переносит base64-картинки опций в S3:
+ * sharp ресайз → WebP thumb (256) + full (768) → PutObject → UPDATE ключи в БД.
+ *
+ * Захватывает только строки вида image_url LIKE 'data:image/%' и пропускает те,
+ * у которых image_thumb_key уже заполнен. Если S3 не настроен — тихо пропускает шаг.
+ *
+ * Запускается мигратором при каждом деплое; повторные запуски ничего не делают.
+ */
+async function migrateBase64OptionImagesToS3(client: Client): Promise<void> {
+  if (!env.S3_ENDPOINT || !env.S3_ACCESS_KEY || !env.S3_SECRET_KEY) {
+    logger.warn({}, "migrate_option_images_skipped_s3_not_configured");
+    return;
+  }
+
+  const bucket = env.S3_BUCKET ?? "media";
+  const s3 = new S3Client({
+    endpoint: env.S3_ENDPOINT,
+    region: env.S3_REGION ?? "auto",
+    credentials: {
+      accessKeyId: env.S3_ACCESS_KEY,
+      secretAccessKey: env.S3_SECRET_KEY,
+    },
+    forcePathStyle: true,
+  });
+
+  const tables = [
+    "character_options",
+    "appearance_options",
+    "pose_options",
+    "scene_options",
+    "camera_options",
+  ];
+
+  let totalOk = 0;
+  let totalFailed = 0;
+
+  for (const table of tables) {
+    const { rows } = await client.query<{ id: string; image_url: string }>(
+      `SELECT id, image_url FROM "${table}"
+       WHERE image_url LIKE 'data:image/%' AND image_thumb_key IS NULL`,
+    );
+
+    if (rows.length === 0) {
+      logger.info({ table }, "migrate_option_images_table_empty");
+      continue;
+    }
+    logger.info({ table, count: rows.length }, "migrate_option_images_table_start");
+
+    let ok = 0;
+    let failed = 0;
+    for (const row of rows) {
+      try {
+        const match = row.image_url.match(/^data:[^;]+;base64,(.*)$/);
+        if (!match) {
+          failed++;
+          continue;
+        }
+        const source = Buffer.from(match[1], "base64");
+        if (source.length === 0) {
+          failed++;
+          continue;
+        }
+
+        const id = randomUUID();
+        const thumbKey = `option-images/${id}-thumb.webp`;
+        const fullKey = `option-images/${id}-full.webp`;
+
+        const [thumbBuf, fullBuf] = await Promise.all([
+          sharp(source).rotate().resize(256, 256, { fit: "cover" }).webp({ quality: 80 }).toBuffer(),
+          sharp(source).rotate().resize(768, 768, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
+        ]);
+
+        await Promise.all([
+          s3.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: thumbKey,
+            Body: thumbBuf,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable",
+          })),
+          s3.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: fullKey,
+            Body: fullBuf,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable",
+          })),
+        ]);
+
+        await client.query(
+          `UPDATE "${table}" SET image_thumb_key = $1, image_full_key = $2, image_url = NULL WHERE id = $3`,
+          [thumbKey, fullKey, row.id],
+        );
+        ok++;
+      } catch (err) {
+        failed++;
+        logger.warn({ table, id: row.id, err }, "migrate_option_image_row_failed");
+      }
+    }
+    logger.info({ table, ok, failed }, "migrate_option_images_table_done");
+    totalOk += ok;
+    totalFailed += failed;
+  }
+
+  logger.info({ totalOk, totalFailed }, "migrate_option_images_summary");
+}
+
+/**
  * Основная функция миграции.
  *
  * Алгоритм:
@@ -454,6 +565,10 @@ async function main() {
     logger.info({}, "seed_generation_elements_start");
     await seedGenerationElements(client, workspaceRoot);
     logger.info({}, "seed_generation_elements_done");
+
+    logger.info({}, "migrate_option_images_start");
+    await migrateBase64OptionImagesToS3(client);
+    logger.info({}, "migrate_option_images_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
     await client.query("SELECT pg_advisory_unlock(987654321);");

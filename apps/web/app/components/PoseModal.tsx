@@ -134,7 +134,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
                     const selected = draft.facialExpressions.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, facialExpressions: toggle(draft.facialExpressions, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>
@@ -157,7 +157,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
                     const selected = draft.poses.includes(opt.name);
                     return (
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, poses: toggle(draft.poses, opt.name) })}>
-                        {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
                         <span style={s.imgCardLabel}>{opt.name}</span>
                       </button>

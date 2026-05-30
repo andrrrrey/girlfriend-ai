@@ -20,6 +20,14 @@ export class UpdateCameraOptionDto {
   imageUrl?: string;
 
   @IsOptional()
+  @IsString()
+  imageThumbKey?: string;
+
+  @IsOptional()
+  @IsString()
+  imageFullKey?: string;
+
+  @IsOptional()
   @IsInt()
   order?: number;
 }
