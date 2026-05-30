@@ -29,7 +29,7 @@ const SETTING_GROUPS = [
     subtitle: "Параметры генерации изображений, видео и чата (ModelsLab)",
     keys: [
       { key: "MODELSLAB_API_KEY", label: "Ключ API ModelsLab", type: "password" },
-      { key: "MODELSLAB_CHAT_MODEL", label: "Модель чата (Uncensored Chat)", type: "select", options: ["llama-3-8b-instruct", "mistral-7b-instruct", "mixtral-8x7b-instruct", "llama-2-70b-chat"] },
+      { key: "MODELSLAB_CHAT_MODEL", label: "Модель чата (Uncensored Chat)", type: "select", options: ["llama-3-8b-instruct", "llama-3-70b-instruct", "mistral-7b-instruct", "mixtral-8x7b-instruct", "llama-2-70b-chat"] },
       { key: "MODELSLAB_DEFAULT_MODEL", label: "Модель изображений", type: "select", options: ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"] },
       { key: "MODELSLAB_DEFAULT_VIDEO_MODEL", label: "Модель видео", type: "select", options: ["wan2.1", "wan2.2", "cogvideox", "hunyuan-video", "animatediff", "ltx-video"] },
     ],

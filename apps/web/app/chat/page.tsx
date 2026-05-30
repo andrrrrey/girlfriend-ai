@@ -128,19 +128,30 @@ function ChatPageInner() {
     }
   }, [loading, user, loadChats, searchParams]);
 
+  // Load messages only when the active chat changes — NOT on every chatList
+  // update. Otherwise any background refresh of chatList (e.g. lastMessageAt
+  // bump after sending) would overwrite optimistic user messages with the
+  // server snapshot, making the just-sent message disappear from the UI
+  // until the AI reply arrives.
   useEffect(() => {
     if (activeChat) {
       loadMessages(activeChat);
       setGalleryIndex(0);
-      // Mark chat as read
-      const chat = chatList.find((c) => c.id === activeChat);
-      if (chat?.lastMessage) {
-        localStorage.setItem(`chat-read-${activeChat}`, chat.lastMessage.createdAt);
-      }
       // Auto-focus the message input
       setTimeout(() => chatInputRef.current?.focus(), 100);
     }
-  }, [activeChat, loadMessages, chatList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat, loadMessages]);
+
+  // Mark chat as read whenever chatList updates with a new lastMessage —
+  // separate from message loading so it doesn't trigger a reload.
+  useEffect(() => {
+    if (!activeChat) return;
+    const chat = chatList.find((c) => c.id === activeChat);
+    if (chat?.lastMessage) {
+      localStorage.setItem(`chat-read-${activeChat}`, chat.lastMessage.createdAt);
+    }
+  }, [activeChat, chatList]);
 
   // Auto-scroll to bottom
   useEffect(() => {
