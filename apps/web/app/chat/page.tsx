@@ -168,8 +168,13 @@ function ChatPageInner() {
     }
   }, [loading, user, router]);
 
-  if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
-  if (!user) return null;
+  // NOTE: do NOT early-return here based on `loading` / `user`.
+  // There are more hooks (useMemo, useRef, useEffect) declared after the
+  // helpers below — an early return would cause React to call a different
+  // number of hooks on subsequent renders ("Rendered more hooks than during
+  // the previous render"), which triggers the root error boundary
+  // ("Something went wrong"). The loading / unauthenticated branches are
+  // applied right before the final JSX return instead.
 
   const handleDemoError = (err: string, code?: number, body?: any) => {
     if ((code === 429 || code === 403) && body?.error === "FREE_LIMIT_REACHED") {
@@ -650,6 +655,10 @@ function ChatPageInner() {
     const pose = allPoses.find((o) => o.name === poseName);
     if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
   };
+
+  // Auth gates — placed here (after all hooks) on purpose. See note above.
+  if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
+  if (!user) return null;
 
   return (
     <div className="chat-content">
