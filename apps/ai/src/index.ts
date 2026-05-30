@@ -359,14 +359,68 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       return reply.status(502).send({ error: "ModelsLab API error", details: text });
     }
 
-    const data: any = await mlRes.json();
+    let data: any = await mlRes.json();
+
+    logger.info(
+      {
+        status: data.status,
+        hasOutput: typeof data.output === "string" ? data.output.length : Array.isArray(data.output) ? data.output.length : !!data.output,
+        hasMessage: !!data.message,
+        hasFetchResult: !!data.fetch_result,
+        eta: data.eta,
+      },
+      "modelslab_chat_initial_response",
+    );
 
     if (data.status === "error") {
       logger.error({ data }, "modelslab_chat_api_error");
       return reply.status(502).send({ error: "ModelsLab API error", details: data.message });
     }
 
-    const output: string = data.output ?? data.message ?? "";
+    // Если ModelsLab вернул processing/queued — поллим fetch_result до 30 сек.
+    // Без этого фронт получает пустой content и кажется, что персонаж «молчит».
+    if ((data.status === "processing" || data.status === "queued") && data.fetch_result) {
+      const fetchUrl: string = data.fetch_result;
+      const maxAttempts = 15; // 15 * 2s = 30s
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const pollRes = await fetch(fetchUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: apiKey }),
+            signal: abortController.signal,
+          });
+          if (!pollRes.ok) {
+            logger.warn({ status: pollRes.status, attempt: i }, "modelslab_chat_poll_http_error");
+            continue;
+          }
+          const pollData: any = await pollRes.json();
+          logger.info({ status: pollData.status, attempt: i }, "modelslab_chat_poll");
+          if (pollData.status === "success" || pollData.output || pollData.message) {
+            data = pollData;
+            break;
+          }
+          if (pollData.status === "failed" || pollData.status === "error") {
+            logger.error({ pollData }, "modelslab_chat_poll_failed");
+            return reply.status(502).send({ error: "ModelsLab generation failed" });
+          }
+        } catch (pollErr: any) {
+          if (pollErr.name === "AbortError") throw pollErr;
+          logger.warn({ err: pollErr.message, attempt: i }, "modelslab_chat_poll_error");
+        }
+      }
+    }
+
+    let output: string = (Array.isArray(data.output) ? data.output.join("") : data.output) ?? data.message ?? "";
+    output = (output || "").trim();
+
+    if (!output) {
+      // Пустой ответ от LLM — это не ошибка сети, но и не валидный ответ.
+      // Логируем и возвращаем 502, чтобы фронт показал ошибку вместо «молчания».
+      logger.error({ data, model }, "modelslab_chat_empty_output");
+      return reply.status(502).send({ error: "Empty response from AI model" });
+    }
 
     // Устанавливаем заголовки SSE-стрима
     reply.raw.writeHead(200, {
@@ -379,7 +433,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
     reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason: "stop", usage: null })}\n\n`);
 
-    logger.info({ model }, "modelslab_chat_done");
+    logger.info({ model, outputLength: output.length }, "modelslab_chat_done");
     reply.raw.write("data: [DONE]\n\n");
     reply.raw.end();
   } catch (err: any) {
