@@ -19,11 +19,14 @@ export default function Sidebar({
 }) {
   const { user } = useAuth();
   const { notificationHistory } = useGeneration();
-  // Read token synchronously so the label is correct on the very first render
-  // (avoids flicker while useAuth's async profile fetch is in-flight)
-  const [hasToken] = useState(() =>
-    typeof window !== "undefined" && !!localStorage.getItem("accessToken")
-  );
+  // Defer the localStorage read until after hydration to avoid SSR/client
+  // markup mismatch (server has no localStorage → would render "Creator
+  // account", client with a token would render "My account" → hydration
+  // error tears down the tree and triggers the root error boundary).
+  const [hasToken, setHasToken] = useState(false);
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem("accessToken"));
+  }, []);
   const isLoggedIn = user != null || hasToken;
   const [unreadCount, setUnreadCount] = useState(0);
 
