@@ -69,6 +69,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from "@nestj
 import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DemoService } from "../demo/demo.service";
+import { S3Service } from "../s3/s3.service";
 import { ChatsService } from "./chats.service";
 import { CreateChatDto } from "./dto/create-chat.dto";
 import { EditMessageDto } from "./dto/edit-message.dto";
@@ -134,6 +135,7 @@ export class ChatsController {
   constructor(
     private readonly chatsService: ChatsService,
     private readonly demoService: DemoService,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -659,49 +661,61 @@ export class ChatsController {
 
       const contentType = ttsRes.headers.get("content-type") || "";
 
-      // If AI service returned JSON with URL (internal S3/MinIO path) —
-      // the URL is reachable from the API container but NOT from the browser,
-      // so we fetch the audio here and proxy it as binary to the client.
+      // If AI service returned JSON with URL+key (S3 upload) — download the
+      // audio via the S3 SDK using the INTERNAL endpoint (same pattern as
+      // /media/stream for images), and proxy it as binary to the client.
+      //
+      // Why we don't `fetch(data.url)` anymore:
+      // `data.url` is built from S3_PUBLIC_URL (the browser-facing CDN/MinIO
+      // address). In production setups the API container often cannot reach
+      // that public address (NAT, firewall, split-DNS), even though it can
+      // reach S3 fine via the internal S3_ENDPOINT used by the SDK. That mismatch
+      // was producing 502 Bad Gateway on TTS while images worked (images go
+      // through /media/stream which already uses the SDK).
       if (contentType.includes("application/json")) {
         const data = await ttsRes.json() as { url: string; key: string };
-        let audioRes: Awaited<ReturnType<typeof fetch>>;
         try {
-          audioRes = await fetch(data.url);
-        } catch (fetchErr: any) {
-          // Самая частая причина 502 на проде: S3_PUBLIC_URL указывает
-          // на внешний адрес, до которого сам API-контейнер не может
-          // достучаться (DNS / TLS / firewall).
+          const { body, contentType: s3ContentType } = await this.s3Service.getObject(data.key);
+          await this.chatsService.logUsage(req.user.id, "tts");
+          res.setHeader("Content-Type", s3ContentType || "audio/mpeg");
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          body.pipe(res);
+        } catch (s3Err: any) {
           // eslint-disable-next-line no-console
-          console.error("[tts] storage fetch threw", { url: data.url, key: data.key, err: fetchErr?.message });
-          res.status(502).json({
-            error: "Failed to reach audio storage",
-            details: fetchErr?.message,
+          console.error("[tts] s3 getObject failed", {
+            key: data.key,
             url: data.url,
-            hint: "API container cannot reach S3_PUBLIC_URL. Check that S3_PUBLIC_URL is resolvable AND reachable from inside the API container (DNS, TLS, network policy).",
+            err: s3Err?.message,
+            code: s3Err?.Code || s3Err?.name,
           });
-          return;
+          // Fallback: пробуем по публичному URL — на случай если S3Service
+          // не настроен в API-контейнере, но у AI он есть.
+          try {
+            const audioRes = await fetch(data.url);
+            if (!audioRes.ok) {
+              res.status(502).json({
+                error: "Failed to fetch audio from storage",
+                storageStatus: audioRes.status,
+                key: data.key,
+                url: data.url,
+              });
+              return;
+            }
+            const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+            await this.chatsService.logUsage(req.user.id, "tts");
+            res.setHeader("Content-Type", "audio/mpeg");
+            res.setHeader("Content-Length", audioBuffer.length);
+            res.status(200).send(audioBuffer);
+          } catch (fetchErr: any) {
+            res.status(502).json({
+              error: "Failed to reach audio storage",
+              s3Error: s3Err?.message,
+              fetchError: fetchErr?.message,
+              key: data.key,
+              url: data.url,
+            });
+          }
         }
-        if (!audioRes.ok) {
-          const storageBody = await audioRes.text().catch(() => "");
-          // eslint-disable-next-line no-console
-          console.error("[tts] storage non-2xx", {
-            url: data.url, key: data.key,
-            storageStatus: audioRes.status,
-            storageBody: storageBody?.slice(0, 500),
-          });
-          res.status(502).json({
-            error: "Failed to fetch audio from storage",
-            storageStatus: audioRes.status,
-            storageBody: storageBody?.slice(0, 500),
-            url: data.url,
-          });
-          return;
-        }
-        const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-        await this.chatsService.logUsage(req.user.id, "tts");
-        res.setHeader("Content-Type", "audio/mpeg");
-        res.setHeader("Content-Length", audioBuffer.length);
-        res.status(200).send(audioBuffer);
         return;
       }
 

@@ -26,9 +26,13 @@ import { CharactersController } from "./characters.controller";
 import { ChatsService } from "./chats.service";
 import { PrismaService } from "../prisma.service";
 import { DemoModule } from "../demo/demo.module";
+import { S3Module } from "../s3/s3.module";
 
 @Module({
-  imports: [DemoModule], // Для DemoService (проверка лимитов free-пользователей)
+  imports: [
+    DemoModule, // Для DemoService (проверка лимитов free-пользователей)
+    S3Module,   // Для S3Service — скачиваем TTS-аудио по ключу через внутренний S3 endpoint
+  ],
   controllers: [ChatsController, CharactersController],
   providers: [ChatsService, PrismaService],
 })

@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma.service";
 import { DemoService } from "../demo/demo.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
+import { normalizeCharacterDto } from "./character-normalize";
 import type { Prisma } from "@prisma/client";
 
 @Controller("characters")
@@ -182,8 +183,13 @@ export class CharactersController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  async createCharacter(@Req() req: any, @Body() dto: CreateUserCharacterDto) {
+  async createCharacter(@Req() req: any, @Body() rawDto: CreateUserCharacterDto) {
     await this.demoService.checkCharacterCreation(req.user.id, req.user.subscription);
+
+    // Нормализуем входящий DTO: что бы ни прислал фронт (английские лейблы из
+    // /create, русские локализованные из /generation, кривые ключи из manifest)
+    // — в БД и в systemPrompt лягут английские lowercase-snake ключи.
+    const dto = normalizeCharacterDto(rawDto);
 
     const systemPrompt = generateSystemPrompt(dto);
 
