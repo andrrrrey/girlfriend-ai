@@ -144,6 +144,130 @@ export class CharactersController {
     });
   }
 
+  /**
+   * Stories-лента для главной страницы.
+   *
+   * Возвращает персонажей в виде кружков. Персонажи, у которых за последние
+   * 24 часа в чатах с пользователями были сгенерированы картинки (Message
+   * type="image"), помечаются hasActiveStory=true и идут первыми, отсортированные
+   * по свежести последней истории. Остальные публичные персонажи идут следом
+   * (новые первыми). Через 24 часа история «протухает» — персонаж теряет обводку
+   * и уходит в конец списка автоматически (т.к. перестаёт попадать в окно).
+   */
+  @Get("stories")
+  async getStories(@Query("limit") limit?: string) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Картинки, созданные в чатах за последние 24 часа, с привязкой к персонажу
+    const recentImages = await this.prisma.message.findMany({
+      where: {
+        type: "image",
+        mediaUrl: { not: null },
+        deletedAt: null,
+        createdAt: { gte: since },
+        chatSession: { deletedAt: null },
+      },
+      select: {
+        createdAt: true,
+        chatSession: { select: { characterId: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Агрегируем по персонажу: время последней истории и количество кадров
+    const storyMap = new Map<string, { latestAt: Date; count: number }>();
+    for (const m of recentImages) {
+      const cid = m.chatSession.characterId;
+      const cur = storyMap.get(cid);
+      if (cur) {
+        cur.count += 1;
+        if (m.createdAt > cur.latestAt) cur.latestAt = m.createdAt;
+      } else {
+        storyMap.set(cid, { latestAt: m.createdAt, count: 1 });
+      }
+    }
+
+    const activeIds = [...storyMap.keys()];
+    const restTake = limit ? parseInt(limit, 10) : 60;
+
+    const [activeRaw, restRaw] = await Promise.all([
+      activeIds.length
+        ? this.prisma.character.findMany({
+            where: { id: { in: activeIds }, deletedAt: null, avatarUrl: { not: null } },
+            select: { id: true, name: true, avatarUrl: true },
+          })
+        : Promise.resolve([]),
+      this.prisma.character.findMany({
+        where: {
+          deletedAt: null,
+          avatarUrl: { not: null },
+          ...(activeIds.length ? { id: { notIn: activeIds } } : {}),
+        },
+        select: { id: true, name: true, avatarUrl: true },
+        orderBy: { createdAt: "desc" },
+        take: restTake,
+      }),
+    ]);
+
+    const active = activeRaw
+      .map((c) => {
+        const story = storyMap.get(c.id)!;
+        return {
+          ...c,
+          hasActiveStory: true,
+          storyCount: story.count,
+          latestStoryAt: story.latestAt,
+        };
+      })
+      .sort((a, b) => b.latestStoryAt.getTime() - a.latestStoryAt.getTime());
+
+    const rest = restRaw.map((c) => ({
+      ...c,
+      hasActiveStory: false,
+      storyCount: 0,
+      latestStoryAt: null as Date | null,
+    }));
+
+    return { items: [...active, ...rest] };
+  }
+
+  /**
+   * Кадры истории конкретного персонажа — картинки из чатов за последние 24 часа.
+   * Отсортированы хронологически (старые → новые), как слайды в Instagram Stories.
+   */
+  @Get(":id/story")
+  async getCharacterStory(@Param("id") id: string) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [character, messages] = await Promise.all([
+      this.prisma.character.findFirst({
+        where: { id, deletedAt: null },
+        select: { id: true, name: true, avatarUrl: true },
+      }),
+      this.prisma.message.findMany({
+        where: {
+          type: "image",
+          mediaUrl: { not: null },
+          deletedAt: null,
+          createdAt: { gte: since },
+          chatSession: { characterId: id, deletedAt: null },
+        },
+        select: { id: true, mediaUrl: true, content: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
+    return {
+      character,
+      items: messages.map((m) => ({
+        id: m.id,
+        url: m.mediaUrl,
+        label: m.content || "",
+        createdAt: m.createdAt,
+      })),
+    };
+  }
+
   @Get(":id")
   async getOne(@Param("id") id: string) {
     const character = await this.prisma.character.findFirst({

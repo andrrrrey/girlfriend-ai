@@ -582,6 +582,22 @@ export interface Character {
   } | null;
 }
 
+export interface StoryCharacter {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  hasActiveStory: boolean;
+  storyCount: number;
+  latestStoryAt: string | null;
+}
+
+export interface StoryImage {
+  id: string;
+  url: string;
+  label: string;
+  createdAt: string;
+}
+
 /**
  * Методы admin-панели.
  * Все запросы требуют роль "admin" (JWT + RolesGuard).
@@ -1144,6 +1160,21 @@ export const characters = {
 
   async listMy(): Promise<Character[]> {
     return apiFetch<Character[]>("/characters/my");
+  },
+
+  async getOne(id: string): Promise<Character> {
+    return apiFetch<Character>(`/characters/${id}`);
+  },
+
+  async getStories(): Promise<{ items: StoryCharacter[] }> {
+    return apiFetch<{ items: StoryCharacter[] }>("/characters/stories");
+  },
+
+  async getStory(id: string): Promise<{
+    character: { id: string; name: string; avatarUrl: string | null } | null;
+    items: StoryImage[];
+  }> {
+    return apiFetch(`/characters/${id}/story`);
   },
 
   async create(data: CreateCharacterFormData): Promise<Character> {

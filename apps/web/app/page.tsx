@@ -6,6 +6,7 @@ import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
+import StoriesRail from "./components/StoriesRail";
 
 const PAGE_CSS = `
     .content { position: relative; }
@@ -29,7 +30,7 @@ const PAGE_CSS = `
     .progress-bar.inactive { opacity: 0.7; }
     .progress-bar.inactive .progress-bar-inner { background: #46383e; border-radius: 1px; }
     .characters-section {
-      position: absolute; left: 36px; right: 36px; top: 196px;
+      position: absolute; left: 36px; right: 36px; top: 324px;
       display: flex; flex-direction: column; gap: 16px;
     }
     .chars-header { display: flex; flex-direction: column; gap: 5px; max-width: 570px; }
@@ -95,7 +96,7 @@ const PAGE_CSS = `
       .hero { margin: 0 16px; height: 130px; top: 8px; }
       .hero-content { width: 100%; padding: 0 8px; }
       .hero-title { font-size: 20px; white-space: normal; text-align: center; }
-      .characters-section { left: 16px; top: 168px; width: calc(100% - 32px); }
+      .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
       .cards-row { gap: 10px; }
@@ -266,6 +267,18 @@ export default function HomePage() {
     }
   };
 
+  const handleOpenProfile = useCallback(async (id: string) => {
+    const existing = charsRef.current.find((c) => c.id === id);
+    if (existing) {
+      setSelectedChar(existing);
+      return;
+    }
+    try {
+      const full = await characters.getOne(id);
+      setSelectedChar(full);
+    } catch {}
+  }, []);
+
   const dynamicCardsHtml = buildDynamicCards(chars, likeStatuses);
 
   const handleCardClick = useCallback((e: MouseEvent) => {
@@ -313,6 +326,8 @@ export default function HomePage() {
       <style>{PAGE_CSS}</style>
       <div className="content">
         <div dangerouslySetInnerHTML={{ __html: HERO_HTML }} />
+
+        <StoriesRail onOpenProfile={handleOpenProfile} />
 
         <div className="characters-section">
           <div className="chars-header">
