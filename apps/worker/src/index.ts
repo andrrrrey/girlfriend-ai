@@ -318,7 +318,7 @@ async function handleImageJob(job: Job): Promise<void> {
   const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/image/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider, generationStyle }),
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider, generationStyle, aspectRatio }),
   });
 
   if (!response.ok) {

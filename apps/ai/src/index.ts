@@ -653,6 +653,8 @@ interface ImageGenerateBody {
   width?: number;
   /** Высота изображения в пикселях */
   height?: number;
+  /** Соотношение сторон: "1:1" | "4:5" | "5:4" | "9:16" | "16:9" (используется Civitai) */
+  aspectRatio?: string;
   /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
   generationStyle?: string;
 }
@@ -698,22 +700,50 @@ const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   ],
 };
 
+/**
+ * Размеры изображения по соотношению сторон, масштабированные под базу Stable Diffusion.
+ * SDXL рассчитан на ~1 Мпикс (база 1024), SD1 — на базу 512. Используется Civitai и AtlasCloud.
+ * Если соотношение не задано — возвращает переданный fallback.
+ * Примечание: все значения SDXL имеют обе стороны ≥768 и попадают в диапазон AtlasCloud (0.59–2.07 Мпикс).
+ */
+function sdDimsForAspect(
+  base: string,
+  aspectRatio: string | undefined,
+  fallback: { width: number; height: number },
+): { width: number; height: number } {
+  if (!aspectRatio) return fallback;
+  const sdxl: Record<string, { width: number; height: number }> = {
+    "1:1": { width: 1024, height: 1024 },
+    "4:5": { width: 1024, height: 1280 },
+    "5:4": { width: 1280, height: 1024 },
+    "9:16": { width: 768, height: 1344 },
+    "16:9": { width: 1344, height: 768 },
+  };
+  const sd1: Record<string, { width: number; height: number }> = {
+    "1:1": { width: 512, height: 512 },
+    "4:5": { width: 512, height: 640 },
+    "5:4": { width: 640, height: 512 },
+    "9:16": { width: 512, height: 896 },
+    "16:9": { width: 896, height: 512 },
+  };
+  const table = base === "sd1" ? sd1 : sdxl;
+  return table[aspectRatio] || fallback;
+}
+
 async function generateImageCivitai(params: {
   apiToken: string;
   generationStyle: string;
   prompt: string;
   negativePrompt?: string;
-  width?: number;
-  height?: number;
+  aspectRatio?: string;
 }): Promise<{ url: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, width, height } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio } = params;
 
   const pool = CIVITAI_MODELS[generationStyle];
   if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
 
   const model = pool[Math.floor(Math.random() * pool.length)];
-  const w = model.width;
-  const h = model.height;
+  const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
 
   const requestBody = {
     steps: [{
@@ -820,14 +850,13 @@ async function generateImageAtlasCloud(params: {
   modelId: string;
   prompt: string;
   negativePrompt?: string;
-  width?: number;
-  height?: number;
+  aspectRatio?: string;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
+  const { apiKey, modelId, prompt, negativePrompt, aspectRatio } = params;
 
-  // AtlasCloud requires between 589824 and 2073600 total pixels (min ~768x768)
-  const w = Math.max(width || 1024, 768);
-  const h = Math.max(height || 1024, 768);
+  // AtlasCloud требует 589824..2073600 пикселей всего (мин ~768x768). Размеры SDXL-шкалы
+  // для каждого соотношения уже удовлетворяют этим границам; по умолчанию — квадрат 1024.
+  const { width: w, height: h } = sdDimsForAspect("sdxl", aspectRatio, { width: 1024, height: 1024 });
   const size = `${w}*${h}`;
 
   const requestBody: Record<string, unknown> = {
@@ -967,8 +996,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         modelId,
         prompt,
         negativePrompt,
-        width,
-        height,
+        aspectRatio: req.body.aspectRatio,
       });
 
       const imageResponse = await fetch(result.url);
@@ -1008,8 +1036,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         generationStyle,
         prompt,
         negativePrompt,
-        width,
-        height,
+        aspectRatio: req.body.aspectRatio,
       });
 
       const imageResponse = await fetch(result.url);
@@ -1209,6 +1236,21 @@ function keyToPublicUrl(key: string): string {
   return `${publicBase}/${bucket}/${key}`;
 }
 
+/**
+ * Считывает объект S3 по ключу через внутренний media-стрим API и возвращает base64 data URI.
+ * Используется, чтобы передавать входное медиа провайдеру инлайн — без зависимости от
+ * публично доступного S3_PUBLIC_URL (важно в dev, где S3 — внутренний MinIO).
+ */
+async function keyToBase64DataUri(key: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/media/stream?key=${encodeURIComponent(key)}`);
+  if (!res.ok) {
+    throw new Error(`Failed to read media for key ${key}: ${res.status}`);
+  }
+  const contentType = res.headers.get("content-type") || "application/octet-stream";
+  const buf = Buffer.from(await res.arrayBuffer());
+  return `data:${contentType};base64,${buf.toString("base64")}`;
+}
+
 /** Маппинг соотношения сторон → формат размера Atlas Cloud (width*height). */
 function atlasSizeForAspect(aspectRatio?: string): string {
   const sizeMap: Record<string, string> = {
@@ -1377,7 +1419,13 @@ async function submitAndPollAtlasCloudVideo(
   apiKey: string,
   requestBody: Record<string, unknown>,
 ): Promise<{ url: string }> {
-  logger.info({ requestBody }, "atlascloud_video_request_body");
+  // Не логируем base64-медиа целиком — только его размер.
+  const loggableBody = { ...requestBody };
+  for (const k of ["image", "video"]) {
+    const v = loggableBody[k];
+    if (typeof v === "string" && v.length > 256) loggableBody[k] = `<${k}:${v.length} chars>`;
+  }
+  logger.info({ requestBody: loggableBody }, "atlascloud_video_request_body");
 
   const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateVideo", {
     method: "POST",
@@ -1429,7 +1477,9 @@ async function submitAndPollAtlasCloudVideo(
     });
 
     if (!pollResponse.ok) {
-      logger.warn({ status: pollResponse.status, attempt: i }, "atlascloud_video_poll_error");
+      // Логируем тело ошибки на первых попытках — помогает диагностировать сбой prediction.
+      const errBody = i < 3 ? await pollResponse.text().catch(() => "") : "";
+      logger.warn({ status: pollResponse.status, attempt: i, body: errBody.slice(0, 500) }, "atlascloud_video_poll_error");
       continue;
     }
 
@@ -1635,12 +1685,13 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
       logger.info({ model, provider: "atlascloud", mode }, "video_generation_start");
 
       if (mode === "img2vid") {
+        // Передаём изображение инлайн (base64) — AtlasCloud не сможет скачать его с внутреннего S3.
         videoResult = await generateVideoAtlasCloudFromImage({
           apiKey,
           modelId: model || "atlascloud/wan-2.6-spicy/image-to-video",
           prompt,
           negativePrompt,
-          imageUrl: keyToPublicUrl(initImageKey!),
+          imageUrl: await keyToBase64DataUri(initImageKey!),
           duration: req.body.duration,
         });
       } else if (mode === "continue") {
@@ -1649,7 +1700,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
           modelId: model || "alibaba/wan-2.7/image-to-video",
           prompt,
           negativePrompt,
-          videoUrl: keyToPublicUrl(initVideoKey!),
+          videoUrl: await keyToBase64DataUri(initVideoKey!),
           duration: req.body.duration,
         });
       } else {
