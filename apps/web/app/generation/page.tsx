@@ -997,6 +997,7 @@ export default function GenerationPage() {
   const [initMediaKey, setInitMediaKey] = useState<string | null>(null);
   const [initMediaUrl, setInitMediaUrl] = useState<string | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Подписка пользователя: premium-опции (≠ "4:5", количество > 1, режимы видео из медиа) доступны только платным. */
@@ -1388,7 +1389,8 @@ export default function GenerationPage() {
   }, [characterOptions, poseOptions, appearanceOptions, sceneOptions, cameraOptions]);
 
   const handleGenerate = useCallback(async () => {
-    if ((!prompt.trim() && !hasAnySelection) || !canGenerate) return;
+    if ((!prompt.trim() && !hasAnySelection) || !canGenerate || submitting) return;
+    setSubmitting(true);
     setError(null);
 
     const isVideo = activeTab === "video";
@@ -1453,8 +1455,10 @@ export default function GenerationPage() {
       } else {
         setError(err.message || "Failed to start generation");
       }
+    } finally {
+      setSubmitting(false);
     }
-  }, [prompt, selectedModel, selectedVideoModel, canGenerate, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1944,10 +1948,10 @@ export default function GenerationPage() {
             <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
             <button
               className="btn-generate"
-              disabled={(!prompt.trim() && !hasAnySelection) || !canGenerate}
+              disabled={(!prompt.trim() && !hasAnySelection) || !canGenerate || submitting}
               onClick={handleGenerate}
             >
-              {!canGenerate
+              {submitting || !canGenerate
                 ? "Generating..."
                 : `Generate ${activeTab === "video" ? "Video" : "Image"}`
               }

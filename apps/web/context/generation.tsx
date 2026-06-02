@@ -32,7 +32,7 @@ interface GenerationNotification {
   metadata?: Record<string, unknown>;
 }
 
-const MAX_CONCURRENT = 16;
+const MAX_CONCURRENT = 2;
 const LS_KEY = "gen_active_jobs";
 const HISTORY_LS_KEY = "gen_notification_history";
 
