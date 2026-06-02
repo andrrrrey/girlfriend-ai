@@ -528,23 +528,30 @@ export async function getCameraOptions(): Promise<CameraOptionsResponse> {
 
 // ─── Admin API ───────────────────────────────────────────────
 
-/** Строка расходов по одной модели нейросети. */
-export interface GenerationCostRow {
+/** Одна созданная генерация в отчёте расходов. */
+export interface GenerationCostItem {
+  jobId: string;
   type: string;      // "image" | "video"
   model: string;
-  count: number;     // число завершённых генераций
-  unitPrice: number; // цена за 1 генерацию ($)
-  total: number;     // count * unitPrice
+  prompt: string;
+  createdAt: string; // ISO 8601
 }
 
-/** Сводка расходов на генерацию по моделям (GET /admin/generation-costs). */
+/** Агрегат количества генераций по (тип, модель) для подсчёта итогов. */
+export interface GenerationCostBreakdown {
+  type: string;
+  model: string;
+  count: number;
+}
+
+/** Данные раздела «Расходы» (GET /admin/generation-costs). */
 export interface GenerationCosts {
   currency: string;
-  rows: GenerationCostRow[];
-  pricing: Record<string, number>;
-  totalImageCost: number;
-  totalVideoCost: number;
-  totalCost: number;
+  rows: GenerationCostItem[];
+  total: number;                              // всего генераций под фильтр (для пагинации)
+  pricing: Record<string, number>;            // сохранённые цены за генерацию по моделям
+  availableModels: { type: string; model: string }[];
+  breakdown: GenerationCostBreakdown[];       // количества по моделям под фильтр
 }
 
 /** Настройка приложения (ключ-значение, хранится в БД). */
@@ -935,11 +942,22 @@ export const admin = {
     return apiFetch(`/admin/generations?${qs}`);
   },
 
-  /** Расходы на генерацию по каждой модели в $ (GET /admin/generation-costs). */
-  async getGenerationCosts(params?: { from?: string; to?: string }): Promise<GenerationCosts> {
+  /** Список генераций + разбивка по моделям для расходов (GET /admin/generation-costs). */
+  async getGenerationCosts(params?: {
+    type?: string;
+    model?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<GenerationCosts> {
     const qs = new URLSearchParams();
+    if (params?.type) qs.set("type", params.type);
+    if (params?.model) qs.set("model", params.model);
     if (params?.from) qs.set("from", params.from);
     if (params?.to) qs.set("to", params.to);
+    if (params?.limit != null) qs.set("limit", String(params.limit));
+    if (params?.offset != null) qs.set("offset", String(params.offset));
     const q = qs.toString();
     return apiFetch<GenerationCosts>(`/admin/generation-costs${q ? `?${q}` : ""}`);
   },

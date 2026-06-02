@@ -511,18 +511,34 @@ export class AdminController {
   }
 
   /**
-   * Возвращает расходы на генерацию по каждой модели нейросети в USD.
+   * Возвращает список созданных генераций с фильтрами и разбивку по моделям
+   * для подсчёта расходов в USD (стоимость «за генерацию»).
    *
-   * `GET /admin/generation-costs?from=&to=`
+   * `GET /admin/generation-costs?type=&model=&from=&to=&limit=&offset=`
    *
-   * @param from — нижняя граница диапазона дат (ISO, необязательно).
-   * @param to   — верхняя граница диапазона дат (ISO, необязательно).
+   * @param type   — фильтр по типу ("image" | "video", необязательно).
+   * @param model  — фильтр по модели нейросети (необязательно).
+   * @param from   — нижняя граница диапазона дат (ISO, необязательно).
+   * @param to     — верхняя граница диапазона дат (ISO, необязательно).
+   * @param limit  — размер страницы (по умолчанию 100).
+   * @param offset — смещение (по умолчанию 0).
    */
   @Get("generation-costs")
   async getGenerationCosts(
+    @Query("type") type?: string,
+    @Query("model") model?: string,
     @Query("from") from?: string,
     @Query("to") to?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
   ) {
-    return this.adminService.getGenerationCosts({ from, to });
+    return this.adminService.getGenerationCosts({
+      type,
+      model,
+      from,
+      to,
+      limit: limit ? parseInt(limit, 10) : 100,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
   }
 }

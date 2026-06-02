@@ -4,9 +4,10 @@ export const adminStyles: Record<string, React.CSSProperties> = {
   page: {
     padding: 20,
   },
-  container: { maxWidth: 800, margin: "0 auto" },
-  containerWide: { maxWidth: 1100, margin: "0 auto" },
-  containerXWide: { maxWidth: 1500, margin: "0 auto" },
+  // Контент админки занимает всю ширину экрана (как в разделе «Настройки генераций»).
+  container: { width: "100%" },
+  containerWide: { width: "100%" },
+  containerXWide: { width: "100%" },
   tabs: { display: "flex", gap: 0, marginBottom: 20 },
   tab: {
     padding: "8px 14px",

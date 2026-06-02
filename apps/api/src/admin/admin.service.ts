@@ -757,36 +757,78 @@ export class AdminService {
   }
 
   /**
-   * Считает расходы на генерацию изображений и видео по каждой модели нейросети.
+   * Возвращает расходы на генерацию: список созданных генераций (изображения/видео)
+   * с фильтрами, плюс агрегированную разбивку по моделям для подсчёта итоговой суммы.
    *
-   * Количество генераций берётся из завершённых задач `AiJob` (status = completed,
-   * type = image|video), сгруппированных по модели (`input->>'model'`). Цена за одну
-   * генерацию для каждой модели хранится в `AppSetting` под ключом `MODEL_PRICING`
-   * (JSON-объект `{ "<modelId>": <ценаЗаГенерацию> }`) и редактируется администратором.
+   * Стоимость считается «за генерацию»: цена за 1 генерацию для каждой модели хранится
+   * в `AppSetting` под ключом `MODEL_PRICING` (JSON `{ "<modelId>": <ценаЗаГенерацию> }`)
+   * и редактируется администратором. Итоговые суммы вычисляются на клиенте из `breakdown`
+   * (количество генераций по каждой модели) и текущих цен, поэтому здесь возвращаются
+   * только агрегаты количеств, а не суммы.
    *
-   * @param opts.from — нижняя граница диапазона (ISO-дата, включительно), необязательно.
-   * @param opts.to   — верхняя граница диапазона (ISO-дата, включительно), необязательно.
-   * @returns Объект с построчной разбивкой по моделям, ценами и итоговыми суммами в USD.
+   * @param opts.type   — фильтр по типу: "image" | "video" (необязательно).
+   * @param opts.model  — фильтр по модели нейросети (`input->>'model'`, необязательно).
+   * @param opts.from   — нижняя граница диапазона дат (ISO, включительно, необязательно).
+   * @param opts.to     — верхняя граница диапазона дат (ISO, включительно, необязательно).
+   * @param opts.limit  — размер страницы списка генераций (по умолчанию 100).
+   * @param opts.offset — смещение для пагинации (по умолчанию 0).
    */
-  async getGenerationCosts(opts: { from?: string; to?: string }) {
-    const { from, to } = opts;
+  async getGenerationCosts(opts: {
+    type?: string;
+    model?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const { type, model, from, to, limit = 100, offset = 0 } = opts;
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
 
-    const grouped = await this.prisma.$queryRaw<
-      { type: string; model: string | null; count: number }[]
-    >(Prisma.sql`
-      SELECT type, input->>'model' AS model, COUNT(*)::int AS count
-      FROM ai_jobs
-      WHERE status = 'completed' AND type IN ('image', 'video')
-      ${fromDate ? Prisma.sql`AND created_at >= ${fromDate}` : Prisma.empty}
-      ${toDate ? Prisma.sql`AND created_at <= ${toDate}` : Prisma.empty}
-      GROUP BY type, model
-    `);
+    // Where для Prisma findMany (список генераций).
+    const where: Prisma.AiJobWhereInput = {
+      status: "completed",
+      type: type === "image" || type === "video" ? type : { in: ["image", "video"] },
+    };
+    if (model) where.input = { path: ["model"], equals: model };
+    if (fromDate || toDate) {
+      where.createdAt = {
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
+      };
+    }
 
-    const pricingSetting = await this.prisma.appSetting.findUnique({
-      where: { key: "MODEL_PRICING" },
-    });
+    // Те же фильтры в виде SQL для агрегатных запросов.
+    const conds: Prisma.Sql[] = [
+      Prisma.sql`status = 'completed'`,
+      type === "image" || type === "video"
+        ? Prisma.sql`type = ${type}`
+        : Prisma.sql`type IN ('image', 'video')`,
+    ];
+    if (model) conds.push(Prisma.sql`input->>'model' = ${model}`);
+    if (fromDate) conds.push(Prisma.sql`created_at >= ${fromDate}`);
+    if (toDate) conds.push(Prisma.sql`created_at <= ${toDate}`);
+    const whereSql = Prisma.join(conds, " AND ");
+
+    const [items, total, grouped, distinctModels, pricingSetting] = await Promise.all([
+      this.prisma.aiJob.findMany({
+        where,
+        select: { id: true, type: true, input: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.aiJob.count({ where }),
+      this.prisma.$queryRaw<{ type: string; model: string | null; count: number }[]>(
+        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
+      ),
+      // Список доступных моделей для фильтра — по всем завершённым генерациям, без учёта фильтров.
+      this.prisma.$queryRaw<{ type: string; model: string | null }[]>(
+        Prisma.sql`SELECT DISTINCT type, input->>'model' AS model FROM ai_jobs WHERE status = 'completed' AND type IN ('image', 'video') AND input->>'model' IS NOT NULL ORDER BY type, model`,
+      ),
+      this.prisma.appSetting.findUnique({ where: { key: "MODEL_PRICING" } }),
+    ]);
+
     let pricing: Record<string, number> = {};
     if (pricingSetting?.value) {
       try {
@@ -796,30 +838,28 @@ export class AdminService {
       }
     }
 
-    const rows = grouped
-      .map((r) => {
-        const model = r.model ?? "unknown";
-        const count = Number(r.count);
-        const unitPrice = Number(pricing[model] ?? 0);
-        return { type: r.type, model, count, unitPrice, total: count * unitPrice };
-      })
-      .sort((a, b) => b.total - a.total || b.count - a.count);
+    const rows = items.map((it) => {
+      const input = (it.input as Record<string, unknown> | null) ?? {};
+      return {
+        jobId: it.id,
+        type: it.type,
+        model: (input["model"] as string) ?? "unknown",
+        prompt: (input["prompt"] as string) ?? (input["originalPrompt"] as string) ?? "",
+        createdAt: it.createdAt,
+      };
+    });
 
-    const totalImageCost = rows
-      .filter((r) => r.type === "image")
-      .reduce((sum, r) => sum + r.total, 0);
-    const totalVideoCost = rows
-      .filter((r) => r.type === "video")
-      .reduce((sum, r) => sum + r.total, 0);
+    const breakdown = grouped.map((g) => ({
+      type: g.type,
+      model: g.model ?? "unknown",
+      count: Number(g.count),
+    }));
 
-    return {
-      currency: "USD",
-      rows,
-      pricing,
-      totalImageCost,
-      totalVideoCost,
-      totalCost: totalImageCost + totalVideoCost,
-    };
+    const availableModels = distinctModels
+      .filter((m) => m.model)
+      .map((m) => ({ type: m.type, model: m.model as string }));
+
+    return { currency: "USD", rows, total, pricing, availableModels, breakdown };
   }
 
   private async signOutput(output: unknown): Promise<unknown> {
