@@ -86,14 +86,14 @@ export class DemoService {
     }
   }
 
-  async checkImageGeneration(userId: string, subscription: string): Promise<void> {
+  async checkImageGeneration(userId: string, subscription: string, count = 1): Promise<void> {
     if (!this.isFree(subscription)) return;
 
     const used = await this.prisma.aiJob.count({
       where: { userId, type: "image", status: { not: "failed" } },
     });
 
-    if (used >= FREE_LIMITS.imageGenerations) {
+    if (used + count > FREE_LIMITS.imageGenerations) {
       throw new ForbiddenException({
         error: "FREE_LIMIT_REACHED",
         limitType: "imageGenerations",
@@ -104,14 +104,14 @@ export class DemoService {
     }
   }
 
-  async checkVideoGeneration(userId: string, subscription: string): Promise<void> {
+  async checkVideoGeneration(userId: string, subscription: string, count = 1): Promise<void> {
     if (!this.isFree(subscription)) return;
 
     const used = await this.prisma.aiJob.count({
       where: { userId, type: "video", status: { not: "failed" } },
     });
 
-    if (used >= FREE_LIMITS.videoGenerations) {
+    if (used + count > FREE_LIMITS.videoGenerations) {
       throw new ForbiddenException({
         error: "FREE_LIMIT_REACHED",
         limitType: "videoGenerations",

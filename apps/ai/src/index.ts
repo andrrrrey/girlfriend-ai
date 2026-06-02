@@ -1194,6 +1194,33 @@ interface VideoGenerateBody {
   aspectRatio?: string;
   /** Длительность видео в секундах */
   duration?: number;
+  /** Режим генерации: "scratch" | "img2vid" | "continue" */
+  mode?: string;
+  /** S3-ключ исходного изображения (режим img2vid) */
+  initImageKey?: string;
+  /** S3-ключ исходного видео (режим continue) */
+  initVideoKey?: string;
+}
+
+/** Строит публичный URL объекта S3 из ключа (для передачи провайдеру, который скачивает медиа). */
+function keyToPublicUrl(key: string): string {
+  const bucket = env.S3_BUCKET || "media";
+  const publicBase = (env.S3_PUBLIC_URL || env.S3_ENDPOINT || "").replace(/\/$/, "");
+  return `${publicBase}/${bucket}/${key}`;
+}
+
+/** Маппинг соотношения сторон → формат размера Atlas Cloud (width*height). */
+function atlasSizeForAspect(aspectRatio?: string): string {
+  const sizeMap: Record<string, string> = {
+    "16:9": "1920*1080",
+    "9:16": "1080*1920",
+    "1:1": "1440*1440",
+    "4:5": "1024*1280",
+    "5:4": "1280*1024",
+    "4:3": "1632*1248",
+    "3:4": "1248*1632",
+  };
+  return sizeMap[aspectRatio || "16:9"] || "1920*1080";
 }
 
 /**
@@ -1209,25 +1236,66 @@ async function generateVideoModelsLab(params: {
   height: number;
 }): Promise<{ url: string }> {
   const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
+  return runModelsLabVideo(apiKey, "https://modelslab.com/api/v6/video/text2video", {
+    key: apiKey,
+    model_id: modelId,
+    prompt,
+    negative_prompt: negativePrompt,
+    width,
+    height,
+    num_frames: 16,
+    num_inference_steps: 20,
+    guidance_scale: 7,
+    output_type: "mp4",
+    safety_checker: false,
+    safety_checker_type: "none",
+    seed: null,
+  });
+}
 
-  const mlResponse = await fetch("https://modelslab.com/api/v6/video/text2video", {
+/**
+ * Image-to-video через ModelsLab img2video API (init_image задаёт первый кадр).
+ */
+async function generateVideoModelsLabFromImage(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt: string;
+  imageUrl: string;
+  width: number;
+  height: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, imageUrl, width, height } = params;
+  return runModelsLabVideo(apiKey, "https://modelslab.com/api/v6/video/img2video", {
+    key: apiKey,
+    model_id: modelId || "svd",
+    init_image: imageUrl,
+    prompt,
+    negative_prompt: negativePrompt,
+    width,
+    height,
+    num_frames: 25,
+    num_inference_steps: 20,
+    output_type: "mp4",
+    safety_checker: false,
+    safety_checker_type: "none",
+    seed: null,
+  });
+}
+
+/**
+ * Отправляет запрос в ModelsLab video API и поллит результат до готовности.
+ * Используется для text2video и img2video.
+ */
+async function runModelsLabVideo(
+  apiKey: string,
+  endpoint: string,
+  body: Record<string, unknown>,
+): Promise<{ url: string }> {
+  const mlResponse = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      key: apiKey,
-      model_id: modelId,
-      prompt,
-      negative_prompt: negativePrompt,
-      width,
-      height,
-      num_frames: 16,
-      num_inference_steps: 20,
-      guidance_scale: 7,
-      output_type: "mp4",
-      safety_checker: false,
-      safety_checker_type: "none",
-      seed: null,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!mlResponse.ok) {
@@ -1302,38 +1370,13 @@ async function generateVideoModelsLab(params: {
 }
 
 /**
- * Генерация видео через Atlas Cloud API.
- * Поддерживает NSFW модели (spicy).
+ * Отправляет запрос в Atlas Cloud generateVideo и поллит результат до готовности.
+ * Используется для text-to-video, image-to-video и continue (video extension).
  */
-async function generateVideoAtlasCloud(params: {
-  apiKey: string;
-  modelId: string;
-  prompt: string;
-  aspectRatio?: string;
-  duration?: number;
-}): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, aspectRatio, duration } = params;
-
-  // Map aspect ratio to Atlas Cloud size format (width*height)
-  const sizeMap: Record<string, string> = {
-    "16:9": "1920*1080",
-    "9:16": "1080*1920",
-    "1:1": "1440*1440",
-    "4:3": "1632*1248",
-    "3:4": "1248*1632",
-  };
-  const size = sizeMap[aspectRatio || "16:9"] || "1920*1080";
-
-  const requestBody = {
-    model: modelId,
-    prompt,
-    size,
-    duration: duration || 5,
-    enable_prompt_expansion: false,  // MUST be false for NSFW — default true rewrites/censors the prompt
-    shot_type: "single",
-    generate_audio: false,
-  };
-
+async function submitAndPollAtlasCloudVideo(
+  apiKey: string,
+  requestBody: Record<string, unknown>,
+): Promise<{ url: string }> {
   logger.info({ requestBody }, "atlascloud_video_request_body");
 
   const response = await fetch("https://api.atlascloud.ai/api/v1/model/generateVideo", {
@@ -1423,6 +1466,85 @@ async function generateVideoAtlasCloud(params: {
 }
 
 /**
+ * Генерация видео через Atlas Cloud API (text-to-video).
+ * Поддерживает NSFW модели (spicy).
+ */
+async function generateVideoAtlasCloud(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  aspectRatio?: string;
+  duration?: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, aspectRatio, duration } = params;
+
+  return submitAndPollAtlasCloudVideo(apiKey, {
+    model: modelId,
+    prompt,
+    size: atlasSizeForAspect(aspectRatio),
+    duration: duration || 5,
+    enable_prompt_expansion: false,  // MUST be false for NSFW — default true rewrites/censors the prompt
+    shot_type: "single",
+    generate_audio: false,
+  });
+}
+
+/**
+ * Image-to-video через Atlas Cloud (модель wan-2.6-spicy/image-to-video).
+ * Исходное изображение задаёт первый кадр и соотношение сторон.
+ */
+async function generateVideoAtlasCloudFromImage(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt?: string;
+  imageUrl: string;
+  duration?: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, imageUrl, duration } = params;
+
+  return submitAndPollAtlasCloudVideo(apiKey, {
+    model: modelId,
+    prompt,
+    image: imageUrl,
+    negative_prompt: negativePrompt || undefined,
+    duration: duration || 5,
+    resolution: "720p",
+    enable_prompt_expansion: false,
+    shot_type: "single",
+    generate_audio: false,
+    seed: -1,
+  });
+}
+
+/**
+ * Continue / extend existing video через Atlas Cloud (модель wan-2.7/image-to-video,
+ * режим video continuation: на вход подаётся URL существующего видео).
+ */
+async function generateVideoAtlasCloudContinue(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt?: string;
+  videoUrl: string;
+  duration?: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, videoUrl, duration } = params;
+
+  return submitAndPollAtlasCloudVideo(apiKey, {
+    model: modelId,
+    prompt,
+    video: videoUrl,
+    negative_prompt: negativePrompt || undefined,
+    duration: duration || 5,
+    resolution: "720p",
+    enable_prompt_expansion: false,
+    generate_audio: false,
+    seed: -1,
+  });
+}
+
+/**
  * Скачивает видео по URL и загружает в S3.
  * Возвращает S3 URL или оригинальный URL как fallback.
  */
@@ -1478,10 +1600,17 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
  * Роутинг по провайдеру: "atlascloud" для NSFW моделей, "modelslab" по умолчанию.
  */
 app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, width, height, provider } = req.body;
+  const { prompt, negativePrompt, model, width, height, provider, mode, initImageKey, initVideoKey } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
+  }
+
+  if (mode === "img2vid" && !initImageKey) {
+    return reply.status(400).send({ error: "initImageKey is required for img2vid mode" });
+  }
+  if (mode === "continue" && !initVideoKey) {
+    return reply.status(400).send({ error: "initVideoKey is required for continue mode" });
   }
 
   let settings: Record<string, string>;
@@ -1503,32 +1632,64 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
       if (!apiKey) {
         return reply.status(503).send({ error: "Atlas Cloud API key not configured" });
       }
-      const modelId = model || "atlascloud/van-2.6/text-to-video";
-      logger.info({ modelId, provider: "atlascloud" }, "video_generation_start");
+      logger.info({ model, provider: "atlascloud", mode }, "video_generation_start");
 
-      videoResult = await generateVideoAtlasCloud({
-        apiKey,
-        modelId,
-        prompt,
-        aspectRatio: req.body.aspectRatio,
-        duration: req.body.duration,
-      });
+      if (mode === "img2vid") {
+        videoResult = await generateVideoAtlasCloudFromImage({
+          apiKey,
+          modelId: model || "atlascloud/wan-2.6-spicy/image-to-video",
+          prompt,
+          negativePrompt,
+          imageUrl: keyToPublicUrl(initImageKey!),
+          duration: req.body.duration,
+        });
+      } else if (mode === "continue") {
+        videoResult = await generateVideoAtlasCloudContinue({
+          apiKey,
+          modelId: model || "alibaba/wan-2.7/image-to-video",
+          prompt,
+          negativePrompt,
+          videoUrl: keyToPublicUrl(initVideoKey!),
+          duration: req.body.duration,
+        });
+      } else {
+        videoResult = await generateVideoAtlasCloud({
+          apiKey,
+          modelId: model || "atlascloud/van-2.6/text-to-video",
+          prompt,
+          aspectRatio: req.body.aspectRatio,
+          duration: req.body.duration,
+        });
+      }
     } else {
       const apiKey = settings.MODELSLAB_API_KEY;
       if (!apiKey) {
         return reply.status(503).send({ error: "ModelsLab API key not configured" });
       }
       const modelId = model || settings.MODELSLAB_DEFAULT_VIDEO_MODEL || "wan2.1";
-      logger.info({ modelId, provider: "modelslab" }, "video_generation_start");
+      logger.info({ modelId, provider: "modelslab", mode }, "video_generation_start");
 
-      videoResult = await generateVideoModelsLab({
-        apiKey,
-        modelId,
-        prompt,
-        negativePrompt: negativePrompt || "",
-        width: vidWidth,
-        height: vidHeight,
-      });
+      if (mode === "img2vid") {
+        videoResult = await generateVideoModelsLabFromImage({
+          apiKey,
+          modelId: settings.MODELSLAB_IMG2VIDEO_MODEL || "svd",
+          prompt,
+          negativePrompt: negativePrompt || "",
+          imageUrl: keyToPublicUrl(initImageKey!),
+          width: vidWidth,
+          height: vidHeight,
+        });
+      } else {
+        // ModelsLab не поддерживает continue — для continue используйте Atlas Cloud.
+        videoResult = await generateVideoModelsLab({
+          apiKey,
+          modelId,
+          prompt,
+          negativePrompt: negativePrompt || "",
+          width: vidWidth,
+          height: vidHeight,
+        });
+      }
     }
 
     const finalUrl = await downloadAndUploadVideo(videoResult.url);

@@ -147,6 +147,12 @@ export interface VideoJobData {
   model?: string;
   /** Провайдер генерации: "modelslab" | "atlascloud" */
   provider?: string;
+  /** Режим генерации: "scratch" | "img2vid" | "continue" */
+  mode?: string;
+  /** S3-ключ исходного изображения (режим img2vid) */
+  initImageKey?: string;
+  /** S3-ключ исходного видео (режим continue) */
+  initVideoKey?: string;
 }
 
 /** Объединённый тип payload для всех заданий очереди */

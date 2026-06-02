@@ -1596,11 +1596,29 @@ export async function createImageJob(data: {
   aspectRatio?: string;
   provider?: string;
   generationStyle?: string;
+  count?: number;
 }) {
-  return apiFetch<{ jobId: string; status: string }>("/generation/image", {
+  return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+/** Загружает пользовательское медиа (image/video) в S3, возвращает ключ. */
+export async function uploadMedia(file: File): Promise<{ key: string }> {
+  const accessToken = (typeof window !== "undefined") ? localStorage.getItem("accessToken") : null;
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/media/upload`, {
+    method: "POST",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, body.message || res.statusText, body);
+  }
+  return res.json();
 }
 
 export async function getJobStatus(jobId: string) {
@@ -1641,8 +1659,12 @@ export async function createVideoJob(data: {
   negativePrompt?: string;
   aspectRatio?: string;
   provider?: string;
+  mode?: string;
+  initImageKey?: string;
+  initVideoKey?: string;
+  count?: number;
 }) {
-  return apiFetch<{ jobId: string; status: string }>("/generation/video", {
+  return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/video", {
     method: "POST",
     body: JSON.stringify(data),
   });

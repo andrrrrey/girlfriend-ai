@@ -13,6 +13,7 @@ import {
   getVideoStyles,
   getGenerationHistory,
   deleteGenerationJob,
+  uploadMedia,
 } from "../../lib/api";
 import {
   getCachedCharacterOptions,
@@ -906,6 +907,23 @@ interface GenModel {
   provider?: string;
 }
 
+/** Соотношения сторон для генерации. Бесплатно доступен только Portrait (4:5). */
+const ASPECT_OPTIONS = [
+  { value: "4:5", label: "Portraite (4:5)", rect: "r-4-5", cls: "orient", free: true },
+  { value: "5:4", label: "Landscape (5:4)", rect: "r-5-4", cls: "orient", free: false },
+  { value: "9:16", label: "9:16", rect: "r-9-16", cls: "orient-sm", free: false },
+  { value: "16:9", label: "16:9", rect: "r-16-9", cls: "orient-sm", free: false },
+  { value: "1:1", label: "1:1", rect: "r-1-1", cls: "orient-sm", free: false },
+] as const;
+
+/** Количество элементов за генерацию. Бесплатно доступно только 1. */
+const COUNT_OPTIONS = [
+  { value: 1, free: true },
+  { value: 4, free: false },
+  { value: 8, free: false },
+  { value: 16, free: false },
+] as const;
+
 interface HistoryItem {
   jobId: string;
   type: string;
@@ -974,6 +992,56 @@ export default function GenerationPage() {
   const [gallerySearch, setGallerySearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [aspectRatio, setAspectRatio] = useState("4:5");
+  const [count, setCount] = useState(1);
+  const [initMediaKey, setInitMediaKey] = useState<string | null>(null);
+  const [initMediaUrl, setInitMediaUrl] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Подписка пользователя: premium-опции (≠ "4:5", количество > 1, режимы видео из медиа) доступны только платным. */
+  const isPremium = !!user && user.subscription !== "free";
+
+  /** Открывает попап премиума при попытке использовать платную опцию на free-тарифе. */
+  const showPremiumGate = useCallback(() => {
+    setPremiumPopup({
+      limitType: activeTab === "video" ? "videoGenerations" : "imageGenerations",
+      limit: 0,
+      used: 0,
+    });
+  }, [activeTab]);
+
+  /** Сбрасывает выбранное исходное медиа (при смене вкладки/режима). */
+  const resetInitMedia = useCallback(() => {
+    setInitMediaKey(null);
+    setInitMediaUrl(null);
+  }, []);
+
+  /** Извлекает S3-ключ из proxied-URL вида /api-proxy/media/stream?key=... */
+  const extractMediaKey = useCallback((url?: string | null): string | null => {
+    if (!url) return null;
+    const q = url.split("?")[1];
+    if (!q) return null;
+    return new URLSearchParams(q).get("key");
+  }, []);
+
+  /** Загружает файл с устройства в S3 и выбирает его как исходное медиа. */
+  const handleMediaFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingMedia(true);
+    setError(null);
+    try {
+      const { key } = await uploadMedia(file);
+      setInitMediaKey(key);
+      setInitMediaUrl(URL.createObjectURL(file));
+    } catch (err: any) {
+      setError(err?.message || "Failed to upload file");
+    } finally {
+      setUploadingMedia(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -1327,21 +1395,33 @@ export default function GenerationPage() {
     const model = isVideo ? selectedVideoModel : selectedModel;
     const compositePrompt = buildCompositePrompt(prompt.trim(), model, isVideo);
 
+    // Режимы из медиа требуют исходного изображения/видео.
+    const mode = isVideo ? videoSubTab : "scratch";
+    if (isVideo && (mode === "img2vid" || mode === "continue") && !initMediaKey) {
+      setError(mode === "img2vid" ? "Select a source image" : "Select a source video");
+      return;
+    }
+
     try {
-      let jobId: string;
       const defaultNeg = "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo, signature, cropped, out of frame";
       const negativePrompt = promptDetailsSelections.negativePromptTerms.length > 0
         ? promptDetailsSelections.negativePromptTerms.join(", ") + ", " + defaultNeg
         : defaultNeg;
+
+      let jobIds: string[];
       if (isVideo) {
-        const videoProvider = videoModels.find((m) => m.id === selectedVideoModel)?.provider;
         const result = await createVideoJob({
           prompt: compositePrompt,
           negativePrompt,
-          model,
-          provider: videoProvider,
+          // В режимах из медиа модель определяется на бэкенде по режиму.
+          model: mode === "scratch" ? model : undefined,
+          aspectRatio,
+          mode,
+          initImageKey: mode === "img2vid" ? initMediaKey ?? undefined : undefined,
+          initVideoKey: mode === "continue" ? initMediaKey ?? undefined : undefined,
+          count,
         });
-        jobId = result.jobId;
+        jobIds = result.jobIds;
       } else {
         const imageProvider = imageModels.find((m) => m.id === selectedModel)?.provider;
         const selectedStyleOption = characterOptions.find(
@@ -1353,11 +1433,15 @@ export default function GenerationPage() {
           model,
           provider: imageProvider,
           generationStyle: imageProvider === "civitai" ? selectedStyleOption?.generationStyle || undefined : undefined,
+          aspectRatio,
+          count,
         });
-        jobId = result.jobId;
+        jobIds = result.jobIds;
       }
 
-      startGeneration(jobId, isVideo ? "video" : "image", prompt.trim(), model);
+      for (const jobId of jobIds) {
+        startGeneration(jobId, isVideo ? "video" : "image", prompt.trim(), model);
+      }
       setPrompt("");
     } catch (err: any) {
       if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
@@ -1370,7 +1454,7 @@ export default function GenerationPage() {
         setError(err.message || "Failed to start generation");
       }
     }
-  }, [prompt, selectedModel, selectedVideoModel, canGenerate, activeTab, promptDetailsSelections, buildCompositePrompt, videoModels, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1523,7 +1607,7 @@ export default function GenerationPage() {
             </button>
             <button
               className={`seg-tab ${activeTab === "image" ? "active" : ""}`}
-              onClick={() => setActiveTab("image")}
+              onClick={() => { setActiveTab("image"); resetInitMedia(); }}
             >
               <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1"/><path d="M2 12l3.5-3.5L8 11l3-3 3 3v1.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V12z" fill="currentColor" fillOpacity="0.3"/></svg>
               Image
@@ -1535,27 +1619,95 @@ export default function GenerationPage() {
             <div className="video-subtabs">
               <button
                 className={`video-subtab ${videoSubTab === "scratch" ? "active" : ""}`}
-                onClick={() => setVideoSubTab("scratch")}
+                onClick={() => { setVideoSubTab("scratch"); resetInitMedia(); }}
               >
                 Create from Scratch
               </button>
               <button
-                className={`video-subtab disabled`}
-                onClick={() => {}}
+                className={`video-subtab ${videoSubTab === "img2vid" ? "active" : ""}`}
+                onClick={() => {
+                  if (!isPremium) { showPremiumGate(); return; }
+                  setVideoSubTab("img2vid"); resetInitMedia();
+                }}
               >
                 Convert Image to Video
               </button>
               <button
-                className={`video-subtab disabled`}
-                onClick={() => {}}
+                className={`video-subtab ${videoSubTab === "continue" ? "active" : ""}`}
+                onClick={() => {
+                  if (!isPremium) { showPremiumGate(); return; }
+                  setVideoSubTab("continue"); resetInitMedia();
+                }}
               >
                 Continue Existing Video
               </button>
               <div className="video-subtabs-line" />
               <div
                 className="video-subtabs-glow"
-                style={{ left: "0%", width: "33.33%" }}
+                style={{ left: videoSubTab === "img2vid" ? "33.33%" : videoSubTab === "continue" ? "66.66%" : "0%", width: "33.33%" }}
               />
+            </div>
+          )}
+
+          {/* Media picker for img2vid / continue */}
+          {activeTab === "video" && (videoSubTab === "img2vid" || videoSubTab === "continue") && (
+            <div className="chips-section">
+              <div className="section-title">{videoSubTab === "img2vid" ? "Source Image" : "Source Video"}</div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={videoSubTab === "img2vid" ? "image/*" : "video/*"}
+                style={{ display: "none" }}
+                onChange={handleMediaFileChange}
+              />
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingMedia}
+                  style={{
+                    width: 72, height: 72, borderRadius: 8, border: "1px dashed #4a4a4a",
+                    background: "#1e1e1e", color: "#c1f0aa", fontSize: 10, cursor: "pointer",
+                    fontFamily: "'Syne', sans-serif", padding: 4,
+                  }}
+                >
+                  {uploadingMedia ? "Uploading…" : "Upload"}
+                </button>
+                {history
+                  .filter((h) => h.type === (videoSubTab === "img2vid" ? "image" : "video") && h.output?.url)
+                  .map((h) => {
+                    const key = extractMediaKey(h.output?.url);
+                    const selected = !!key && key === initMediaKey;
+                    return (
+                      <div
+                        key={h.jobId}
+                        onClick={() => { if (key) { setInitMediaKey(key); setInitMediaUrl(h.output?.url ?? null); } }}
+                        style={{
+                          width: 72, height: 72, borderRadius: 8, overflow: "hidden", cursor: "pointer",
+                          border: selected ? "2px solid #c1f0aa" : "2px solid transparent",
+                        }}
+                      >
+                        {videoSubTab === "img2vid"
+                          ? <img src={h.output?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : <video src={h.output?.url} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                    );
+                  })}
+              </div>
+              {initMediaUrl && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
+                  {videoSubTab === "img2vid"
+                    ? <img src={initMediaUrl} alt="selected" style={{ width: 96, height: 96, borderRadius: 8, objectFit: "cover" }} />
+                    : <video src={initMediaUrl} controls muted style={{ width: 96, height: 96, borderRadius: 8, objectFit: "cover" }} />}
+                  <button
+                    type="button"
+                    onClick={resetInitMedia}
+                    style={{ background: "transparent", border: "1px solid #4a4a4a", borderRadius: 6, color: "#969696", fontSize: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "'Syne', sans-serif" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1747,30 +1899,20 @@ export default function GenerationPage() {
           <div className="chips-section">
             <div className="section-title">Orientation</div>
             <div className="chips-row">
-              <div className="chip orient active">
-                <span className="orient-icon"><span className="orient-rect r-4-5" /></span>
-                Portraite (4:5)
-              </div>
-              <div className="chip orient">
-                <span className="orient-icon"><span className="orient-rect r-5-4" /></span>
-                Landscape (5:4)
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
-              <div className="chip orient-sm">
-                <span className="orient-icon"><span className="orient-rect r-9-16" /></span>
-                9:16
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
-              <div className="chip orient-sm">
-                <span className="orient-icon"><span className="orient-rect r-16-9" /></span>
-                16:9
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
-              <div className="chip orient-sm">
-                <span className="orient-icon"><span className="orient-rect r-1-1" /></span>
-                1:1
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
+              {ASPECT_OPTIONS.map((opt) => (
+                <div
+                  key={opt.value}
+                  className={`chip ${opt.cls}${aspectRatio === opt.value ? " active" : ""}`}
+                  onClick={() => {
+                    if (!opt.free && !isPremium) { showPremiumGate(); return; }
+                    setAspectRatio(opt.value);
+                  }}
+                >
+                  <span className="orient-icon"><span className={`orient-rect ${opt.rect}`} /></span>
+                  {opt.label}
+                  {!opt.free && <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1781,19 +1923,19 @@ export default function GenerationPage() {
           <div className="chips-section">
             <div className="section-title">Number of {activeTab === "video" ? "Videos" : "Images"}</div>
             <div className="chips-row">
-              <div className="chip flex-1 active">1</div>
-              <div className="chip flex-1">
-                4
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
-              <div className="chip flex-1">
-                8
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
-              <div className="chip flex-1">
-                16
-                <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
-              </div>
+              {COUNT_OPTIONS.map((opt) => (
+                <div
+                  key={opt.value}
+                  className={`chip flex-1${count === opt.value ? " active" : ""}`}
+                  onClick={() => {
+                    if (!opt.free && !isPremium) { showPremiumGate(); return; }
+                    setCount(opt.value);
+                  }}
+                >
+                  {opt.value}
+                  {!opt.free && <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1816,7 +1958,7 @@ export default function GenerationPage() {
           {activeJobs.length > 0 && (
             <div className="spinner-container">
               <div className="spinner" />
-              <span>Creating your {activeTab === "video" ? "video" : "image"}... ({activeJobs.length}/{2})</span>
+              <span>Creating your {activeTab === "video" ? "video" : "image"}{activeJobs.length > 1 ? "s" : ""}... ({activeJobs.length} in progress)</span>
             </div>
           )}
 

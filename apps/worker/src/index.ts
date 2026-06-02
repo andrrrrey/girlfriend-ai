@@ -346,8 +346,8 @@ async function handleImageJob(job: Job): Promise<void> {
  * @param {Job} job - BullMQ Job с данными типа VideoJobData
  */
 async function handleVideoJob(job: Job): Promise<void> {
-  const { jobId, userId, prompt, negativePrompt, model, aspectRatio, provider } = job.data;
-  logger.info({ jobId, userId, provider }, "video_job_started");
+  const { jobId, userId, prompt, negativePrompt, model, aspectRatio, provider, mode, initImageKey, initVideoKey } = job.data;
+  logger.info({ jobId, userId, provider, mode }, "video_job_started");
 
   await updateJobStatus(jobId, "processing");
 
@@ -357,7 +357,7 @@ async function handleVideoJob(job: Job): Promise<void> {
   const response = await fetch(`http://${env.AI_HOST}:${env.AI_PORT}/ai/video/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider, aspectRatio }),
+    body: JSON.stringify({ prompt, negativePrompt, model, width, height, provider, aspectRatio, mode, initImageKey, initVideoKey }),
   });
 
   if (!response.ok) {

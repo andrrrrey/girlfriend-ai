@@ -12,6 +12,9 @@ const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
 
 const CYRILLIC_RE = /[а-яА-ЯёЁ]/;
 
+/** Допустимое количество элементов за одну генерацию (создаётся N заданий). */
+const ALLOWED_GEN_COUNTS = [1, 4, 8, 16];
+
 const IMAGE_MODELS = [
   { id: "realistic-vision-v51", name: "Realistic Vision", description: "Photorealistic images" },
   { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
@@ -23,7 +26,15 @@ const IMAGE_MODELS = [
 
 const VIDEO_MODELS = [
   { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
+  { id: "atlascloud/wan-2.6-spicy/image-to-video", name: "Wan 2.6 Spicy (I2V)", description: "Image-to-video, uncensored", provider: "atlascloud" },
+  { id: "alibaba/wan-2.7/image-to-video", name: "Wan 2.7 (Continue)", description: "Continue / extend existing video", provider: "atlascloud" },
 ];
+
+/** Дефолтные модели видео по режиму генерации. */
+const VIDEO_MODE_DEFAULT_MODEL: Record<string, string> = {
+  img2vid: "atlascloud/wan-2.6-spicy/image-to-video",
+  continue: "alibaba/wan-2.7/image-to-video",
+};
 
 @Injectable()
 export class GenerationService {
@@ -97,7 +108,7 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -108,38 +119,44 @@ export class GenerationService {
     }
 
     const resolvedProvider = data.provider || IMAGE_MODELS.find((m) => m.id === data.model)?.provider;
+    const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
 
-    const aiJob = await this.prisma.aiJob.create({
-      data: {
-        userId,
-        type: "image",
-        status: "pending",
-        input: {
-          prompt,
-          originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
-          negativePrompt: data.negativePrompt,
-          model: data.model,
-          aspectRatio: data.aspectRatio,
-          provider: resolvedProvider,
-          generationStyle: data.generationStyle,
+    // Создаём N отдельных заданий (1 job → 1 изображение).
+    const jobIds: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const aiJob = await this.prisma.aiJob.create({
+        data: {
+          userId,
+          type: "image",
+          status: "pending",
+          input: {
+            prompt,
+            originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
+            negativePrompt: data.negativePrompt,
+            model: data.model,
+            aspectRatio: data.aspectRatio,
+            provider: resolvedProvider,
+            generationStyle: data.generationStyle,
+          },
         },
-      },
-    });
+      });
 
-    const jobData: ImageJobData = {
-      jobId: aiJob.id,
-      userId,
-      prompt,
-      negativePrompt: data.negativePrompt,
-      aspectRatio: data.aspectRatio,
-      model: data.model,
-      provider: resolvedProvider,
-      generationStyle: data.generationStyle,
-    };
+      const jobData: ImageJobData = {
+        jobId: aiJob.id,
+        userId,
+        prompt,
+        negativePrompt: data.negativePrompt,
+        aspectRatio: data.aspectRatio,
+        model: data.model,
+        provider: resolvedProvider,
+        generationStyle: data.generationStyle,
+      };
 
-    await this.queue.add(JOB_NAMES.IMAGE, jobData);
+      await this.queue.add(JOB_NAMES.IMAGE, jobData);
+      jobIds.push(aiJob.id);
+    }
 
-    return { jobId: aiJob.id, status: "pending" };
+    return { jobId: jobIds[0], jobIds, status: "pending" };
   }
 
   async getJobStatus(jobId: string, userId: string) {
@@ -265,7 +282,17 @@ export class GenerationService {
 
   async createVideoJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string },
+    data: {
+      prompt: string;
+      negativePrompt?: string;
+      model?: string;
+      aspectRatio?: string;
+      provider?: string;
+      mode?: string;
+      initImageKey?: string;
+      initVideoKey?: string;
+      count?: number;
+    },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -275,38 +302,52 @@ export class GenerationService {
       prompt = await this.translateToEnglish(prompt);
     }
 
+    const mode = data.mode || "scratch";
+    // Для режимов img2vid/continue модель определяется режимом, если не задана явно.
+    const model = data.model || VIDEO_MODE_DEFAULT_MODEL[mode];
     // Auto-detect provider from model if not explicitly set
-    const provider = data.provider || VIDEO_MODELS.find((m) => m.id === data.model)?.provider || "modelslab";
+    const provider = data.provider || VIDEO_MODELS.find((m) => m.id === model)?.provider || "modelslab";
+    const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
 
-    const aiJob = await this.prisma.aiJob.create({
-      data: {
-        userId,
-        type: "video",
-        status: "pending",
-        input: {
-          prompt,
-          originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
-          negativePrompt: data.negativePrompt,
-          model: data.model,
-          aspectRatio: data.aspectRatio,
-          provider,
+    const jobIds: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const aiJob = await this.prisma.aiJob.create({
+        data: {
+          userId,
+          type: "video",
+          status: "pending",
+          input: {
+            prompt,
+            originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
+            negativePrompt: data.negativePrompt,
+            model,
+            aspectRatio: data.aspectRatio,
+            provider,
+            mode,
+            initImageKey: data.initImageKey,
+            initVideoKey: data.initVideoKey,
+          },
         },
-      },
-    });
+      });
 
-    const jobData: VideoJobData = {
-      jobId: aiJob.id,
-      userId,
-      prompt,
-      negativePrompt: data.negativePrompt,
-      aspectRatio: data.aspectRatio,
-      model: data.model,
-      provider,
-    };
+      const jobData: VideoJobData = {
+        jobId: aiJob.id,
+        userId,
+        prompt,
+        negativePrompt: data.negativePrompt,
+        aspectRatio: data.aspectRatio,
+        model,
+        provider,
+        mode,
+        initImageKey: data.initImageKey,
+        initVideoKey: data.initVideoKey,
+      };
 
-    await this.queue.add(JOB_NAMES.VIDEO, jobData);
+      await this.queue.add(JOB_NAMES.VIDEO, jobData);
+      jobIds.push(aiJob.id);
+    }
 
-    return { jobId: aiJob.id, status: "pending" };
+    return { jobId: jobIds[0], jobIds, status: "pending" };
   }
 
   async getVideoStyles() {

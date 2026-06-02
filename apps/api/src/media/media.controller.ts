@@ -8,10 +8,16 @@ import {
   ServiceUnavailableException,
   NotFoundException,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Res,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+// Подтягивает type-augmentation для Express.Multer.File:
+import "multer";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { IsArray, IsString } from "class-validator";
+import { randomUUID } from "crypto";
 import { S3Service } from "../s3/s3.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import type { Response } from "express";
@@ -23,6 +29,17 @@ class SignedUrlsDto {
 }
 
 const EXPIRES_IN = 900; // 15 минут
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 МБ (видео для continue)
+
+/** MIME → расширение файла для загружаемых медиа. */
+const UPLOAD_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
 
 @ApiTags("media")
 @Controller("media")
@@ -76,6 +93,29 @@ export class MediaController {
       if (err instanceof NotFoundException) throw err;
       throw new ServiceUnavailableException("Failed to fetch upstream media");
     }
+  }
+
+  @ApiOperation({ summary: "Upload a user media file (image/video) → returns S3 key" })
+  @UseGuards(JwtAuthGuard)
+  @Post("upload")
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
+  async uploadMedia(@UploadedFile() file: Express.Multer.File | undefined) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException("file is required");
+    }
+    if (!this.s3.isConfigured()) {
+      throw new ServiceUnavailableException("S3 is not configured");
+    }
+    const ext = UPLOAD_EXT[file.mimetype];
+    if (!ext) {
+      throw new BadRequestException("Unsupported file type");
+    }
+    const prefix = file.mimetype.startsWith("video/") ? "videos" : "images";
+    const key = `uploads/${prefix}/${randomUUID()}.${ext}`;
+    await this.s3.putObject(key, file.buffer, file.mimetype);
+    return { key };
   }
 
   @ApiOperation({ summary: "Get presigned URL for a media key" })

@@ -31,7 +31,7 @@ export class GenerationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createImageJob(@Req() req: any, @Body() dto: CreateImageJobDto) {
-    await this.demoService.checkImageGeneration(req.user.id, req.user.subscription);
+    await this.demoService.checkImageGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
     return this.generationService.createImageJob(req.user.id, {
       prompt: dto.prompt,
       negativePrompt: dto.negativePrompt,
@@ -39,6 +39,7 @@ export class GenerationController {
       aspectRatio: dto.aspectRatio,
       provider: dto.provider,
       generationStyle: dto.generationStyle,
+      count: dto.count,
     });
   }
 
@@ -46,13 +47,17 @@ export class GenerationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createVideoJob(@Req() req: any, @Body() dto: CreateVideoJobDto) {
-    await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription);
+    await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
     return this.generationService.createVideoJob(req.user.id, {
       prompt: dto.prompt,
       negativePrompt: dto.negativePrompt,
       model: dto.model,
       aspectRatio: dto.aspectRatio,
       provider: dto.provider,
+      mode: dto.mode,
+      initImageKey: dto.initImageKey,
+      initVideoKey: dto.initVideoKey,
+      count: dto.count,
     });
   }
 
