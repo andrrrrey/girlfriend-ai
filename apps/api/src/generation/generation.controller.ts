@@ -47,6 +47,14 @@ export class GenerationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createVideoJob(@Req() req: any, @Body() dto: CreateVideoJobDto) {
+    // Режим "continue" (видео-из-видео) временно отключён: формат запроса
+    // video-continuation у провайдера не подтверждён, задачи падают и жгут ресурсы.
+    if (dto.mode === "continue") {
+      throw new HttpException(
+        "Continue Existing Video is not available yet",
+        HttpStatus.NOT_IMPLEMENTED,
+      );
+    }
     await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
     return this.generationService.createVideoJob(req.user.id, {
       prompt: dto.prompt,

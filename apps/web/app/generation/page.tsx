@@ -1637,11 +1637,9 @@ export default function GenerationPage() {
                 Convert Image to Video
               </button>
               <button
-                className={`video-subtab ${videoSubTab === "continue" ? "active" : ""}`}
-                onClick={() => {
-                  if (!isPremium) { showPremiumGate(); return; }
-                  setVideoSubTab("continue"); resetInitMedia();
-                }}
+                className="video-subtab disabled"
+                title="Coming soon"
+                onClick={() => setError("Continue Existing Video is coming soon")}
               >
                 Continue Existing Video
               </button>

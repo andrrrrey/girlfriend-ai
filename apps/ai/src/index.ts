@@ -1468,6 +1468,8 @@ async function submitAndPollAtlasCloudVideo(
   const pollUrl = result.urls?.get || `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
   logger.info({ pollUrl, hasUrlsGet: !!result.urls?.get }, "atlascloud_poll_url");
   const maxAttempts = 120; // 120 * 5s = 600 секунд максимум
+  const MAX_CONSECUTIVE_5XX = 5;
+  let consecutive5xx = 0;
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
@@ -1477,9 +1479,16 @@ async function submitAndPollAtlasCloudVideo(
     });
 
     if (!pollResponse.ok) {
-      // Логируем тело ошибки на первых попытках — помогает диагностировать сбой prediction.
-      const errBody = i < 3 ? await pollResponse.text().catch(() => "") : "";
+      const errBody = await pollResponse.text().catch(() => "");
       logger.warn({ status: pollResponse.status, attempt: i, body: errBody.slice(0, 500) }, "atlascloud_video_poll_error");
+      // 4xx — терминальная ошибка prediction (битый запрос/упавшая задача): выходим сразу.
+      if (pollResponse.status >= 400 && pollResponse.status < 500) {
+        throw new Error(`Atlas Cloud prediction failed (HTTP ${pollResponse.status})`);
+      }
+      // 5xx — возможно временная; выходим после нескольких подряд, чтобы не молотить 10 минут.
+      if (++consecutive5xx >= MAX_CONSECUTIVE_5XX) {
+        throw new Error(`Atlas Cloud prediction polling failed (${consecutive5xx}× HTTP ${pollResponse.status})`);
+      }
       continue;
     }
 
@@ -1496,6 +1505,7 @@ async function submitAndPollAtlasCloudVideo(
 
     // Atlas Cloud wraps response in "data" key
     const pollResult = rawPoll.data || rawPoll as { id: string; status: string; outputs?: string[] };
+    consecutive5xx = 0; // успешный ответ — сбрасываем счётчик ошибок
 
     logger.info({ status: pollResult.status, hasOutputs: !!pollResult.outputs?.length, attempt: i }, "atlascloud_video_poll_result");
 
