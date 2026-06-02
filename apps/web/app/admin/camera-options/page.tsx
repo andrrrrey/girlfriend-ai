@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type CameraOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
+import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
 
 const SECTIONS = [
   { key: "FRAMING", label: "Framing" },
@@ -206,11 +208,10 @@ export default function AdminCameraOptionsPage() {
 
   return (
     <div style={adminStyles.page}>
+      <AdminTabs active="gen-settings" />
       <div style={adminStyles.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h1 style={adminStyles.title}>Camera Options</h1>
-          <a href="/admin" style={{ ...s.cancelBtn, textDecoration: "none", display: "inline-block" }}>← Admin</a>
-        </div>
+        <GenerationSettingsTabs active="camera" />
+        <h1 style={{ ...adminStyles.title, marginBottom: 20 }}>Camera Options</h1>
 
         {/* Nav tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 24, borderBottom: "1px solid #222", paddingBottom: 0 }}>

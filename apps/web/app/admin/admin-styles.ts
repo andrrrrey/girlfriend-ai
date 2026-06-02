@@ -6,6 +6,7 @@ export const adminStyles: Record<string, React.CSSProperties> = {
   },
   container: { maxWidth: 800, margin: "0 auto" },
   containerWide: { maxWidth: 1100, margin: "0 auto" },
+  containerXWide: { maxWidth: 1500, margin: "0 auto" },
   tabs: { display: "flex", gap: 0, marginBottom: 20 },
   tab: {
     padding: "8px 14px",

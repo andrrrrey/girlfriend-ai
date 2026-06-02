@@ -20,7 +20,7 @@
  */
 
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { loadEnv } from "@repo/config";
@@ -754,6 +754,72 @@ export class AdminService {
     })));
 
     return { items: signedItems, total };
+  }
+
+  /**
+   * Считает расходы на генерацию изображений и видео по каждой модели нейросети.
+   *
+   * Количество генераций берётся из завершённых задач `AiJob` (status = completed,
+   * type = image|video), сгруппированных по модели (`input->>'model'`). Цена за одну
+   * генерацию для каждой модели хранится в `AppSetting` под ключом `MODEL_PRICING`
+   * (JSON-объект `{ "<modelId>": <ценаЗаГенерацию> }`) и редактируется администратором.
+   *
+   * @param opts.from — нижняя граница диапазона (ISO-дата, включительно), необязательно.
+   * @param opts.to   — верхняя граница диапазона (ISO-дата, включительно), необязательно.
+   * @returns Объект с построчной разбивкой по моделям, ценами и итоговыми суммами в USD.
+   */
+  async getGenerationCosts(opts: { from?: string; to?: string }) {
+    const { from, to } = opts;
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+
+    const grouped = await this.prisma.$queryRaw<
+      { type: string; model: string | null; count: number }[]
+    >(Prisma.sql`
+      SELECT type, input->>'model' AS model, COUNT(*)::int AS count
+      FROM ai_jobs
+      WHERE status = 'completed' AND type IN ('image', 'video')
+      ${fromDate ? Prisma.sql`AND created_at >= ${fromDate}` : Prisma.empty}
+      ${toDate ? Prisma.sql`AND created_at <= ${toDate}` : Prisma.empty}
+      GROUP BY type, model
+    `);
+
+    const pricingSetting = await this.prisma.appSetting.findUnique({
+      where: { key: "MODEL_PRICING" },
+    });
+    let pricing: Record<string, number> = {};
+    if (pricingSetting?.value) {
+      try {
+        pricing = JSON.parse(pricingSetting.value);
+      } catch {
+        pricing = {};
+      }
+    }
+
+    const rows = grouped
+      .map((r) => {
+        const model = r.model ?? "unknown";
+        const count = Number(r.count);
+        const unitPrice = Number(pricing[model] ?? 0);
+        return { type: r.type, model, count, unitPrice, total: count * unitPrice };
+      })
+      .sort((a, b) => b.total - a.total || b.count - a.count);
+
+    const totalImageCost = rows
+      .filter((r) => r.type === "image")
+      .reduce((sum, r) => sum + r.total, 0);
+    const totalVideoCost = rows
+      .filter((r) => r.type === "video")
+      .reduce((sum, r) => sum + r.total, 0);
+
+    return {
+      currency: "USD",
+      rows,
+      pricing,
+      totalImageCost,
+      totalVideoCost,
+      totalCost: totalImageCost + totalVideoCost,
+    };
   }
 
   private async signOutput(output: unknown): Promise<unknown> {

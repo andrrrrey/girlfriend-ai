@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, type AdminUser, type AdminUserDetailedStats } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
 
 const pageStyles: Record<string, React.CSSProperties> = {
   badge: {
@@ -250,17 +251,7 @@ export default function AdminUsersPage() {
   return (
     <div style={adminStyles.page}>
       <div style={adminStyles.containerWide}>
-        <div style={adminStyles.tabs}>
-          <a href="/admin" style={adminStyles.tab}>Настройки</a>
-          <a href="/admin/characters" style={adminStyles.tab}>Персонажи</a>
-          <a href="/admin/users" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Пользователи</a>
-          <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
-          <a href="/admin/appearance-options" style={adminStyles.tab}>Appearance</a>
-          <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
-          <a href="/admin/scene-options" style={adminStyles.tab}>Scene</a>
-          <a href="/admin/camera-options" style={adminStyles.tab}>Camera</a>
-          <a href="/admin/generations" style={adminStyles.tab}>Генерации</a>
-        </div>
+        <AdminTabs active="users" />
 
         {error && (
           <div style={{ ...pageStyles.alert, ...pageStyles.alertError, marginBottom: 16 }}>{error}</div>

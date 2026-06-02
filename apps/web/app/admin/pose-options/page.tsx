@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type PoseCategory, type PoseOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
+import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
 
 const TABS = [
   { key: "FACIAL_EXPRESSION", label: "Facial Expression" },
@@ -298,11 +300,10 @@ export default function AdminPoseOptionsPage() {
 
   return (
     <div style={adminStyles.page}>
+      <AdminTabs active="gen-settings" />
       <div style={adminStyles.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h1 style={adminStyles.title}>Pose Options</h1>
-          <a href="/admin" style={{ ...s.cancelBtn, textDecoration: "none", display: "inline-block" }}>← Admin</a>
-        </div>
+        <GenerationSettingsTabs active="pose" />
+        <h1 style={{ ...adminStyles.title, marginBottom: 20 }}>Pose Options</h1>
 
         {/* Tab selector */}
         <div style={s.tabRow}>

@@ -528,6 +528,25 @@ export async function getCameraOptions(): Promise<CameraOptionsResponse> {
 
 // ─── Admin API ───────────────────────────────────────────────
 
+/** Строка расходов по одной модели нейросети. */
+export interface GenerationCostRow {
+  type: string;      // "image" | "video"
+  model: string;
+  count: number;     // число завершённых генераций
+  unitPrice: number; // цена за 1 генерацию ($)
+  total: number;     // count * unitPrice
+}
+
+/** Сводка расходов на генерацию по моделям (GET /admin/generation-costs). */
+export interface GenerationCosts {
+  currency: string;
+  rows: GenerationCostRow[];
+  pricing: Record<string, number>;
+  totalImageCost: number;
+  totalVideoCost: number;
+  totalCost: number;
+}
+
 /** Настройка приложения (ключ-значение, хранится в БД). */
 export interface AppSetting {
   key: string;
@@ -914,6 +933,15 @@ export const admin = {
     if (params?.offset) qs.set("offset", String(params.offset));
     if (params?.search) qs.set("search", params.search);
     return apiFetch(`/admin/generations?${qs}`);
+  },
+
+  /** Расходы на генерацию по каждой модели в $ (GET /admin/generation-costs). */
+  async getGenerationCosts(params?: { from?: string; to?: string }): Promise<GenerationCosts> {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set("from", params.from);
+    if (params?.to) qs.set("to", params.to);
+    const q = qs.toString();
+    return apiFetch<GenerationCosts>(`/admin/generation-costs${q ? `?${q}` : ""}`);
   },
 };
 

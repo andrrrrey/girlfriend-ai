@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, type Character } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
 
 const charStyles: Record<string, React.CSSProperties> = {
   charItem: {
@@ -13,6 +14,8 @@ const charStyles: Record<string, React.CSSProperties> = {
     padding: "16px 0",
     borderBottom: "1px solid #313131",
   },
+  charAvatar: { width: 48, height: 48, borderRadius: 8, objectFit: "cover" as const, background: "#1e1e1e", flexShrink: 0, marginRight: 14 },
+  charAvatarPlaceholder: { width: 48, height: 48, borderRadius: 8, background: "#1e1e1e", flexShrink: 0, marginRight: 14 },
   charInfo: { flex: 1 },
   charName: { color: "#fff", fontSize: 14, fontWeight: "bold" as const, marginBottom: 6 },
   charTags: { display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 },
@@ -89,17 +92,7 @@ export default function AdminCharactersPage() {
   return (
     <div style={adminStyles.page}>
       <div style={adminStyles.container}>
-        <div style={adminStyles.tabs}>
-          <a href="/admin" style={adminStyles.tab}>Настройки</a>
-          <a href="/admin/characters" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Персонажи</a>
-          <a href="/admin/users" style={adminStyles.tab}>Пользователи</a>
-          <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
-          <a href="/admin/appearance-options" style={adminStyles.tab}>Appearance</a>
-          <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
-          <a href="/admin/scene-options" style={adminStyles.tab}>Scene</a>
-          <a href="/admin/camera-options" style={adminStyles.tab}>Camera</a>
-          <a href="/admin/generations" style={adminStyles.tab}>Генерации</a>
-        </div>
+        <AdminTabs active="characters" />
 
         {editing ? (
           <div style={adminStyles.card}>
@@ -144,12 +137,18 @@ export default function AdminCharactersPage() {
             <div style={adminStyles.row}>
               <div style={{ flex: 1 }}>
                 <label style={adminStyles.label}>URL аватара</label>
-                <input
-                  value={editing.avatarUrl || ""}
-                  onChange={(e) => setEditing({ ...editing, avatarUrl: e.target.value })}
-                  style={adminStyles.input}
-                  placeholder="https://..."
-                />
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {editing.avatarUrl
+                    ? <img src={editing.avatarUrl} alt="" style={charStyles.charAvatar} />
+                    : <div style={charStyles.charAvatarPlaceholder} />
+                  }
+                  <input
+                    value={editing.avatarUrl || ""}
+                    onChange={(e) => setEditing({ ...editing, avatarUrl: e.target.value })}
+                    style={adminStyles.input}
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
               <div style={{ flex: 1 }}>
                 <label style={adminStyles.label}>ID голоса</label>
@@ -203,6 +202,10 @@ export default function AdminCharactersPage() {
               <div>
                 {chars.map((c) => (
                   <div key={c.id} style={charStyles.charItem}>
+                    {c.avatarUrl
+                      ? <img src={c.avatarUrl} alt={c.name} style={charStyles.charAvatar} loading="lazy" decoding="async" />
+                      : <div style={charStyles.charAvatarPlaceholder} />
+                    }
                     <div style={charStyles.charInfo}>
                       <div style={charStyles.charName}>{c.name}</div>
                       <div style={charStyles.charTags}>

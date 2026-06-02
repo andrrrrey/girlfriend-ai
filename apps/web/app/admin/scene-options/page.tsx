@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type SceneCategory, type SceneOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
+import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
 
 const TABS = [
   { key: "LOCATION", label: "Location" },
@@ -297,11 +299,10 @@ export default function AdminSceneOptionsPage() {
 
   return (
     <div style={adminStyles.page}>
+      <AdminTabs active="gen-settings" />
       <div style={adminStyles.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h1 style={adminStyles.title}>Scene Options</h1>
-          <a href="/admin" style={{ ...s.cancelBtn, textDecoration: "none", display: "inline-block" }}>← Admin</a>
-        </div>
+        <GenerationSettingsTabs active="scene" />
+        <h1 style={{ ...adminStyles.title, marginBottom: 20 }}>Scene Options</h1>
 
         {/* Tab selector */}
         <div style={s.tabRow}>

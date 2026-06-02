@@ -509,4 +509,20 @@ export class AdminController {
       search,
     });
   }
+
+  /**
+   * Возвращает расходы на генерацию по каждой модели нейросети в USD.
+   *
+   * `GET /admin/generation-costs?from=&to=`
+   *
+   * @param from — нижняя граница диапазона дат (ISO, необязательно).
+   * @param to   — верхняя граница диапазона дат (ISO, необязательно).
+   */
+  @Get("generation-costs")
+  async getGenerationCosts(
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.adminService.getGenerationCosts({ from, to });
+  }
 }

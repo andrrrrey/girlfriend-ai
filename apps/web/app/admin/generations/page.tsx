@@ -4,8 +4,9 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
 
-const LIMIT = 50;
+const LIMIT = 100;
 
 const pageStyles: Record<string, React.CSSProperties> = {
   filterRow: {
@@ -42,76 +43,41 @@ const pageStyles: Record<string, React.CSSProperties> = {
     width: 260,
     fontFamily: "'Syne', sans-serif",
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-    gap: 16,
-  },
-  card: {
-    background: "#121212",
-    border: "1px solid #313131",
-    borderRadius: 8,
-    overflow: "hidden",
-    cursor: "pointer",
-    transition: "border-color 0.2s",
-  },
-  thumbWrap: {
-    position: "relative",
+  table: {
     width: "100%",
-    paddingTop: "100%",
+    borderCollapse: "collapse",
+    fontSize: 12,
+  },
+  th: {
+    textAlign: "left",
+    color: "#848484",
+    fontSize: 11,
+    fontWeight: 600,
+    padding: "8px 10px",
+    borderBottom: "1px solid #313131",
+    whiteSpace: "nowrap",
+  },
+  td: {
+    padding: "6px 10px",
+    borderBottom: "1px solid #1e1e1e",
+    color: "#ccc",
+    verticalAlign: "middle",
+  },
+  row: { cursor: "pointer" },
+  thumbBox: {
+    position: "relative",
+    width: 56,
+    height: 56,
+    borderRadius: 6,
     background: "#0a0a0a",
     overflow: "hidden",
+    flexShrink: 0,
   },
   thumbMedia: {
-    position: "absolute",
-    top: 0,
-    left: 0,
     width: "100%",
     height: "100%",
     objectFit: "cover",
-  },
-  typeBadge: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    background: "rgba(0,0,0,0.7)",
-    color: "#f95bad",
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "2px 8px",
-    borderRadius: 4,
-  },
-  sourceBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    background: "rgba(0,0,0,0.7)",
-    color: "#fdcb6e",
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "2px 8px",
-    borderRadius: 4,
-  },
-  cardBody: {
-    padding: "10px 12px",
-  },
-  promptText: {
-    color: "#fff",
-    fontSize: 12,
-    lineHeight: "1.3",
-    marginBottom: 4,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  userText: {
-    color: "#969696",
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  dateText: {
-    color: "#848484",
-    fontSize: 10,
+    display: "block",
   },
   pagination: {
     display: "flex",
@@ -224,17 +190,15 @@ function CardThumbnail({ item }: { item: any }) {
 
   if (!url) {
     return (
-      <div style={pageStyles.thumbWrap}>
-        <div style={{ ...pageStyles.thumbMedia, display: "flex", alignItems: "center", justifyContent: "center", color: "#555", fontSize: 12 }}>
-          No media
-        </div>
+      <div style={{ ...pageStyles.thumbBox, display: "flex", alignItems: "center", justifyContent: "center", color: "#555", fontSize: 9 }}>
+        N/A
       </div>
     );
   }
 
   return (
     <div
-      style={pageStyles.thumbWrap}
+      style={pageStyles.thumbBox as React.CSSProperties}
       onMouseEnter={() => { if (video && videoRef.current) videoRef.current.play().catch(() => {}); }}
       onMouseLeave={() => { if (video && videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; } }}
     >
@@ -251,12 +215,6 @@ function CardThumbnail({ item }: { item: any }) {
       ) : (
         <img src={url} alt="" style={pageStyles.thumbMedia as React.CSSProperties} loading="lazy" />
       )}
-      <span style={pageStyles.typeBadge as React.CSSProperties}>
-        {video ? "Video" : "Image"}
-      </span>
-      <span style={pageStyles.sourceBadge as React.CSSProperties}>
-        {detectSource(item)}
-      </span>
     </div>
   );
 }
@@ -367,18 +325,8 @@ export default function AdminGenerationsPage() {
 
   return (
     <div style={adminStyles.page}>
-      <div style={adminStyles.containerWide}>
-        <div style={adminStyles.tabs}>
-          <a href="/admin" style={adminStyles.tab}>Настройки</a>
-          <a href="/admin/characters" style={adminStyles.tab}>Персонажи</a>
-          <a href="/admin/users" style={adminStyles.tab}>Пользователи</a>
-          <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
-          <a href="/admin/appearance-options" style={adminStyles.tab}>Appearance</a>
-          <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
-          <a href="/admin/scene-options" style={adminStyles.tab}>Scene</a>
-          <a href="/admin/camera-options" style={adminStyles.tab}>Camera</a>
-          <a href="/admin/generations" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Генерации</a>
-        </div>
+      <div style={adminStyles.containerXWide}>
+        <AdminTabs active="generations" />
 
         {error && (
           <div style={{ background: "rgba(227,100,102,0.15)", border: "1px solid #e36466", borderRadius: 8, padding: "10px 16px", fontSize: 13, color: "#e36466", marginBottom: 16 }}>
@@ -428,28 +376,52 @@ export default function AdminGenerationsPage() {
           ) : items.length === 0 ? (
             <p style={{ color: "#888", padding: "20px 0" }}>Генерации не найдены.</p>
           ) : (
-            <div style={pageStyles.grid}>
-              {items.map((item) => {
-                const prompt = item.input?.prompt || item.input?.originalPrompt || "";
-                const truncated = prompt.length > 50 ? prompt.slice(0, 50) + "..." : prompt;
-                const userDisplay = item.user?.nickname || item.user?.email || item.userId || "";
-                const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString("ru-RU") : "";
+            <div style={{ overflowX: "auto" }}>
+              <table style={pageStyles.table as React.CSSProperties}>
+                <thead>
+                  <tr>
+                    <th style={{ ...pageStyles.th, width: 64 }}>Превью</th>
+                    <th style={{ ...pageStyles.th, width: 70 }}>Тип</th>
+                    <th style={{ ...pageStyles.th, width: 100 }}>Источник</th>
+                    <th style={pageStyles.th}>Prompt</th>
+                    <th style={{ ...pageStyles.th, width: 180 }}>Модель</th>
+                    <th style={{ ...pageStyles.th, width: 200 }}>Пользователь</th>
+                    <th style={{ ...pageStyles.th, width: 150 }}>Дата</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const prompt = item.input?.prompt || item.input?.originalPrompt || "";
+                    const truncated = prompt.length > 90 ? prompt.slice(0, 90) + "..." : prompt;
+                    const userDisplay = item.user?.nickname || item.user?.email || item.userId || "";
+                    const model = item.input?.model || "—";
+                    const date = item.createdAt ? new Date(item.createdAt).toLocaleString("ru-RU") : "";
+                    const video = isVideo(item);
 
-                return (
-                  <div
-                    key={item.id || item.jobId}
-                    style={pageStyles.card}
-                    onClick={() => setSelected(item)}
-                  >
-                    <CardThumbnail item={item} />
-                    <div style={pageStyles.cardBody}>
-                      <div style={pageStyles.promptText} title={prompt}>{truncated || "No prompt"}</div>
-                      <div style={pageStyles.userText}>{userDisplay}</div>
-                      <div style={pageStyles.dateText}>{date}</div>
-                    </div>
-                  </div>
-                );
-              })}
+                    return (
+                      <tr
+                        key={item.id || item.jobId}
+                        style={pageStyles.row}
+                        onClick={() => setSelected(item)}
+                      >
+                        <td style={pageStyles.td}><CardThumbnail item={item} /></td>
+                        <td style={pageStyles.td}>
+                          <span style={{ color: video ? "#f95bad" : "#6cb2eb", fontWeight: 600 }}>
+                            {video ? "Video" : "Image"}
+                          </span>
+                        </td>
+                        <td style={pageStyles.td}>{detectSource(item)}</td>
+                        <td style={{ ...pageStyles.td, color: "#fff", maxWidth: 360 }} title={prompt}>
+                          {truncated || "—"}
+                        </td>
+                        <td style={{ ...pageStyles.td, fontSize: 11 }}>{model}</td>
+                        <td style={{ ...pageStyles.td, fontSize: 11 }}>{userDisplay}</td>
+                        <td style={{ ...pageStyles.td, color: "#848484", fontSize: 11, whiteSpace: "nowrap" }}>{date}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type CharacterOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
+import { AdminTabs } from "../AdminTabs";
+import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
 
 const CATEGORIES = [
   { key: "STYLE", label: "Style (Graphic Style)" },
@@ -219,13 +221,10 @@ export default function AdminCharacterOptionsPage() {
 
   return (
     <div style={adminStyles.page}>
+      <AdminTabs active="gen-settings" />
       <div style={adminStyles.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h1 style={adminStyles.title}>Character Options</h1>
-          <div style={{ display: "flex", gap: 8 }}>
-            <a href="/admin" style={{ ...s.cancelBtn, textDecoration: "none", display: "inline-block" }}>← Admin</a>
-          </div>
-        </div>
+        <GenerationSettingsTabs active="character" />
+        <h1 style={{ ...adminStyles.title, marginBottom: 20 }}>Character Options</h1>
 
         {/* Category tabs */}
         <div style={s.catTabs}>

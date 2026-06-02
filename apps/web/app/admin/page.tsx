@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth";
 import { admin, type AppSetting } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
+import { AdminTabs } from "./AdminTabs";
 
 const SETTING_GROUPS = [
   {
@@ -122,17 +123,7 @@ export default function AdminSettingsPage() {
   return (
     <div style={adminStyles.page}>
       <div style={adminStyles.container}>
-        <div style={adminStyles.tabs}>
-          <a href="/admin" style={{ ...adminStyles.tab, ...adminStyles.tabActive }}>Настройки</a>
-          <a href="/admin/characters" style={adminStyles.tab}>Персонажи</a>
-          <a href="/admin/users" style={adminStyles.tab}>Пользователи</a>
-          <a href="/admin/character-options" style={adminStyles.tab}>Опции персонажа</a>
-          <a href="/admin/appearance-options" style={adminStyles.tab}>Appearance</a>
-          <a href="/admin/pose-options" style={adminStyles.tab}>Pose</a>
-          <a href="/admin/scene-options" style={adminStyles.tab}>Scene</a>
-          <a href="/admin/camera-options" style={adminStyles.tab}>Camera</a>
-          <a href="/admin/generations" style={adminStyles.tab}>Генерации</a>
-        </div>
+        <AdminTabs active="settings" />
 
         {error && <div style={{ ...adminStyles.card, ...adminStyles.error, marginBottom: 20 }}>{error}</div>}
         {saved && <div style={{ ...adminStyles.card, ...adminStyles.success, marginBottom: 20 }}>Настройки сохранены!</div>}
