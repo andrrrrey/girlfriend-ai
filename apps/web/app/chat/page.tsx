@@ -928,6 +928,9 @@ function ChatPageInner() {
                   <img src={activeChatData.character.avatarUrl} alt={activeChatData.character.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />
                 )}
               </div>
+              <span className="chat-header-name">
+                {activeChatData?.character?.name || "Чат"}
+              </span>
               <div className="chat-profile-select">
                 <select
                   value={activeChatData?.chatProfileId ?? ""}
@@ -940,9 +943,6 @@ function ChatPageInner() {
                   ))}
                 </select>
               </div>
-              <span className="chat-header-name">
-                {activeChatData?.character?.name || "Чат"}
-              </span>
               {isDemo && (
                 <span className="demo-badge">Free</span>
               )}

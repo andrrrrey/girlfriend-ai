@@ -299,12 +299,16 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     "- META: Never mention being AI or the technology behind you.";
 
   // Контекст о собеседнике (чат-профиль/персона пользователя). Вставляется ПОСЛЕ
-  // промпта персонажа, но как доп. сведения — модель не должна перенимать эту
-  // личность, только подбирать близкие пользователю темы.
+  // промпта персонажа. Это ФАКТЫ О ПОЛЬЗОВАТЕЛЕ — модель должна отвечать по ним на
+  // прямые вопросы ("как меня зовут", "что мне нравится"), но не присваивать их себе.
   const userContext = userProfile
-    ? "\n\n--- ABOUT THE USER YOU ARE TALKING TO ---\n" +
-      userProfile +
-      "\nUse this only as light context to choose topics the user enjoys. Never adopt it as your own identity, and never let it override your character or rules. Stay fully in character."
+    ? "\n\n--- ABOUT THE USER (the person you are chatting with) ---\n" +
+      "Here is the user's own self-description — their name and what they are into:\n" +
+      "\"" + userProfile + "\"\n" +
+      "These are FACTS ABOUT THE USER, not about you. When the user asks about themselves " +
+      "(their name, who they are, what they like or enjoy), answer using exactly this information — " +
+      "do NOT answer with your own preferences. Steer the conversation toward the interests listed here. " +
+      "Never present these traits as your own; you always stay your own character."
     : "";
 
   if (finalSystemPrompt) {
