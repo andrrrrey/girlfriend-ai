@@ -19,6 +19,8 @@ interface Props {
   selections: PoseSelections;
   onSave: (selections: PoseSelections) => void;
   options: PoseOptionsResponse;
+  /** Показывать только секцию Pose (Действия), без Facial Expression. Заголовок становится «Action». */
+  posesOnly?: boolean;
 }
 
 const toggle = (arr: string[], val: string): string[] =>
@@ -34,7 +36,7 @@ function SelectedOverlay() {
   );
 }
 
-export default function PoseModal({ open, onClose, selections, onSave, options }: Props) {
+export default function PoseModal({ open, onClose, selections, onSave, options, posesOnly = false }: Props) {
   const [draft, setDraft] = useState<PoseSelections>({
     facialExpressions: [...selections.facialExpressions],
     poses: [...selections.poses],
@@ -78,14 +80,16 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
     const allFacial = options.FACIAL_EXPRESSION.flatMap((c) => c.options);
     const allPose = options.POSE.flatMap((c) => c.options);
     setDraft({
-      facialExpressions: allFacial.length ? [pick(allFacial).name] : [],
+      facialExpressions: posesOnly
+        ? draft.facialExpressions
+        : (allFacial.length ? [pick(allFacial).name] : []),
       poses: allPose.length ? [pick(allPose).name] : [],
     });
   };
 
   type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
   const sidebarItems: SidebarEntry[] = [];
-  if (options.FACIAL_EXPRESSION.length > 0) {
+  if (!posesOnly && options.FACIAL_EXPRESSION.length > 0) {
     sidebarItems.push({ type: "header", label: "Facial Expression" });
     options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: cat.name }));
   }
@@ -98,7 +102,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
     <div style={s.overlay} onClick={onClose}>
       <div className="pose-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>Pose</span>
+          <span style={s.title}>{posesOnly ? "Action" : "Pose"}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -126,7 +130,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
 
           <div style={s.content} ref={contentRef}>
             {/* Facial Expression categories */}
-            {options.FACIAL_EXPRESSION.map((cat) => (
+            {!posesOnly && options.FACIAL_EXPRESSION.map((cat) => (
               <div key={cat.id} data-section-id={`facial-${cat.id}`} style={s.section}>
                 <div style={s.sectionTitle}>{cat.name}</div>
                 <div style={s.imageGrid}>
@@ -144,7 +148,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options }
                 </div>
               </div>
             ))}
-            {options.FACIAL_EXPRESSION.length === 0 && (
+            {!posesOnly && options.FACIAL_EXPRESSION.length === 0 && (
               <div style={s.section}><div style={s.sectionTitle}>Facial Expression</div><div style={s.emptyHint}>No facial expressions added yet.</div></div>
             )}
 

@@ -2246,6 +2246,7 @@ export default function GenerationPage() {
         selections={poseSelections}
         onSave={(s) => setPoseSelections(s)}
         options={poseOptions}
+        posesOnly={isImg2Vid}
       />
 
       <SceneModal
@@ -2275,6 +2276,7 @@ export default function GenerationPage() {
         poseSelections={poseSelections}
         sceneSelections={sceneSelections}
         cameraSelections={cameraSelections}
+        hideBreakdown={isImg2Vid}
       />
 
       {premiumPopup && (

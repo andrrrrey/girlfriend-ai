@@ -26,6 +26,8 @@ interface Props {
   poseSelections: PoseSelections;
   sceneSelections: SceneSelections;
   cameraSelections: CameraSelections;
+  /** Скрыть секцию «Prompt Breakdown», оставив только Prompt Preview и Negative Prompt. */
+  hideBreakdown?: boolean;
 }
 
 type Section = "prompt" | "negativePrompt";
@@ -74,6 +76,7 @@ function BreakdownField({ label, value }: { label: string; value: string }) {
 export default function PromptDetailsModal({
   open, onClose, prompt, selections, onSave,
   characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections,
+  hideBreakdown = false,
 }: Props) {
   const [draftPrompt, setDraftPrompt] = useState(prompt);
   const [draft, setDraft] = useState<PromptDetailsSelections>({
@@ -201,36 +204,40 @@ export default function PromptDetailsModal({
                 className="pd-prompt-textarea"
               />
 
-              <div style={{ ...s.sectionTitle, marginTop: 28 }}>
-                Prompt Breakdown
-                <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
-              </div>
-              <div style={s.conditionNote}>
-                *Selected conditions apply to all selected clothing in the prompt.
-              </div>
-              <div style={s.breakdownGrid}>
-                <div style={s.col}>
-                  <div style={s.colTitle}>Character</div>
-                  <BreakdownField label="Subject" value={subject} />
-                  <BreakdownField label="Hair" value={hair} />
-                  <BreakdownField label="Face" value={face} />
-                  <BreakdownField label="Expression" value={expression} />
-                </div>
-                <div style={s.col}>
-                  <div style={s.colTitle}>Appearance</div>
-                  <BreakdownField label="Body" value={body} />
-                  <BreakdownField label="Clothing" value={clothing} />
-                  <BreakdownField label="Accessories" value={accessories} />
-                  <BreakdownField label="Pose" value={pose} />
-                </div>
-                <div style={s.col}>
-                  <div style={s.colTitle}>Camera</div>
-                  <BreakdownField label="Quality / Style" value="" />
-                  <BreakdownField label="Scene" value={scene} />
-                  <BreakdownField label="Framing" value={framing} />
-                  <BreakdownField label="Lighting" value={lighting} />
-                </div>
-              </div>
+              {!hideBreakdown && (
+                <>
+                  <div style={{ ...s.sectionTitle, marginTop: 28 }}>
+                    Prompt Breakdown
+                    <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
+                  </div>
+                  <div style={s.conditionNote}>
+                    *Selected conditions apply to all selected clothing in the prompt.
+                  </div>
+                  <div style={s.breakdownGrid}>
+                    <div style={s.col}>
+                      <div style={s.colTitle}>Character</div>
+                      <BreakdownField label="Subject" value={subject} />
+                      <BreakdownField label="Hair" value={hair} />
+                      <BreakdownField label="Face" value={face} />
+                      <BreakdownField label="Expression" value={expression} />
+                    </div>
+                    <div style={s.col}>
+                      <div style={s.colTitle}>Appearance</div>
+                      <BreakdownField label="Body" value={body} />
+                      <BreakdownField label="Clothing" value={clothing} />
+                      <BreakdownField label="Accessories" value={accessories} />
+                      <BreakdownField label="Pose" value={pose} />
+                    </div>
+                    <div style={s.col}>
+                      <div style={s.colTitle}>Camera</div>
+                      <BreakdownField label="Quality / Style" value="" />
+                      <BreakdownField label="Scene" value={scene} />
+                      <BreakdownField label="Framing" value={framing} />
+                      <BreakdownField label="Lighting" value={lighting} />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* ── Negative Prompt ── */}
