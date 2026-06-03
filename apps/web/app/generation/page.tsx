@@ -1401,6 +1401,7 @@ export default function GenerationPage() {
     const mode = isVideo ? videoSubTab : "scratch";
     if (isVideo && (mode === "img2vid" || mode === "continue") && !initMediaKey) {
       setError(mode === "img2vid" ? "Select a source image" : "Select a source video");
+      setSubmitting(false);
       return;
     }
 
@@ -1588,6 +1589,12 @@ export default function GenerationPage() {
   const extraCameraTags = cameraTags.length > 5 ? cameraTags.length - 5 : 0;
   const hasCameraSelections = cameraTags.length > 0;
 
+  /** В режиме «Convert Image to Video» показываем упрощённый редактор: Image File + Action + Custom Prompt. */
+  const isImg2Vid = activeTab === "video" && videoSubTab === "img2vid";
+  const actionTags = poseSelections.poses;
+  const visibleActionTags = actionTags.slice(0, 5);
+  const extraActionTags = actionTags.length > 5 ? actionTags.length - 5 : 0;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -1651,14 +1658,14 @@ export default function GenerationPage() {
             </div>
           )}
 
-          {/* Media picker for img2vid / continue */}
-          {activeTab === "video" && (videoSubTab === "img2vid" || videoSubTab === "continue") && (
+          {/* Media picker for Continue Existing Video (source video) */}
+          {activeTab === "video" && videoSubTab === "continue" && (
             <div className="chips-section">
-              <div className="section-title">{videoSubTab === "img2vid" ? "Source Image" : "Source Video"}</div>
+              <div className="section-title">Source Video</div>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={videoSubTab === "img2vid" ? "image/*" : "video/*"}
+                accept="video/*"
                 style={{ display: "none" }}
                 onChange={handleMediaFileChange}
               />
@@ -1676,7 +1683,7 @@ export default function GenerationPage() {
                   {uploadingMedia ? "Uploading…" : "Upload"}
                 </button>
                 {history
-                  .filter((h) => h.type === (videoSubTab === "img2vid" ? "image" : "video") && h.output?.url)
+                  .filter((h) => h.type === "video" && h.output?.url)
                   .map((h) => {
                     const key = extractMediaKey(h.output?.url);
                     const selected = !!key && key === initMediaKey;
@@ -1689,18 +1696,14 @@ export default function GenerationPage() {
                           border: selected ? "2px solid #c1f0aa" : "2px solid transparent",
                         }}
                       >
-                        {videoSubTab === "img2vid"
-                          ? <img src={h.output?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          : <video src={h.output?.url} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                        <video src={h.output?.url} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     );
                   })}
               </div>
               {initMediaUrl && (
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
-                  {videoSubTab === "img2vid"
-                    ? <img src={initMediaUrl} alt="selected" style={{ width: 96, height: 96, borderRadius: 8, objectFit: "cover" }} />
-                    : <video src={initMediaUrl} controls muted style={{ width: 96, height: 96, borderRadius: 8, objectFit: "cover" }} />}
+                  <video src={initMediaUrl} controls muted style={{ width: 96, height: 96, borderRadius: 8, objectFit: "cover" }} />
                   <button
                     type="button"
                     onClick={resetInitMedia}
@@ -1772,7 +1775,93 @@ export default function GenerationPage() {
             </div>
           </div>
 
-          {/* Editor cards — 3×2 grid */}
+          {/* Editor cards — img2vid: Image File + Action + Custom Prompt; otherwise full 3×2 grid */}
+          {isImg2Vid ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleMediaFileChange}
+              />
+              <div className="editor-section" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                {/* Image File */}
+                <div
+                  className={`editor-card${initMediaUrl ? " active" : ""}`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {initMediaUrl && (
+                    <>
+                      <img
+                        src={initMediaUrl}
+                        alt="source"
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); resetInitMedia(); }}
+                        style={{ position: "absolute", top: 8, right: 8, zIndex: 2, width: 24, height: 24, borderRadius: 6, background: "rgba(0,0,0,0.6)", border: "1px solid #3a3a3a", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </button>
+                    </>
+                  )}
+                  <div className="card-content">
+                    <div className="editor-icon">
+                      <svg viewBox="0 0 20 20" fill="none"><path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 13v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2" stroke="#fff" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </div>
+                    <div className="editor-text">
+                      <div className="name">Image File</div>
+                      <div className="sub required">{uploadingMedia ? "uploading…" : "required"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action */}
+                <div
+                  className={`editor-card${actionTags.length > 0 ? " active" : ""}`}
+                  onClick={() => setPoseOpen(true)}
+                >
+                  <div className="card-content">
+                    <div className="editor-icon">
+                      <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l1.8 4.7L16.7 8 12 9.8 10.2 14.5 8.4 9.8 3.7 8l4.7-1.3L10 2z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                    </div>
+                    <div className="editor-text">
+                      <div className="name">Action</div>
+                      <div className="sub required">required</div>
+                    </div>
+                    {actionTags.length > 0 && (
+                      <div className="editor-tags">
+                        {visibleActionTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                        {extraActionTags > 0 && <span className="editor-tag">+{extraActionTags}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Prompt (Premium) */}
+              <div className="custom-prompt-card" onClick={() => setPromptDetailsOpen(true)}>
+                <div className="custom-prompt-icon">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="heading">
+                  <span>Custom Promt</span>
+                  <span dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
+                </div>
+                <div className="premium-label">premium feature</div>
+                {promptDetailsSelections.negativePromptTerms.length > 0 && (
+                  <div className="editor-tags">
+                    {promptDetailsSelections.negativePromptTerms.slice(0, 3).map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {promptDetailsSelections.negativePromptTerms.length > 3 && (
+                      <span className="editor-tag">+{promptDetailsSelections.negativePromptTerms.length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
           <div className="editor-section">
             {/* Character */}
             <div className={`editor-card${hasCharSelections ? " active" : ""}`} onClick={() => setCharacterOpen(true)}>
@@ -1893,6 +1982,7 @@ export default function GenerationPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Separator */}
           <div className="sep" />
