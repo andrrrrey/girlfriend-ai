@@ -224,7 +224,7 @@ export class ChatsController {
     @Param("id") id: string,
     @Body() dto: UpdateChatDto,
   ) {
-    return this.chatsService.updateChat(id, req.user.id, dto.title!);
+    return this.chatsService.updateChat(id, req.user.id, dto);
   }
 
   /**
@@ -347,6 +347,9 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
+          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
+          : undefined,
       }),
     });
 
@@ -521,6 +524,9 @@ export class ChatsController {
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           characterId: chat.characterId,
+          userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
+            ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
+            : undefined,
         }),
       });
 
@@ -858,6 +864,9 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
+          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
+          : undefined,
       }),
     });
 
@@ -985,6 +994,9 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
+          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
+          : undefined,
       }),
     });
 

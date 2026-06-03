@@ -976,7 +976,48 @@ export interface ChatSession {
   lastMessage: { content: string; role: string; createdAt: string } | null;
   lastMessageAt: string | null;
   createdAt: string;
+  /** ID выбранного чат-профиля (персоны), который персонаж учитывает в диалоге. */
+  chatProfileId?: string | null;
 }
+
+/** Чат-профиль (персона) пользователя. */
+export interface ChatProfile {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** CRUD-методы для чат-профилей пользователя (/chat-profiles). */
+export const chatProfiles = {
+  /** Список профилей текущего пользователя (GET /chat-profiles). */
+  async list(): Promise<ChatProfile[]> {
+    return apiFetch<ChatProfile[]>("/chat-profiles");
+  },
+
+  /** Создаёт новый профиль (POST /chat-profiles). */
+  async create(data: { name: string; description: string }): Promise<ChatProfile> {
+    return apiFetch<ChatProfile>("/chat-profiles", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Обновляет профиль (PATCH /chat-profiles/:id). */
+  async update(id: string, data: { name?: string; description?: string }): Promise<ChatProfile> {
+    return apiFetch<ChatProfile>(`/chat-profiles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Удаляет профиль (DELETE /chat-profiles/:id). */
+  async remove(id: string): Promise<void> {
+    return apiFetch(`/chat-profiles/${id}`, { method: "DELETE" });
+  },
+};
 
 /**
  * Сообщение в чате.
@@ -1026,11 +1067,14 @@ export const chats = {
     return apiFetch(`/chats/${id}`);
   },
 
-  /** Переименовывает чат (PATCH /chats/:id). */
-  async update(id: string, title: string) {
+  /**
+   * Обновляет чат (PATCH /chats/:id): название и/или выбранный чат-профиль.
+   * Передайте chatProfileId: null, чтобы сбросить профиль ("без профиля").
+   */
+  async update(id: string, data: { title?: string; chatProfileId?: string | null }) {
     return apiFetch(`/chats/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(data),
     });
   },
 

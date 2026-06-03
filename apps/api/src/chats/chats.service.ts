@@ -103,6 +103,7 @@ export class ChatsService {
         id: c.id,
         title: c.title,
         character: c.character,
+        chatProfileId: c.chatProfileId, // выбранный чат-профиль (персона)
         lastMessage: c.messages[0] || null, // null если сообщений нет
         lastMessageAt: c.lastMessageAt,
         createdAt: c.createdAt,
@@ -129,6 +130,10 @@ export class ChatsService {
           // systemPrompt нужен для AI-запросов; voiceId — для TTS
           select: { id: true, name: true, avatarUrl: true, systemPrompt: true, voiceId: true },
         },
+        // Выбранный чат-профиль (персона) — описание прокидывается в AI-промпт
+        chatProfile: {
+          select: { id: true, name: true, description: true, deletedAt: true },
+        },
       },
     });
     if (!chat) throw new NotFoundException("Chat not found");
@@ -142,13 +147,30 @@ export class ChatsService {
    *
    * @param chatId — ID чата
    * @param userId — ID владельца (проверка через getChat)
-   * @param title — новый заголовок
+   * @param data   — поля для обновления: title и/или chatProfileId (null — сброс)
    */
-  async updateChat(chatId: string, userId: string, title: string) {
+  async updateChat(
+    chatId: string,
+    userId: string,
+    data: { title?: string; chatProfileId?: string | null },
+  ) {
     const chat = await this.getChat(chatId, userId);
+
+    // Если привязываем профиль — проверяем, что он принадлежит пользователю и не удалён
+    if (data.chatProfileId) {
+      const profile = await this.prisma.chatProfile.findFirst({
+        where: { id: data.chatProfileId, userId, deletedAt: null },
+      });
+      if (!profile) throw new NotFoundException("Chat profile not found");
+    }
+
+    const updateData: { title?: string; chatProfileId?: string | null } = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.chatProfileId !== undefined) updateData.chatProfileId = data.chatProfileId;
+
     return this.prisma.chatSession.update({
       where: { id: chat.id },
-      data: { title },
+      data: updateData,
     });
   }
 

@@ -22,6 +22,7 @@ import { HealthController } from "./health.controller";
 import { PrismaService } from "./prisma.service";
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
+import { ChatProfilesModule } from "./chat-profiles/chat-profiles.module";
 import { AdminModule } from "./admin/admin.module";
 import { InternalModule } from "./internal/internal.module";
 import { ChatsModule } from "./chats/chats.module";
@@ -39,6 +40,7 @@ import { CommentsModule } from "./comments/comments.module";
     QueueModule,    // Глобальный модуль BullMQ-очереди (регистрирует AI_QUEUE токен)
     AuthModule,     // JWT-аутентификация и управление сессиями
     UsersModule,    // Операции с профилем текущего пользователя
+    ChatProfilesModule, // Чат-профили (персоны) пользователя
     AdminModule,    // Административные операции (защищены ролью "admin")
     InternalModule, // Внутренние API для ai-сервиса и worker-а (без аутентификации!)
     ChatsModule,      // Чаты, сообщения, SSE, STT, TTS

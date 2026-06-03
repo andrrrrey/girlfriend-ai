@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
   chats,
+  chatProfiles,
+  type ChatProfile,
   characters as charactersApi,
   streamMessage,
   streamRegenerate,
@@ -39,6 +41,7 @@ function ChatPageInner() {
   const [streaming, setStreaming] = useState(false);
   const [streamContent, setStreamContent] = useState("");
   const [charList, setCharList] = useState<Character[]>([]);
+  const [profilesList, setProfilesList] = useState<ChatProfile[]>([]);
   const [showNewChat, setShowNewChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -98,6 +101,25 @@ function ChatPageInner() {
       setMessages([]);
     }
   }, []);
+
+  // Load user's chat profiles (personas) for the header dropdown
+  useEffect(() => {
+    if (!loading && user) {
+      chatProfiles.list().then(setProfilesList).catch(() => setProfilesList([]));
+    }
+  }, [loading, user]);
+
+  // Persist the selected chat profile for the active chat
+  const handleProfileChange = useCallback(async (profileId: string | null) => {
+    if (!activeChat) return;
+    setChatList((prev) => prev.map((c) => (c.id === activeChat ? { ...c, chatProfileId: profileId } : c)));
+    try {
+      await chats.update(activeChat, { chatProfileId: profileId });
+    } catch {
+      // revert on failure by reloading the list
+      loadChats();
+    }
+  }, [activeChat, loadChats]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -701,6 +723,17 @@ function ChatPageInner() {
 .chat-header { display: flex; align-items: center; gap: 20px; padding: 20px 0 0 0; }
 .chat-header-avatar { width: 46px; height: 46px; border-radius: 8px; border: 1px solid #313131; background: #313131; }
 .chat-header-name { flex: 1; font-size: 24px; font-weight: 700; }
+.chat-profile-select select {
+  appearance: none;
+  background: #1e1e1e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23848484' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+  border: 1px solid #313131; border-radius: 6px;
+  color: #fff; font-size: 12px; font-weight: 600; font-family: inherit;
+  padding: 7px 28px 7px 12px; cursor: pointer; max-width: 220px;
+  text-overflow: ellipsis; transition: border-color 0.2s;
+}
+.chat-profile-select select:hover { border-color: #f95bad; }
+.chat-profile-select select:focus { outline: none; border-color: #f95bad; }
+.chat-profile-select option { background: #1e1e1e; color: #fff; }
 .chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; gap: 8px; }
 .message { display: flex; flex-direction: column; gap: 4px; }
 .message.from-ai { align-items: flex-start; max-width: 65%; }
@@ -894,6 +927,18 @@ function ChatPageInner() {
                 {activeChatData?.character?.avatarUrl && (
                   <img src={activeChatData.character.avatarUrl} alt={activeChatData.character.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />
                 )}
+              </div>
+              <div className="chat-profile-select">
+                <select
+                  value={activeChatData?.chatProfileId ?? ""}
+                  onChange={(e) => handleProfileChange(e.target.value || null)}
+                  title="Выберите свой чат-профиль для этого диалога"
+                >
+                  <option value="">Без профиля</option>
+                  {profilesList.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               <span className="chat-header-name">
                 {activeChatData?.character?.name || "Чат"}

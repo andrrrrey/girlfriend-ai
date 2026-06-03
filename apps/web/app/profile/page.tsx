@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { users } from "../../lib/api";
+import { users, chatProfiles, type ChatProfile } from "../../lib/api";
 
 type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
 
@@ -372,6 +372,23 @@ const CSS = `
   transition: border-color 0.2s;
 }
 .pp-chat-create:hover { border-color: #f95bad; }
+.pp-chat-menu {
+  position: absolute; top: 28px; right: 0; z-index: 10;
+  display: flex; flex-direction: column; min-width: 110px;
+  background: #252525; border: 1px solid #313131; border-radius: 8px;
+  padding: 4px; overflow: hidden;
+}
+.pp-chat-menu button {
+  background: transparent; border: none; text-align: left;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  color: #fff; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+}
+.pp-chat-menu button:hover { background: #313131; }
+.pp-chat-menu .pp-chat-menu-del { color: #E36466; }
+.pp-chat-form {
+  display: flex; flex-direction: column; gap: 10px;
+  background: #252525; padding: 12px; border-radius: 8px;
+}
 
 /* ── Unauthenticated ── */
 .pp-unauth {
@@ -434,11 +451,6 @@ const TAG_GROUPS = [
     label: "Hobbies",
     tags: ["Gaming", "Fitness", "Travel", "Music", "Cooking", "Art", "Reading", "Dancing"],
   },
-];
-
-const CHAT_DATA = [
-  { name: "Artem, 25", bio: "Creative writer and hopeless romantic. Loves poetry, rainy days, and deep conversations about the meaning of life." },
-  { name: "Boris, 40", bio: "Experienced and thoughtful. Great listener with a dry sense of humor and a passion for history." },
 ];
 
 const TABS: { id: Tab; label: string }[] = [
@@ -877,29 +889,131 @@ function PreferencesTab() {
 }
 
 function ChatProfilesTab() {
+  const [profiles, setProfiles] = useState<ChatProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    chatProfiles.list()
+      .then(setProfiles)
+      .catch(() => setMsg({ text: "Failed to load profiles", ok: false }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function openCreate() {
+    setEditingId(null); setName(""); setDescription(""); setMsg(null); setShowForm(true);
+  }
+  function openEdit(p: ChatProfile) {
+    setEditingId(p.id); setName(p.name); setDescription(p.description);
+    setMsg(null); setOpenMenu(null); setShowForm(true);
+  }
+  function closeForm() {
+    setShowForm(false); setEditingId(null); setName(""); setDescription("");
+  }
+
+  async function handleSave() {
+    if (!name.trim() || !description.trim()) {
+      setMsg({ text: "Please fill in both fields", ok: false });
+      return;
+    }
+    setSaving(true); setMsg(null);
+    try {
+      if (editingId) {
+        const updated = await chatProfiles.update(editingId, { name: name.trim(), description: description.trim() });
+        setProfiles((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
+      } else {
+        const created = await chatProfiles.create({ name: name.trim(), description: description.trim() });
+        setProfiles((prev) => [created, ...prev]);
+      }
+      closeForm();
+    } catch (err: any) {
+      setMsg({ text: err?.message || "Failed to save profile", ok: false });
+    }
+    setSaving(false);
+  }
+
+  async function handleDelete(id: string) {
+    setOpenMenu(null);
+    if (!confirm("Delete this chat profile?")) return;
+    const prev = profiles;
+    setProfiles((p) => p.filter((x) => x.id !== id));
+    try {
+      await chatProfiles.remove(id);
+    } catch {
+      setProfiles(prev);
+      setMsg({ text: "Failed to delete profile", ok: false });
+    }
+  }
+
+  if (loading) return <div className="pp-chats"><div className="pp-chat-bio">Loading…</div></div>;
+
   return (
     <div className="pp-chats">
-      {CHAT_DATA.map((p) => (
-        <div className="pp-chat-card" key={p.name}>
+      {profiles.map((p) => (
+        <div className="pp-chat-card" key={p.id}>
           <div className="pp-chat-ava"><IcoPerson size={20} stroke="#848484" /></div>
           <div className="pp-chat-info">
             <div className="pp-chat-name">{p.name}</div>
-            <div className="pp-chat-bio">{p.bio}</div>
+            <div className="pp-chat-bio">{p.description}</div>
           </div>
-          <button className="pp-chat-btn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-            </svg>
-          </button>
+          <div style={{ position: "relative", alignSelf: "center" }}>
+            <button className="pp-chat-btn" onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+              </svg>
+            </button>
+            {openMenu === p.id && (
+              <div className="pp-chat-menu">
+                <button onClick={() => openEdit(p)}>Edit</button>
+                <button className="pp-chat-menu-del" onClick={() => handleDelete(p.id)}>Delete</button>
+              </div>
+            )}
+          </div>
         </div>
       ))}
-      <button className="pp-chat-create">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
-          <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
-        </svg>
-        Create New
-      </button>
+
+      {showForm && (
+        <div className="pp-chat-form">
+          <input
+            className="pp-input"
+            type="text"
+            placeholder="Name, e.g. Андрей — стартапер из Твери"
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <textarea
+            className="pp-textarea"
+            placeholder="Describe yourself: who you are, your interests, the mood you want…"
+            maxLength={2000}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          {msg && <span className={`pp-feedback ${msg.ok ? "ok" : "err"}`}>{msg.text}</span>}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="pp-save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : editingId ? "Save changes" : "Save"}
+            </button>
+            <button className="pp-cancel-btn" onClick={closeForm}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {!showForm && (
+        <button className="pp-chat-create" onClick={openCreate}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          Create New
+        </button>
+      )}
     </div>
   );
 }

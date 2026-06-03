@@ -10,27 +10,28 @@ datasource db {
 // ─── Users & Auth ────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  nickname     String?   @unique
-  avatarUrl    String?   @map("avatar_url")
-  aboutMe      String?   @map("about_me")
-  role                       String    @default("user")
-  subscription               String    @default("free")
-  isDemo                     Boolean   @default(false) @map("is_demo")
-  lang                       String    @default("en")
-  emailVerified              Boolean   @default(false) @map("email_verified")
-  verificationToken          String?   @unique @map("verification_token")
-  verificationTokenExpiresAt DateTime? @map("verification_token_expires_at")
+  id                          String    @id @default(uuid()) @db.Uuid
+  email                       String    @unique
+  passwordHash                String    @map("password_hash")
+  nickname                    String?   @unique
+  avatarUrl                   String?   @map("avatar_url")
+  aboutMe                     String?   @map("about_me")
+  role                        String    @default("user")
+  subscription                String    @default("free")
+  isDemo                      Boolean   @default(false) @map("is_demo")
+  lang                        String    @default("en")
+  emailVerified               Boolean   @default(false) @map("email_verified")
+  verificationToken           String?   @unique @map("verification_token")
+  verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at")
   passwordResetToken          String?   @unique @map("password_reset_token")
   passwordResetTokenExpiresAt DateTime? @map("password_reset_token_expires_at")
-  createdAt                  DateTime  @default(now()) @map("created_at")
-  updatedAt                  DateTime  @updatedAt @map("updated_at")
-  deletedAt                  DateTime? @map("deleted_at")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+  deletedAt                   DateTime? @map("deleted_at")
 
   sessions         Session[]
   socialLinks      SocialLink[]
+  chatProfiles     ChatProfile[]
   chatSessions     ChatSession[]
   usageCounters    UsageCounter[]
   aiJobs           AiJob[]
@@ -49,7 +50,7 @@ model User {
 model UsageCounter {
   id      String   @id @default(uuid()) @db.Uuid
   userId  String   @map("user_id") @db.Uuid
-  action  String   // chat_message | stt | tts | generation
+  action  String // chat_message | stt | tts | generation
   count   Int      @default(0)
   resetAt DateTime @map("reset_at")
 
@@ -84,6 +85,24 @@ model SocialLink {
 
   @@unique([userId, provider])
   @@map("social_links")
+}
+
+// ─── Chat Profiles (user-created personas) ───────────────────
+
+model ChatProfile {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  name        String
+  description String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSessions ChatSession[]
+
+  @@index([userId, deletedAt])
+  @@map("chat_profiles")
 }
 
 // ─── Admin Settings (key-value store) ────────────────────────
@@ -124,15 +143,17 @@ model ChatSession {
   id            String    @id @default(uuid()) @db.Uuid
   userId        String    @map("user_id") @db.Uuid
   characterId   String    @map("character_id") @db.Uuid
+  chatProfileId String?   @map("chat_profile_id") @db.Uuid
   title         String?
   lastMessageAt DateTime? @map("last_message_at")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  character Character @relation(fields: [characterId], references: [id])
-  messages  Message[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character   Character    @relation(fields: [characterId], references: [id])
+  chatProfile ChatProfile? @relation(fields: [chatProfileId], references: [id], onDelete: SetNull)
+  messages    Message[]
 
   // Составной индекс для листа чатов: фильтр по userId + deletedAt, сортировка по lastMessageAt DESC
   @@index([userId, deletedAt, lastMessageAt(sort: Desc)])
@@ -143,7 +164,7 @@ model ChatSession {
 model Message {
   id            String    @id @default(uuid()) @db.Uuid
   chatSessionId String    @map("chat_session_id") @db.Uuid
-  role          String    // user | assistant | system
+  role          String // user | assistant | system
   content       String
   type          String    @default("text") // text | audio | image
   mediaUrl      String?   @map("media_url")
@@ -161,7 +182,7 @@ model Message {
 
 model AiJob {
   id          String    @id @default(uuid()) @db.Uuid
-  type        String    // chat | stt | tts
+  type        String // chat | stt | tts
   status      String    @default("pending") // pending | processing | completed | failed
   input       Json?
   output      Json?
@@ -183,7 +204,7 @@ model AiJob {
 model UsageLog {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id") @db.Uuid
-  action     String   // chat_message | stt | tts
+  action     String // chat_message | stt | tts
   tokensUsed Int?     @map("tokens_used")
   metadata   Json?
   createdAt  DateTime @default(now()) @map("created_at")
@@ -199,7 +220,7 @@ model UsageLog {
 
 model CharacterOption {
   id              String   @id @default(cuid())
-  category        String   // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
+  category        String // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
   name            String
   prompt          String?
   imageUrl        String?  @map("image_url")
@@ -217,7 +238,7 @@ model CharacterOption {
 
 model AppearanceCategory {
   id        String   @id @default(cuid())
-  tab       String   // OUTFITS | OUTFIT_DETAILS
+  tab       String // OUTFITS | OUTFIT_DETAILS
   name      String
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
@@ -249,7 +270,7 @@ model AppearanceOption {
 
 model PoseCategory {
   id        String   @id @default(cuid())
-  tab       String   // FACIAL_EXPRESSION | POSE
+  tab       String // FACIAL_EXPRESSION | POSE
   name      String
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
@@ -281,7 +302,7 @@ model PoseOption {
 
 model SceneCategory {
   id        String   @id @default(cuid())
-  tab       String   // LOCATION
+  tab       String // LOCATION
   name      String
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
@@ -313,7 +334,7 @@ model SceneOption {
 
 model CameraOption {
   id            String   @id @default(cuid())
-  section       String   // FRAMING | CAMERA_ANGLE
+  section       String // FRAMING | CAMERA_ANGLE
   name          String
   prompt        String?
   imageUrl      String?  @map("image_url")
