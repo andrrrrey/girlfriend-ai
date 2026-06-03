@@ -2277,6 +2277,7 @@ export default function GenerationPage() {
         sceneSelections={sceneSelections}
         cameraSelections={cameraSelections}
         hideBreakdown={isImg2Vid}
+        hideNegativePrompt={isImg2Vid}
       />
 
       {premiumPopup && (

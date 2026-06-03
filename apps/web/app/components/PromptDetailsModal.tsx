@@ -28,6 +28,8 @@ interface Props {
   cameraSelections: CameraSelections;
   /** Скрыть секцию «Prompt Breakdown», оставив только Prompt Preview и Negative Prompt. */
   hideBreakdown?: boolean;
+  /** Скрыть секцию «Negative Prompt». */
+  hideNegativePrompt?: boolean;
 }
 
 type Section = "prompt" | "negativePrompt";
@@ -76,7 +78,7 @@ function BreakdownField({ label, value }: { label: string; value: string }) {
 export default function PromptDetailsModal({
   open, onClose, prompt, selections, onSave,
   characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections,
-  hideBreakdown = false,
+  hideBreakdown = false, hideNegativePrompt = false,
 }: Props) {
   const [draftPrompt, setDraftPrompt] = useState(prompt);
   const [draft, setDraft] = useState<PromptDetailsSelections>({
@@ -180,7 +182,7 @@ export default function PromptDetailsModal({
           {/* Sidebar */}
           <div style={s.sidebar}>
             <nav style={s.sidebarNav}>
-              {SECTIONS.map((sec) => (
+              {SECTIONS.filter((sec) => !(hideNegativePrompt && sec === "negativePrompt")).map((sec) => (
                 <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>
                   {SECTION_LABELS[sec]}
                 </button>
@@ -241,22 +243,24 @@ export default function PromptDetailsModal({
             </div>
 
             {/* ── Negative Prompt ── */}
-            <div ref={sectionRefs.negativePrompt} style={s.section}>
-              <div style={s.sectionTitle}>
-                Negative Prompt
-                <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
+            {!hideNegativePrompt && (
+              <div ref={sectionRefs.negativePrompt} style={s.section}>
+                <div style={s.sectionTitle}>
+                  Negative Prompt
+                  <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
+                </div>
+                <div style={s.pillGrid}>
+                  {NEGATIVE_PROMPT_OPTIONS.map((opt) => {
+                    const selected = draft.negativePromptTerms.includes(opt);
+                    return (
+                      <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, negativePromptTerms: toggle(draft.negativePromptTerms, opt) })}>
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={s.pillGrid}>
-                {NEGATIVE_PROMPT_OPTIONS.map((opt) => {
-                  const selected = draft.negativePromptTerms.includes(opt);
-                  return (
-                    <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, negativePromptTerms: toggle(draft.negativePromptTerms, opt) })}>
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

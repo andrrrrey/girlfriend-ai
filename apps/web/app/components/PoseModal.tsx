@@ -26,6 +26,9 @@ interface Props {
 const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
+/** В режиме «Action» из секции Pose показываем только категорию «Действия». */
+const ACTION_CATEGORY_NAME = "Действия";
+
 function SelectedOverlay() {
   return (
     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 1 }}>
@@ -69,6 +72,11 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
 
   if (!open) return null;
 
+  // В режиме «Action» оставляем только категорию «Действия» из секции Pose.
+  const poseCategories = posesOnly
+    ? options.POSE.filter((cat) => cat.name === ACTION_CATEGORY_NAME)
+    : options.POSE;
+
   const scrollTo = (id: string) => {
     setActiveId(id);
     const el = contentRef.current?.querySelector<HTMLElement>(`[data-section-id="${id}"]`);
@@ -78,7 +86,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
   const handleRandom = () => {
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
     const allFacial = options.FACIAL_EXPRESSION.flatMap((c) => c.options);
-    const allPose = options.POSE.flatMap((c) => c.options);
+    const allPose = poseCategories.flatMap((c) => c.options);
     setDraft({
       facialExpressions: posesOnly
         ? draft.facialExpressions
@@ -93,9 +101,9 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
     sidebarItems.push({ type: "header", label: "Facial Expression" });
     options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: cat.name }));
   }
-  if (options.POSE.length > 0) {
+  if (poseCategories.length > 0) {
     sidebarItems.push({ type: "header", label: "Pose" });
-    options.POSE.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: cat.name }));
+    poseCategories.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: cat.name }));
   }
 
   return (
@@ -153,7 +161,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
             )}
 
             {/* Pose categories */}
-            {options.POSE.map((cat) => (
+            {poseCategories.map((cat) => (
               <div key={cat.id} data-section-id={`pose-${cat.id}`} style={s.section}>
                 <div style={s.sectionTitle}>{cat.name}</div>
                 <div style={s.imageGrid}>
@@ -171,7 +179,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
                 </div>
               </div>
             ))}
-            {options.POSE.length === 0 && (
+            {poseCategories.length === 0 && (
               <div style={s.section}><div style={s.sectionTitle}>Pose</div><div style={s.emptyHint}>No poses added yet.</div></div>
             )}
           </div>
