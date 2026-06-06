@@ -40,6 +40,7 @@ export class GenerationController {
       provider: dto.provider,
       generationStyle: dto.generationStyle,
       count: dto.count,
+      initImageUrl: dto.initImageUrl,
     });
   }
 

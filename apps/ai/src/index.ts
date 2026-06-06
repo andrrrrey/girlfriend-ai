@@ -291,7 +291,9 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     "- LENGTH: 1–3 short sentences. No paragraphs, no lists, no monologues. Write like a casual text chat.\n" +
     "- DIALOGUE: End almost every reply with a question or invitation. Be curious about the user.\n" +
     "- BIOGRAPHY: Never dump your full bio. Reveal one small detail at a time, only when relevant.\n" +
-    "- GREETING: Greet only once, in the very first reply, and only if the user greeted you. Never start later replies with \"Привет\", \"Hi\", \"Hello\", \"Hola\", etc.\n" +
+    "- GREETING: In your very first reply, keep it short and simple: a brief warm hello plus ONE easy, neutral question (e.g. how their day is going, what they're up to, how they found you). Do not introduce your whole backstory. Greet only once — never start later replies with \"Привет\", \"Hi\", \"Hello\", \"Hola\", etc.\n" +
+    "- HONESTY: If you don't know something or aren't sure, say so plainly (\"I'm not sure\", \"я не знаю\") instead of inventing facts, names, or events. Never make up information.\n" +
+    "- NO REPETITION: Never repeat a message you already sent. Do not reuse the same sentences, phrasing, or questions from your previous replies — each reply must be fresh and move the conversation forward.\n" +
     "- CONTEXT: Read the full history. Remember what the user said. Stay consistent with your previous replies.\n" +
     "- VAGUE REQUESTS: If the user says something short like \"cheer me up\", just do it in 1–2 sentences. Do not list options or ask them to choose.\n" +
     "- EMOJI: At most 1 per message, usually none.\n" +
@@ -354,6 +356,10 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
         max_tokens: 4096,
         temperature: 0.6,
         top_p: 0.9,
+        // Снижаем дословные повторы целых фраз/сообщений на уровне сэмплера —
+        // в дополнение к правилу NO REPETITION в системном промпте.
+        frequency_penalty: 0.6,
+        presence_penalty: 0.4,
       }),
       signal: abortController.signal,
     });
@@ -672,6 +678,12 @@ interface ImageGenerateBody {
   aspectRatio?: string;
   /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
   generationStyle?: string;
+  /**
+   * Публичный URL исходного изображения (фото персонажа). Если задан — генерация
+   * идёт в режиме img2img, чтобы результат был похож на исходного персонажа
+   * (используется при генерации поз в чате).
+   */
+  initImageUrl?: string;
 }
 
 // ─── Civitai RED Orchestration API ─────────────────────────────────────────
@@ -982,8 +994,84 @@ async function generateImageAtlasCloud(params: {
   throw new Error("Atlas Cloud image generation timed out");
 }
 
+/**
+ * Генерация изображения в режиме img2img через ModelsLab.
+ *
+ * Используется, когда передан initImageUrl (фото персонажа). Модель опирается
+ * на исходное изображение, поэтому результат сохраняет внешность персонажа,
+ * а текстовый промпт меняет позу/действие/окружение.
+ *
+ * strength ~0.45 — баланс: достаточно похоже на оригинал, но поза меняется.
+ * Возвращает прямой URL результата (с поллингом при processing).
+ */
+async function generateImg2ImgModelsLab(params: {
+  apiKey: string;
+  modelId: string;
+  prompt: string;
+  negativePrompt?: string;
+  initImageUrl: string;
+  width: number;
+  height: number;
+}): Promise<{ url: string }> {
+  const { apiKey, modelId, prompt, negativePrompt, initImageUrl, width, height } = params;
+
+  const mlResponse = await fetch("https://modelslab.com/api/v6/images/img2img", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      key: apiKey,
+      model_id: modelId,
+      init_image: initImageUrl,
+      prompt,
+      negative_prompt: negativePrompt || "",
+      width,
+      height,
+      samples: 1,
+      strength: 0.45,
+      safety_checker: "no",
+      enhance_prompt: "no",
+      num_inference_steps: 30,
+      seed: null,
+    }),
+  });
+
+  if (!mlResponse.ok) {
+    const errBody = await mlResponse.text().catch(() => "");
+    logger.error({ status: mlResponse.status, body: errBody.slice(0, 500) }, "modelslab_img2img_api_error");
+    throw new Error(`ModelsLab img2img API error: ${mlResponse.status}`);
+  }
+
+  let mlResult = await mlResponse.json() as {
+    status: string;
+    output?: string[];
+    fetch_result?: string;
+  };
+
+  if (mlResult.status === "processing" && mlResult.fetch_result) {
+    const fetchUrl = mlResult.fetch_result;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const pollRes = await fetch(fetchUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: apiKey }),
+      });
+      if (!pollRes.ok) continue;
+      const poll = await pollRes.json() as { status: string; output?: string[] };
+      if (poll.status === "success" && poll.output?.length) { mlResult = poll; break; }
+      if (poll.status === "failed") throw new Error("ModelsLab img2img generation failed");
+    }
+  }
+
+  if (mlResult.status !== "success" || !mlResult.output?.length) {
+    throw new Error("ModelsLab img2img timed out or returned no image");
+  }
+
+  return { url: mlResult.output[0] };
+}
+
 app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, provider, width, height } = req.body;
+  const { prompt, negativePrompt, model, provider, width, height, initImageUrl } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
@@ -998,6 +1086,57 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   }
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
+
+  // ─── img2img: генерация по фото персонажа ──────────────────────────────
+  // Если передан initImageUrl — пытаемся сделать img2img через ModelsLab,
+  // чтобы результат был похож на исходного персонажа. При любой ошибке
+  // мягко падаем в обычный (text2img/провайдерный) поток ниже.
+  if (initImageUrl) {
+    const mlKey = settings.MODELSLAB_API_KEY;
+    if (mlKey) {
+      try {
+        const MODELSLAB_IMG_MODELS = ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"];
+        const i2iModel = MODELSLAB_IMG_MODELS.includes(modelId) ? modelId : "realistic-vision-v51";
+        const i2iDefaults: Record<string, { w: number; h: number }> = {
+          "realistic-vision-v51": { w: 512, h: 768 },
+          "sdxl": { w: 1024, h: 1024 },
+          "juggernaut-xl": { w: 1024, h: 1024 },
+          "flux": { w: 1024, h: 1024 },
+        };
+        const dft = i2iDefaults[i2iModel] || { w: 512, h: 768 };
+        const result = await generateImg2ImgModelsLab({
+          apiKey: mlKey,
+          modelId: i2iModel,
+          prompt,
+          negativePrompt,
+          initImageUrl,
+          width: width || dft.w,
+          height: height || dft.h,
+        });
+
+        const imageResponse = await fetch(result.url);
+        if (imageResponse.ok) {
+          const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+          const s3 = createS3Client();
+          const bucket = env.S3_BUCKET || "media";
+          if (s3) {
+            try {
+              const key = `images/${randomUUID()}.png`;
+              const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
+              logger.info({ key, i2iModel }, "img2img_uploaded_to_s3");
+              return reply.send({ url });
+            } catch (s3Err: any) {
+              logger.warn({ err: s3Err }, "img2img_s3_upload_failed");
+            }
+          }
+        }
+        return reply.send({ url: result.url });
+      } catch (err: any) {
+        logger.warn({ err: err?.message }, "img2img_failed_fallback_to_text2img");
+        // продолжаем в обычный поток ниже
+      }
+    }
+  }
 
   // AtlasCloud routing
   if (provider === "atlascloud") {

@@ -268,6 +268,43 @@ export class CharactersController {
     };
   }
 
+  /**
+   * Картинки персонажа для попапа на главной: последние 5 изображений,
+   * сгенерированных ВСЕМИ пользователями в чатах с этим персонажем,
+   * плюс общее количество таких изображений (для счётчика GENERATED).
+   *
+   * В отличие от /story здесь нет окна «24 часа» — берём за всё время.
+   */
+  @Get(":id/images")
+  async getCharacterImages(@Param("id") id: string) {
+    const where = {
+      type: "image",
+      mediaUrl: { not: null },
+      deletedAt: null,
+      chatSession: { characterId: id, deletedAt: null },
+    } as const;
+
+    const [count, messages] = await Promise.all([
+      this.prisma.message.count({ where }),
+      this.prisma.message.findMany({
+        where,
+        select: { id: true, mediaUrl: true, content: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+    ]);
+
+    return {
+      count,
+      items: messages.map((m) => ({
+        id: m.id,
+        url: m.mediaUrl,
+        label: m.content || "",
+        createdAt: m.createdAt,
+      })),
+    };
+  }
+
   @Get(":id")
   async getOne(@Param("id") id: string) {
     const character = await this.prisma.character.findFirst({

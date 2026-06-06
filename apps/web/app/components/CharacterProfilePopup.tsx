@@ -3,18 +3,21 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { likes, comments as commentsApi, users, resizedMediaUrl } from "../../lib/api";
-import type { Character, CommentItem } from "../../lib/api";
+import { likes, comments as commentsApi, users, characters as charactersApi, resizedMediaUrl } from "../../lib/api";
+import type { Character, CommentItem, StoryImage } from "../../lib/api";
 import LikeButton from "./LikeButton";
+import { formatTag } from "../../lib/tags";
 
 interface Props {
   character: Character | null;
   onClose: () => void;
+  /** Сообщает родителю об изменении лайка, чтобы синхронизировать карточку на главной. */
+  onLikeChange?: (characterId: string, liked: boolean, count: number) => void;
 }
 
 type Tab = "about" | "gallery" | "comments";
 
-export default function CharacterProfilePopup({ character, onClose }: Props) {
+export default function CharacterProfilePopup({ character, onClose, onLikeChange }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("about");
@@ -25,6 +28,11 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
   const [commentText, setCommentText] = useState("");
   const [commentCursor, setCommentCursor] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Сгенерированные в чатах изображения этого персонажа (все пользователи)
+  const [genImages, setGenImages] = useState<StoryImage[]>([]);
+  const [genCount, setGenCount] = useState(0);
+  // Текущее основное фото в левой панели (можно переключать на миниатюры)
+  const [mainImage, setMainImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (character) {
@@ -33,6 +41,16 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
       setCommentItems([]);
       setCommentText("");
       setCommentCursor(null);
+      setGenImages([]);
+      setGenCount(0);
+      setMainImage(character.avatarUrl);
+
+      charactersApi.getImages(character.id)
+        .then((r) => {
+          setGenImages(r.items);
+          setGenCount(r.count);
+        })
+        .catch(() => {});
 
       likes.getCount("character", character.id)
         .then((r) => setLikeCount(r.count))
@@ -127,22 +145,34 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
         {/* ═══════════════════ LEFT PANEL ═══════════════════ */}
         <div className="cpp-left" style={s.left}>
           <div style={s.imgWrap}>
-            {character.avatarUrl
-              ? <img src={resizedMediaUrl(character.avatarUrl, { w: 768 }) ?? character.avatarUrl} alt={character.name} style={s.avatar} decoding="async" />
+            {mainImage
+              ? <img src={resizedMediaUrl(mainImage, { w: 768 }) ?? mainImage} alt={character.name} style={s.avatar} decoding="async" />
               : <div style={s.avatarBg} />
             }
-            <div style={s.dotsBtn}>
-              <svg width="16" height="4" viewBox="0 0 16 4" fill="none">
-                <circle cx="2" cy="2" r="2" fill="#fff"/>
-                <circle cx="8" cy="2" r="2" fill="#fff"/>
-                <circle cx="14" cy="2" r="2" fill="#fff"/>
-              </svg>
-            </div>
-            <div style={s.progress}>
-              <div style={s.progActive} />
-              <div style={s.progInactive} />
-              <div style={s.progInactive} />
-            </div>
+            {/* Миниатюры последних 5 изображений из чатов всех пользователей */}
+            {genImages.length > 0 && (
+              <div style={s.thumbStrip}>
+                <div
+                  style={{ ...s.thumb, ...(mainImage === character.avatarUrl ? s.thumbActive : {}) }}
+                  onClick={() => setMainImage(character.avatarUrl)}
+                  title="Avatar"
+                >
+                  {character.avatarUrl && (
+                    <img src={resizedMediaUrl(character.avatarUrl, { w: 120 }) ?? character.avatarUrl} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
+                  )}
+                </div>
+                {genImages.map((img) => (
+                  <div
+                    key={img.id}
+                    style={{ ...s.thumb, ...(mainImage === img.url ? s.thumbActive : {}) }}
+                    onClick={() => setMainImage(img.url)}
+                    title={img.label || "Generated"}
+                  >
+                    <img src={resizedMediaUrl(img.url, { w: 120 }) ?? img.url} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={s.stats}>
@@ -157,7 +187,7 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
             </div>
             <div style={s.statSep} />
             <div style={s.stat}>
-              <span style={s.statVal}>—</span>
+              <span style={s.statVal}>{formatCount(genCount)}</span>
               <span style={s.statLbl}>GENERATED</span>
             </div>
           </div>
@@ -170,7 +200,11 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
               initialCount={likeCount}
               size="lg"
               showCount={false}
-              onToggle={(newLiked, newCount) => { setLiked(newLiked); setLikeCount(newCount); }}
+              onToggle={(newLiked, newCount) => {
+                setLiked(newLiked);
+                setLikeCount(newCount);
+                onLikeChange?.(character.id, newLiked, newCount);
+              }}
             />
             <button style={s.generateBtn}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -196,7 +230,7 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
             <h2 style={s.name}>{character.name}{age ? `, ${age}` : ""}</h2>
             <div style={s.tagsRow}>
               {rawTags.slice(0, 10).map((t, i) => (
-                <span key={i} style={s.tag}>{String(t)}</span>
+                <span key={i} style={s.tag}>{formatTag(String(t))}</span>
               ))}
             </div>
           </div>
@@ -227,7 +261,7 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
                 creator={character.creator ?? null}
               />
             )}
-            {tab === "gallery" && <GalleryTab avatarUrl={character.avatarUrl} />}
+            {tab === "gallery" && <GalleryTab avatarUrl={character.avatarUrl} images={genImages} total={genCount} />}
             {tab === "comments" && (
               <CommentsTab
                 items={commentItems}
@@ -427,40 +461,34 @@ function CreatorSection({ creator }: {
   );
 }
 
-function GalleryTab({ avatarUrl }: { avatarUrl: string | null }) {
+function GalleryTab({ avatarUrl, images, total }: { avatarUrl: string | null; images: StoryImage[]; total: number }) {
+  const tiles: { url: string }[] = [];
+  if (avatarUrl) tiles.push({ url: avatarUrl });
+  for (const img of images) tiles.push({ url: img.url });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <p style={{ ...s.secLabel, margin: 0 }}>GENERATED CONTENT</p>
-        <span style={{ color: "#f95bad", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>VIEW ALL</span>
+        <span style={{ color: "#f95bad", fontSize: 11, fontWeight: 700 }}>{total} total</span>
       </div>
-      <div style={s.galGrid}>
-        {Array.from({ length: 12 }).map((_, i) => {
-          const isPremium = i === 5;
-          const isBlurred = i > 5 && i < 9;
-          return (
-            <div key={i} style={{ ...s.galCard, ...(isBlurred ? s.galBlurred : {}) }}>
-              {avatarUrl && i < 2
-                ? <img src={resizedMediaUrl(avatarUrl, { w: 400 }) ?? avatarUrl} alt="" style={s.galImg} loading="lazy" decoding="async" />
-                : <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${125 + i * 15}deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)` }} />
-              }
-              {isPremium && (
-                <div style={s.premOverlay}>
-                  <div style={s.lockCircle}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2"/>
-                      <path d="M7 11V7a5 5 0 0110 0v4"/>
-                    </svg>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", textAlign: "center" as const }}>More Photos 💎</div>
-                  <div style={{ fontSize: 9, color: "#f95bad", textTransform: "uppercase" as const, fontWeight: 600, letterSpacing: "0.05em" }}>PREMIUM FEATURE</div>
-                  <button style={s.premBtn}>Become Premium</button>
-                </div>
-              )}
+      {tiles.length === 0 ? (
+        <p style={{ color: "#848484", fontSize: 13, textAlign: "center", padding: "30px 0" }}>
+          No images generated yet.
+        </p>
+      ) : (
+        <div style={s.galGrid}>
+          {tiles.map((t, i) => (
+            <div
+              key={i}
+              style={{ ...s.galCard, cursor: "pointer" }}
+              onClick={() => window.open(t.url, "_blank")}
+            >
+              <img src={resizedMediaUrl(t.url, { w: 400 }) ?? t.url} alt="" style={s.galImg} loading="lazy" decoding="async" />
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -578,6 +606,34 @@ const s: Record<string, React.CSSProperties> = {
     position: "absolute" as const,
     inset: 0,
     background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)",
+  },
+  thumbStrip: {
+    position: "absolute" as const,
+    bottom: 10,
+    left: 10,
+    right: 10,
+    display: "flex",
+    gap: 6,
+    zIndex: 3,
+  },
+  thumb: {
+    flex: 1,
+    aspectRatio: "1/1",
+    borderRadius: 6,
+    overflow: "hidden",
+    cursor: "pointer",
+    border: "1.5px solid rgba(255,255,255,0.2)",
+    background: "rgba(0,0,0,0.4)",
+  },
+  thumbActive: {
+    border: "1.5px solid #f95bad",
+    boxShadow: "0 0 8px rgba(249,91,173,0.7)",
+  },
+  thumbImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover" as const,
+    display: "block",
   },
   dotsBtn: {
     position: "absolute" as const,

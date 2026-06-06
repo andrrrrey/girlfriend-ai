@@ -26,6 +26,7 @@ import {
 import ChatPoseModal from "../components/ChatPoseModal";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
+import { formatTags } from "../../lib/tags";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -575,6 +576,15 @@ function ChatPageInner() {
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
   const generatingInThisChat = activeJobs.some((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
 
+  // Курсор всегда на поле ввода: возвращаем фокус, как только поле снова
+  // активно (после отправки/перегенерации/генерации картинки, смены чата).
+  useEffect(() => {
+    if (activeChat && inputMode === "ask" && !streaming && !generatingInThisChat) {
+      chatInputRef.current?.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat, inputMode, streaming, generatingInThisChat, messages.length]);
+
   const galleryImages = useMemo(() => {
     const imgs: { url: string; label: string }[] = [];
     const avatarUrl = activeChatData?.character?.avatarUrl;
@@ -670,9 +680,13 @@ function ChatPageInner() {
     try {
       const charStyle = activeCharPersonality.generationStyle as string | undefined;
       const useCivitai = !!charStyle;
+      // Фото персонажа → img2img, чтобы сгенерированная поза была похожа на
+      // исходного персонажа, а не на случайного человека по текстовому промпту.
+      const initImageUrl = activeChatData?.character?.avatarUrl || undefined;
       const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
         negativePrompt: "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo",
+        ...(initImageUrl ? { initImageUrl } : {}),
         ...(useCivitai
           ? { provider: "civitai", generationStyle: charStyle }
           : { model: "alibaba/wan-2.6/text-to-image", provider: "atlascloud" }),
@@ -709,6 +723,12 @@ function ChatPageInner() {
     <div className="chat-content">
       <style>{`
 .chat-content { display: flex; flex: 1; min-height: 0; }
+/* Скроллбар в цвет сайта (розовый акцент на тёмном фоне) */
+.chat-messages, .chats-panel, .right-panel { scrollbar-width: thin; scrollbar-color: #f95bad #121212; }
+.chat-messages::-webkit-scrollbar, .chats-panel::-webkit-scrollbar, .right-panel::-webkit-scrollbar { width: 8px; height: 8px; }
+.chat-messages::-webkit-scrollbar-track, .chats-panel::-webkit-scrollbar-track, .right-panel::-webkit-scrollbar-track { background: #121212; border-radius: 4px; }
+.chat-messages::-webkit-scrollbar-thumb, .chats-panel::-webkit-scrollbar-thumb, .right-panel::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #f95bad, #ff0084); border-radius: 4px; }
+.chat-messages::-webkit-scrollbar-thumb:hover, .chats-panel::-webkit-scrollbar-thumb:hover, .right-panel::-webkit-scrollbar-thumb:hover { background: #ff0084; }
 .chats-panel { width: 256px; flex-shrink: 0; background: #121212; padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; height: calc(100vh - 46px); }
 .chats-panel-title { font-size: 16px; font-weight: 700; }
 .chats-search { background: #121212; border: 1px solid #313131; border-radius: 4px; width: 100%; height: 30px; display: flex; align-items: center; gap: 10px; padding: 7px 12px; color: #848484; font-size: 12px; font-weight: 500; }
@@ -868,7 +888,7 @@ function ChatPageInner() {
                 <div>
                   <div style={{ color: "#fff", fontSize: 13 }}>{c.name}</div>
                   <div style={{ color: "#848484", fontSize: 11 }}>
-                    {c.tags.join(", ")}
+                    {formatTags(c.tags).join(", ")}
                   </div>
                 </div>
               </div>

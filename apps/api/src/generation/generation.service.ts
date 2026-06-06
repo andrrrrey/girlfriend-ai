@@ -106,9 +106,38 @@ export class GenerationService {
     }
   }
 
+  /**
+   * Превращает URL аватара персонажа (как его знает фронт) в публично доступный
+   * URL для img2img: фронт хранит проксированный путь вида
+   * `/api-proxy/media/stream?key=...`, который внешний AI-провайдер (ModelsLab)
+   * скачать не может. Достаём S3-ключ и подписываем прямой GET-URL.
+   */
+  private async toPublicImageUrl(url: string | undefined | null): Promise<string | undefined> {
+    if (!url) return undefined;
+    try {
+      // Вытаскиваем ключ из `?key=...` (наш media-прокси).
+      const keyMatch = url.match(/[?&]key=([^&]+)/);
+      if (keyMatch) {
+        const key = decodeURIComponent(keyMatch[1]);
+        return await this.s3.getSignedUrl(key);
+      }
+      // Прямой S3 URL → извлекаем ключ и подписываем.
+      const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
+      if (publicBase) {
+        const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
+        if (key) return await this.s3.getSignedUrl(key);
+      }
+      // Внешний http(s) URL — отдаём как есть.
+      if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    } catch (err) {
+      this.logger.warn(`Failed to build public init image url: ${err}`);
+    }
+    return undefined;
+  }
+
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -120,6 +149,8 @@ export class GenerationService {
 
     const resolvedProvider = data.provider || IMAGE_MODELS.find((m) => m.id === data.model)?.provider;
     const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
+    // Для img2img конвертируем фото персонажа в публичный URL (один раз на запрос).
+    const initImageUrl = await this.toPublicImageUrl(data.initImageUrl);
 
     // Создаём N отдельных заданий (1 job → 1 изображение).
     const jobIds: string[] = [];
@@ -137,6 +168,7 @@ export class GenerationService {
             aspectRatio: data.aspectRatio,
             provider: resolvedProvider,
             generationStyle: data.generationStyle,
+            img2img: initImageUrl ? true : undefined,
           },
         },
       });
@@ -150,6 +182,7 @@ export class GenerationService {
         model: data.model,
         provider: resolvedProvider,
         generationStyle: data.generationStyle,
+        initImageUrl,
       };
 
       await this.queue.add(JOB_NAMES.IMAGE, jobData);

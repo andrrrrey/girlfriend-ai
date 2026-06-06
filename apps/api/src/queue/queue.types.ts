@@ -126,6 +126,8 @@ export interface ImageJobData {
   provider?: string;
   /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
   generationStyle?: string;
+  /** Публичный URL исходного изображения (фото персонажа) для режима img2img. */
+  initImageUrl?: string;
 }
 
 /**

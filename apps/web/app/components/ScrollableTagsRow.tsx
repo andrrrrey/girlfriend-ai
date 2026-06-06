@@ -6,6 +6,8 @@ interface Props {
   selectedTags: string[];
   onTagToggle: (tag: string) => void;
   maxVisible?: number;
+  /** Преобразует значение тега в отображаемую подпись (по умолчанию — как есть). */
+  formatLabel?: (tag: string) => string;
 }
 
 export default function ScrollableTagsRow({
@@ -13,6 +15,7 @@ export default function ScrollableTagsRow({
   selectedTags,
   onTagToggle,
   maxVisible = 15,
+  formatLabel = (t) => t,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
@@ -68,7 +71,7 @@ export default function ScrollableTagsRow({
               style={active ? { ...s.tag, ...s.tagActive } : s.tag}
               onClick={() => onTagToggle(tag)}
             >
-              {tag}
+              {formatLabel(tag)}
               {active && <span style={s.underline} />}
             </button>
           );

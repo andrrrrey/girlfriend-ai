@@ -116,6 +116,7 @@ function stage02() {
     ${stageHeader(2, "Origin")}
     <div class="dropdown-row">${dropdown("nationality", "Nationality", NATIONALITIES, "American")}${dropdown("language", "Language", LANGUAGES, "English")}</div>
     <div class="ethnicity-section"><div class="field-label">Ethnicity</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
+    <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">Fantasy Race <span style="color:#969696;font-weight:400">(optional)</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
     <div class="voice-section"><div class="field-label">Voice</div>
       <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${v}</span></div>`).join("")}</div></div>
     ${navButtons(1, 3)}
@@ -317,6 +318,8 @@ function collectFormData() {
     language: sel("language"),
     ethnicity: card("ethnicity"),
     ethnicityPrompt: cardPrompt("ethnicity"),
+    fantasyRace: card("fantasyRace"),
+    fantasyRacePrompt: cardPrompt("fantasyRace"),
     voice: voice(),
     eyeColor: card("eyeColor"),
     hairStyle: card("hairStyle"),
@@ -429,6 +432,7 @@ function restoreFormState(): boolean {
       card?.classList.add("selected");
     };
     restoreCard("ethnicity", d.ethnicity);
+    restoreCard("fantasyRace", d.fantasyRace);
     restoreCard("eyeColor", d.eyeColor);
     restoreCard("hairStyle", d.hairStyle);
     restoreCard("hairColor", d.hairColor);
@@ -517,7 +521,8 @@ function validateStage(n: number): { valid: boolean; errors: { field: string; me
       break;
     }
     case 2:
-      if (!hasCard("ethnicity")) errors.push({ field: "ethnicity", message: "Please select an ethnicity" });
+      // Этничность ИЛИ фэнтези-раса (фэнтези-раса опциональна и заменяет этничность).
+      if (!hasCard("ethnicity") && !hasCard("fantasyRace")) errors.push({ field: "ethnicity", message: "Please select an ethnicity or fantasy race" });
       break;
     case 3:
       if (!hasCard("eyeColor")) errors.push({ field: "eyeColor", message: "Please select an eye color" });
@@ -857,7 +862,7 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
     d.style === "Anime" ? "anime style" : "photorealistic",
     d.gender?.toLowerCase() ?? "female",
     d.age ? `${d.age} years old` : "",
-    d.ethnicityPrompt || d.ethnicity || "",
+    d.fantasyRacePrompt || d.fantasyRace || d.ethnicityPrompt || d.ethnicity || "",
     d.hairColor ? `${d.hairColor} hair` : "",
     d.hairStylePrompt || (d.hairStyle ? `${d.hairStyle} hairstyle` : ""),
     d.eyeColor ? `${d.eyeColor} eyes` : "",
@@ -1195,6 +1200,28 @@ export default function CreateCharacterPage() {
         }
       }
 
+      // FANTASY_RACE -> fantasyRace (Stage 02, optional). Показываем секцию
+      // только если в админке заведены фэнтези-расы — как на странице генерации.
+      const fantasyRaceOpts = allOpts.filter((o) => o.category === "FANTASY_RACE").sort((a, b) => a.order - b.order);
+      if (fantasyRaceOpts.length > 0) {
+        const section = document.getElementById("fantasy-race-section");
+        if (section) section.style.display = "";
+        populateImageCards("fantasy-race-grid-container", fantasyRaceOpts);
+        // Взаимоисключение: выбор фэнтези-расы снимает выбор обычной этничности и наоборот.
+        const ethGrid = document.getElementById("ethnicity-grid-container");
+        const fanGrid = document.getElementById("fantasy-race-grid-container");
+        fanGrid?.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            ethGrid?.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+          });
+        });
+        ethGrid?.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            fanGrid?.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+          });
+        });
+      }
+
       // HAIR_STYLE -> hairStyle (Stage 03)
       const hairStyleOpts = allOpts.filter((o) => o.category === "HAIR_STYLE").sort((a, b) => a.order - b.order);
       if (hairStyleOpts.length > 0) {
@@ -1347,9 +1374,14 @@ export default function CreateCharacterPage() {
       submitBtn.textContent = "Creating...";
       try {
         const data = collectFormData();
-        // Remove prompt fields — they're only used for image generation, not character creation API
-        const { ethnicityPrompt, hairStylePrompt, bodyTypePrompt, ...charData } = data;
-        const newChar = await characters.create({ ...charData, avatarUrl: previewImageUrl ?? undefined });
+        // Remove prompt fields — they're only used for image generation, not character creation API.
+        // fantasyRace мапится в поле ethnicity (бэк нормализует elf/demon/… как ethnicity).
+        const { ethnicityPrompt, hairStylePrompt, bodyTypePrompt, fantasyRace, fantasyRacePrompt, ...charData } = data;
+        const newChar = await characters.create({
+          ...charData,
+          ethnicity: fantasyRace || charData.ethnicity,
+          avatarUrl: previewImageUrl ?? undefined,
+        });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);
         router.push(`/chat?sessionId=${newChat.id}`);

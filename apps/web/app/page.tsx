@@ -7,6 +7,7 @@ import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
+import { formatTag } from "../lib/tags";
 
 const PAGE_CSS = `
     .content { position: relative; }
@@ -156,7 +157,7 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       const label = `${char.name}${age}`;
       const description = (p["description"] as string) || (p["bio"] as string) || "";
       const rawTags = (p["tags"] as string[]) || (p["traits"] as string[]) || char.tags || [];
-      const tagsHtml = rawTags.slice(0, 7).map((t) => `<span class="hover-tag">${t}</span>`).join("");
+      const tagsHtml = rawTags.slice(0, 7).map((t) => `<span class="hover-tag">${formatTag(String(t))}</span>`).join("");
       const descHtml = description
         ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
         : `<p class="hover-description" style="color:#969696;">No description yet.</p>`;
@@ -184,7 +185,6 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
   </div>
   <div class="card-actions">
     <div class="card-action-btn card-like-btn" data-char-id="${char.id}"><svg width="16" height="16" viewBox="0 0 16 16" fill="${heartFill}"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="${heartStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <div class="card-action-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1" fill="#fff"/><circle cx="8" cy="8" r="1" fill="#fff"/><circle cx="12" cy="8" r="1" fill="#fff"/></svg></div>
   </div>
   <div class="card featured">
     <div class="card-bg">${bgContent}<div class="card-overlay"></div></div>
@@ -375,6 +375,7 @@ export default function HomePage() {
               selectedTags={selectedTags}
               onTagToggle={handleTagToggle}
               maxVisible={15}
+              formatLabel={formatTag}
             />
           </div>
 
@@ -386,6 +387,9 @@ export default function HomePage() {
       <CharacterProfilePopup
         character={selectedChar}
         onClose={() => setSelectedChar(null)}
+        onLikeChange={(charId, liked, count) =>
+          setLikeStatuses((prev) => ({ ...prev, [charId]: { liked, count } }))
+        }
       />
     </>
   );

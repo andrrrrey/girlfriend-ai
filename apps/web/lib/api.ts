@@ -1301,6 +1301,11 @@ export const characters = {
     return apiFetch(`/characters/${id}/story`);
   },
 
+  /** Последние 5 изображений из чатов всех пользователей + общий счётчик. */
+  async getImages(id: string): Promise<{ count: number; items: StoryImage[] }> {
+    return apiFetch(`/characters/${id}/images`);
+  },
+
   async create(data: CreateCharacterFormData): Promise<Character> {
     return apiFetch<Character>("/characters", {
       method: "POST",
@@ -1675,6 +1680,7 @@ export async function createImageJob(data: {
   provider?: string;
   generationStyle?: string;
   count?: number;
+  initImageUrl?: string;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",

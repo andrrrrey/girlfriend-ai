@@ -46,4 +46,13 @@ export class CreateImageJobDto {
   @IsInt()
   @IsIn(ALLOWED_COUNTS)
   count?: number;
+
+  /**
+   * URL исходного изображения (фото персонажа) для режима img2img.
+   * Если задан — генерация опирается на это фото, чтобы результат был похож
+   * на персонажа (используется при генерации поз в чате).
+   */
+  @IsOptional()
+  @IsString()
+  initImageUrl?: string;
 }

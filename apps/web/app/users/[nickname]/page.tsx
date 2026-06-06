@@ -9,6 +9,7 @@ import LikeButton from "../../components/LikeButton";
 import FilterDropdown from "../../components/FilterDropdown";
 import ScrollableTagsRow from "../../components/ScrollableTagsRow";
 import CharacterProfilePopup from "../../components/CharacterProfilePopup";
+import { formatTag, formatTags } from "../../../lib/tags";
 
 const PAGE_CSS = `
   .up-wrap {
@@ -716,6 +717,7 @@ export default function UserProfilePage() {
             <ScrollableTagsRow
               tags={tags}
               selectedTags={selectedTags}
+              formatLabel={formatTag}
               onTagToggle={(tag) => {
                 if (tag === "__ALL__") { setSelectedTags([]); return; }
                 setSelectedTags((prev) =>
@@ -819,7 +821,7 @@ export default function UserProfilePage() {
                     <div key={`c-${c.id}`} className="up-card-wrap">
                       <div className="up-hover-panel">
                         <p style={{ fontSize: 10, color: "#fff", margin: 0, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as any }}>
-                          {c.tags.slice(0, 5).join(", ")}
+                          {formatTags(c.tags.slice(0, 5)).join(", ")}
                         </p>
                         <button
                           className="up-hover-btn"

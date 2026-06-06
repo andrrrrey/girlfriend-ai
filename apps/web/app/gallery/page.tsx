@@ -7,6 +7,7 @@ import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
+import { formatTag } from "../../lib/tags";
 import LikeButton from "../components/LikeButton";
 
 const PAGE_CSS = `
@@ -515,6 +516,7 @@ export default function GalleryPage() {
           <ScrollableTagsRow
             tags={tags}
             selectedTags={selectedTags}
+            formatLabel={formatTag}
             onTagToggle={(tag) => {
               if (tag === "__ALL__") {
                 setSelectedTags([]);
