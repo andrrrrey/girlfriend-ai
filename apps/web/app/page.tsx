@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { characters, auth, likes } from "../lib/api";
+import { characters, auth, likes, resizedMediaUrl } from "../lib/api";
 import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
@@ -161,7 +161,7 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
         ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
         : `<p class="hover-description" style="color:#969696;">No description yet.</p>`;
       const bgContent = char.avatarUrl
-        ? `<img src="${char.avatarUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
+        ? `<img src="${resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl}" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
       const isLiked = likeStatuses[char.id]?.liked || false;
       const likeCount = likeStatuses[char.id]?.count || 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
@@ -16,6 +17,7 @@ import {
   getPoseOptions,
   createImageJob,
   saveImageMessage,
+  resizedMediaUrl,
   type ChatSession,
   type Message,
   type Character,
@@ -861,7 +863,7 @@ function ChatPageInner() {
                 className="char-option"
               >
                 <div className="char-avatar" style={{overflow:'hidden'}}>
-                  {c.avatarUrl && <img src={c.avatarUrl} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:4}} />}
+                  {c.avatarUrl && <img src={resizedMediaUrl(c.avatarUrl, { w: 256 }) ?? c.avatarUrl} alt={c.name} loading="lazy" decoding="async" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:4}} />}
                 </div>
                 <div>
                   <div style={{ color: "#fff", fontSize: 13 }}>{c.name}</div>
@@ -892,7 +894,7 @@ function ChatPageInner() {
             >
               <div className="chat-item-avatar" style={{overflow:'hidden',borderRadius:4}}>
                 {c.character?.avatarUrl && (
-                  <img src={c.character.avatarUrl} alt={c.character.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                  <img src={resizedMediaUrl(c.character.avatarUrl, { w: 256 }) ?? c.character.avatarUrl} alt={c.character.name} loading="lazy" decoding="async" style={{width:'100%',height:'100%',objectFit:'cover'}} />
                 )}
               </div>
               <div className="chat-item-message">
@@ -925,7 +927,7 @@ function ChatPageInner() {
             <div className="chat-header">
               <div className="chat-header-avatar" style={{overflow:'hidden'}}>
                 {activeChatData?.character?.avatarUrl && (
-                  <img src={activeChatData.character.avatarUrl} alt={activeChatData.character.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />
+                  <img src={resizedMediaUrl(activeChatData.character.avatarUrl, { w: 256 }) ?? activeChatData.character.avatarUrl} alt={activeChatData.character.name} decoding="async" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />
                 )}
               </div>
               <span className="chat-header-name">
@@ -954,7 +956,7 @@ function ChatPageInner() {
                 <span>{demoBanner.message}</span>
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   {demoBanner.subscribeCta && (
-                    <a href="/profile" className="demo-banner-btn">Оформить подписку</a>
+                    <Link href="/profile" className="demo-banner-btn">Оформить подписку</Link>
                   )}
                   <button onClick={() => setDemoBanner(null)} className="demo-banner-close">Закрыть</button>
                 </div>
@@ -1230,7 +1232,7 @@ function ChatPageInner() {
             {isDemo && (
               <p style={{ color: "#f95bad", marginTop: 12, fontSize: 13 }}>
                 Бесплатный план: {DEMO_MESSAGE_LIMIT} сообщений/день, без голосовых функций.{" "}
-                <a href="/profile" style={{ color: "#f95bad" }}>Оформить подписку →</a>
+                <Link href="/profile" style={{ color: "#f95bad" }}>Оформить подписку →</Link>
               </p>
             )}
           </div>

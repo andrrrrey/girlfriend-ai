@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../context/auth";
-import { users, getPublicGallery, characters as charactersApi } from "../../../lib/api";
+import { users, getPublicGallery, characters as charactersApi, resizedMediaUrl } from "../../../lib/api";
 import type { PublicUserProfile, GalleryItem, Character } from "../../../lib/api";
 import LikeButton from "../../components/LikeButton";
 import FilterDropdown from "../../components/FilterDropdown";
@@ -620,7 +620,7 @@ export default function UserProfilePage() {
         <aside className="up-sidebar">
           <div className="up-sidebar-top" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
             {profile?.avatarUrl
-              ? <img src={profile.avatarUrl} alt={profile.nickname || ""} className="up-avatar" />
+              ? <img src={resizedMediaUrl(profile.avatarUrl, { w: 256 }) ?? profile.avatarUrl} alt={profile.nickname || ""} className="up-avatar" decoding="async" />
               : <div className="up-avatar" style={{ background: "linear-gradient(135deg, #2d1b3d, #1a0a2e)", borderRadius: 12 }} />
             }
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -785,7 +785,7 @@ export default function UserProfilePage() {
                         {url ? (
                           isVideo
                             ? <video className="up-card-thumb" src={url} muted loop preload="metadata" playsInline />
-                            : <img className="up-card-thumb" src={url} alt="" loading="lazy" />
+                            : <img className="up-card-thumb" src={resizedMediaUrl(url, { w: 400 }) ?? url} alt="" loading="lazy" decoding="async" />
                         ) : (
                           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)" }} />
                         )}
@@ -830,7 +830,7 @@ export default function UserProfilePage() {
                       </div>
                       <div className="up-card" onClick={() => setSelectedChar(c)}>
                         {c.avatarUrl
-                          ? <img className="up-card-thumb" src={c.avatarUrl} alt={c.name} loading="lazy" />
+                          ? <img className="up-card-thumb" src={resizedMediaUrl(c.avatarUrl, { w: 400 }) ?? c.avatarUrl} alt={c.name} loading="lazy" decoding="async" />
                           : <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${135 + idx * 20}deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)` }} />
                         }
                         <div className="up-card-overlay" />

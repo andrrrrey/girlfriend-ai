@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../../context/auth";
-import { getPublicGallery, getGalleryTags, likes } from "../../lib/api";
+import { getPublicGallery, getGalleryTags, likes, resizedMediaUrl } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import FilterDropdown from "../components/FilterDropdown";
@@ -357,7 +357,7 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
             <video className="g-card-thumb" src={url} muted loop preload="metadata" playsInline
               onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none"; }} />
           ) : (
-            <img className="g-card-thumb" src={url} alt="" loading="lazy"
+            <img className="g-card-thumb" src={resizedMediaUrl(url, { w: 400 }) ?? url} alt="" loading="lazy" decoding="async"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
           )
         ) : (
@@ -570,7 +570,7 @@ export default function GalleryPage() {
               lightbox.type === "video" ? (
                 <video className="g-lightbox-media" src={lightbox.url} controls autoPlay loop />
               ) : (
-                <img className="g-lightbox-media" src={lightbox.url} alt="Gallery" />
+                <img className="g-lightbox-media" src={resizedMediaUrl(lightbox.url, { w: 1080 }) ?? lightbox.url} alt="Gallery" decoding="async" />
               )
             )}
           </div>

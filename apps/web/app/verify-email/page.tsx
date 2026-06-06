@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Logo from "../components/Logo";
 
@@ -66,9 +67,9 @@ function VerifyEmailContent() {
             <div style={styles.iconError}>✕</div>
             <h2 style={styles.title}>Ошибка верификации</h2>
             <p style={{ ...styles.text, color: "#ff7675" }}>{message}</p>
-            <a href="/register" style={styles.link}>
+            <Link href="/register" style={styles.link}>
               Зарегистрироваться заново
-            </a>
+            </Link>
           </>
         )}
       </div>

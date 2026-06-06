@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { characters as charactersApi } from "../../lib/api";
+import { characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { StoryCharacter } from "../../lib/api";
 import StoryViewer from "./StoryViewer";
 
@@ -81,7 +81,12 @@ export default function StoriesRail({ onOpenProfile }: Props) {
               <span className={c.hasActiveStory ? "story-ring active" : "story-ring"}>
                 <span className="story-avatar">
                   {c.avatarUrl ? (
-                    <img src={c.avatarUrl} alt={c.name} />
+                    <img
+                      src={resizedMediaUrl(c.avatarUrl, { w: 256 }) ?? c.avatarUrl}
+                      alt={c.name}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <span className="story-avatar-fallback" />
                   )}

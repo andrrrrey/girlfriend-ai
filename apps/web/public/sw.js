@@ -1,8 +1,15 @@
 // Service Worker: cache-first для картинок опций (admin) и медиа-стрима.
 // Версионируем имя кеша, чтобы при изменении формата (например, переход
-// от base64 к webp) можно было выкинуть старое.
-const CACHE_NAME = "option-images-v1";
-const MAX_ENTRIES = 500;
+// на webp + ресайз через ?w=) можно было выкинуть старое.
+//
+// Cache-first (а не stale-while-revalidate) выбран намеренно: /media/stream
+// отдаёт immutable-контент (ключ + параметры ?w=&q= однозначно определяют
+// результат), поэтому фоновая ревалидация только зря жгла бы трафик — что
+// особенно важно на медленном интернете.
+//
+// v2: сброс старого кеша с несжатыми/не-webp ответами + увеличенный лимит.
+const CACHE_NAME = "media-v2";
+const MAX_ENTRIES = 1500;
 
 self.addEventListener("install", () => {
   self.skipWaiting();

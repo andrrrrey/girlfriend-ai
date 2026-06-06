@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "../../context/auth";
 import { auth } from "../../lib/api";
 import Logo from "../components/Logo";
@@ -119,7 +120,7 @@ export default function LoginPage() {
         />
 
         <div style={{ textAlign: "right" as const, marginTop: 8 }}>
-          <a href="/forgot-password" style={styles.link}>Забыли пароль?</a>
+          <Link href="/forgot-password" style={styles.link}>Забыли пароль?</Link>
         </div>
 
         {turnstileSiteKey && (
@@ -140,9 +141,9 @@ export default function LoginPage() {
 
         <p style={styles.footer}>
           Нет аккаунта?{" "}
-          <a href="/register" style={styles.link}>
+          <Link href="/register" style={styles.link}>
             Регистрация
-          </a>
+          </Link>
         </p>
       </form>
     </div>

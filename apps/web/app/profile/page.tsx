@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { users, chatProfiles, type ChatProfile } from "../../lib/api";
+import { users, chatProfiles, resizedMediaUrl, type ChatProfile } from "../../lib/api";
 
 type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
 
@@ -666,7 +667,7 @@ function AccountTab() {
               <div className="pp-avatar-box">
                 {avatarUrl
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={avatarUrl} alt="avatar" />
+                  ? <img src={resizedMediaUrl(avatarUrl, { w: 256 }) ?? avatarUrl} alt="avatar" decoding="async" />
                   : <div className="pp-avatar-ph"><IcoPerson size={40} stroke="#848484" /></div>}
                 <div className="pp-avatar-fade" />
               </div>
@@ -1032,8 +1033,8 @@ function UnauthContent() {
         <div className="pp-unauth-sub">Sign in or create an account to access your profile.</div>
       </div>
       <div className="pp-unauth-btns">
-        <a href="/login" className="pp-unauth-p">Sign in</a>
-        <a href="/register" className="pp-unauth-s">Create account</a>
+        <Link href="/login" className="pp-unauth-p">Sign in</Link>
+        <Link href="/register" className="pp-unauth-s">Create account</Link>
       </div>
     </div>
   );
@@ -1054,10 +1055,10 @@ function ProfileContent() {
     <>
       {/* Admin link */}
       {isAdmin && (
-        <a href="/admin" className="pp-admin-link">
+        <Link href="/admin" className="pp-admin-link">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.18V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-2.82-1.18l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Admin panel
-        </a>
+        </Link>
       )}
 
       {/* Hero header */}
@@ -1066,7 +1067,7 @@ function ProfileContent() {
           <div className="pp-hero-ava">
             {user?.avatarUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={user.avatarUrl} alt="avatar" />
+              ? <img src={resizedMediaUrl(user.avatarUrl, { w: 96 }) ?? user.avatarUrl} alt="avatar" decoding="async" />
               : <IcoPerson size={28} stroke="#848484" />}
           </div>
           <div className="pp-hero-badge" onClick={() => document.querySelector<HTMLButtonElement>(".pp-btn-replace")?.click()}>
