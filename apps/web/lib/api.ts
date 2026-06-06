@@ -23,13 +23,47 @@
 
 const API_BASE = "/api-proxy";
 
+/** Опции ресайза картинки на лету (см. GET /media/stream на бэкенде). */
+export interface ImageResizeOpts {
+  /** Целевая ширина. Допустимы: 96, 256, 400, 768, 1080. Иное игнорируется. */
+  w?: number;
+  /** Качество webp 40..90 (по умолчанию 80 на сервере). */
+  q?: number;
+}
+
 /**
  * Превращает S3-ключ в URL медиа-стрима (с долгим immutable-кешем).
  * Используется на админских страницах, где сервер возвращает ключи, но не URL.
+ * Если переданы opts.w/opts.q — сервер вернёт сжатый webp нужной ширины.
  */
-export function streamUrlForKey(key: string | null | undefined): string | null {
+export function streamUrlForKey(
+  key: string | null | undefined,
+  opts?: ImageResizeOpts,
+): string | null {
   if (!key) return null;
-  return `${API_BASE}/media/stream?key=${encodeURIComponent(key)}`;
+  const params = new URLSearchParams({ key });
+  if (opts?.w) params.set("w", String(opts.w));
+  if (opts?.q) params.set("q", String(opts.q));
+  return `${API_BASE}/media/stream?${params.toString()}`;
+}
+
+/**
+ * Дописывает параметры ресайза к уже готовому URL медиа-стрима
+ * (например, к avatarUrl, который сервер отдаёт как /media/stream?key=...).
+ * Параметры добавляются только для наших стрим-URL; чужие URL не трогаем.
+ */
+export function resizedMediaUrl(
+  url: string | null | undefined,
+  opts: ImageResizeOpts,
+): string | null {
+  if (!url) return null;
+  if (!url.includes("/media/stream")) return url;
+  if (!opts.w && !opts.q) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  const extra: string[] = [];
+  if (opts.w && !/[?&]w=/.test(url)) extra.push(`w=${opts.w}`);
+  if (opts.q && !/[?&]q=/.test(url)) extra.push(`q=${opts.q}`);
+  return extra.length ? `${url}${sep}${extra.join("&")}` : url;
 }
 
 /**

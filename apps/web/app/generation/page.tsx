@@ -14,6 +14,7 @@ import {
   getGenerationHistory,
   deleteGenerationJob,
   uploadMedia,
+  resizedMediaUrl,
 } from "../../lib/api";
 import {
   getCachedCharacterOptions,
@@ -2180,7 +2181,7 @@ export default function GenerationPage() {
                       {isVideo ? (
                         <video src={url} muted loop playsInline preload="metadata" onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} />
                       ) : (
-                        <img src={url} alt={item.input?.prompt || "Generated"} loading="lazy" />
+                        <img src={resizedMediaUrl(url, { w: 400 }) ?? url} alt={item.input?.prompt || "Generated"} loading="lazy" decoding="async" />
                       )}
 
                       {/* Hover overlay with prompt */}

@@ -78,6 +78,34 @@ interface AuthContextValue {
 /** React Context с начальным значением null (проверяется в useAuth). */
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Ключ localStorage для кеша профиля (stale-while-revalidate). */
+const PROFILE_CACHE_KEY = "userProfile";
+
+/**
+ * Читает закешированный профиль из localStorage.
+ * Возвращает null на сервере (SSR) или если кеша нет/он битый.
+ */
+function readCachedProfile(): UserProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as UserProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Сохраняет/очищает кеш профиля в localStorage. */
+function writeCachedProfile(profile: UserProfile | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (profile) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+    else localStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {
+    /* квота/приватный режим — кеш не критичен */
+  }
+}
+
 /**
  * Провайдер аутентификации.
  *
@@ -101,8 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profile = await users.getProfile();
       setUser(profile);
+      writeCachedProfile(profile);
     } catch {
       setUser(null);
+      writeCachedProfile(null);
     }
   }, []);
 
@@ -114,8 +144,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     if (authApi.isAuthenticated()) {
+      // Stale-while-revalidate: мгновенно показываем закешированный профиль
+      // (правильный UI сразу после гидрации, без мигания гость→залогинен),
+      // затем в фоне актуализируем через GET /users/me.
+      const cached = readCachedProfile();
+      if (cached) setUser(cached);
       refreshProfile().finally(() => setLoading(false));
     } else {
+      // Токена нет — на всякий случай чистим протухший кеш профиля.
+      writeCachedProfile(null);
       setLoading(false);
     }
   }, [refreshProfile]);
@@ -146,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await authApi.logout();
     setUser(null);
+    writeCachedProfile(null);
   };
 
   // После успешной авторизации запускаем фоновую подгрузку картинок

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "../../../context/auth";
 import { admin, type AdminUser, type AdminUserDetailedStats } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
@@ -193,7 +194,7 @@ export default function AdminUsersPage() {
         <div style={adminStyles.card}>
           <h1 style={adminStyles.title}>Доступ запрещён</h1>
           <p style={{ color: "#aaa" }}>Требуются права администратора.</p>
-          <a href="/" style={adminStyles.link}>На главную</a>
+          <Link href="/" style={adminStyles.link}>На главную</Link>
         </div>
       </div>
     );

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, getGenerationHistory, likes, deleteGenerationJob } from "../../lib/api";
+import { characters, getGenerationHistory, likes, deleteGenerationJob, resizedMediaUrl } from "../../lib/api";
 import type { Character } from "../../lib/api";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
@@ -545,7 +545,7 @@ function MyAICard({
             item.type === "Video" ? (
               <video src={bg} muted loop playsInline preload="metadata" onMouseEnter={(e) => (e.target as HTMLVideoElement).play()} onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <img src={bg} alt={item.name || ""} loading="lazy" />
+              <img src={resizedMediaUrl(bg, { w: 400 }) ?? bg} alt={item.name || ""} loading="lazy" decoding="async" />
             )
           ) : (
             <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)", borderRadius: 8 }} />

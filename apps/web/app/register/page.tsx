@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "../../context/auth";
 import Logo from "../components/Logo";
 import TurnstileWidget from "../components/TurnstileWidget";
@@ -135,9 +136,9 @@ export default function RegisterPage() {
 
         <p style={styles.footer}>
           Уже есть аккаунт?{" "}
-          <a href="/login" style={styles.link}>
+          <Link href="/login" style={styles.link}>
             Войти
-          </a>
+          </Link>
         </p>
       </form>
     </div>

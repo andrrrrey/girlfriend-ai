@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { characters as charactersApi } from "../../lib/api";
+import { characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { StoryCharacter, StoryImage } from "../../lib/api";
 
 const SLIDE_MS = 5000;
@@ -164,7 +164,12 @@ export default function StoryViewer({ stories, startIndex, onClose }: Props) {
         <div style={s.header}>
           <div style={s.headerLeft}>
             {current.avatarUrl ? (
-              <img src={current.avatarUrl} alt="" style={s.headerAvatar} />
+              <img
+                src={resizedMediaUrl(current.avatarUrl, { w: 96 }) ?? current.avatarUrl}
+                alt=""
+                style={s.headerAvatar}
+                decoding="async"
+              />
             ) : (
               <div style={{ ...s.headerAvatar, background: "linear-gradient(135deg,#2d1b3d,#0d0d1a)" }} />
             )}
@@ -189,7 +194,13 @@ export default function StoryViewer({ stories, startIndex, onClose }: Props) {
           {loading || !slide ? (
             <div style={s.spinner} />
           ) : (
-            <img src={slide.url} alt={slide.label} style={s.image} draggable={false} />
+            <img
+              src={resizedMediaUrl(slide.url, { w: 1080 }) ?? slide.url}
+              alt={slide.label}
+              style={s.image}
+              draggable={false}
+              decoding="async"
+            />
           )}
 
           {/* Зоны тапа: левая — назад, правая — вперёд */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useGeneration } from "../../context/generation";
 
@@ -13,7 +14,8 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) {
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, loading, logout } = useAuth();
   const {
     activeJobs, completedCount, notificationHistory,
     dismissAllNotifications, dismissHistoryItem, clearNotificationHistory,
@@ -21,6 +23,21 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const isGenerating = activeJobs.length > 0;
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  // Откладываем чтение localStorage до маунта (после гидрации), чтобы серверная
+  // и первая клиентская отрисовка совпали (иначе hydration mismatch). Это
+  // позволяет сразу знать, что пользователь залогинен, и не мигать гостевыми
+  // кнопками, пока профиль подтягивается через GET /users/me.
+  const [hasToken, setHasToken] = useState(false);
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem("accessToken"));
+  }, []);
+  // Токен есть, но профиль ещё не подтверждён первым запросом — показываем
+  // нейтральный плейсхолдер вместо «Create account / Log in».
+  const authPending = loading && hasToken;
+  // После завершения проверки опираемся на профиль: если токен оказался
+  // невалидным (refresh не удался), user будет null → покажем гостевые кнопки.
+  const isLoggedIn = user != null;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -134,9 +151,9 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       onClick={n.status === "completed" ? () => {
                         dismissHistoryItem(n.id);
                         setBellOpen(false);
-                        if (n.source === "character-creation") window.location.href = "/create";
-                        else if (n.source === "chat" && n.metadata?.chatId) window.location.href = `/chat?sessionId=${n.metadata.chatId}`;
-                        else window.location.href = "/gallery";
+                        if (n.source === "character-creation") router.push("/create");
+                        else if (n.source === "chat" && n.metadata?.chatId) router.push(`/chat?sessionId=${n.metadata.chatId}`);
+                        else router.push("/gallery");
                       } : undefined}
                     >
                       <div className="bell-item-icon">
@@ -174,11 +191,16 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
             )}
           </div>
         )}
-        {!user && <button className="btn-primary" onClick={() => { window.location.href = "/register"; }}>Create Free Account</button>}
-        {user ? (
+        {authPending ? (
+          // Плейсхолдер, пока подтверждается авторизация — без мигания кнопок.
+          <span aria-hidden style={{width:92,height:36,borderRadius:8,background:'rgba(255,255,255,0.06)',display:'inline-block'}} />
+        ) : isLoggedIn ? (
           <button className="btn-secondary" onClick={handleLogout}>Log out <span style={{width:6,height:6,borderRadius:'50%',background:'#E36466',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(227,100,102,0.6)'}}></span></button>
         ) : (
-          <button className="btn-secondary" onClick={() => { window.location.href = "/login"; }}>Log in <span style={{width:6,height:6,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(74,222,128,0.6)'}}></span></button>
+          <>
+            <button className="btn-primary" onClick={() => router.push("/register")}>Create Free Account</button>
+            <button className="btn-secondary" onClick={() => router.push("/login")}>Log in <span style={{width:6,height:6,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(74,222,128,0.6)'}}></span></button>
+          </>
         )}
       </div>
     </header>

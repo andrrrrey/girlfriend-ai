@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/auth";
-import { getPublicShorts, likes } from "../../lib/api";
+import { getPublicShorts, likes, resizedMediaUrl } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import LikeButton from "../components/LikeButton";
@@ -135,7 +135,7 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
           <div className="shorts-profile">
             <div className="shorts-avatar">
               {creatorAvatar
-                ? <img src={creatorAvatar} alt="" />
+                ? <img src={resizedMediaUrl(creatorAvatar, { w: 96 }) ?? creatorAvatar} alt="" loading="lazy" decoding="async" />
                 : creatorName.slice(0, 2).toUpperCase()
               }
             </div>

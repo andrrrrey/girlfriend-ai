@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { auth } from "../../lib/api";
 import Logo from "../components/Logo";
 
@@ -71,9 +72,9 @@ export default function ForgotPasswordPage() {
         )}
 
         <p style={styles.footer}>
-          <a href="/login" style={styles.link}>
+          <Link href="/login" style={styles.link}>
             Вернуться ко входу
-          </a>
+          </Link>
         </p>
       </form>
     </div>

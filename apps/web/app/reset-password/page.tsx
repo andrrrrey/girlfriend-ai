@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { auth } from "../../lib/api";
 import Logo from "../components/Logo";
@@ -23,7 +24,7 @@ function ResetPasswordContent() {
           <div style={styles.iconError}>✕</div>
           <h2 style={styles.titleCenter}>Ошибка</h2>
           <p style={{ ...styles.text, color: "#ff7675" }}>Токен не указан. Проверьте ссылку в письме.</p>
-          <a href="/forgot-password" style={styles.linkBlock}>Запросить новую ссылку</a>
+          <Link href="/forgot-password" style={styles.linkBlock}>Запросить новую ссылку</Link>
         </div>
       </div>
     );
@@ -115,7 +116,7 @@ function ResetPasswordContent() {
         </button>
 
         <p style={styles.footer}>
-          <a href="/login" style={styles.link}>Вернуться ко входу</a>
+          <Link href="/login" style={styles.link}>Вернуться ко входу</Link>
         </p>
       </form>
     </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { likes, comments as commentsApi, users } from "../../lib/api";
+import { likes, comments as commentsApi, users, resizedMediaUrl } from "../../lib/api";
 import type { Character, CommentItem } from "../../lib/api";
 import LikeButton from "./LikeButton";
 
@@ -128,7 +128,7 @@ export default function CharacterProfilePopup({ character, onClose }: Props) {
         <div className="cpp-left" style={s.left}>
           <div style={s.imgWrap}>
             {character.avatarUrl
-              ? <img src={character.avatarUrl} alt={character.name} style={s.avatar} />
+              ? <img src={resizedMediaUrl(character.avatarUrl, { w: 768 }) ?? character.avatarUrl} alt={character.name} style={s.avatar} decoding="async" />
               : <div style={s.avatarBg} />
             }
             <div style={s.dotsBtn}>
@@ -391,7 +391,7 @@ function CreatorSection({ creator }: {
         onClick={creator.nickname ? goToProfile : undefined}
       >
         {creator.avatarUrl && (
-          <img src={creator.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+          <img src={resizedMediaUrl(creator.avatarUrl, { w: 96 }) ?? creator.avatarUrl} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
         )}
       </div>
       <div>
@@ -441,7 +441,7 @@ function GalleryTab({ avatarUrl }: { avatarUrl: string | null }) {
           return (
             <div key={i} style={{ ...s.galCard, ...(isBlurred ? s.galBlurred : {}) }}>
               {avatarUrl && i < 2
-                ? <img src={avatarUrl} alt="" style={s.galImg} />
+                ? <img src={resizedMediaUrl(avatarUrl, { w: 400 }) ?? avatarUrl} alt="" style={s.galImg} loading="lazy" decoding="async" />
                 : <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${125 + i * 15}deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)` }} />
               }
               {isPremium && (
