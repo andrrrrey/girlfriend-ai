@@ -3,11 +3,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import Logo from "../components/Logo";
 import TurnstileWidget from "../components/TurnstileWidget";
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,12 +38,12 @@ export default function RegisterPage() {
     setSuccess("");
 
     if (password !== confirmPassword) {
-      setError("Пароли не совпадают");
+      setError(t("auth.passwordsNoMatch"));
       return;
     }
 
     if (password.length < 6) {
-      setError("Минимум 6 символов");
+      setError(t("auth.minChars"));
       return;
     }
 
@@ -49,12 +51,12 @@ export default function RegisterPage() {
     try {
       const result = await register(email, password, turnstileToken);
       if (result && (result as any).message) {
-        setSuccess(`Письмо с подтверждением отправлено на ${email}. Проверьте почту.`);
+        setSuccess(t("auth.confirmEmailSent", { email }));
       } else {
         window.location.href = "/";
       }
     } catch (err: any) {
-      setError(err.message || "Registration failed");
+      setError(err.message || t("auth.registrationFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -73,14 +75,14 @@ export default function RegisterPage() {
           <Logo />
         </div>
 
-        <h1 style={styles.title}>Регистрация</h1>
+        <h1 style={styles.title}>{t("auth.registerTitle")}</h1>
 
         {error && <div style={styles.error}>{error}</div>}
         {success && <div style={styles.successBox}>{success}</div>}
 
         {!success && (
           <>
-            <label style={styles.label}>Email</label>
+            <label style={styles.label}>{t("auth.email")}</label>
             <input
               type="email"
               value={email}
@@ -92,7 +94,7 @@ export default function RegisterPage() {
               placeholder="email@example.com"
             />
 
-            <label style={styles.label}>Пароль</label>
+            <label style={styles.label}>{t("auth.password")}</label>
             <input
               type="password"
               value={password}
@@ -101,10 +103,10 @@ export default function RegisterPage() {
               onBlur={() => setFocusedField(null)}
               required
               style={inputStyle("password")}
-              placeholder="Минимум 6 символов"
+              placeholder={t("auth.minChars")}
             />
 
-            <label style={styles.label}>Подтверждение пароля</label>
+            <label style={styles.label}>{t("auth.confirmPassword")}</label>
             <input
               type="password"
               value={confirmPassword}
@@ -113,7 +115,7 @@ export default function RegisterPage() {
               onBlur={() => setFocusedField(null)}
               required
               style={inputStyle("confirmPassword")}
-              placeholder="Повторите пароль"
+              placeholder={t("auth.repeatPassword")}
             />
 
             {turnstileSiteKey && (
@@ -129,15 +131,15 @@ export default function RegisterPage() {
               disabled={submitting || !canSubmit}
               style={{ ...styles.button, opacity: submitting || !canSubmit ? 0.7 : 1 }}
             >
-              {submitting ? "Создание..." : "Создать аккаунт"}
+              {submitting ? t("auth.creating") : t("auth.createAccount")}
             </button>
           </>
         )}
 
         <p style={styles.footer}>
-          Уже есть аккаунт?{" "}
+          {t("auth.haveAccount")}{" "}
           <Link href="/login" style={styles.link}>
-            Войти
+            {t("auth.signIn")}
           </Link>
         </p>
       </form>

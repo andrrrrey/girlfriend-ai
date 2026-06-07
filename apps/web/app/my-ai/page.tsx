@@ -8,6 +8,7 @@ import type { Character } from "../../lib/api";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import LikeButton from "../components/LikeButton";
+import { useT } from "../../context/language";
 
 const PAGE_CSS = `
   .my-ai-content {
@@ -406,30 +407,6 @@ const PAGE_CSS = `
   }
 `;
 
-const TYPE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Character", label: "Character" },
-  { value: "Image", label: "Image" },
-  { value: "Video", label: "Video" },
-];
-const GENDER_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Female", label: "Female" },
-  { value: "Male", label: "Male" },
-  { value: "Non-binary", label: "Non-binary" },
-];
-const STYLE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Realistic", label: "Realistic" },
-  { value: "Anime", label: "Anime" },
-  { value: "Fantasy", label: "Fantasy" },
-];
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "name", label: "Name" },
-];
-
 interface GridItem {
   id?: string;
   jobId?: string;
@@ -460,6 +437,7 @@ function MyAICard({
   likeStatus?: { liked: boolean; count: number };
 }) {
   const router = useRouter();
+  const { t } = useT();
   const isCharacter = item.type === "Character";
   const bg = item.avatarUrl || item.url;
   const tagsHtml = (item.tags || []).slice(0, 6);
@@ -486,10 +464,10 @@ function MyAICard({
         <>
           <div className="ai-hover-panel">
             <div className="ai-hover-tags">
-              {tagsHtml.map((t, i) => <span className="ai-hover-tag" key={i}>{t}</span>)}
+              {tagsHtml.map((tag, i) => <span className="ai-hover-tag" key={i}>{tag}</span>)}
             </div>
             <p className="ai-hover-description" style={desc ? {} : { color: "#969696" }}>
-              {desc ? (desc.length > 120 ? desc.slice(0, 120) + "…" : desc) : "No description available."}
+              {desc ? (desc.length > 120 ? desc.slice(0, 120) + "…" : desc) : t("chat.noDescription")}
             </p>
             <div className="ai-hover-actions">
               {isCharacter ? (
@@ -499,7 +477,7 @@ function MyAICard({
                     if (item.id) router.push(`/chat?characterId=${item.id}`);
                   }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M14 10a1.3 1.3 0 01-1.3 1.3H4.7L2 13.7V3.3A1.3 1.3 0 013.3 2h9.4A1.3 1.3 0 0114 3.3V10z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Chat now
+                    {t("myai.chatNow")}
                   </button>
                 </>
               ) : (
@@ -518,7 +496,7 @@ function MyAICard({
                     document.body.removeChild(a);
                   }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Download
+                    {t("myai.download")}
                   </button>
                   <button className="ai-hover-btn secondary" onClick={(e) => {
                     e.stopPropagation();
@@ -526,7 +504,7 @@ function MyAICard({
                     if (shareUrl && navigator.share) navigator.share({ url: shareUrl }).catch(() => {});
                   }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" strokeWidth="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                    Share
+                    {t("gallery.share")}
                   </button>
                 </>
               )}
@@ -560,7 +538,7 @@ function MyAICard({
           ) : (
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="#fff" strokeWidth="1.2"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
           )}
-          {item.type}
+          {item.type === "Character" ? t("media.character") : item.type === "Video" ? t("media.video") : t("media.image")}
         </div>
         {isCharacter && item.name && (
           <>
@@ -581,6 +559,30 @@ function MyAICard({
 }
 
 export default function MyAIPage() {
+  const { t } = useT();
+  const TYPE_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "Character", label: t("media.character") },
+    { value: "Image", label: t("media.image") },
+    { value: "Video", label: t("media.video") },
+  ];
+  const GENDER_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "Female", label: t("filter.female") },
+    { value: "Male", label: t("filter.male") },
+    { value: "Non-binary", label: t("filter.nonbinary") },
+  ];
+  const STYLE_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "Realistic", label: t("filter.realistic") },
+    { value: "Anime", label: t("filter.anime") },
+    { value: "Fantasy", label: t("filter.fantasy") },
+  ];
+  const SORT_OPTIONS = [
+    { value: "newest", label: t("filter.newest") },
+    { value: "oldest", label: t("filter.oldest") },
+    { value: "name", label: t("filter.name") },
+  ];
   const { user, loading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("created");
@@ -779,7 +781,7 @@ export default function MyAIPage() {
       <div className="my-ai-content">
         <div className="my-ai-title-row">
           <div className="my-ai-title">
-            <span className="pink">My AI </span><span className="white">Library</span>
+            <span className="pink">{t("myai.titlePink")}</span><span className="white">{t("myai.titleWhite")}</span>
           </div>
           <button
             className={`manage-btn${manageMode ? " active" : ""}`}
@@ -792,14 +794,14 @@ export default function MyAIPage() {
               <circle cx="8" cy="8" r="2.5" stroke="#fff" strokeWidth="1.2" />
               <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M12.95 3.05l-1.06 1.06M4.11 11.89L3.05 12.95" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            <span>{manageMode ? "Done" : "Manage my Library"}</span>
+            <span>{manageMode ? t("myai.done") : t("myai.manage")}</span>
           </button>
         </div>
 
         <div className="my-ai-tabs">
           {[
-            { key: "created", label: "Created" },
-            { key: "liked", label: "Liked" },
+            { key: "created", label: t("myai.created") },
+            { key: "liked", label: t("myai.liked") },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -823,15 +825,15 @@ export default function MyAIPage() {
             </svg>
             <input
               type="text"
-              placeholder="Search your library..."
+              placeholder={t("myai.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <FilterDropdown label="Type" value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
-          <FilterDropdown label="Gender" value={gender} options={GENDER_OPTIONS} onChange={setGender} />
-          <FilterDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-          <FilterDropdown label="Sort" value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
+          <FilterDropdown label={t("filter.type")} value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
+          <FilterDropdown label={t("filter.gender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
+          <FilterDropdown label={t("filter.style")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
+          <FilterDropdown label={t("myai.filterSort")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
         </div>
 
         {tags.length > 0 && (
@@ -862,7 +864,7 @@ export default function MyAIPage() {
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="1.5">
                     <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
                   </svg>
-                  <span>No liked items yet</span>
+                  <span>{t("myai.noLiked")}</span>
                 </>
               ) : (
                 <>
@@ -871,7 +873,7 @@ export default function MyAIPage() {
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
-                  <span>Your library is empty. Create a character or generate content!</span>
+                  <span>{t("myai.emptyLibrary")}</span>
                 </>
               )}
             </div>
@@ -895,7 +897,7 @@ export default function MyAIPage() {
         {manageMode && selectedIds.size > 0 && (
           <div className="manage-bar">
             <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>
-              {selectedIds.size} selected
+              {t("myai.selected", { count: selectedIds.size })}
             </span>
             <button
               onClick={handleBulkDelete}
@@ -913,7 +915,7 @@ export default function MyAIPage() {
                 fontFamily: "'Syne', sans-serif",
               }}
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? t("myai.deleting") : t("common.delete")}
             </button>
             <button
               onClick={() => { setSelectedIds(new Set()); setManageMode(false); }}
@@ -929,7 +931,7 @@ export default function MyAIPage() {
                 fontFamily: "'Syne', sans-serif",
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         )}

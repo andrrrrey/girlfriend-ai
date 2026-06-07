@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import { useRouter } from "next/navigation";
 import { likes } from "../../lib/api";
 
@@ -26,6 +27,7 @@ export default function LikeButton({
   onToggle,
 }: Props) {
   const { user } = useAuth();
+  const { t } = useT();
   const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -72,7 +74,7 @@ export default function LikeButton({
   };
 
   return (
-    <button onClick={handleClick} style={s.btn} title={liked ? "Unlike" : "Like"}>
+    <button onClick={handleClick} style={s.btn} title={liked ? t("like.unlike") : t("like.like")}>
       <svg
         width={iconSize}
         height={iconSize}

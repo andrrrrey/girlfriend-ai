@@ -8,6 +8,10 @@ import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
 import { formatTag } from "../lib/tags";
+import { useT } from "../context/language";
+import type { TKey } from "../lib/i18n";
+
+type TFn = (key: TKey, vars?: Record<string, string | number>) => string;
 
 const PAGE_CSS = `
     .content { position: relative; }
@@ -114,14 +118,14 @@ const PAGE_CSS = `
     }
 `;
 
-const HERO_HTML = `
+const heroHtml = (t: TFn) => `
   <div class="hero">
     <div class="hero-bg">
       <div style="width:100%;height:100%;background:linear-gradient(135deg, #1a0a1e 0%, #2d1b3d 30%, #1a0a2e 60%, #0d0d1a 100%);border-radius:8px;"></div>
     </div>
     <div class="hero-content">
-      <h1 class="hero-title">Create your New Girlfriend</h1>
-      <button class="btn-primary">Create Now</button>
+      <h1 class="hero-title">${t("home.heroTitle")}</h1>
+      <button class="btn-primary">${t("home.createNow")}</button>
     </div>
     <div class="hero-progress">
       <div class="progress-bar active"><div class="progress-bar-inner"></div></div>
@@ -131,24 +135,7 @@ const HERO_HTML = `
   </div>
 `;
 
-const GENDER_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Female", label: "Female" },
-  { value: "Male", label: "Male" },
-  { value: "Trans", label: "Trans" },
-];
-const STYLE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Realistic", label: "Realistic" },
-  { value: "Anime", label: "Anime" },
-];
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "name", label: "Name" },
-];
-
-function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { liked: boolean; count: number }>): string {
+function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { liked: boolean; count: number }>, t: TFn): string {
   if (!chars || chars.length === 0) return "";
   return chars
     .map((char, index) => {
@@ -160,7 +147,7 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       const tagsHtml = rawTags.slice(0, 7).map((t) => `<span class="hover-tag">${formatTag(String(t))}</span>`).join("");
       const descHtml = description
         ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
-        : `<p class="hover-description" style="color:#969696;">No description yet.</p>`;
+        : `<p class="hover-description" style="color:#969696;">${t("home.noDescYet")}</p>`;
       const bgContent = char.avatarUrl
         ? `<img src="${resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl}" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
@@ -174,13 +161,13 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
     <div class="hover-tags">${tagsHtml}</div>
     ${descHtml}
     <div class="hover-stats">
-      <div class="hover-stat"><span class="hover-stat-value">${likeCount}</span><span class="hover-stat-label">likes</span></div>
-      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">comments</span></div>
-      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">generated</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">${likeCount}</span><span class="hover-stat-label">${t("home.likes")}</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">${t("home.comments")}</span></div>
+      <div class="hover-stat"><span class="hover-stat-value">—</span><span class="hover-stat-label">${t("home.generated")}</span></div>
     </div>
     <div class="hover-actions">
-      <div class="hover-btn primary" data-action="view">View</div>
-      <div class="hover-btn secondary" data-action="chat">Chat</div>
+      <div class="hover-btn primary" data-action="view">${t("home.view")}</div>
+      <div class="hover-btn secondary" data-action="chat">${t("home.chat")}</div>
     </div>
   </div>
   <div class="card-actions">
@@ -196,6 +183,23 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
 }
 
 export default function HomePage() {
+  const { t } = useT();
+  const GENDER_OPTIONS = [
+    { value: "", label: t("home.filterAll") },
+    { value: "Female", label: t("home.genderFemale") },
+    { value: "Male", label: t("home.genderMale") },
+    { value: "Trans", label: t("home.genderTrans") },
+  ];
+  const STYLE_OPTIONS = [
+    { value: "", label: t("home.filterAll") },
+    { value: "Realistic", label: t("home.styleRealistic") },
+    { value: "Anime", label: t("home.styleAnime") },
+  ];
+  const SORT_OPTIONS = [
+    { value: "newest", label: t("home.sortNewest") },
+    { value: "oldest", label: t("home.sortOldest") },
+    { value: "name", label: t("home.sortName") },
+  ];
   const [chars, setChars] = useState<Character[]>([]);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -279,7 +283,7 @@ export default function HomePage() {
     } catch {}
   }, []);
 
-  const dynamicCardsHtml = buildDynamicCards(chars, likeStatuses);
+  const dynamicCardsHtml = buildDynamicCards(chars, likeStatuses, t);
 
   const handleCardClick = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -325,14 +329,14 @@ export default function HomePage() {
     <>
       <style>{PAGE_CSS}</style>
       <div className="content">
-        <div dangerouslySetInnerHTML={{ __html: HERO_HTML }} />
+        <div dangerouslySetInnerHTML={{ __html: heroHtml(t) }} />
 
         <StoriesRail onOpenProfile={handleOpenProfile} />
 
         <div className="characters-section">
           <div className="chars-header">
-            <div className="section-label" style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", color: "#969696" }}>CHARACTERS</div>
-            <h2 className="chars-title"><span className="pink">Choose Your Partner </span>for Today</h2>
+            <div className="section-label" style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", color: "#969696" }}>{t("home.charactersLabel")}</div>
+            <h2 className="chars-title"><span className="pink">{t("home.choosePartner")}</span>{t("home.forToday")}</h2>
           </div>
 
           {/* Filter bar */}
@@ -349,7 +353,7 @@ export default function HomePage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t("common.search")}
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   style={{
@@ -363,9 +367,9 @@ export default function HomePage() {
 
               {/* Filter dropdowns */}
               <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
-                <FilterDropdown label="Gender" value={gender} options={GENDER_OPTIONS} onChange={setGender} />
-                <FilterDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-                <FilterDropdown label="Sort by" value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
+                <FilterDropdown label={t("home.filterGender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
+                <FilterDropdown label={t("home.filterStyle")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
+                <FilterDropdown label={t("home.filterSortBy")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
               </div>
             </div>
 

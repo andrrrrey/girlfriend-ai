@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from "react";
 import { getJobStatus } from "../lib/api";
+import { useT } from "./language";
 
 interface ActiveJob {
   jobId: string;
@@ -84,6 +85,12 @@ interface GenerationContextValue {
 const GenerationContext = createContext<GenerationContextValue | null>(null);
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useT();
+  // Human label for a notification based on its source/type.
+  const sourceLabel = (source?: string, type?: string) =>
+    type === "video" ? t("notif.video")
+    : source === "character-creation" ? t("notif.character")
+    : source === "chat" ? t("notif.chatImage") : t("notif.image");
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>(() => loadJobs());
   const [notifications, setNotifications] = useState<GenerationNotification[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<GenerationNotification[]>(() => loadHistory());
@@ -275,13 +282,13 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               </div>
               <div className="gen-toast-body">
                 <div className="gen-toast-title">
-                  {n.status === "started" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation started`}
-                  {n.status === "completed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation completed!`}
-                  {n.status === "failed" && `${n.type === "video" ? "Video" : n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : "Image"} generation failed`}
+                  {n.status === "started" && t("notif.startedTitle", { label: sourceLabel(n.source, n.type) })}
+                  {n.status === "completed" && t("notif.completedTitle", { label: sourceLabel(n.source, n.type) })}
+                  {n.status === "failed" && t("notif.failedTitle", { label: sourceLabel(n.source, n.type) })}
                 </div>
                 {n.status === "completed" && (
                   <div className="gen-toast-subtitle">
-                    {n.source === "character-creation" ? "Click to continue creating" : n.source === "chat" ? "Click to view in chat" : "Click to view in gallery"}
+                    {n.source === "character-creation" ? t("notif.clickContinue") : n.source === "chat" ? t("notif.clickViewChat") : t("notif.clickViewGallery")}
                   </div>
                 )}
                 {n.status === "failed" && n.error && <div className="gen-toast-subtitle">{n.error}</div>}

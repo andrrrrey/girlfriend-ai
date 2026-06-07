@@ -6,6 +6,7 @@ import { getPublicShorts, likes, resizedMediaUrl } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import LikeButton from "../components/LikeButton";
+import { useT } from "../../context/language";
 
 const PAGE_CSS = `
   .shorts-feed-wrapper {
@@ -96,12 +97,13 @@ const PAGE_CSS = `
 `;
 
 function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number } }) {
+  const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
-  const creatorName = item.user?.nickname || "AI Generated";
+  const creatorName = item.user?.nickname || t("shorts.aiGenerated");
   const creatorAvatar = item.user?.avatarUrl;
 
   useEffect(() => {
@@ -177,6 +179,7 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
 
 export default function ShortsPage() {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
@@ -209,7 +212,7 @@ export default function ShortsPage() {
               <div style={{ position: "absolute", inset: 0, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", pointerEvents: "auto" }} />
             </div>
             <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
-              <AuthRequiredOverlay title="Sign in to watch Shorts" subtitle="Create an account or sign in to view short videos" />
+              <AuthRequiredOverlay title={t("shorts.signInTitle")} subtitle={t("shorts.signInSubtitle")} />
             </div>
           </>
         )}
@@ -225,7 +228,7 @@ export default function ShortsPage() {
                   <path d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.362a1 1 0 01-1.447.894L15 14"/>
                   <rect x="2" y="6" width="13" height="12" rx="2"/>
                 </svg>
-                <span>No videos yet. Generate one first!</span>
+                <span>{t("shorts.empty")}</span>
               </div>
             </div>
           </div>

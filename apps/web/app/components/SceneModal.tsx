@@ -2,6 +2,15 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { SceneCategory, SceneOptionsResponse } from "../../lib/api";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
+
+const ATMOSPHERE_LABEL_KEYS: Record<string, TKey> = {
+  timeOfDay: "gen.timeOfDay",
+  weather: "gen.weather",
+  particles: "gen.particles",
+  environmentEffects: "gen.environmentEffects",
+};
 
 export interface SceneSelections {
   locations: string[];
@@ -52,6 +61,7 @@ function SelectedOverlay() {
 }
 
 export default function SceneModal({ open, onClose, selections, onSave, options }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState<SceneSelections>({
     locations: [...selections.locations],
     timeOfDay: [...selections.timeOfDay],
@@ -121,16 +131,16 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
   type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
   const sidebarItems: SidebarEntry[] = [];
   if (options.LOCATION.length > 0) {
-    sidebarItems.push({ type: "header", label: "Location" });
+    sidebarItems.push({ type: "header", label: t("gen.location") });
     options.LOCATION.forEach((cat) => sidebarItems.push({ type: "item", id: `location-${cat.id}`, label: cat.name }));
   }
-  sidebarItems.push({ type: "item", id: "atmosphere", label: "Atmosphere" });
+  sidebarItems.push({ type: "item", id: "atmosphere", label: t("gen.atmosphere") });
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div className="scene-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>Scene</span>
+          <span style={s.title}>{t("gen.titleScene")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -152,7 +162,7 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
             <div style={s.sidebarDivider} />
             <button style={s.sidebarGenerate} onClick={handleRandom}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
+              {t("gen.generateRandom")}
             </button>
           </div>
 
@@ -172,21 +182,21 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
                       </button>
                     );
                   })}
-                  {cat.options.length === 0 && <div style={s.emptyHint}>No options in this category.</div>}
+                  {cat.options.length === 0 && <div style={s.emptyHint}>{t("gen.noOptions")}</div>}
                 </div>
               </div>
             ))}
             {options.LOCATION.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>Location</div><div style={s.emptyHint}>No locations added yet. Add them in the admin panel.</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{t("gen.location")}</div><div style={s.emptyHint}>{t("gen.noLocations")}</div></div>
             )}
 
             {/* Atmosphere */}
             <div data-section-id="atmosphere" style={s.section}>
-              <div style={s.sectionTitle}>Atmosphere</div>
+              <div style={s.sectionTitle}>{t("gen.atmosphere")}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {ATMOSPHERE_SECTIONS.map((sec) => (
                   <div key={sec.key}>
-                    <div style={s.sectionLabel}>{sec.label}</div>
+                    <div style={s.sectionLabel}>{ATMOSPHERE_LABEL_KEYS[sec.key] ? t(ATMOSPHERE_LABEL_KEYS[sec.key]) : sec.label}</div>
                     <div style={s.pillRow}>
                       {sec.options.map((opt) => {
                         const selected = (draft[sec.key] as string[]).includes(opt);
@@ -200,8 +210,8 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
                   </div>
                 ))}
                 <div>
-                  <div style={s.sectionLabel}>Props</div>
-                  <textarea style={s.propsTextarea} placeholder="Describe props in the scene in English..." value={draft.props} onChange={(e) => setDraft({ ...draft, props: e.target.value })} rows={4} />
+                  <div style={s.sectionLabel}>{t("gen.props")}</div>
+                  <textarea style={s.propsTextarea} placeholder={t("gen.propsPlaceholder")} value={draft.props} onChange={(e) => setDraft({ ...draft, props: e.target.value })} rows={4} />
                 </div>
               </div>
             </div>
@@ -209,8 +219,8 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
         </div>
 
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

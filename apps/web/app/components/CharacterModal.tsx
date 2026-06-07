@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { CharacterOption } from "../../lib/api";
+import { useT } from "../../context/language";
 
 export interface CharacterSelections {
   style?: string;
@@ -91,6 +92,7 @@ const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
 export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [activeId, setActiveId] = useState<string>("style");
   const contentRef = useRef<HTMLDivElement>(null);
@@ -130,26 +132,26 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
   type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
   const sidebarItems: SidebarEntry[] = [
-    { type: "item", id: "style", label: "Graphic Style" },
-    { type: "header", label: "Character" },
-    { type: "item", id: "age-gender", label: "Age & Gender" },
-    { type: "item", id: "human-race", label: "Human Race" },
-    { type: "item", id: "fantasy-race", label: "Fantasy Race" },
-    { type: "header", label: "Face & Hair" },
-    { type: "item", id: "eyes-face", label: "Eyes & Face" },
-    { type: "item", id: "hair-style", label: "Hair Style" },
-    { type: "item", id: "hair-details", label: "Hair Details" },
-    { type: "header", label: "Body" },
-    { type: "item", id: "body-type", label: "Body Type" },
-    { type: "item", id: "breast-size", label: "Breast Size" },
-    { type: "item", id: "butt-size", label: "Butt Size" },
+    { type: "item", id: "style", label: t("gen.graphicStyle") },
+    { type: "header", label: t("gen.titleCharacter") },
+    { type: "item", id: "age-gender", label: t("gen.ageGender") },
+    { type: "item", id: "human-race", label: t("gen.humanRace") },
+    { type: "item", id: "fantasy-race", label: t("gen.fantasyRace") },
+    { type: "header", label: t("gen.faceHair") },
+    { type: "item", id: "eyes-face", label: t("gen.eyesFace") },
+    { type: "item", id: "hair-style", label: t("gen.hairStyle") },
+    { type: "item", id: "hair-details", label: t("gen.hairDetails") },
+    { type: "header", label: t("gen.body") },
+    { type: "item", id: "body-type", label: t("gen.bodyType") },
+    { type: "item", id: "breast-size", label: t("gen.breastSize") },
+    { type: "item", id: "butt-size", label: t("gen.buttSize") },
   ];
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div className="char-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>Character</span>
+          <span style={s.title}>{t("gen.titleCharacter")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -171,14 +173,14 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
             <div style={s.sidebarDivider} />
             <button style={s.sidebarGenerate} onClick={onRandomize}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
+              {t("gen.generateRandom")}
             </button>
           </div>
 
           <div style={s.content} ref={contentRef}>
             {/* ── Graphic Style ── */}
             <div data-section-id="style" style={s.section}>
-              <div style={s.sectionTitle}>Graphic Style</div>
+              <div style={s.sectionTitle}>{t("gen.graphicStyle")}</div>
               <div style={s.imageGrid}>
                 {byCategory("STYLE").map((opt) => {
                   const selected = draft.style === opt.name;
@@ -190,16 +192,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("STYLE").length === 0 && <div style={s.emptyHint}>No styles added yet. Add them in the admin panel.</div>}
+                {byCategory("STYLE").length === 0 && <div style={s.emptyHint}>{t("gen.noStyles")}</div>}
               </div>
             </div>
 
             {/* ── Age & Gender ── */}
             <div data-section-id="age-gender" style={s.section}>
-              <div style={s.sectionTitle}>Age & Gender</div>
+              <div style={s.sectionTitle}>{t("gen.ageGender")}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <div style={s.sectionLabel}>Age</div>
+                  <div style={s.sectionLabel}>{t("gen.age")}</div>
                   <div style={{ position: "relative", padding: "8px 0" }}>
                     <div style={{ ...s.sliderTooltip, left: `${((draft.age - 18) / 82) * 100}%` }}>{draft.age}</div>
                     <input
@@ -212,7 +214,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={s.sectionLabel}>Gender</div>
+                  <div style={s.sectionLabel}>{t("gen.gender")}</div>
                   <div style={s.pillRow}>
                     {GENDERS.map((g) => (
                       <button key={g} style={{ ...s.pill, ...(draft.gender === g ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
@@ -223,7 +225,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={s.sectionLabel}>Height</div>
+                  <div style={s.sectionLabel}>{t("gen.height")}</div>
                   <div style={s.pillRow}>
                     {HEIGHTS.map((h) => (
                       <button key={h} style={{ ...s.pill, ...(draft.height === h ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, height: draft.height === h ? undefined : h })}>
@@ -237,7 +239,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
             {/* ── Human Race ── */}
             <div data-section-id="human-race" style={s.section}>
-              <div style={s.sectionTitle}>Human Race</div>
+              <div style={s.sectionTitle}>{t("gen.humanRace")}</div>
               <div style={s.imageGrid}>
                 {byCategory("HUMAN_RACE").map((opt) => {
                   const selected = draft.humanRace === opt.name;
@@ -249,13 +251,13 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("HUMAN_RACE").length === 0 && <div style={s.emptyHint}>No human races added yet. Add them in the admin panel.</div>}
+                {byCategory("HUMAN_RACE").length === 0 && <div style={s.emptyHint}>{t("gen.noHumanRaces")}</div>}
               </div>
             </div>
 
             {/* ── Fantasy Race ── */}
             <div data-section-id="fantasy-race" style={s.section}>
-              <div style={s.sectionTitle}>Fantasy Race</div>
+              <div style={s.sectionTitle}>{t("gen.fantasyRace")}</div>
               <div style={s.imageGrid}>
                 {byCategory("FANTASY_RACE").map((opt) => {
                   const selected = draft.fantasyRace === opt.name;
@@ -267,16 +269,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("FANTASY_RACE").length === 0 && <div style={s.emptyHint}>No fantasy races added yet. Add them in the admin panel.</div>}
+                {byCategory("FANTASY_RACE").length === 0 && <div style={s.emptyHint}>{t("gen.noFantasyRaces")}</div>}
               </div>
             </div>
 
             {/* ── Eyes & Face ── */}
             <div data-section-id="eyes-face" style={s.section}>
-              <div style={s.sectionTitle}>Eyes & Face</div>
+              <div style={s.sectionTitle}>{t("gen.eyesFace")}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <div>
-                  <div style={s.sectionLabel}>Eye Color</div>
+                  <div style={s.sectionLabel}>{t("gen.eyeColor")}</div>
                   <div style={s.colorPillRow}>
                     {EYE_COLORS.map((ec) => (
                       <button key={ec.name} style={{ ...s.colorPill, ...(draft.eyeColor === ec.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
@@ -288,7 +290,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={s.sectionLabel}>Eye Features</div>
+                  <div style={s.sectionLabel}>{t("gen.eyeFeatures")}</div>
                   <div style={s.pillRow}>
                     {EYE_FEATURES.map((f) => (
                       <button key={f} style={{ ...s.pill, ...(draft.eyeFeatures.includes(f) ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, eyeFeatures: toggle(draft.eyeFeatures, f) })}>
@@ -299,7 +301,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={s.sectionLabel}>Face Features</div>
+                  <div style={s.sectionLabel}>{t("gen.faceFeatures")}</div>
                   <div style={s.pillRow}>
                     {FACE_FEATURES.map((f) => (
                       <button key={f} style={{ ...s.pill, ...(draft.faceFeatures.includes(f) ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, faceFeatures: toggle(draft.faceFeatures, f) })}>
@@ -313,7 +315,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
             {/* ── Hair Style ── */}
             <div data-section-id="hair-style" style={s.section}>
-              <div style={s.sectionTitle}>Hair Style</div>
+              <div style={s.sectionTitle}>{t("gen.hairStyle")}</div>
               <div style={s.imageGrid}>
                 {byCategory("HAIR_STYLE").map((opt) => {
                   const selected = draft.hairStyle === opt.name;
@@ -325,16 +327,16 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("HAIR_STYLE").length === 0 && <div style={s.emptyHint}>No hair styles added yet. Add them in the admin panel.</div>}
+                {byCategory("HAIR_STYLE").length === 0 && <div style={s.emptyHint}>{t("gen.noHairStyles")}</div>}
               </div>
             </div>
 
             {/* ── Hair Details ── */}
             <div data-section-id="hair-details" style={s.section}>
-              <div style={s.sectionTitle}>Hair Details</div>
+              <div style={s.sectionTitle}>{t("gen.hairDetails")}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <div>
-                  <div style={s.sectionLabel}>Hair Length</div>
+                  <div style={s.sectionLabel}>{t("gen.hairLength")}</div>
                   <div style={s.pillRow}>
                     {HAIR_LENGTHS.map((l) => (
                       <button key={l} style={{ ...s.pill, ...(draft.hairLength === l ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, hairLength: draft.hairLength === l ? undefined : l })}>
@@ -345,7 +347,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 </div>
 
                 <div>
-                  <div style={s.sectionLabel}>Hair Color</div>
+                  <div style={s.sectionLabel}>{t("gen.hairColor")}</div>
                   <div style={s.colorPillRow}>
                     {HAIR_COLORS.map((hc) => (
                       <button key={hc.name} style={{ ...s.colorPill, ...(draft.hairColor === hc.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
@@ -360,7 +362,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
 
             {/* ── Body Type ── */}
             <div data-section-id="body-type" style={s.section}>
-              <div style={s.sectionTitle}>Body Type</div>
+              <div style={s.sectionTitle}>{t("gen.bodyType")}</div>
               <div style={s.imageGrid}>
                 {byCategory("BODY_TYPE").map((opt) => {
                   const selected = draft.bodyType === opt.name;
@@ -372,13 +374,13 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("BODY_TYPE").length === 0 && <div style={s.emptyHint}>No body types added yet. Add them in the admin panel.</div>}
+                {byCategory("BODY_TYPE").length === 0 && <div style={s.emptyHint}>{t("gen.noBodyTypes")}</div>}
               </div>
             </div>
 
             {/* ── Breast Size ── */}
             <div data-section-id="breast-size" style={s.section}>
-              <div style={s.sectionTitle}>Breast Size</div>
+              <div style={s.sectionTitle}>{t("gen.breastSize")}</div>
               <div style={s.imageGrid}>
                 {byCategory("BREAST_SIZE").map((opt) => {
                   const selected = draft.breastSize === opt.name;
@@ -390,13 +392,13 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("BREAST_SIZE").length === 0 && <div style={s.emptyHint}>No breast sizes added yet. Add them in the admin panel.</div>}
+                {byCategory("BREAST_SIZE").length === 0 && <div style={s.emptyHint}>{t("gen.noBreastSizes")}</div>}
               </div>
             </div>
 
             {/* ── Butt Size ── */}
             <div data-section-id="butt-size" style={s.section}>
-              <div style={s.sectionTitle}>Butt Size</div>
+              <div style={s.sectionTitle}>{t("gen.buttSize")}</div>
               <div style={s.imageGrid}>
                 {byCategory("BUTT_SIZE").map((opt) => {
                   const selected = draft.buttSize === opt.name;
@@ -408,15 +410,15 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     </button>
                   );
                 })}
-                {byCategory("BUTT_SIZE").length === 0 && <div style={s.emptyHint}>No butt sizes added yet. Add them in the admin panel.</div>}
+                {byCategory("BUTT_SIZE").length === 0 && <div style={s.emptyHint}>{t("gen.noButtSizes")}</div>}
               </div>
             </div>
           </div>
         </div>
 
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

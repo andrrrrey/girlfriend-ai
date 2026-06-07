@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
 import { users, chatProfiles, resizedMediaUrl, type ChatProfile } from "../../lib/api";
 
 type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
@@ -425,15 +427,15 @@ const CSS = `
 /* ═══════════════════════════════════════
    Data
 ═══════════════════════════════════════ */
-const FEATURES = [
-  { icon: "💬", label: "Messages per day",   free: "10",  pro: "∞" },
-  { icon: "🖼️", label: "Image generations",  free: "10",  pro: "∞" },
-  { icon: "🎬", label: "Video content",       free: "✗",   pro: "✓" },
-  { icon: "❤️", label: "AI relationships",    free: "1",   pro: "∞" },
-  { icon: "⭐", label: "Premium characters",  free: "✗",   pro: "✓" },
-  { icon: "🎭", label: "Custom personas",     free: "✗",   pro: "✓" },
-  { icon: "📷", label: "NSFW content",        free: "✗",   pro: "✓" },
-  { icon: "⚡", label: "Priority responses",  free: "✗",   pro: "✓" },
+const FEATURES: { icon: string; labelKey: TKey; free: string; pro: string }[] = [
+  { icon: "💬", labelKey: "profile.featMessages",      free: "10",  pro: "∞" },
+  { icon: "🖼️", labelKey: "profile.featImages",        free: "10",  pro: "∞" },
+  { icon: "🎬", labelKey: "profile.featVideo",         free: "✗",   pro: "✓" },
+  { icon: "❤️", labelKey: "profile.featRelationships", free: "1",   pro: "∞" },
+  { icon: "⭐", labelKey: "profile.featPremiumChars",  free: "✗",   pro: "✓" },
+  { icon: "🎭", labelKey: "profile.featPersonas",      free: "✗",   pro: "✓" },
+  { icon: "📷", labelKey: "profile.featNsfw",          free: "✗",   pro: "✓" },
+  { icon: "⚡", labelKey: "profile.featPriority",      free: "✗",   pro: "✓" },
 ];
 
 const STYLES = [
@@ -454,11 +456,11 @@ const TAG_GROUPS = [
   },
 ];
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "subscription",  label: "Subscription"  },
-  { id: "account",       label: "Account Info"  },
-  { id: "preferences",   label: "Preferences"   },
-  { id: "chat-profiles", label: "Chat Profiles" },
+const TABS: { id: Tab; labelKey: TKey }[] = [
+  { id: "subscription",  labelKey: "profile.tabSubscription"  },
+  { id: "account",       labelKey: "profile.tabAccount"  },
+  { id: "preferences",   labelKey: "profile.tabPreferences"   },
+  { id: "chat-profiles", labelKey: "profile.tabChatProfiles" },
 ];
 
 /* ═══════════════════════════════════════
@@ -539,35 +541,36 @@ function IcoXCircle() {
    Tabs
 ═══════════════════════════════════════ */
 function SubscriptionTab() {
+  const { t } = useT();
   return (
     <div className="pp-sub">
       <div className="pp-sub-card">
         <div className="pp-sub-icon"><IcoDiamond /></div>
-        <div className="pp-sub-title">Pro</div>
+        <div className="pp-sub-title">{t("profile.proPlan")}</div>
         <div className="pp-sub-price">
           <span className="pp-sub-amount">$ 25</span>
-          <span className="pp-sub-period">/ 6 month</span>
+          <span className="pp-sub-period">{t("profile.perMonths")}</span>
         </div>
-        <div className="pp-sub-charge">We will charge your card on: 07/23/2026</div>
+        <div className="pp-sub-charge">{t("profile.chargeOn", { date: "07/23/2026" })}</div>
         <div className="pp-sub-spacer" />
         <div className="pp-sub-btns">
-          <button className="pp-btn-grad">Upgrade</button>
-          <button className="pp-btn-dark">Manage Subscription</button>
+          <button className="pp-btn-grad">{t("profile.upgrade")}</button>
+          <button className="pp-btn-dark">{t("profile.manageSubscription")}</button>
         </div>
       </div>
 
       <div className="pp-sub-right">
         <div className="pp-feat-table">
           {FEATURES.map((f) => (
-            <>
-              <div className="pp-feat-card" key={`${f.label}-card`}>
+            <React.Fragment key={f.labelKey}>
+              <div className="pp-feat-card" key={`${f.labelKey}-card`}>
                 <div className="pp-feat-ico">{f.icon}</div>
-                {f.label}
+                {t(f.labelKey)}
               </div>
-              <div className="pp-cmp-cell" key={`${f.label}-cmp`}>
+              <div className="pp-cmp-cell" key={`${f.labelKey}-cmp`}>
                 {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
               </div>
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>
@@ -577,6 +580,7 @@ function SubscriptionTab() {
 
 function AccountTab() {
   const { user, refreshProfile } = useAuth();
+  const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl]   = useState(user?.avatarUrl ?? "");
   const [nickname, setNickname]     = useState(user?.nickname ?? "");
@@ -611,7 +615,7 @@ function AccountTab() {
 
   async function handleSave() {
     if (nickname && nickname !== user?.nickname && nicknameAvailable === false) {
-      setMsg({ text: "Nickname is already taken", ok: false });
+      setMsg({ text: t("profile.nicknameTaken"), ok: false });
       return;
     }
     setSaving(true); setMsg(null);
@@ -627,22 +631,22 @@ function AccountTab() {
       const removedProviders = [...originalProviders].filter((p) => !currentProviders.has(p));
       await Promise.all(removedProviders.map((p) => users.deleteSocialLink(p)));
       await refreshProfile();
-      setMsg({ text: "Saved successfully", ok: true });
+      setMsg({ text: t("profile.savedSuccess"), ok: true });
     } catch (err: any) {
-      const msg = err?.message || "Failed to save";
-      setMsg({ text: msg.includes("taken") ? "Nickname is already taken" : msg, ok: false });
+      const msg = err?.message || t("profile.failedSave");
+      setMsg({ text: msg.includes("taken") ? t("profile.nicknameTaken") : msg, ok: false });
     }
     finally { setSaving(false); }
   }
 
   async function handleChangePwd() {
-    if (!currentPwd || !newPwd) { setPwdMsg({ text: "Fill both fields", ok: false }); return; }
+    if (!currentPwd || !newPwd) { setPwdMsg({ text: t("profile.fillBothFields"), ok: false }); return; }
     setSavingPwd(true); setPwdMsg(null);
     try {
       await users.changePassword(currentPwd, newPwd);
-      setPwdMsg({ text: "Password changed", ok: true });
+      setPwdMsg({ text: t("profile.passwordChanged"), ok: true });
       setCurrentPwd(""); setNewPwd(""); setShowPwdForm(false);
-    } catch { setPwdMsg({ text: "Incorrect current password", ok: false }); }
+    } catch { setPwdMsg({ text: t("profile.incorrectPassword"), ok: false }); }
     finally { setSavingPwd(false); }
   }
 
@@ -662,7 +666,7 @@ function AccountTab() {
         <div className="pp-acc-col">
           {/* Profile picture */}
           <div className="pp-field">
-            <span className="pp-lbl"><span className="pp-lbl-left">Profile picture</span></span>
+            <span className="pp-lbl"><span className="pp-lbl-left">{t("profile.profilePicture")}</span></span>
             <div className="pp-avatar-row">
               <div className="pp-avatar-box">
                 {avatarUrl
@@ -681,7 +685,7 @@ function AccountTab() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 10 * 1024 * 1024) { alert("File must be under 10 MB"); return; }
+                      if (file.size > 10 * 1024 * 1024) { alert(t("profile.fileUnder10")); return; }
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         const src = ev.target?.result as string;
@@ -706,12 +710,12 @@ function AccountTab() {
                   />
                   <button className="pp-btn-sm" onClick={() => fileInputRef.current?.click()}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    Replace picture
+                    {t("profile.replacePicture")}
                   </button>
-                  <button className="pp-btn-sm" onClick={() => setAvatarUrl("")}>Remove</button>
+                  <button className="pp-btn-sm" onClick={() => setAvatarUrl("")}>{t("profile.remove")}</button>
                 </div>
                 <div className="pp-helper">
-                  <span>*.png, @.jpeg files up to 10MB</span>
+                  <span>{t("profile.pictureHelper")}</span>
                 </div>
               </div>
             </div>
@@ -720,8 +724,8 @@ function AccountTab() {
           {/* E-mail */}
           <div className="pp-field">
             <div className="pp-lbl">
-              <span className="pp-lbl-left">E-mail</span>
-              <span className="pp-verified" style={{ fontSize: 10, padding: "2px 8px" }}>Verified</span>
+              <span className="pp-lbl-left">{t("profile.email")}</span>
+              <span className="pp-verified" style={{ fontSize: 10, padding: "2px 8px" }}>{t("profile.verified")}</span>
             </div>
             <div style={{ position: "relative" }}>
               <input className="pp-input" type="text" value={user?.email ?? ""} disabled style={{ paddingRight: 36 }} />
@@ -732,18 +736,18 @@ function AccountTab() {
           {/* Password */}
           <div className="pp-field">
             <div className="pp-lbl">
-              <span className="pp-lbl-left">Password</span>
+              <span className="pp-lbl-left">{t("profile.password")}</span>
               <button className="pp-pwd-link" onClick={() => setShowPwdForm((v) => !v)}>
-                {showPwdForm ? "Cancel" : "Change password"}
+                {showPwdForm ? t("common.cancel") : t("profile.changePassword")}
               </button>
             </div>
             {!showPwdForm
               ? <input className="pp-input" type="password" value="●●●●●●●●●●" disabled />
               : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input className="pp-input" type="password" placeholder="Current password" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} />
-                  <input className="pp-input" type="password" placeholder="New password" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                  <input className="pp-input" type="password" placeholder={t("profile.currentPassword")} value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} />
+                  <input className="pp-input" type="password" placeholder={t("profile.newPasswordPlaceholder")} value={newPwd} onChange={e => setNewPwd(e.target.value)} />
                   <button className="pp-save-btn" style={{ alignSelf: "flex-start" }} onClick={handleChangePwd} disabled={savingPwd}>
-                    {savingPwd ? "Saving…" : "Confirm"}
+                    {savingPwd ? t("profile.saving") : t("profile.confirm")}
                   </button>
                   {pwdMsg && <span className={`pp-feedback ${pwdMsg.ok ? "ok" : "err"}`}>{pwdMsg.text}</span>}
                 </div>
@@ -752,7 +756,7 @@ function AccountTab() {
 
           {/* Social media links */}
           <div className="pp-field">
-            <span className="pp-lbl"><span className="pp-lbl-left">Social Media links</span></span>
+            <span className="pp-lbl"><span className="pp-lbl-left">{t("profile.socialLinks")}</span></span>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {socialLinks.map((url, i) => (
                 <div className="pp-social-row" key={i}>
@@ -764,14 +768,14 @@ function AccountTab() {
                 </div>
               ))}
               <button className="pp-add-more" onClick={() => setSocialLinks([...socialLinks, ""])}>
-                <IcoPlus /> Add more
+                <IcoPlus /> {t("profile.addMore")}
               </button>
             </div>
           </div>
 
           {/* Delete account */}
-          <button className="pp-delete-acc" onClick={() => alert("To delete your account, please contact support.")}>
-            <IcoTrash /> Delete account
+          <button className="pp-delete-acc" onClick={() => alert(t("profile.deleteAccountAlert"))}>
+            <IcoTrash /> {t("profile.deleteAccount")}
           </button>
         </div>
 
@@ -779,13 +783,13 @@ function AccountTab() {
         <div className="pp-acc-col">
           <div className="pp-field">
             <span className="pp-lbl">
-              <span>Nickname</span>
-              {checkingNickname && <span style={{ fontSize: 10, color: "#848484" }}>Checking…</span>}
+              <span>{t("profile.nickname")}</span>
+              {checkingNickname && <span style={{ fontSize: 10, color: "#848484" }}>{t("profile.checking")}</span>}
               {!checkingNickname && nicknameAvailable === true && nickname !== user?.nickname && (
-                <span style={{ fontSize: 10, color: "#c1f0aa" }}>✓ Available</span>
+                <span style={{ fontSize: 10, color: "#c1f0aa" }}>{t("profile.available")}</span>
               )}
               {!checkingNickname && nicknameAvailable === false && (
-                <span style={{ fontSize: 10, color: "#f95bad" }}>✗ Already taken</span>
+                <span style={{ fontSize: 10, color: "#f95bad" }}>{t("profile.taken")}</span>
               )}
             </span>
             <input
@@ -798,21 +802,21 @@ function AccountTab() {
           </div>
 
           <div className="pp-field">
-            <span className="pp-lbl"><span>Handle</span></span>
+            <span className="pp-lbl"><span>{t("profile.handle")}</span></span>
             <input className="pp-input" type="text" value={nickname ? `@${nickname}` : ""} disabled placeholder="@handle" />
           </div>
 
           <div className="pp-field">
-            <span className="pp-lbl"><span>About me</span></span>
-            <textarea className="pp-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell about yourself…" />
+            <span className="pp-lbl"><span>{t("profile.aboutMe")}</span></span>
+            <textarea className="pp-textarea" value={bio} onChange={e => setBio(e.target.value)} placeholder={t("profile.aboutPlaceholder")} />
           </div>
         </div>
 
         {/* ── Bottom bar ── */}
         <div className="pp-acc-bottom">
           {msg && <span className={`pp-feedback ${msg.ok ? "ok" : "err"}`} style={{ marginRight: "auto", alignSelf: "center" }}>{msg.text}</span>}
-          <button className="pp-cancel-btn" onClick={() => { setNickname(user?.nickname ?? ""); setAvatarUrl(user?.avatarUrl ?? ""); setBio(user?.aboutMe ?? ""); setNicknameAvailable(null); }}>Cancel</button>
-          <button className="pp-save-btn" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+          <button className="pp-cancel-btn" onClick={() => { setNickname(user?.nickname ?? ""); setAvatarUrl(user?.avatarUrl ?? ""); setBio(user?.aboutMe ?? ""); setNicknameAvailable(null); }}>{t("common.cancel")}</button>
+          <button className="pp-save-btn" onClick={handleSave} disabled={saving}>{saving ? t("profile.saving") : t("profile.saveChanges")}</button>
         </div>
       </div>
     </div>
@@ -820,6 +824,7 @@ function AccountTab() {
 }
 
 function PreferencesTab() {
+  const { t } = useT();
   const [style,   setStyle]   = useState("Realistic");
   const [gender,  setGender]  = useState("Female");
   const [age,     setAge]     = useState("18–25");
@@ -835,15 +840,15 @@ function PreferencesTab() {
   }
 
   const drops = [
-    { label: "Preferred gender:", val: gender,  set: setGender,  opts: ["Female", "Male", "All"] },
-    { label: "Age range:",        val: age,     set: setAge,     opts: ["18–25", "25–35", "35+", "Any"] },
-    { label: "Content type:",     val: content, set: setContent, opts: ["All", "SFW only", "NSFW only"] },
+    { label: t("profile.preferredGender"), val: gender,  set: setGender,  opts: ["Female", "Male", "All"] },
+    { label: t("profile.ageRange"),        val: age,     set: setAge,     opts: ["18–25", "25–35", "35+", "Any"] },
+    { label: t("profile.contentType"),     val: content, set: setContent, opts: ["All", "SFW only", "NSFW only"] },
   ];
 
   return (
     <div className="pp-pref">
       <div className="pp-section">
-        <span className="pp-section-lbl">Graphic style</span>
+        <span className="pp-section-lbl">{t("profile.graphicStyle")}</span>
         <div className="pp-style-grid">
           {STYLES.map((s) => (
             <div key={s.label} className={`pp-style-card${style === s.label ? " pp-active" : ""}`} onClick={() => setStyle(s.label)}>
@@ -856,7 +861,7 @@ function PreferencesTab() {
       </div>
 
       <div className="pp-section">
-        <span className="pp-section-lbl">Preferences</span>
+        <span className="pp-section-lbl">{t("profile.preferences")}</span>
         <div className="pp-drops">
           {drops.map((d) => (
             <div key={d.label} className="pp-drop-row">
@@ -875,7 +880,7 @@ function PreferencesTab() {
 
       {TAG_GROUPS.map((g) => (
         <div className="pp-section" key={g.label}>
-          <span className="pp-section-lbl">{g.label}</span>
+          <span className="pp-section-lbl">{g.label === "Appearance" ? t("profile.tagAppearance") : g.label === "Hobbies" ? t("profile.tagHobbies") : g.label}</span>
           <div className="pp-tags">
             {g.tags.map((tag) => (
               <div key={tag} className={`pp-tag${activeTags.has(tag) ? " pp-tag-on" : ""}`} onClick={() => toggleTag(tag)}>
@@ -890,6 +895,7 @@ function PreferencesTab() {
 }
 
 function ChatProfilesTab() {
+  const { t } = useT();
   const [profiles, setProfiles] = useState<ChatProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -903,7 +909,7 @@ function ChatProfilesTab() {
   useEffect(() => {
     chatProfiles.list()
       .then(setProfiles)
-      .catch(() => setMsg({ text: "Failed to load profiles", ok: false }))
+      .catch(() => setMsg({ text: t("profile.loadProfilesFailed"), ok: false }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -920,7 +926,7 @@ function ChatProfilesTab() {
 
   async function handleSave() {
     if (!name.trim() || !description.trim()) {
-      setMsg({ text: "Please fill in both fields", ok: false });
+      setMsg({ text: t("profile.fillBothFieldsChat"), ok: false });
       return;
     }
     setSaving(true); setMsg(null);
@@ -934,25 +940,25 @@ function ChatProfilesTab() {
       }
       closeForm();
     } catch (err: any) {
-      setMsg({ text: err?.message || "Failed to save profile", ok: false });
+      setMsg({ text: err?.message || t("profile.saveProfileFailed"), ok: false });
     }
     setSaving(false);
   }
 
   async function handleDelete(id: string) {
     setOpenMenu(null);
-    if (!confirm("Delete this chat profile?")) return;
+    if (!confirm(t("profile.deleteChatProfileConfirm"))) return;
     const prev = profiles;
     setProfiles((p) => p.filter((x) => x.id !== id));
     try {
       await chatProfiles.remove(id);
     } catch {
       setProfiles(prev);
-      setMsg({ text: "Failed to delete profile", ok: false });
+      setMsg({ text: t("profile.deleteProfileFailed"), ok: false });
     }
   }
 
-  if (loading) return <div className="pp-chats"><div className="pp-chat-bio">Loading…</div></div>;
+  if (loading) return <div className="pp-chats"><div className="pp-chat-bio">{t("common.loading")}</div></div>;
 
   return (
     <div className="pp-chats">
@@ -971,8 +977,8 @@ function ChatProfilesTab() {
             </button>
             {openMenu === p.id && (
               <div className="pp-chat-menu">
-                <button onClick={() => openEdit(p)}>Edit</button>
-                <button className="pp-chat-menu-del" onClick={() => handleDelete(p.id)}>Delete</button>
+                <button onClick={() => openEdit(p)}>{t("chat.edit")}</button>
+                <button className="pp-chat-menu-del" onClick={() => handleDelete(p.id)}>{t("common.delete")}</button>
               </div>
             )}
           </div>
@@ -984,14 +990,14 @@ function ChatProfilesTab() {
           <input
             className="pp-input"
             type="text"
-            placeholder="Name, e.g. Андрей — стартапер из Твери"
+            placeholder={t("profile.namePlaceholder")}
             maxLength={100}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <textarea
             className="pp-textarea"
-            placeholder="Describe yourself: who you are, your interests, the mood you want…"
+            placeholder={t("profile.descPlaceholder")}
             maxLength={2000}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -999,9 +1005,9 @@ function ChatProfilesTab() {
           {msg && <span className={`pp-feedback ${msg.ok ? "ok" : "err"}`}>{msg.text}</span>}
           <div style={{ display: "flex", gap: 8 }}>
             <button className="pp-save-btn" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving…" : editingId ? "Save changes" : "Save"}
+              {saving ? t("profile.saving") : editingId ? t("profile.saveChanges") : t("common.save")}
             </button>
-            <button className="pp-cancel-btn" onClick={closeForm}>Cancel</button>
+            <button className="pp-cancel-btn" onClick={closeForm}>{t("common.cancel")}</button>
           </div>
         </div>
       )}
@@ -1012,7 +1018,7 @@ function ChatProfilesTab() {
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
             <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
           </svg>
-          Create New
+          {t("profile.createNew")}
         </button>
       )}
     </div>
@@ -1023,18 +1029,19 @@ function ChatProfilesTab() {
    Unauthenticated
 ═══════════════════════════════════════ */
 function UnauthContent() {
+  const { t } = useT();
   return (
     <div className="pp-unauth">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#313131" strokeWidth="1.5" strokeLinecap="round">
         <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
       <div>
-        <div className="pp-unauth-title">You&apos;re not logged in</div>
-        <div className="pp-unauth-sub">Sign in or create an account to access your profile.</div>
+        <div className="pp-unauth-title">{t("profile.notLoggedIn")}</div>
+        <div className="pp-unauth-sub">{t("profile.notLoggedInSub")}</div>
       </div>
       <div className="pp-unauth-btns">
-        <Link href="/login" className="pp-unauth-p">Sign in</Link>
-        <Link href="/register" className="pp-unauth-s">Create account</Link>
+        <Link href="/login" className="pp-unauth-p">{t("auth.signInBtn")}</Link>
+        <Link href="/register" className="pp-unauth-s">{t("auth.createAccountBtn")}</Link>
       </div>
     </div>
   );
@@ -1045,10 +1052,11 @@ function UnauthContent() {
 ═══════════════════════════════════════ */
 function ProfileContent() {
   const { user } = useAuth();
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<Tab>("subscription");
   const isAdmin = user?.role === "admin";
 
-  const displayName = user?.nickname ?? user?.email?.split("@")[0] ?? "User";
+  const displayName = user?.nickname ?? user?.email?.split("@")[0] ?? t("profile.userFallback");
   const handle = `@${user?.nickname ?? (user?.email ?? "user").split("@")[0]}`;
 
   return (
@@ -1057,7 +1065,7 @@ function ProfileContent() {
       {isAdmin && (
         <Link href="/admin" className="pp-admin-link">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.18V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-2.82-1.18l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Admin panel
+          {t("profile.adminPanel")}
         </Link>
       )}
 
@@ -1084,9 +1092,9 @@ function ProfileContent() {
 
       {/* Tabs */}
       <div className="pp-tabs">
-        {TABS.map((t) => (
-          <div key={t.id} className={`pp-tab${activeTab === t.id ? " pp-tab-active" : ""}`} onClick={() => setActiveTab(t.id)}>
-            <span className="pp-tab-label">{t.label}</span>
+        {TABS.map((tab) => (
+          <div key={tab.id} className={`pp-tab${activeTab === tab.id ? " pp-tab-active" : ""}`} onClick={() => setActiveTab(tab.id)}>
+            <span className="pp-tab-label">{t(tab.labelKey)}</span>
             <div className="pp-tab-line" />
           </div>
         ))}

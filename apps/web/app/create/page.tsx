@@ -11,12 +11,14 @@ import {
 } from "../../lib/api";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
 import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
   EYE_COLORS, HAIR_STYLES, HAIR_COLORS, BODY_TYPES, BREAST_SIZES, BUTT_SIZES,
   RELATIONSHIP_TYPES, FAMILY_STATUSES, LIFESTYLES, WORKS, HOBBIES,
-  KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_NAMES, STAGE_ICONS,
+  KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_ICONS,
   CHEVRON_SVG, GENERATE_BTN_SVG, VOICE_ICON_SVG, CHECK_SVG, LOADER_SVG, PREMIUM_BADGE_SVG,
 } from "./data";
 
@@ -35,6 +37,17 @@ let cachedSceneOptions: SceneOptionsResponse | null = null;
 let cachedCameraOptions: CameraOptionsResponse | null = null;
 
 /* ── HTML Builders ────────────────────────────── */
+
+// Module-level translator, set from the component before content is built so the
+// many string-template builders below can localize without threading `t` through.
+let tr: (key: TKey, vars?: Record<string, string | number>) => string = (k) => k;
+
+// Translation keys for the 9 stage titles (parallel to STAGE_NAMES).
+const STAGE_TITLE_KEYS: TKey[] = [
+  "create.stageBasic", "create.stageOrigin", "create.stageFacial", "create.stageBodyType",
+  "create.stagePersonality", "create.stageLifestyle", "create.stageKinks", "create.stageMemories",
+  "create.stageFinalPreview",
+];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -77,35 +90,35 @@ function chips(field: string, items: string[]) {
   return `<div class="tags-wrap" data-field="${field}">${items.map((v) => `<div class="tag-chip" data-value="${v}">${v}</div>`).join("")}</div>`;
 }
 
-function stageHeader(num: number, title: string, genDisabled = false) {
-  return `<div class="form-header"><div class="stage-info"><div class="stage-label">Stage ${pad(num)}</div>
-    <div class="stage-title">${title}</div></div>
+function stageHeader(num: number, titleKey: TKey, genDisabled = false) {
+  return `<div class="form-header"><div class="stage-info"><div class="stage-label">${tr("create.stage")} ${pad(num)}</div>
+    <div class="stage-title">${tr(titleKey)}</div></div>
     <div class="header-actions">
-      <div class="btn-reset">Reset</div>
-      <div class="btn-generate${genDisabled ? " disabled" : ""}">${GENERATE_BTN_SVG}<span>Generate Random</span></div>
+      <div class="btn-reset">${tr("create.reset")}</div>
+      <div class="btn-generate${genDisabled ? " disabled" : ""}">${GENERATE_BTN_SVG}<span>${tr("gen.generateRandom")}</span></div>
     </div></div><div class="form-sep"></div>`;
 }
 
 function navButtons(prev: number, next: number | "submit") {
   const right = next === "submit"
-    ? `<div class="btn-bring-to-life disabled" id="btn-submit">Bring to Life</div>`
-    : `<div class="btn-continue" data-goto="${next}">Continue</div>`;
-  return `<div class="buttons-row"><div class="btn-cancel" data-goto="${prev}">Cancel</div>${right}</div>`;
+    ? `<div class="btn-bring-to-life disabled" id="btn-submit">${tr("create.bringToLife")}</div>`
+    : `<div class="btn-continue" data-goto="${next}">${tr("create.continue")}</div>`;
+  return `<div class="buttons-row"><div class="btn-cancel" data-goto="${prev}">${tr("common.cancel")}</div>${right}</div>`;
 }
 
 /* ── Stage HTML ───────────────────────────────── */
 
 function stage01() {
   return `<div class="stage-content active" id="stage-01-content">
-    ${stageHeader(1, "Basic parameters")}
-    <div class="dropdown-row">${dropdown("gender", "Gender", GENDERS, "Female")}${dropdown("orientation", "Orientation", ORIENTATIONS, "Heterosexual")}</div>
-    <div class="field"><div class="field-label">Name</div><input type="text" class="input-text" id="input-name" placeholder="Enter character name" value=""></div>
-    <div class="field"><div class="field-label">Surname</div><input type="text" class="input-text" id="input-surname" placeholder="Choose a surname for your character"></div>
-    <div class="field-age"><div class="field-label">Age</div>
+    ${stageHeader(1, "create.stageBasic")}
+    <div class="dropdown-row">${dropdown("gender", tr("create.gender"), GENDERS, "Female")}${dropdown("orientation", tr("create.orientation"), ORIENTATIONS, "Heterosexual")}</div>
+    <div class="field"><div class="field-label">${tr("create.name")}</div><input type="text" class="input-text" id="input-name" placeholder="${tr("create.namePlaceholder")}" value=""></div>
+    <div class="field"><div class="field-label">${tr("create.surname")}</div><input type="text" class="input-text" id="input-surname" placeholder="${tr("create.surnamePlaceholder")}"></div>
+    <div class="field-age"><div class="field-label">${tr("create.age")}</div>
       <div class="slider-container"><span class="slider-min">18</span>
         <div class="slider-track" data-value="25"><div class="slider-fill"><div class="slider-thumb"><div class="slider-tooltip">25</div></div></div></div>
         <span class="slider-max">100</span></div></div>
-    <div class="field-style"><div class="field-label">Style</div>
+    <div class="field-style"><div class="field-label">${tr("create.style")}</div>
       <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${s}</span></div>`).join("")}</div></div>
     ${navButtons(1, 2)}
   </div>`;
@@ -113,11 +126,11 @@ function stage01() {
 
 function stage02() {
   return `<div class="stage-content" id="stage-02-content">
-    ${stageHeader(2, "Origin")}
-    <div class="dropdown-row">${dropdown("nationality", "Nationality", NATIONALITIES, "American")}${dropdown("language", "Language", LANGUAGES, "English")}</div>
-    <div class="ethnicity-section"><div class="field-label">Ethnicity</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
-    <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">Fantasy Race <span style="color:#969696;font-weight:400">(optional)</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
-    <div class="voice-section"><div class="field-label">Voice</div>
+    ${stageHeader(2, "create.stageOrigin")}
+    <div class="dropdown-row">${dropdown("nationality", tr("create.nationality"), NATIONALITIES, "American")}${dropdown("language", tr("create.language"), LANGUAGES, "English")}</div>
+    <div class="ethnicity-section"><div class="field-label">${tr("create.ethnicity")}</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
+    <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">${tr("create.fantasyRace")} <span style="color:#969696;font-weight:400">${tr("create.optional")}</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
+    <div class="voice-section"><div class="field-label">${tr("create.voice")}</div>
       <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${v}</span></div>`).join("")}</div></div>
     ${navButtons(1, 3)}
   </div>`;
@@ -125,11 +138,11 @@ function stage02() {
 
 function stage03() {
   return `<div class="stage-content" id="stage-03-content">
-    ${stageHeader(3, "Facial")}
+    ${stageHeader(3, "create.stageFacial")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">Eye color</div>${cardGrid("eyeColor", EYE_COLORS, true)}</div>
-      <div class="ethnicity-section"><div class="field-label">Hair style</div>${imageCardGrid("hairStyle", "hairstyle-grid-container", true)}</div>
-      <div class="ethnicity-section"><div class="field-label">Hair color</div>${cardGrid("hairColor", HAIR_COLORS, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.eyeColor")}</div>${cardGrid("eyeColor", EYE_COLORS, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.hairStyle")}</div>${imageCardGrid("hairStyle", "hairstyle-grid-container", true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.hairColor")}</div>${cardGrid("hairColor", HAIR_COLORS, true)}</div>
     </div>
     ${navButtons(2, 4)}
   </div>`;
@@ -137,11 +150,11 @@ function stage03() {
 
 function stage04() {
   return `<div class="stage-content" id="stage-04-content">
-    ${stageHeader(4, "Body type")}
+    ${stageHeader(4, "create.stageBodyType")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">Body type</div>${imageCardGrid("bodyType", "bodytype-grid-container", true)}</div>
-      <div class="ethnicity-section"><div class="field-label">Breast size</div>${cardGrid("breastSize", BREAST_SIZES, true)}</div>
-      <div class="ethnicity-section"><div class="field-label">Butt size</div>${cardGrid("buttSize", BUTT_SIZES, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.bodyType")}</div>${imageCardGrid("bodyType", "bodytype-grid-container", true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.breastSize")}</div>${cardGrid("breastSize", BREAST_SIZES, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.buttSize")}</div>${cardGrid("buttSize", BUTT_SIZES, true)}</div>
     </div>
     ${navButtons(3, 5)}
   </div>`;
@@ -152,20 +165,20 @@ function stage05() {
     `<div class="personality-card" data-value="${p.name}"><div class="p-icon">${p.icon}</div><div class="p-title">${p.name}</div><div class="p-desc">${p.desc}</div></div>`
   ).join("");
   return `<div class="stage-content" id="stage-05-content">
-    ${stageHeader(5, "Personality")}
-    <div class="dropdown-row">${dropdown("relationshipType", "Relationships type", RELATIONSHIP_TYPES, "Girlfriend")}${dropdown("familyStatus", "Family status", FAMILY_STATUSES, "Single")}</div>
-    <div class="personality-scroll"><div class="field-label">Personality</div><div class="personality-grid">${persCards}</div></div>
+    ${stageHeader(5, "create.stagePersonality")}
+    <div class="dropdown-row">${dropdown("relationshipType", tr("create.relationshipType"), RELATIONSHIP_TYPES, "Girlfriend")}${dropdown("familyStatus", tr("create.familyStatus"), FAMILY_STATUSES, "Single")}</div>
+    <div class="personality-scroll"><div class="field-label">${tr("create.personality")}</div><div class="personality-grid">${persCards}</div></div>
     ${navButtons(4, 6)}
   </div>`;
 }
 
 function stage06() {
   return `<div class="stage-content" id="stage-06-content">
-    ${stageHeader(6, "Lifestyle")}
+    ${stageHeader(6, "create.stageLifestyle")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">Lifestyle</div>${cardGrid("lifestyle", LIFESTYLES, true)}</div>
-      <div class="tags-section"><div class="field-label">Work</div>${chips("work", WORKS)}</div>
-      <div class="tags-section"><div class="field-label">Hobby</div>${chips("hobbies", HOBBIES)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.lifestyle")}</div>${cardGrid("lifestyle", LIFESTYLES, true)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.work")}</div>${chips("work", WORKS)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.hobby")}</div>${chips("hobbies", HOBBIES)}</div>
     </div>
     ${navButtons(5, 7)}
   </div>`;
@@ -173,11 +186,11 @@ function stage06() {
 
 function stage07() {
   return `<div class="stage-content" id="stage-07-content">
-    ${stageHeader(7, "Kinks")}
+    ${stageHeader(7, "create.stageKinks")}
     <div class="facial-scroll">
-      <div class="tags-section"><div class="field-label">Kinks — Scenarios</div>${chips("kinks1", KINKS_1)}</div>
-      <div class="tags-section"><div class="field-label">Kinks — Power dynamics</div>${chips("kinks2", KINKS_2)}</div>
-      <div class="tags-section"><div class="field-label">Kinks — Sensory</div>${chips("kinks3", KINKS_3)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksScenarios")}</div>${chips("kinks1", KINKS_1)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksPower")}</div>${chips("kinks2", KINKS_2)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksSensory")}</div>${chips("kinks3", KINKS_3)}</div>
     </div>
     ${navButtons(6, 8)}
   </div>`;
@@ -185,14 +198,14 @@ function stage07() {
 
 function stage08() {
   return `<div class="stage-content" id="stage-08-content">
-    ${stageHeader(8, "Memories", true)}
+    ${stageHeader(8, "create.stageMemories", true)}
     <div class="facial-scroll">
-      <div class="memory-field"><div class="memory-label">Childhood and adolescence ${PREMIUM_BADGE_SVG}</div>
-        <textarea class="memory-textarea" id="memory-childhood" placeholder="Describe any childhood memory"></textarea></div>
-      <div class="memory-field"><div class="memory-label">Memories and life story ${PREMIUM_BADGE_SVG}</div>
-        <textarea class="memory-textarea" id="memory-lifestory" placeholder="Make a life story of your character"></textarea></div>
-      <div class="memory-field"><div class="memory-label">Phobias ${PREMIUM_BADGE_SVG}</div>
-        <textarea class="memory-textarea" id="memory-phobias" placeholder="Describe phobias"></textarea></div>
+      <div class="memory-field"><div class="memory-label">${tr("create.childhoodMemory")} ${PREMIUM_BADGE_SVG}</div>
+        <textarea class="memory-textarea" id="memory-childhood" placeholder="${tr("create.childhoodPlaceholder")}"></textarea></div>
+      <div class="memory-field"><div class="memory-label">${tr("create.lifeStory")} ${PREMIUM_BADGE_SVG}</div>
+        <textarea class="memory-textarea" id="memory-lifestory" placeholder="${tr("create.lifeStoryPlaceholder")}"></textarea></div>
+      <div class="memory-field"><div class="memory-label">${tr("create.phobias")} ${PREMIUM_BADGE_SVG}</div>
+        <textarea class="memory-textarea" id="memory-phobias" placeholder="${tr("create.phobiasPlaceholder")}"></textarea></div>
     </div>
     ${navButtons(7, 9)}
   </div>`;
@@ -201,7 +214,7 @@ function stage08() {
 function stage09() {
   return `<div class="stage-content" id="stage-09-content">
     <div class="s9-header">
-      <div class="stage-info"><div class="stage-label">Stage 09</div><div class="stage-title">Final preview</div></div>
+      <div class="stage-info"><div class="stage-label">${tr("create.stage")} 09</div><div class="stage-title">${tr("create.stageFinalPreview")}</div></div>
     </div>
     <div class="s9-sep"></div>
     <div class="s9-body">
@@ -211,14 +224,14 @@ function stage09() {
           <img id="s9-avatar-img" class="s9-avatar-img" src="" style="display:none">
           <div id="s9-avatar-spinner" class="s9-spinner-wrap">
             <div class="s9-spinner"></div>
-            <div class="s9-spinner-txt">Generating...</div>
+            <div class="s9-spinner-txt">${tr("create.generating")}</div>
           </div>
-          <button class="s9-regen-btn" id="s9-regen-btn" title="Regenerate">
+          <button class="s9-regen-btn" id="s9-regen-btn" title="${tr("create.regenerate")}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
           </button>
         </div>
         <div class="s9-name-row">
-          <span id="preview-name" class="s9-name">Character</span>
+          <span id="preview-name" class="s9-name">${tr("create.character")}</span>
         </div>
         <div class="s9-age-row">
           <span id="preview-age" class="s9-age">25 yo</span>
@@ -227,9 +240,9 @@ function stage09() {
       <!-- RIGHT: tabs + attribute grid -->
       <div class="s9-attrs-col">
         <div class="preview-tabs">
-          <div class="preview-tab active" data-tab="tab-appearance">Appearance</div>
-          <div class="preview-tab" data-tab="tab-personality">Personality</div>
-          <div class="preview-tab" data-tab="tab-memories">Memories</div>
+          <div class="preview-tab active" data-tab="tab-appearance">${tr("create.tabAppearance")}</div>
+          <div class="preview-tab" data-tab="tab-personality">${tr("create.tabPersonality")}</div>
+          <div class="preview-tab" data-tab="tab-memories">${tr("create.tabMemories")}</div>
         </div>
         <div class="s9-tab-sep"></div>
         <div class="preview-tab-content active" id="tab-appearance"></div>
@@ -253,14 +266,14 @@ function stagesPanel() {
       ? `<div class="icon-content"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svgInner}</svg></div>`
       : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svgInner}</svg>`;
     const desc = isActive
-      ? `<div class="stage-desc" id="stage-${pad(i)}-desc">Here you can choose how your character's face will look, including the color and shape of the eyes, hairstyle and hair length</div>`
+      ? `<div class="stage-desc" id="stage-${pad(i)}-desc">${tr("create.facialDesc")}</div>`
       : "";
     const textClass = isActive ? "stage-text with-desc" : "stage-text";
     html += `<div class="progress-stage" id="stage-${pad(i)}-progress">
       <div class="${iconClass}" id="stage-${pad(i)}-icon">${iconContent}</div>
       <div class="${textClass}" id="stage-${pad(i)}-text">
-        <div class="header"><div class="stage-number">Stage ${pad(i)}</div>
-        <div class="stage-name" id="stage-${pad(i)}-name">${STAGE_NAMES[i - 1]}</div></div>${desc}
+        <div class="header"><div class="stage-number">${tr("create.stage")} ${pad(i)}</div>
+        <div class="stage-name" id="stage-${pad(i)}-name">${tr(STAGE_TITLE_KEYS[i - 1])}</div></div>${desc}
       </div>${isActive ? "" : LOADER_SVG.replace('class="loader-icon"', `class="loader-icon" id="stage-${pad(i)}-loader"`)}
     </div>`;
     if (i < 9) {
@@ -284,8 +297,8 @@ function mobileDots() {
 
 function buildContent() {
   return `<div class="create-header">
-      <div class="breadcrumb">Create Character</div>
-      <div class="page-title"><span class="pink">Create </span>Your Character</div>
+      <div class="breadcrumb">${tr("create.breadcrumb")}</div>
+      <div class="page-title"><span class="pink">${tr("create.titlePink")}</span>${tr("create.titleRest")}</div>
     </div>
     ${mobileDots()}
     <div class="create-body">
@@ -517,35 +530,35 @@ function validateStage(n: number): { valid: boolean; errors: { field: string; me
   switch (n) {
     case 1: {
       const name = (document.getElementById("input-name") as HTMLInputElement)?.value?.trim();
-      if (!name) errors.push({ field: "input-name", message: "Please enter a character name" });
+      if (!name) errors.push({ field: "input-name", message: tr("create.errName") });
       break;
     }
     case 2:
       // Этничность ИЛИ фэнтези-раса (фэнтези-раса опциональна и заменяет этничность).
-      if (!hasCard("ethnicity") && !hasCard("fantasyRace")) errors.push({ field: "ethnicity", message: "Please select an ethnicity or fantasy race" });
+      if (!hasCard("ethnicity") && !hasCard("fantasyRace")) errors.push({ field: "ethnicity", message: tr("create.errEthnicity") });
       break;
     case 3:
-      if (!hasCard("eyeColor")) errors.push({ field: "eyeColor", message: "Please select an eye color" });
-      if (!hasCard("hairStyle")) errors.push({ field: "hairStyle", message: "Please select a hair style" });
-      if (!hasCard("hairColor")) errors.push({ field: "hairColor", message: "Please select a hair color" });
+      if (!hasCard("eyeColor")) errors.push({ field: "eyeColor", message: tr("create.errEyeColor") });
+      if (!hasCard("hairStyle")) errors.push({ field: "hairStyle", message: tr("create.errHairStyle") });
+      if (!hasCard("hairColor")) errors.push({ field: "hairColor", message: tr("create.errHairColor") });
       break;
     case 4:
-      if (!hasCard("bodyType")) errors.push({ field: "bodyType", message: "Please select a body type" });
-      if (!hasCard("breastSize")) errors.push({ field: "breastSize", message: "Please select a breast size" });
-      if (!hasCard("buttSize")) errors.push({ field: "buttSize", message: "Please select a butt size" });
+      if (!hasCard("bodyType")) errors.push({ field: "bodyType", message: tr("create.errBodyType") });
+      if (!hasCard("breastSize")) errors.push({ field: "breastSize", message: tr("create.errBreastSize") });
+      if (!hasCard("buttSize")) errors.push({ field: "buttSize", message: tr("create.errButtSize") });
       break;
     case 5:
       if (!document.querySelector(".personality-card.selected"))
-        errors.push({ field: "personality", message: "Please select a personality" });
+        errors.push({ field: "personality", message: tr("create.errPersonality") });
       break;
     case 6:
-      if (!hasCard("lifestyle")) errors.push({ field: "lifestyle", message: "Please select a lifestyle" });
-      if (!hasChip("work")) errors.push({ field: "work", message: "Please select at least one work option" });
-      if (!hasChip("hobbies")) errors.push({ field: "hobbies", message: "Please select at least one hobby" });
+      if (!hasCard("lifestyle")) errors.push({ field: "lifestyle", message: tr("create.errLifestyle") });
+      if (!hasChip("work")) errors.push({ field: "work", message: tr("create.errWork") });
+      if (!hasChip("hobbies")) errors.push({ field: "hobbies", message: tr("create.errHobby") });
       break;
     case 7:
       if (!hasChip("kinks1") && !hasChip("kinks2") && !hasChip("kinks3"))
-        errors.push({ field: "kinks1", message: "Please select at least one kink" });
+        errors.push({ field: "kinks1", message: tr("create.errKink") });
       break;
   }
 
@@ -715,7 +728,7 @@ function randomizeStage(n: number) {
 /* ── Populate stage-09 preview ────────────────── */
 
 function row(icon: string, label: string, value: string) {
-  return `<div class="pers-row"><div class="pers-row-icon">${icon}</div><div class="pers-row-text"><span class="pers-row-label">${label}</span><span class="pers-row-value">${value || "Not set"}</span></div></div>`;
+  return `<div class="pers-row"><div class="pers-row-icon">${icon}</div><div class="pers-row-text"><span class="pers-row-label">${label}</span><span class="pers-row-value">${value || tr("create.notSet")}</span></div></div>`;
 }
 
 function colorNameToHex(name: string | undefined): string {
@@ -739,7 +752,7 @@ function s9ColorTile(color: string | undefined, label: string) {
 }
 
 function s9PersRow(icon: string, label: string, value: string) {
-  return `<div class="s9-pers-row"><div class="s9-pers-icon">${icon}</div><div class="s9-pers-text"><div class="s9-pers-label">${label}</div><div class="s9-pers-value">${value || "Not set"}</div></div></div>`;
+  return `<div class="s9-pers-row"><div class="s9-pers-icon">${icon}</div><div class="s9-pers-text"><div class="s9-pers-label">${label}</div><div class="s9-pers-value">${value || tr("create.notSet")}</div></div></div>`;
 }
 
 function populatePreview() {
@@ -747,34 +760,34 @@ function populatePreview() {
   const nameEl = document.getElementById("preview-name");
   const ageEl = document.getElementById("preview-age");
   if (nameEl) nameEl.textContent = d.surname ? `${d.name} ${d.surname}` : d.name;
-  if (ageEl) ageEl.textContent = `${d.age} yo`;
+  if (ageEl) ageEl.textContent = tr("create.yo", { age: d.age });
 
   // Appearance tab — tile grid + color tiles + custom textareas
   const app = document.getElementById("tab-appearance");
   if (app) {
     app.innerHTML = `
       <div class="s9-attr-grid">
-        ${s9Tile("🔊", d.voice || "—", "VOICE")}
-        ${s9Tile("💇", d.hairStyle || "—", "HAIRSTYLE")}
-        ${s9Tile("🌍", d.ethnicity || "—", "ETHNICITY")}
+        ${s9Tile("🔊", d.voice || "—", tr("create.pvVoice"))}
+        ${s9Tile("💇", d.hairStyle || "—", tr("create.pvHairstyle"))}
+        ${s9Tile("🌍", d.ethnicity || "—", tr("create.pvEthnicity"))}
         <div class="s9-color-tiles">
-          ${s9ColorTile(d.eyeColor, "EYES")}
-          ${s9ColorTile(d.hairColor, "HAIR")}
+          ${s9ColorTile(d.eyeColor, tr("create.pvEyes"))}
+          ${s9ColorTile(d.hairColor, tr("create.pvHair"))}
         </div>
       </div>
       <div class="s9-attr-grid" style="grid-template-columns:repeat(3,1fr)">
-        ${s9Tile("🏋️", d.bodyType || "—", "BODY TYPE")}
-        ${s9Tile("🌸", d.breastSize || "—", "BREAST SIZE")}
-        ${s9Tile("🍑", d.buttSize || "—", "BUTT SIZE")}
+        ${s9Tile("🏋️", d.bodyType || "—", tr("create.pvBodyType"))}
+        ${s9Tile("🌸", d.breastSize || "—", tr("create.pvBreastSize"))}
+        ${s9Tile("🍑", d.buttSize || "—", tr("create.pvButtSize"))}
       </div>
       <div class="s9-custom-textareas">
         <div>
-          <div class="s9-custom-label">Custom appearance details 💎</div>
-          <textarea class="s9-custom-textarea" placeholder="Add custom appearance details..."></textarea>
+          <div class="s9-custom-label">${tr("create.customAppearance")} 💎</div>
+          <textarea class="s9-custom-textarea" placeholder="${tr("create.customAppearancePh")}"></textarea>
         </div>
         <div>
-          <div class="s9-custom-label">Custom face details 💎</div>
-          <textarea class="s9-custom-textarea" placeholder="Add custom face details..."></textarea>
+          <div class="s9-custom-label">${tr("create.customFace")} 💎</div>
+          <textarea class="s9-custom-textarea" placeholder="${tr("create.customFacePh")}"></textarea>
         </div>
       </div>`;
   }
@@ -783,13 +796,13 @@ function populatePreview() {
   const per = document.getElementById("tab-personality");
   if (per) {
     per.innerHTML = `<div class="s9-pers-list">
-      ${s9PersRow("💬", "Personality", d.personality || "")}
-      ${s9PersRow("🏠", "Lifestyle", d.lifestyle || "")}
-      ${s9PersRow("💑", "Relationship", d.relationshipType || "")}
-      ${s9PersRow("👨‍👩‍👧", "Family Status", d.familyStatus || "")}
-      ${s9PersRow("💼", "Work", d.work?.join(", ") || "")}
-      ${s9PersRow("🎯", "Hobbies", d.hobbies?.join(", ") || "")}
-      ${s9PersRow("🔥", "Kinks", d.kinks?.join(", ") || "")}
+      ${s9PersRow("💬", tr("create.pvPersonality"), d.personality || "")}
+      ${s9PersRow("🏠", tr("create.pvLifestyle"), d.lifestyle || "")}
+      ${s9PersRow("💑", tr("create.pvRelationship"), d.relationshipType || "")}
+      ${s9PersRow("👨‍👩‍👧", tr("create.pvFamilyStatus"), d.familyStatus || "")}
+      ${s9PersRow("💼", tr("create.pvWork"), d.work?.join(", ") || "")}
+      ${s9PersRow("🎯", tr("create.pvHobbies"), d.hobbies?.join(", ") || "")}
+      ${s9PersRow("🔥", tr("create.pvKinks"), d.kinks?.join(", ") || "")}
     </div>`;
   }
 
@@ -797,9 +810,9 @@ function populatePreview() {
   const mem = document.getElementById("tab-memories");
   if (mem) {
     mem.innerHTML = `<div class="s9-pers-list">
-      ${s9PersRow("🧒", "Childhood", d.childhoodMemory || "")}
-      ${s9PersRow("📖", "Life Story", d.lifeStory || "")}
-      ${s9PersRow("😨", "Phobias", d.phobias || "")}
+      ${s9PersRow("🧒", tr("create.pvChildhood"), d.childhoodMemory || "")}
+      ${s9PersRow("📖", tr("create.pvLifeStory"), d.lifeStory || "")}
+      ${s9PersRow("😨", tr("create.pvPhobias"), d.phobias || "")}
     </div>`;
   }
 }
@@ -971,7 +984,6 @@ async function startAvatarGeneration() {
 
 /* ── Stage navigation logic ───────────────────── */
 
-const STAGE_DESC = "Here you can choose how your character's face will look, including the color and shape of the eyes, hairstyle and hair length";
 
 function goToStage(n: number) {
   document.querySelectorAll(".stage-content").forEach((el) => el.classList.remove("active"));
@@ -1003,7 +1015,7 @@ function goToStage(n: number) {
         desc = document.createElement("div");
         desc.className = "stage-desc";
         desc.id = `stage-${pad(i)}-desc`;
-        desc.textContent = STAGE_DESC;
+        desc.textContent = tr("create.facialDesc");
         textEl?.appendChild(desc);
       } else {
         desc.style.display = "";
@@ -1131,6 +1143,8 @@ function initInteractive() {
 
 export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
+  const { t } = useT();
+  tr = t; // keep the module-level translator in sync for the HTML builders
   const router = useRouter();
   const initRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
 import type { CharacterSelections } from "./CharacterModal";
 import type { AppearanceSelections } from "./AppearanceModal";
 import type { PoseSelections } from "./PoseModal";
@@ -34,9 +36,9 @@ interface Props {
 
 type Section = "prompt" | "negativePrompt";
 const SECTIONS: Section[] = ["prompt", "negativePrompt"];
-const SECTION_LABELS: Record<Section, string> = {
-  prompt: "Prompt",
-  negativePrompt: "Negative Prompt",
+const SECTION_KEYS: Record<Section, TKey> = {
+  prompt: "prompt.prompt",
+  negativePrompt: "prompt.negativePrompt",
 };
 
 const NEGATIVE_PROMPT_OPTIONS = [
@@ -80,6 +82,7 @@ export default function PromptDetailsModal({
   characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections,
   hideBreakdown = false, hideNegativePrompt = false,
 }: Props) {
+  const { t } = useT();
   const [draftPrompt, setDraftPrompt] = useState(prompt);
   const [draft, setDraft] = useState<PromptDetailsSelections>({
     negativePromptTerms: [...selections.negativePromptTerms],
@@ -169,7 +172,7 @@ export default function PromptDetailsModal({
         {/* Header */}
         <div style={s.header}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={s.title}>Prompt Details</span>
+            <span style={s.title}>{t("prompt.title")}</span>
             <span dangerouslySetInnerHTML={{ __html: GEM }} />
           </div>
           <button style={s.closeBtn} onClick={onClose}>
@@ -184,7 +187,7 @@ export default function PromptDetailsModal({
             <nav style={s.sidebarNav}>
               {SECTIONS.filter((sec) => !(hideNegativePrompt && sec === "negativePrompt")).map((sec) => (
                 <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>
-                  {SECTION_LABELS[sec]}
+                  {t(SECTION_KEYS[sec])}
                 </button>
               ))}
             </nav>
@@ -195,47 +198,47 @@ export default function PromptDetailsModal({
             {/* ── Prompt ── */}
             <div ref={sectionRefs.prompt} style={s.section}>
               <div style={s.sectionTitle}>
-                Prompt Preview
+                {t("prompt.preview")}
                 <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
               </div>
               <textarea
                 style={s.promptTextarea}
                 value={draftPrompt}
                 onChange={(e) => setDraftPrompt(e.target.value)}
-                placeholder="No prompt entered yet."
+                placeholder={t("prompt.empty")}
                 className="pd-prompt-textarea"
               />
 
               {!hideBreakdown && (
                 <>
                   <div style={{ ...s.sectionTitle, marginTop: 28 }}>
-                    Prompt Breakdown
+                    {t("prompt.breakdown")}
                     <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
                   </div>
                   <div style={s.conditionNote}>
-                    *Selected conditions apply to all selected clothing in the prompt.
+                    {t("prompt.conditionNote")}
                   </div>
                   <div style={s.breakdownGrid}>
                     <div style={s.col}>
-                      <div style={s.colTitle}>Character</div>
-                      <BreakdownField label="Subject" value={subject} />
-                      <BreakdownField label="Hair" value={hair} />
-                      <BreakdownField label="Face" value={face} />
-                      <BreakdownField label="Expression" value={expression} />
+                      <div style={s.colTitle}>{t("prompt.character")}</div>
+                      <BreakdownField label={t("prompt.subject")} value={subject} />
+                      <BreakdownField label={t("prompt.hair")} value={hair} />
+                      <BreakdownField label={t("prompt.face")} value={face} />
+                      <BreakdownField label={t("prompt.expression")} value={expression} />
                     </div>
                     <div style={s.col}>
-                      <div style={s.colTitle}>Appearance</div>
-                      <BreakdownField label="Body" value={body} />
-                      <BreakdownField label="Clothing" value={clothing} />
-                      <BreakdownField label="Accessories" value={accessories} />
-                      <BreakdownField label="Pose" value={pose} />
+                      <div style={s.colTitle}>{t("prompt.appearance")}</div>
+                      <BreakdownField label={t("prompt.body")} value={body} />
+                      <BreakdownField label={t("prompt.clothing")} value={clothing} />
+                      <BreakdownField label={t("prompt.accessories")} value={accessories} />
+                      <BreakdownField label={t("prompt.pose")} value={pose} />
                     </div>
                     <div style={s.col}>
-                      <div style={s.colTitle}>Camera</div>
-                      <BreakdownField label="Quality / Style" value="" />
-                      <BreakdownField label="Scene" value={scene} />
-                      <BreakdownField label="Framing" value={framing} />
-                      <BreakdownField label="Lighting" value={lighting} />
+                      <div style={s.colTitle}>{t("prompt.camera")}</div>
+                      <BreakdownField label={t("prompt.qualityStyle")} value="" />
+                      <BreakdownField label={t("prompt.scene")} value={scene} />
+                      <BreakdownField label={t("prompt.framing")} value={framing} />
+                      <BreakdownField label={t("prompt.lighting")} value={lighting} />
                     </div>
                   </div>
                 </>
@@ -246,7 +249,7 @@ export default function PromptDetailsModal({
             {!hideNegativePrompt && (
               <div ref={sectionRefs.negativePrompt} style={s.section}>
                 <div style={s.sectionTitle}>
-                  Negative Prompt
+                  {t("prompt.negativePrompt")}
                   <span dangerouslySetInnerHTML={{ __html: GEM }} style={{ marginLeft: 6 }} />
                 </div>
                 <div style={s.pillGrid}>
@@ -266,8 +269,8 @@ export default function PromptDetailsModal({
 
         {/* Footer */}
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft, draftPrompt); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft, draftPrompt); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { StoryCharacter, StoryImage } from "../../lib/api";
+import { useT } from "../../context/language";
 
 const SLIDE_MS = 5000;
 
@@ -25,6 +26,7 @@ function timeAgo(iso: string): string {
 
 export default function StoryViewer({ stories, startIndex, onClose }: Props) {
   const router = useRouter();
+  const { t } = useT();
   const [charIdx, setCharIdx] = useState(startIndex);
   const [slideIdx, setSlideIdx] = useState(0);
   const [images, setImages] = useState<StoryImage[]>([]);
@@ -176,7 +178,7 @@ export default function StoryViewer({ stories, startIndex, onClose }: Props) {
             <span style={s.headerName}>{current.name}</span>
             {slide && <span style={s.headerTime}>{timeAgo(slide.createdAt)}</span>}
           </div>
-          <button style={s.closeBtn} onClick={onClose} aria-label="Close">
+          <button style={s.closeBtn} onClick={onClose} aria-label={t("common.close")}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>

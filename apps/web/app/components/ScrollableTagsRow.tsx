@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
+import { useT } from "../../context/language";
 
 interface Props {
   tags: string[];
@@ -15,8 +16,9 @@ export default function ScrollableTagsRow({
   selectedTags,
   onTagToggle,
   maxVisible = 15,
-  formatLabel = (t) => t,
+  formatLabel = (tag) => tag,
 }: Props) {
+  const { t } = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
@@ -60,7 +62,7 @@ export default function ScrollableTagsRow({
           style={isAllActive ? { ...s.tag, ...s.tagActive } : s.tag}
           onClick={() => onTagToggle("__ALL__")}
         >
-          All
+          {t("common.all")}
           {isAllActive && <span style={s.underline} />}
         </button>
         {visibleTags.map((tag) => {

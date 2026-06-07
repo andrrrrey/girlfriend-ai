@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -7,14 +8,15 @@ interface Props {
   subtitle?: string;
 }
 
-export default function AuthRequiredOverlay({
-  title = "Sign in to continue",
-  subtitle = "Create an account or sign in to access this content",
-}: Props) {
+export default function AuthRequiredOverlay({ title, subtitle }: Props) {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const router = useRouter();
 
   if (loading || user) return null;
+
+  const titleText = title ?? t("auth.signInToContinue");
+  const subtitleText = subtitle ?? t("auth.signInSubtitle");
 
   return (
     <div style={s.overlay}>
@@ -25,14 +27,14 @@ export default function AuthRequiredOverlay({
             <path d="M7 11V7a5 5 0 0110 0v4"/>
           </svg>
         </div>
-        <h2 style={s.title}>{title}</h2>
-        <p style={s.subtitle}>{subtitle}</p>
+        <h2 style={s.title}>{titleText}</h2>
+        <p style={s.subtitle}>{subtitleText}</p>
         <div style={s.buttons}>
           <button style={s.primaryBtn} onClick={() => router.push("/login")}>
-            Sign In
+            {t("auth.signInBtn")}
           </button>
           <button style={s.secondaryBtn} onClick={() => router.push("/register")}>
-            Create Account
+            {t("auth.createAccountBtn")}
           </button>
         </div>
       </div>

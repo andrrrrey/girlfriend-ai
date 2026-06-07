@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
 
 export type PremiumLimitType =
   | "characters"
@@ -16,30 +18,16 @@ interface Props {
   onClose: () => void;
 }
 
-const LIMIT_MESSAGES: Record<PremiumLimitType, { title: string; description: string }> = {
-  characters: {
-    title: "Лимит персонажей",
-    description: "Вы создали максимальное количество персонажей на бесплатном тарифе.",
-  },
-  chatSessions: {
-    title: "Лимит диалогов",
-    description: "Достигнут максимум диалогов на бесплатном тарифе.",
-  },
-  messagesPerChat: {
-    title: "Лимит сообщений",
-    description: "Достигнут лимит сообщений в этом чате.",
-  },
-  imageGenerations: {
-    title: "Лимит генераций картинок",
-    description: "Вы использовали все бесплатные генерации изображений.",
-  },
-  videoGenerations: {
-    title: "Лимит генераций видео",
-    description: "Вы использовали все бесплатные генерации видео.",
-  },
+const LIMIT_KEYS: Record<PremiumLimitType, { title: TKey; description: TKey }> = {
+  characters: { title: "premium.charactersTitle", description: "premium.charactersDesc" },
+  chatSessions: { title: "premium.chatSessionsTitle", description: "premium.chatSessionsDesc" },
+  messagesPerChat: { title: "premium.messagesTitle", description: "premium.messagesDesc" },
+  imageGenerations: { title: "premium.imageTitle", description: "premium.imageDesc" },
+  videoGenerations: { title: "premium.videoTitle", description: "premium.videoDesc" },
 };
 
 export default function PremiumPopup({ limitType, limit, used, onClose }: Props) {
+  const { t } = useT();
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -47,12 +35,12 @@ export default function PremiumPopup({ limitType, limit, used, onClose }: Props)
     };
   }, []);
 
-  const msg = LIMIT_MESSAGES[limitType];
+  const msg = LIMIT_KEYS[limitType];
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.card} onClick={(e) => e.stopPropagation()}>
-        <button style={s.closeBtn} onClick={onClose} aria-label="Закрыть">
+        <button style={s.closeBtn} onClick={onClose} aria-label={t("common.close")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#848484" strokeWidth="2">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
@@ -69,8 +57,8 @@ export default function PremiumPopup({ limitType, limit, used, onClose }: Props)
           </svg>
         </div>
 
-        <h2 style={s.title}>{msg.title}</h2>
-        <p style={s.subtitle}>{msg.description}</p>
+        <h2 style={s.title}>{t(msg.title)}</h2>
+        <p style={s.subtitle}>{t(msg.description)}</p>
 
         <div style={s.counter}>
           <span style={s.counterUsed}>{used}</span>
@@ -80,15 +68,15 @@ export default function PremiumPopup({ limitType, limit, used, onClose }: Props)
 
         <div style={s.buttons}>
           <button style={s.primaryBtn} onClick={() => { /* TODO: navigate to payment */ }}>
-            Получить Premium
+            {t("premium.getPremium")}
           </button>
           <button style={s.secondaryBtn} onClick={onClose}>
-            Закрыть
+            {t("common.close")}
           </button>
         </div>
 
         <p style={s.hint}>
-          Безлимитные персонажи, чаты, генерации и голосовые функции
+          {t("premium.hint")}
         </p>
       </div>
     </div>

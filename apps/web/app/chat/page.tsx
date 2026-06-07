@@ -26,12 +26,14 @@ import {
 import ChatPoseModal from "../components/ChatPoseModal";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
+import { useT } from "../../context/language";
 import { formatTags } from "../../lib/tags";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
 function ChatPageInner() {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const router = useRouter();
   const { startGeneration, notifications, activeJobs } = useGeneration();
   const isDemo = !user || user.subscription === "free";
@@ -170,15 +172,26 @@ function ChatPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat, loadMessages]);
 
-  // Mark chat as read whenever chatList updates with a new lastMessage —
-  // separate from message loading so it doesn't trigger a reload.
+  // Mark chat as read whenever chatList updates with a new lastMessage or new
+  // messages are loaded — separate from message loading so it doesn't trigger a
+  // reload. We store the newest known timestamp (max of loaded messages and the
+  // chat-list lastMessage) so the sidebar badge clears reliably even if the
+  // chatList snapshot lags behind the messages actually shown, then notify the
+  // sidebar to recompute its unread count.
   useEffect(() => {
     if (!activeChat) return;
     const chat = chatList.find((c) => c.id === activeChat);
-    if (chat?.lastMessage) {
-      localStorage.setItem(`chat-read-${activeChat}`, chat.lastMessage.createdAt);
+    const candidates: number[] = [];
+    if (chat?.lastMessage) candidates.push(new Date(chat.lastMessage.createdAt).getTime());
+    for (const m of messages) {
+      const t = new Date(m.createdAt).getTime();
+      if (!Number.isNaN(t)) candidates.push(t);
     }
-  }, [activeChat, chatList]);
+    if (candidates.length === 0) return;
+    const newest = new Date(Math.max(...candidates)).toISOString();
+    localStorage.setItem(`chat-read-${activeChat}`, newest);
+    window.dispatchEvent(new Event("chat-read"));
+  }, [activeChat, chatList, messages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -222,7 +235,7 @@ function ChatPageInner() {
         used: body.used,
       });
     } else if (code === 403 && body?.error === "DEMO_FEATURE_BLOCKED") {
-      setDemoBanner({ message: "Голосовые функции доступны только по подписке.", subscribeCta: true });
+      setDemoBanner({ message: t("chat.voiceSubOnly"), subscribeCta: true });
     } else if (code === 503) {
       setDemoBanner({
         message: "AI-сервис временно недоступен. Попробуйте через минуту.",
@@ -230,7 +243,7 @@ function ChatPageInner() {
       });
     } else if (code === 502 || code === 504) {
       setDemoBanner({
-        message: "Не удалось получить ответ от AI. Попробуйте ещё раз.",
+        message: t("chat.aiError"),
         subscribeCta: false,
       });
     } else {
@@ -716,7 +729,7 @@ function ChatPageInner() {
   };
 
   // Auth gates — placed here (after all hooks) on purpose. See note above.
-  if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>Загрузка...</p></div>;
+  if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>{t("common.loading")}</p></div>;
   if (!user) return null;
 
   return (
@@ -756,7 +769,7 @@ function ChatPageInner() {
 .chat-profile-select select:hover { border-color: #f95bad; }
 .chat-profile-select select:focus { outline: none; border-color: #f95bad; }
 .chat-profile-select option { background: #1e1e1e; color: #fff; }
-.chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; gap: 8px; }
+.chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 10px 20px 0; overflow-y: auto; gap: 8px; }
 .message { display: flex; flex-direction: column; gap: 4px; }
 .message.from-ai { align-items: flex-start; max-width: 65%; }
 .message.from-me { align-items: flex-end; align-self: flex-end; max-width: 65%; }
@@ -848,14 +861,14 @@ function ChatPageInner() {
       {/* Chats Panel */}
       <aside className="chats-panel">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 className="chats-panel-title">Chats</h2>
+          <h2 className="chats-panel-title">{t("chat.title")}</h2>
         </div>
 
         <div className="chats-search">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
           <input
             type="text"
-            placeholder="Search for a profile"
+            placeholder={t("chat.searchProfile")}
             value={chatSearch}
             onChange={(e) => setChatSearch(e.target.value)}
             style={{
@@ -875,7 +888,7 @@ function ChatPageInner() {
 
         {showNewChat && (
           <div className="new-chat-modal">
-            <h3 style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>Выберите персонажа:</h3>
+            <h3 style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>{t("chat.chooseCharacter")}</h3>
             {charList.map((c) => (
               <div
                 key={c.id}
@@ -919,10 +932,10 @@ function ChatPageInner() {
               </div>
               <div className="chat-item-message">
                 <div className="chat-item-name">
-                  {c.character?.name || "Неизвестный"}
+                  {c.character?.name || t("chat.unknownCharacter")}
                 </div>
                 <div className="chat-item-preview">
-                  {c.lastMessage?.content?.slice(0, 40) || c.title || "Новый чат"}
+                  {c.lastMessage?.content?.slice(0, 40) || c.title || t("chat.newChat")}
                 </div>
               </div>
               <button
@@ -931,7 +944,7 @@ function ChatPageInner() {
                   handleDeleteChat(c.id);
                 }}
                 className="chat-item-dots"
-                title="Удалить чат"
+                title={t("chat.deleteChat")}
               >
                 ×
               </button>
@@ -951,22 +964,22 @@ function ChatPageInner() {
                 )}
               </div>
               <span className="chat-header-name">
-                {activeChatData?.character?.name || "Чат"}
+                {activeChatData?.character?.name || t("chat.chatFallback")}
               </span>
               <div className="chat-profile-select">
                 <select
                   value={activeChatData?.chatProfileId ?? ""}
                   onChange={(e) => handleProfileChange(e.target.value || null)}
-                  title="Выберите свой чат-профиль для этого диалога"
+                  title={t("chat.selectChatProfile")}
                 >
-                  <option value="">Без профиля</option>
+                  <option value="">{t("chat.noProfile")}</option>
                   {profilesList.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </div>
               {isDemo && (
-                <span className="demo-badge">Free</span>
+                <span className="demo-badge">{t("chat.freeBadge")}</span>
               )}
             </div>
 
@@ -976,9 +989,9 @@ function ChatPageInner() {
                 <span>{demoBanner.message}</span>
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   {demoBanner.subscribeCta && (
-                    <Link href="/profile" className="demo-banner-btn">Оформить подписку</Link>
+                    <Link href="/profile" className="demo-banner-btn">{t("chat.subscribe")}</Link>
                   )}
-                  <button onClick={() => setDemoBanner(null)} className="demo-banner-close">Закрыть</button>
+                  <button onClick={() => setDemoBanner(null)} className="demo-banner-close">{t("common.close")}</button>
                 </div>
               </div>
             )}
@@ -990,7 +1003,7 @@ function ChatPageInner() {
                   className={`message msg-bubble ${msg.role === "user" ? "from-me" : "from-ai"}`}
                 >
                   {msg.type === "audio" && msg.role === "user" && (
-                    <div className="voice-label">Голосовое сообщение</div>
+                    <div className="voice-label">{t("chat.voiceMessage")}</div>
                   )}
 
                   {/* Inline edit mode for user messages */}
@@ -1050,7 +1063,7 @@ function ChatPageInner() {
                           <button
                             onClick={() => handleDeleteMessage(msg.id)}
                             className="action-btn"
-                            title="Удалить"
+                            title={t("common.delete")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1061,7 +1074,7 @@ function ChatPageInner() {
                             }}
                             className="action-btn"
                             disabled={streaming || generatingInThisChat}
-                            title="Перегенерировать"
+                            title={t("chat.regenerate")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1073,7 +1086,7 @@ function ChatPageInner() {
                             onClick={() => handlePlayTTS(msg.id)}
                             className="action-btn"
                             disabled={loadingTTSId === msg.id}
-                            title={playingTTSId === msg.id ? "Пауза" : "Озвучить"}
+                            title={playingTTSId === msg.id ? t("chat.pause") : t("chat.play")}
                           >
                             {playingTTSId === msg.id ? (
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.5" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/><rect x="7" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/></svg>
@@ -1081,13 +1094,13 @@ function ChatPageInner() {
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1.5v9l7-4.5-7-4.5z" fill="#fff"/></svg>
                             )}
                           </button>
-                          <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                          <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
                           </button>
                           <button
                             onClick={() => handleDeleteMessage(msg.id)}
                             className="action-btn"
-                            title="Удалить"
+                            title={t("common.delete")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1095,7 +1108,7 @@ function ChatPageInner() {
                             onClick={() => handleRegenerate(msg.id)}
                             className="action-btn"
                             disabled={streaming}
-                            title="Перегенерировать"
+                            title={t("chat.regenerate")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1103,13 +1116,13 @@ function ChatPageInner() {
                       )}
                       {msg.role === "user" && !msg.id.startsWith("temp-") && (
                         <>
-                          <button className="action-btn" title="Копировать" onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                          <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
                           </button>
                           <button
                             onClick={() => handleDeleteMessage(msg.id)}
                             className="action-btn"
-                            title="Удалить"
+                            title={t("common.delete")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1117,7 +1130,7 @@ function ChatPageInner() {
                             onClick={() => handleStartEdit(msg)}
                             className="action-btn"
                             disabled={streaming}
-                            title="Редактировать"
+                            title={t("chat.edit")}
                           >
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
@@ -1131,7 +1144,7 @@ function ChatPageInner() {
               {streaming && streamContent && (
                 <div className="message from-ai">
                   <div className="message-bubble">{streamContent}</div>
-                  <span className="message-time">печатает...</span>
+                  <span className="message-time">{t("chat.typing")}</span>
                 </div>
               )}
 
@@ -1139,7 +1152,7 @@ function ChatPageInner() {
                 <div className="message from-ai">
                   <div className="message-bubble generating-indicator">
                     <div className="generating-spinner" />
-                    <span>Генерация изображения...</span>
+                    <span>{t("chat.generatingImage")}</span>
                   </div>
                 </div>
               )}
@@ -1148,7 +1161,7 @@ function ChatPageInner() {
             <div className="chat-input-bar">
               {streaming ? (
                 <button onClick={handleAbort} className="abort-btn">
-                  Стоп
+                  {t("chat.stop")}
                 </button>
               ) : null}
 
@@ -1158,11 +1171,11 @@ function ChatPageInner() {
                   <span className="recording-time">
                     {formatRecordingTime(recordingTime)}
                   </span>
-                  <button onClick={cancelRecording} className="record-cancel-btn" title="Отмена">
-                    Отмена
+                  <button onClick={cancelRecording} className="record-cancel-btn" title={t("common.cancel")}>
+                    {t("common.cancel")}
                   </button>
-                  <button onClick={stopRecording} className="record-stop-btn" title="Отправить">
-                    Отправить
+                  <button onClick={stopRecording} className="record-stop-btn" title={t("chat.send")}>
+                    {t("chat.send")}
                   </button>
                 </div>
               ) : (
@@ -1177,7 +1190,7 @@ function ChatPageInner() {
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       )}
-                      {inputMode === "ask" ? "Ask" : "Image"}
+                      {inputMode === "ask" ? t("chat.modeAsk") : t("chat.modeImage")}
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginLeft: 2 }}>
                         <path d="M2.5 4L5 6.5L7.5 4" stroke="#888" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -1189,14 +1202,14 @@ function ChatPageInner() {
                           onClick={() => { setInputMode("ask"); setShowInputModeDropdown(false); }}
                         >
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                          Ask
+                          {t("chat.modeAsk")}
                         </button>
                         <button
                           className={`input-mode-option ${inputMode === "image" ? "active" : ""}`}
                           onClick={() => { setInputMode("image"); setShowInputModeDropdown(false); }}
                         >
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          Image
+                          {t("chat.modeImage")}
                         </button>
                       </div>
                     )}
@@ -1210,7 +1223,7 @@ function ChatPageInner() {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         className="chat-text-input"
-                        placeholder="Leave a message..."
+                        placeholder={t("chat.inputPlaceholder")}
                         disabled={streaming || generatingInThisChat}
                         autoFocus
                       />
@@ -1218,7 +1231,7 @@ function ChatPageInner() {
                         onClick={startRecording}
                         disabled={streaming || generatingInThisChat}
                         className="input-icon-btn"
-                        title="Голосовое сообщение"
+                        title={t("chat.voiceMessage")}
                       >
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C6.17 0.5 5.5 1.17 5.5 2v5c0 0.83 0.67 1.5 1.5 1.5s1.5-0.67 1.5-1.5V2c0-0.83-0.67-1.5-1.5-1.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 6v1a4 4 0 008 0V6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11.5V13.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                       </button>
@@ -1236,7 +1249,7 @@ function ChatPageInner() {
                       disabled={streaming || generatingInThisChat}
                       className="choose-pose-btn"
                     >
-                      {generatingInThisChat ? "Генерация..." : "Выбрать позу"}
+                      {generatingInThisChat ? t("chat.generating") : t("chat.choosePose")}
                     </button>
                   )}
                 </>
@@ -1245,14 +1258,14 @@ function ChatPageInner() {
           </div>
         ) : (
           <div className="empty-state">
-            <h2 style={{ color: "#fff", marginBottom: 12 }}>Выберите чат или создайте новый</h2>
+            <h2 style={{ color: "#fff", marginBottom: 12 }}>{t("chat.emptyTitle")}</h2>
             <p style={{ color: "#848484" }}>
-              Нажмите + чтобы начать новый чат с AI-персонажем.
+              {t("chat.emptyDesc")}
             </p>
             {isDemo && (
               <p style={{ color: "#f95bad", marginTop: 12, fontSize: 13 }}>
-                Бесплатный план: {DEMO_MESSAGE_LIMIT} сообщений/день, без голосовых функций.{" "}
-                <Link href="/profile" style={{ color: "#f95bad" }}>Оформить подписку →</Link>
+                {t("chat.demoPlan", { limit: DEMO_MESSAGE_LIMIT })}{" "}
+                <Link href="/profile" style={{ color: "#f95bad" }}>{t("chat.subscribeArrow")}</Link>
               </p>
             )}
           </div>
@@ -1321,7 +1334,7 @@ function ChatPageInner() {
             <div className="profile-bio">
               {(activeCharPersonality["description"] as string) ||
                (activeCharPersonality["bio"] as string) ||
-               "No description available."}
+               t("chat.noDescription")}
             </div>
           </div>
 
@@ -1329,15 +1342,15 @@ function ChatPageInner() {
 
           {/* About Me */}
           <div className="about-me">
-            <div className="about-me-title">About me:</div>
+            <div className="about-me-title">{t("chat.aboutMe")}</div>
             <div className="info-card">
               <div className="info-card-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14A6 6 0 108 2a6 6 0 000 12z" stroke="#fff" strokeWidth="1.2"/><path d="M8 5v3l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
               </div>
               <div className="info-card-text">
-                <div className="info-card-label">AGE</div>
+                <div className="info-card-label">{t("chat.age")}</div>
                 <div className="info-card-value">
-                  {activeCharPersonality["age"] ? `${activeCharPersonality["age"]} years old` : "—"}
+                  {activeCharPersonality["age"] ? t("chat.yearsOld", { age: activeCharPersonality["age"] as string | number }) : "—"}
                 </div>
               </div>
             </div>
@@ -1347,7 +1360,7 @@ function ChatPageInner() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="info-card-text">
-                  <div className="info-card-label">OCCUPATION</div>
+                  <div className="info-card-label">{t("chat.occupation")}</div>
                   <div className="info-card-value">
                     {(activeCharPersonality["work"] as string[] | string | undefined)
                       ? Array.isArray(activeCharPersonality["work"])
@@ -1364,7 +1377,7 @@ function ChatPageInner() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="#fff" strokeWidth="1.2"/><circle cx="8" cy="7" r="1.5" stroke="#fff" strokeWidth="1.2"/></svg>
                 </div>
                 <div className="info-card-text">
-                  <div className="info-card-label">NATIONALITY</div>
+                  <div className="info-card-label">{t("chat.nationality")}</div>
                   <div className="info-card-value">
                     {String(activeCharPersonality["nationality"] || activeCharPersonality["ethnicity"] || "—")}
                   </div>
@@ -1377,7 +1390,7 @@ function ChatPageInner() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="info-card-text">
-                  <div className="info-card-label">RELATIONSHIP</div>
+                  <div className="info-card-label">{t("chat.relationship")}</div>
                   <div className="info-card-value">
                     {String(activeCharPersonality["relationshipType"] || "—")}
                   </div>
@@ -1390,7 +1403,7 @@ function ChatPageInner() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14A6 6 0 108 2a6 6 0 000 12z" stroke="#fff" strokeWidth="1.2"/><path d="M6 6s0-2 2-2 2 2 2 2-1 1-2 1-2 1-2 2v1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="11" r="0.6" fill="#fff"/></svg>
                 </div>
                 <div className="info-card-text">
-                  <div className="info-card-label">PERSONALITY</div>
+                  <div className="info-card-label">{t("chat.personality")}</div>
                   <div className="info-card-value">
                     {String(activeCharPersonality["personality"] || "—")}
                   </div>

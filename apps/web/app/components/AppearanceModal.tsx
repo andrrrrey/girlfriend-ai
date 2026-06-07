@@ -2,6 +2,15 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { AppearanceCategory, AppearanceOptionsResponse } from "../../lib/api";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
+
+const CONDITION_LABEL_KEYS: Record<string, TKey> = {
+  "Overall Condition": "gen.overallCondition",
+  "Damage": "gen.damage",
+  "Stains": "gen.stains",
+  "Liquids": "gen.liquids",
+};
 
 export interface AppearanceSelections {
   outfits: string[];
@@ -44,6 +53,7 @@ function SelectedOverlay() {
 }
 
 export default function AppearanceModal({ open, onClose, selections, onSave, options }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState<AppearanceSelections>({ outfits: [...selections.outfits], outfitDetails: [...selections.outfitDetails], condition: [...selections.condition] });
   const [activeId, setActiveId] = useState<string>("");
 
@@ -94,20 +104,20 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
   type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
   const sidebarItems: SidebarEntry[] = [];
   if (options.OUTFITS.length > 0) {
-    sidebarItems.push({ type: "header", label: "Outfits" });
+    sidebarItems.push({ type: "header", label: t("gen.outfits") });
     options.OUTFITS.forEach((cat) => sidebarItems.push({ type: "item", id: `outfits-${cat.id}`, label: cat.name }));
   }
   if (options.OUTFIT_DETAILS.length > 0) {
-    sidebarItems.push({ type: "header", label: "Outfit Details" });
+    sidebarItems.push({ type: "header", label: t("gen.outfitDetails") });
     options.OUTFIT_DETAILS.forEach((cat) => sidebarItems.push({ type: "item", id: `details-${cat.id}`, label: cat.name }));
   }
-  sidebarItems.push({ type: "item", id: "condition", label: "Condition of Clothes" });
+  sidebarItems.push({ type: "item", id: "condition", label: t("gen.conditionOfClothes") });
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div className="appearance-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>Appearance</span>
+          <span style={s.title}>{t("gen.titleAppearance")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -129,7 +139,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
             <div style={s.sidebarDivider} />
             <button style={s.sidebarGenerate} onClick={handleRandom}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
+              {t("gen.generateRandom")}
             </button>
           </div>
 
@@ -149,12 +159,12 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                       </button>
                     );
                   })}
-                  {cat.options.length === 0 && <div style={s.emptyHint}>No options in this category.</div>}
+                  {cat.options.length === 0 && <div style={s.emptyHint}>{t("gen.noOptions")}</div>}
                 </div>
               </div>
             ))}
             {options.OUTFITS.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>Outfits</div><div style={s.emptyHint}>No outfits added yet. Add them in the admin panel.</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{t("gen.outfits")}</div><div style={s.emptyHint}>{t("gen.noOutfits")}</div></div>
             )}
 
             {/* Outfit Details categories */}
@@ -172,22 +182,22 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                       </button>
                     );
                   })}
-                  {cat.options.length === 0 && <div style={s.emptyHint}>No options in this category.</div>}
+                  {cat.options.length === 0 && <div style={s.emptyHint}>{t("gen.noOptions")}</div>}
                 </div>
               </div>
             ))}
             {options.OUTFIT_DETAILS.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>Outfit Details</div><div style={s.emptyHint}>No outfit details added yet. Add them in the admin panel.</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{t("gen.outfitDetails")}</div><div style={s.emptyHint}>{t("gen.noOutfitDetails")}</div></div>
             )}
 
             {/* Condition */}
             <div data-section-id="condition" style={s.section}>
-              <div style={s.sectionTitle}>Condition of Clothes</div>
-              <p style={s.conditionNote}>*Selected conditions apply to all selected clothing in the prompt.</p>
+              <div style={s.sectionTitle}>{t("gen.conditionOfClothes")}</div>
+              <p style={s.conditionNote}>{t("prompt.conditionNote")}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {CONDITION_SECTIONS.map((sec) => (
                   <div key={sec.label}>
-                    <div style={s.sectionLabel}>{sec.label}</div>
+                    <div style={s.sectionLabel}>{CONDITION_LABEL_KEYS[sec.label] ? t(CONDITION_LABEL_KEYS[sec.label]) : sec.label}</div>
                     <div style={s.conditionPillRow}>
                       {sec.options.map((opt) => {
                         const selected = draft.condition.includes(opt);
@@ -206,8 +216,8 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
         </div>
 
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

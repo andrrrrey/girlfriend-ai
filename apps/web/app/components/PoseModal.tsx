@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
+import { useT } from "../../context/language";
 
 export interface PoseSelections {
   facialExpressions: string[];
@@ -40,6 +41,7 @@ function SelectedOverlay() {
 }
 
 export default function PoseModal({ open, onClose, selections, onSave, options, posesOnly = false }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState<PoseSelections>({
     facialExpressions: [...selections.facialExpressions],
     poses: [...selections.poses],
@@ -98,11 +100,11 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
   type SidebarEntry = { type: "header"; label: string } | { type: "item"; id: string; label: string };
   const sidebarItems: SidebarEntry[] = [];
   if (!posesOnly && options.FACIAL_EXPRESSION.length > 0) {
-    sidebarItems.push({ type: "header", label: "Facial Expression" });
+    sidebarItems.push({ type: "header", label: t("gen.facialExpression") });
     options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: cat.name }));
   }
   if (poseCategories.length > 0) {
-    sidebarItems.push({ type: "header", label: "Pose" });
+    sidebarItems.push({ type: "header", label: t("gen.poseHeader") });
     poseCategories.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: cat.name }));
   }
 
@@ -110,7 +112,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
     <div style={s.overlay} onClick={onClose}>
       <div className="pose-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>{posesOnly ? "Action" : "Pose"}</span>
+          <span style={s.title}>{posesOnly ? t("gen.titleAction") : t("gen.titlePose")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -132,7 +134,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
             <div style={s.sidebarDivider} />
             <button style={s.sidebarGenerate} onClick={handleRandom}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
+              {t("gen.generateRandom")}
             </button>
           </div>
 
@@ -152,12 +154,12 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
                       </button>
                     );
                   })}
-                  {cat.options.length === 0 && <div style={s.emptyHint}>No options in this category.</div>}
+                  {cat.options.length === 0 && <div style={s.emptyHint}>{t("gen.noOptions")}</div>}
                 </div>
               </div>
             ))}
             {!posesOnly && options.FACIAL_EXPRESSION.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>Facial Expression</div><div style={s.emptyHint}>No facial expressions added yet.</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{t("gen.facialExpression")}</div><div style={s.emptyHint}>{t("gen.noFacialExpressions")}</div></div>
             )}
 
             {/* Pose categories */}
@@ -175,19 +177,19 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
                       </button>
                     );
                   })}
-                  {cat.options.length === 0 && <div style={s.emptyHint}>No options in this category.</div>}
+                  {cat.options.length === 0 && <div style={s.emptyHint}>{t("gen.noOptions")}</div>}
                 </div>
               </div>
             ))}
             {poseCategories.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>Pose</div><div style={s.emptyHint}>No poses added yet.</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{t("gen.poseHeader")}</div><div style={s.emptyHint}>{t("gen.noPosesAdded")}</div></div>
             )}
           </div>
         </div>
 
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

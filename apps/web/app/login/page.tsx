@@ -3,12 +3,14 @@
 import React, { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import { auth } from "../../lib/api";
 import Logo from "../components/Logo";
 import TurnstileWidget from "../components/TurnstileWidget";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export default function LoginPage() {
       await login(email, password, turnstileToken);
       window.location.href = "/";
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err.message || t("auth.loginFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -51,7 +53,7 @@ export default function LoginPage() {
           <Logo />
         </div>
 
-        <h1 style={styles.title}>Вход</h1>
+        <h1 style={styles.title}>{t("auth.loginTitle")}</h1>
 
         {error && (
           <div style={styles.error}>
@@ -76,18 +78,18 @@ export default function LoginPage() {
                   textDecoration: "underline",
                 }}
               >
-                Отправить письмо повторно
+                {t("auth.resendEmail")}
               </button>
             )}
             {verificationSent && (
               <span style={{ display: "block", marginTop: 8, color: "#c1f0aa", fontSize: 13 }}>
-                Письмо отправлено!
+                {t("auth.emailSent")}
               </span>
             )}
           </div>
         )}
 
-        <label style={styles.label}>Email</label>
+        <label style={styles.label}>{t("auth.email")}</label>
         <input
           type="email"
           value={email}
@@ -103,7 +105,7 @@ export default function LoginPage() {
           placeholder="email@example.com"
         />
 
-        <label style={styles.label}>Пароль</label>
+        <label style={styles.label}>{t("auth.password")}</label>
         <input
           type="password"
           value={password}
@@ -116,11 +118,11 @@ export default function LoginPage() {
             borderColor: focusedField === "password" ? "#f95bad" : "#313131",
             boxShadow: focusedField === "password" ? "0 0 0 2px rgba(249,91,173,0.15)" : "none",
           }}
-          placeholder="Введите пароль"
+          placeholder={t("auth.passwordPlaceholder")}
         />
 
         <div style={{ textAlign: "right" as const, marginTop: 8 }}>
-          <Link href="/forgot-password" style={styles.link}>Забыли пароль?</Link>
+          <Link href="/forgot-password" style={styles.link}>{t("auth.forgotPassword")}</Link>
         </div>
 
         {turnstileSiteKey && (
@@ -136,13 +138,13 @@ export default function LoginPage() {
           disabled={submitting || !canSubmit}
           style={{ ...styles.button, opacity: submitting || !canSubmit ? 0.7 : 1 }}
         >
-          {submitting ? "Вход..." : "Войти"}
+          {submitting ? t("auth.signingIn") : t("auth.signIn")}
         </button>
 
         <p style={styles.footer}>
-          Нет аккаунта?{" "}
+          {t("auth.noAccount")}{" "}
           <Link href="/register" style={styles.link}>
-            Регистрация
+            {t("auth.register")}
           </Link>
         </p>
       </form>

@@ -10,6 +10,7 @@ import FilterDropdown from "../../components/FilterDropdown";
 import ScrollableTagsRow from "../../components/ScrollableTagsRow";
 import CharacterProfilePopup from "../../components/CharacterProfilePopup";
 import { formatTag, formatTags } from "../../../lib/tags";
+import { useT } from "../../../context/language";
 
 const PAGE_CSS = `
   .up-wrap {
@@ -355,17 +356,6 @@ const PAGE_CSS = `
   }
 `;
 
-const TYPE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "image", label: "Image" },
-  { value: "video", label: "Video" },
-  { value: "character", label: "Character" },
-];
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-];
-
 function SocialIcon({ provider }: { provider: string }) {
   switch (provider) {
     case "tiktok":
@@ -410,6 +400,17 @@ type ContentItem =
   | { kind: "character"; item: Character };
 
 export default function UserProfilePage() {
+  const { t } = useT();
+  const TYPE_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "image", label: t("media.image") },
+    { value: "video", label: t("media.video") },
+    { value: "character", label: t("media.character") },
+  ];
+  const SORT_OPTIONS = [
+    { value: "newest", label: t("filter.newest") },
+    { value: "oldest", label: t("filter.oldest") },
+  ];
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -603,8 +604,8 @@ export default function UserProfilePage() {
             <circle cx="12" cy="8" r="4"/>
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
-          <p style={{ margin: 0, fontSize: 16, color: "#fff" }}>User not found</p>
-          <p style={{ margin: 0, fontSize: 13 }}>@{nickname} doesn&apos;t exist</p>
+          <p style={{ margin: 0, fontSize: 16, color: "#fff" }}>{t("user.notFound")}</p>
+          <p style={{ margin: 0, fontSize: 13 }}>{t("user.notFoundSub", { nickname: String(nickname) })}</p>
         </div>
       </>
     );
@@ -669,18 +670,18 @@ export default function UserProfilePage() {
               disabled={followLoading}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: following ? "#f95bad" : "#4caf50", flexShrink: 0 }} />
-              {following ? "Following" : "Follow"}
+              {following ? t("user.following") : t("user.follow")}
             </button>
           )}
 
           {/* About me */}
           {aboutText && (
             <div>
-              <p className="up-about-label">About me</p>
+              <p className="up-about-label">{t("char.aboutTab")}</p>
               <p className="up-about-text" style={{ marginTop: 6 }}>{displayAbout}</p>
               {shouldTruncate && (
                 <button className="up-read-more" onClick={() => setAboutExpanded((v) => !v)}>
-                  {aboutExpanded ? "Show less" : "Read more"}
+                  {aboutExpanded ? t("user.showLess") : t("user.readMore")}
                 </button>
               )}
             </div>
@@ -699,7 +700,7 @@ export default function UserProfilePage() {
               <input
                 className="up-search-input"
                 type="text"
-                placeholder="Search..."
+                placeholder={t("common.search")}
                 value={search}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -730,13 +731,13 @@ export default function UserProfilePage() {
           {/* Filter dropdowns */}
           <div className="up-filter-row">
             <FilterDropdown
-              label="Type"
+              label={t("filter.type")}
               value={typeFilter}
               options={TYPE_OPTIONS}
               onChange={setTypeFilter}
             />
             <FilterDropdown
-              label="Sort by"
+              label={t("filter.sortBy")}
               value={sortBy}
               options={SORT_OPTIONS}
               onChange={setSortBy}
@@ -757,7 +758,7 @@ export default function UserProfilePage() {
                 <circle cx="8.5" cy="8.5" r="1.5"/>
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
-              <span>No content yet</span>
+              <span>{t("user.noContent")}</span>
             </div>
           ) : (
             <div className="up-grid">
@@ -780,7 +781,7 @@ export default function UserProfilePage() {
                             if (url) window.open(url, "_blank");
                           }}
                         >
-                          View
+                          {t("gallery.view")}
                         </button>
                       </div>
                       <div className="up-card">
@@ -798,7 +799,7 @@ export default function UserProfilePage() {
                           ) : (
                             <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1" fill="#fff"/><path d="M2 11l3.5-3.5 2.5 2.5 2-2L14 11" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           )}
-                          {isVideo ? "Video" : "Image"}
+                          {isVideo ? t("media.video") : t("media.image")}
                         </div>
                         <div style={{ position: "absolute", top: 8, right: 8, zIndex: 5 }}>
                           <LikeButton

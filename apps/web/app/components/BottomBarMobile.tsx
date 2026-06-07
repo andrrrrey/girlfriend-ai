@@ -3,9 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "../../context/language";
 
 export default function BottomBarMobile() {
   const pathname = usePathname();
+  const { t } = useT();
 
   if (pathname.startsWith("/shorts")) return null;
 
@@ -21,7 +23,7 @@ export default function BottomBarMobile() {
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
-        <span>Home</span>
+        <span>{t("bottombar.home")}</span>
       </Link>
       <Link href="/gallery" className={`bb-tab${isActive("/gallery") ? " bb-active" : ""}`}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -29,7 +31,7 @@ export default function BottomBarMobile() {
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <polyline points="21 15 16 10 5 21"/>
         </svg>
-        <span>Gallery</span>
+        <span>{t("bottombar.gallery")}</span>
       </Link>
       <Link href="/create" className={`bb-tab bb-tab-create${isActive("/create") ? " bb-active" : ""}`}>
         <div className="bb-create-btn">
@@ -38,13 +40,13 @@ export default function BottomBarMobile() {
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </div>
-        <span>Create</span>
+        <span>{t("bottombar.create")}</span>
       </Link>
       <Link href="/chat" className={`bb-tab${isActive("/chat") ? " bb-active" : ""}`}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
         </svg>
-        <span>Chat</span>
+        <span>{t("bottombar.chat")}</span>
       </Link>
       <a href="#" className={`bb-tab${false ? " bb-active" : ""}`}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -53,7 +55,7 @@ export default function BottomBarMobile() {
           <line x1="12" y1="22" x2="8" y2="9"/>
           <line x1="12" y1="22" x2="16" y2="9"/>
         </svg>
-        <span>Premium</span>
+        <span>{t("bottombar.premium")}</span>
       </a>
     </nav>
   );

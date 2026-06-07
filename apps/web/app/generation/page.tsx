@@ -5,6 +5,7 @@ import { useGeneration } from "../../context/generation";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
   createImageJob,
@@ -957,6 +958,7 @@ const GALLERY_TAG_STOP_WORDS = new Set([
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
+  const { t: tr } = useT();
   const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
@@ -1039,7 +1041,7 @@ export default function GenerationPage() {
       setInitMediaKey(key);
       setInitMediaUrl(URL.createObjectURL(file));
     } catch (err: any) {
-      setError(err?.message || "Failed to upload file");
+      setError(err?.message || tr("gp.errUpload"));
     } finally {
       setUploadingMedia(false);
     }
@@ -1401,7 +1403,7 @@ export default function GenerationPage() {
     // Режимы из медиа требуют исходного изображения/видео.
     const mode = isVideo ? videoSubTab : "scratch";
     if (isVideo && (mode === "img2vid" || mode === "continue") && !initMediaKey) {
-      setError(mode === "img2vid" ? "Select a source image" : "Select a source video");
+      setError(mode === "img2vid" ? tr("gp.errSelectImage") : tr("gp.errSelectVideo"));
       setSubmitting(false);
       return;
     }
@@ -1455,7 +1457,7 @@ export default function GenerationPage() {
           used: err.body.used,
         });
       } else {
-        setError(err.message || "Failed to start generation");
+        setError(err.message || tr("gp.errStartGen"));
       }
     } finally {
       setSubmitting(false);
@@ -1479,7 +1481,7 @@ export default function GenerationPage() {
       setHistory((prev) => prev.filter((h) => !selectedItems.has(h.jobId)));
       setSelectedItems(new Set());
     } catch {
-      setError("Failed to delete some items");
+      setError(tr("gp.errDelete"));
     }
   }, [selectedItems]);
 
@@ -1600,12 +1602,12 @@ export default function GenerationPage() {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="page-content">
-        <div className="page-label">Generate &nbsp;content</div>
+        <div className="page-label">{tr("gp.pageLabel")}</div>
 
         <div className="generate-content">
           {/* Title */}
           <h1 className="page-title">
-            <span className="accent">Generate </span>Just Like You Want It
+            <span className="accent">{tr("gp.titleAccent")}</span>{tr("gp.titleRest")}
           </h1>
 
           {/* Segmented Tabs: Video / Image */}
@@ -1615,14 +1617,14 @@ export default function GenerationPage() {
               onClick={() => setActiveTab("video")}
             >
               <svg viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor"/></svg>
-              Video
+              {tr("media.video")}
             </button>
             <button
               className={`seg-tab ${activeTab === "image" ? "active" : ""}`}
               onClick={() => { setActiveTab("image"); resetInitMedia(); }}
             >
               <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1"/><path d="M2 12l3.5-3.5L8 11l3-3 3 3v1.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V12z" fill="currentColor" fillOpacity="0.3"/></svg>
-              Image
+              {tr("media.image")}
             </button>
           </div>
 
@@ -1633,7 +1635,7 @@ export default function GenerationPage() {
                 className={`video-subtab ${videoSubTab === "scratch" ? "active" : ""}`}
                 onClick={() => { setVideoSubTab("scratch"); resetInitMedia(); }}
               >
-                Create from Scratch
+                {tr("gp.createScratch")}
               </button>
               <button
                 className={`video-subtab ${videoSubTab === "img2vid" ? "active" : ""}`}
@@ -1642,14 +1644,14 @@ export default function GenerationPage() {
                   setVideoSubTab("img2vid"); resetInitMedia();
                 }}
               >
-                Convert Image to Video
+                {tr("gp.convertImg2Vid")}
               </button>
               <button
                 className="video-subtab disabled"
-                title="Coming soon"
-                onClick={() => setError("Continue Existing Video is coming soon")}
+                title={tr("gp.comingSoon")}
+                onClick={() => setError(tr("gp.continueComingSoon"))}
               >
-                Continue Existing Video
+                {tr("gp.continueExisting")}
               </button>
               <div className="video-subtabs-line" />
               <div
@@ -1662,7 +1664,7 @@ export default function GenerationPage() {
           {/* Media picker for Continue Existing Video (source video) */}
           {activeTab === "video" && videoSubTab === "continue" && (
             <div className="chips-section">
-              <div className="section-title">Source Video</div>
+              <div className="section-title">{tr("gp.sourceVideo")}</div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1681,7 +1683,7 @@ export default function GenerationPage() {
                     fontFamily: "'Syne', sans-serif", padding: 4,
                   }}
                 >
-                  {uploadingMedia ? "Uploading…" : "Upload"}
+                  {uploadingMedia ? tr("gp.uploading") : tr("gp.upload")}
                 </button>
                 {history
                   .filter((h) => h.type === "video" && h.output?.url)
@@ -1710,7 +1712,7 @@ export default function GenerationPage() {
                     onClick={resetInitMedia}
                     style={{ background: "transparent", border: "1px solid #4a4a4a", borderRadius: 6, color: "#969696", fontSize: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "'Syne', sans-serif" }}
                   >
-                    Remove
+                    {tr("profile.remove")}
                   </button>
                 </div>
               )}
@@ -1735,7 +1737,7 @@ export default function GenerationPage() {
                 onClick={() => setModelDropdownOpen((v) => !v)}
               >
                 <div className="sort-text">
-                  <span className="label">AI model:</span>
+                  <span className="label">{tr("gp.aiModel")}</span>
                   <span className="value">
                     {activeTab === "video"
                       ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
@@ -1813,7 +1815,7 @@ export default function GenerationPage() {
                       <svg viewBox="0 0 20 20" fill="none"><path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 13v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2" stroke="#fff" strokeWidth="1.3" strokeLinecap="round"/></svg>
                     </div>
                     <div className="editor-text">
-                      <div className="name">Image File</div>
+                      <div className="name">{tr("gp.imageFile")}</div>
                       <div className="sub required">{uploadingMedia ? "uploading…" : "required"}</div>
                     </div>
                   </div>
@@ -1829,8 +1831,8 @@ export default function GenerationPage() {
                       <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l1.8 4.7L16.7 8 12 9.8 10.2 14.5 8.4 9.8 3.7 8l4.7-1.3L10 2z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
                     </div>
                     <div className="editor-text">
-                      <div className="name">Action</div>
-                      <div className="sub required">required</div>
+                      <div className="name">{tr("gp.action")}</div>
+                      <div className="sub required">{tr("gp.required")}</div>
                     </div>
                     {actionTags.length > 0 && (
                       <div className="editor-tags">
@@ -1848,10 +1850,10 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="heading">
-                  <span>Custom Promt</span>
+                  <span>{tr("gp.customPrompt")}</span>
                   <span dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
                 </div>
-                <div className="premium-label">premium feature</div>
+                <div className="premium-label">{tr("gp.premiumFeature")}</div>
                 {promptDetailsSelections.negativePromptTerms.length > 0 && (
                   <div className="editor-tags">
                     {promptDetailsSelections.negativePromptTerms.slice(0, 3).map((t) => <span key={t} className="editor-tag">{t}</span>)}
@@ -1871,8 +1873,8 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">Character</div>
-                  <div className="sub required">required</div>
+                  <div className="name">{tr("media.character")}</div>
+                  <div className="sub required">{tr("gp.required")}</div>
                 </div>
                 {hasCharSelections && (
                   <div className="editor-tags">
@@ -1890,8 +1892,8 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><path d="M7 3h6a2 2 0 0 1 2 2v1H5V5a2 2 0 0 1 2-2zM5 6h10l-1 11H6L5 6z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M8 9v5M12 9v5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">Appearance</div>
-                  <div className="sub">optional</div>
+                  <div className="name">{tr("gen.titleAppearance")}</div>
+                  <div className="sub">{tr("gp.optionalLabel")}</div>
                 </div>
                 {hasAppearanceSelections && (
                   <div className="editor-tags">
@@ -1909,8 +1911,8 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><path d="M10 3a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 5c-2.5 0-4 1.5-4 3.5V12l1.5 5h5L14 12V8.5C14 6.5 12.5 5 10 5z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M6 10l-2 1M14 10l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">Pose</div>
-                  <div className="sub required">required</div>
+                  <div className="name">{tr("gen.poseHeader")}</div>
+                  <div className="sub required">{tr("gp.required")}</div>
                 </div>
                 {hasPoseSelections && (
                   <div className="editor-tags">
@@ -1928,8 +1930,8 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="#fff" strokeWidth="1.2"/><path d="M2 13l4-4 3 3 4-4 5 4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="6.5" cy="8.5" r="1.5" fill="#fff"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">Scene</div>
-                  <div className="sub">optional</div>
+                  <div className="name">{tr("gen.titleScene")}</div>
+                  <div className="sub">{tr("gp.optionalLabel")}</div>
                 </div>
                 {hasSceneSelections && (
                   <div className="editor-tags">
@@ -1947,8 +1949,8 @@ export default function GenerationPage() {
                   <svg viewBox="0 0 20 20" fill="none"><path d="M2 7h2l2-3h8l2 3h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><circle cx="10" cy="12" r="3" stroke="#fff" strokeWidth="1.2"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">Camera</div>
-                  <div className="sub">optional</div>
+                  <div className="name">{tr("gen.titleCamera")}</div>
+                  <div className="sub">{tr("gp.optionalLabel")}</div>
                 </div>
                 {hasCameraSelections && (
                   <div className="editor-tags">
@@ -1970,7 +1972,7 @@ export default function GenerationPage() {
                     Prompt Details
                     <span dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
                   </div>
-                  <div className="sub premium-label">premium feature</div>
+                  <div className="sub premium-label">{tr("gp.premiumFeature")}</div>
                 </div>
                 {promptDetailsSelections.negativePromptTerms.length > 0 && (
                   <div className="editor-tags">
@@ -1990,7 +1992,7 @@ export default function GenerationPage() {
 
           {/* Orientation */}
           <div className="chips-section">
-            <div className="section-title">Orientation</div>
+            <div className="section-title">{tr("gp.orientation")}</div>
             <div className="chips-row">
               {ASPECT_OPTIONS.map((opt) => (
                 <div
@@ -2034,15 +2036,15 @@ export default function GenerationPage() {
 
           {/* Bottom buttons */}
           <div className="bottom-btns">
-            <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>Cancel</button>
+            <button className="btn-cancel" onClick={() => { setPromptOpen(false); setPrompt(""); setError(null); }}>{tr("common.cancel")}</button>
             <button
               className="btn-generate"
               disabled={(!prompt.trim() && !hasAnySelection) || !canGenerate || submitting}
               onClick={handleGenerate}
             >
               {submitting || !canGenerate
-                ? "Generating..."
-                : `Generate ${activeTab === "video" ? "Video" : "Image"}`
+                ? tr("gp.generating")
+                : tr("gp.generate", { type: activeTab === "video" ? tr("media.video") : tr("media.image") })
               }
             </button>
           </div>
@@ -2051,7 +2053,7 @@ export default function GenerationPage() {
           {activeJobs.length > 0 && (
             <div className="spinner-container">
               <div className="spinner" />
-              <span>Creating your {activeTab === "video" ? "video" : "image"}{activeJobs.length > 1 ? "s" : ""}... ({activeJobs.length} in progress)</span>
+              <span>{tr("gp.creating", { type: activeTab === "video" ? tr("media.video") : tr("media.image"), count: activeJobs.length })}</span>
             </div>
           )}
 
@@ -2062,7 +2064,7 @@ export default function GenerationPage() {
           <div className="sep" />
           <div className="gallery-section">
             <h2 className="gallery-title">
-              Photo&Video <span className="accent">Gallery</span>
+              {tr("gallery.titlePink")}<span className="accent">{tr("gallery.titleWhite")}</span>
             </h2>
 
             {/* Gallery filter tabs */}
@@ -2072,21 +2074,21 @@ export default function GenerationPage() {
                 onClick={() => setGalleryFilter("all")}
               >
                 <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
-                All
+                {tr("media.all")}
               </button>
               <button
                 className={`gallery-filter-tab ${galleryFilter === "image" ? "active" : ""}`}
                 onClick={() => setGalleryFilter("image")}
               >
                 <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1"/><path d="M2 12l3.5-3.5L8 11l3-3 3 3v1.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V12z" fill="currentColor" fillOpacity="0.3"/></svg>
-                Image
+                {tr("media.image")}
               </button>
               <button
                 className={`gallery-filter-tab ${galleryFilter === "video" ? "active" : ""}`}
                 onClick={() => setGalleryFilter("video")}
               >
                 <svg viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor"/></svg>
-                Video
+                {tr("media.video")}
               </button>
             </div>
 
@@ -2096,13 +2098,13 @@ export default function GenerationPage() {
                 <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2"/><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 <input
                   className="gallery-search"
-                  placeholder="Search"
+                  placeholder={tr("common.search")}
                   value={gallerySearch}
                   onChange={(e) => setGallerySearch(e.target.value)}
                 />
               </div>
               <div className="chosen-count">
-                Chosen content: <span>{selectedItems.size}</span>
+                {tr("gp.chosenContent")} <span>{selectedItems.size}</span>
               </div>
               <button
                 className="btn-download-selected"
@@ -2110,7 +2112,7 @@ export default function GenerationPage() {
                 onClick={handleDownloadSelected}
               >
                 <svg viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Download
+                {tr("myai.download")}
               </button>
               <button
                 className="btn-delete-selected"
@@ -2118,7 +2120,7 @@ export default function GenerationPage() {
                 onClick={handleDeleteSelected}
               >
                 <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M6 7v5M10 7v5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 4l1 10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-10" stroke="currentColor" strokeWidth="1.2"/></svg>
-                Delete
+                {tr("common.delete")}
               </button>
             </div>
 
@@ -2142,7 +2144,7 @@ export default function GenerationPage() {
             {/* Gallery grid */}
             {filteredHistory.length === 0 ? (
               <div className="empty-gallery">
-                No generated content yet. Create your first one above!
+                {tr("gp.emptyGallery")}
               </div>
             ) : (
               <div className="gallery-grid">

@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { auth } from "../../lib/api";
+import { useT } from "../../context/language";
 import Logo from "../components/Logo";
 
 export default function ForgotPasswordPage() {
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -21,7 +23,7 @@ export default function ForgotPasswordPage() {
       const result = await auth.forgotPassword(email);
       setSuccess(result.message);
     } catch (err: any) {
-      setError(err.message || "Failed to send reset email");
+      setError(err.message || t("auth.forgotFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -34,7 +36,7 @@ export default function ForgotPasswordPage() {
           <Logo />
         </div>
 
-        <h1 style={styles.title}>Восстановление пароля</h1>
+        <h1 style={styles.title}>{t("auth.forgotTitle")}</h1>
 
         {error && <div style={styles.error}>{error}</div>}
         {success && <div style={styles.successBox}>{success}</div>}
@@ -42,10 +44,10 @@ export default function ForgotPasswordPage() {
         {!success && (
           <>
             <p style={styles.description}>
-              Введите email, указанный при регистрации. Мы отправим ссылку для сброса пароля.
+              {t("auth.forgotDesc")}
             </p>
 
-            <label style={styles.label}>Email</label>
+            <label style={styles.label}>{t("auth.email")}</label>
             <input
               type="email"
               value={email}
@@ -66,14 +68,14 @@ export default function ForgotPasswordPage() {
               disabled={submitting}
               style={{ ...styles.button, opacity: submitting ? 0.7 : 1 }}
             >
-              {submitting ? "Отправка..." : "Отправить ссылку"}
+              {submitting ? t("auth.sending") : t("auth.sendLink")}
             </button>
           </>
         )}
 
         <p style={styles.footer}>
           <Link href="/login" style={styles.link}>
-            Вернуться ко входу
+            {t("auth.backToLogin")}
           </Link>
         </p>
       </form>

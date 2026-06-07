@@ -4,9 +4,11 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { auth } from "../../lib/api";
+import { useT } from "../../context/language";
 import Logo from "../components/Logo";
 
 function ResetPasswordContent() {
+  const { t } = useT();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [password, setPassword] = useState("");
@@ -22,9 +24,9 @@ function ResetPasswordContent() {
         <div style={styles.card}>
           <div style={styles.logoRow}><Logo /></div>
           <div style={styles.iconError}>✕</div>
-          <h2 style={styles.titleCenter}>Ошибка</h2>
-          <p style={{ ...styles.text, color: "#ff7675" }}>Токен не указан. Проверьте ссылку в письме.</p>
-          <Link href="/forgot-password" style={styles.linkBlock}>Запросить новую ссылку</Link>
+          <h2 style={styles.titleCenter}>{t("auth.error")}</h2>
+          <p style={{ ...styles.text, color: "#ff7675" }}>{t("auth.verifyNoToken")}</p>
+          <Link href="/forgot-password" style={styles.linkBlock}>{t("auth.requestNewLink")}</Link>
         </div>
       </div>
     );
@@ -36,8 +38,8 @@ function ResetPasswordContent() {
         <div style={styles.card}>
           <div style={styles.logoRow}><Logo /></div>
           <div style={styles.iconSuccess}>✓</div>
-          <h2 style={styles.titleCenter}>Пароль изменён!</h2>
-          <p style={styles.text}>Переходим на страницу входа...</p>
+          <h2 style={styles.titleCenter}>{t("auth.passwordChanged")}</h2>
+          <p style={styles.text}>{t("auth.redirectingLogin")}</p>
         </div>
       </div>
     );
@@ -48,11 +50,11 @@ function ResetPasswordContent() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Пароли не совпадают");
+      setError(t("auth.passwordsNoMatch"));
       return;
     }
     if (password.length < 6) {
-      setError("Минимум 6 символов");
+      setError(t("auth.minChars"));
       return;
     }
 
@@ -62,7 +64,7 @@ function ResetPasswordContent() {
       setSuccess(true);
       setTimeout(() => { window.location.href = "/login"; }, 2000);
     } catch (err: any) {
-      setError(err.message || "Failed to reset password");
+      setError(err.message || t("auth.resetFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -79,11 +81,11 @@ function ResetPasswordContent() {
       <form onSubmit={handleSubmit} style={styles.card}>
         <div style={styles.logoRow}><Logo /></div>
 
-        <h1 style={styles.title}>Новый пароль</h1>
+        <h1 style={styles.title}>{t("auth.newPassword")}</h1>
 
         {error && <div style={styles.error}>{error}</div>}
 
-        <label style={styles.label}>Новый пароль</label>
+        <label style={styles.label}>{t("auth.newPassword")}</label>
         <input
           type="password"
           value={password}
@@ -92,10 +94,10 @@ function ResetPasswordContent() {
           onBlur={() => setFocusedField(null)}
           required
           style={inputStyle("password")}
-          placeholder="Минимум 6 символов"
+          placeholder={t("auth.minChars")}
         />
 
-        <label style={styles.label}>Подтверждение пароля</label>
+        <label style={styles.label}>{t("auth.confirmPassword")}</label>
         <input
           type="password"
           value={confirmPassword}
@@ -104,7 +106,7 @@ function ResetPasswordContent() {
           onBlur={() => setFocusedField(null)}
           required
           style={inputStyle("confirm")}
-          placeholder="Повторите пароль"
+          placeholder={t("auth.repeatPassword")}
         />
 
         <button
@@ -112,11 +114,11 @@ function ResetPasswordContent() {
           disabled={submitting}
           style={{ ...styles.button, opacity: submitting ? 0.7 : 1 }}
         >
-          {submitting ? "Сохранение..." : "Сохранить пароль"}
+          {submitting ? t("auth.saving") : t("auth.savePassword")}
         </button>
 
         <p style={styles.footer}>
-          <Link href="/login" style={styles.link}>Вернуться ко входу</Link>
+          <Link href="/login" style={styles.link}>{t("auth.backToLogin")}</Link>
         </p>
       </form>
     </div>

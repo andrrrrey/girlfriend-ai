@@ -9,6 +9,7 @@ import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import { formatTag } from "../../lib/tags";
 import LikeButton from "../components/LikeButton";
+import { useT } from "../../context/language";
 
 const PAGE_CSS = `
   .gallery-content {
@@ -304,24 +305,8 @@ const PAGE_CSS = `
   }
 `;
 
-const GENDER_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Female", label: "Female" },
-  { value: "Male", label: "Male" },
-  { value: "Non-binary", label: "Non-binary" },
-];
-const STYLE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "Realistic", label: "Realistic" },
-  { value: "Anime", label: "Anime" },
-  { value: "Fantasy", label: "Fantasy" },
-];
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "popular", label: "Popular" },
-];
-
 function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
+  const { t } = useT();
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
   const isVideo = item.type === "video";
@@ -333,14 +318,14 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
         <div className="g-hover-actions">
           <button className="g-hover-btn primary" onClick={(e) => { e.stopPropagation(); if (url) onOpen(item); }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="8" r="6"/><path d="M6 5l5 3-5 3V5z" fill="currentColor" stroke="none"/></svg>
-            View
+            {t("gallery.view")}
           </button>
           <button className="g-hover-btn secondary" onClick={(e) => {
             e.stopPropagation();
             if (url && navigator.share) navigator.share({ url }).catch(() => {});
           }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" strokeWidth="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            Share
+            {t("gallery.share")}
           </button>
         </div>
       </div>
@@ -373,7 +358,7 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
           ) : (
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1" fill="#fff"/><path d="M2 11l3.5-3.5 2.5 2.5 2-2L14 11" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           )}
-          {isVideo ? "Video" : "Image"}
+          {isVideo ? t("media.video") : t("media.image")}
         </div>
       </div>
     </div>
@@ -384,6 +369,23 @@ const PAGE_SIZE = 20;
 
 export default function GalleryPage() {
   const { user, loading } = useAuth();
+  const { t } = useT();
+  const GENDER_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "Female", label: t("filter.female") },
+    { value: "Male", label: t("filter.male") },
+    { value: "Non-binary", label: t("filter.nonbinary") },
+  ];
+  const STYLE_OPTIONS = [
+    { value: "", label: t("common.all") },
+    { value: "Realistic", label: t("filter.realistic") },
+    { value: "Anime", label: t("filter.anime") },
+    { value: "Fantasy", label: t("filter.fantasy") },
+  ];
+  const SORT_OPTIONS = [
+    { value: "newest", label: t("filter.newest") },
+    { value: "popular", label: t("filter.popular") },
+  ];
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -479,22 +481,22 @@ export default function GalleryPage() {
               <div style={{ position: "absolute", inset: 0, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", pointerEvents: "auto" }} />
             </div>
             <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
-              <AuthRequiredOverlay title="Sign in to view Gallery" subtitle="Create an account or sign in to browse AI-generated photos and videos" />
+              <AuthRequiredOverlay title={t("gallery.signInTitle")} subtitle={t("gallery.signInSubtitle")} />
             </div>
           </>
         )}
 
         <div className="gallery-title-row">
           <div className="gallery-title">
-            <span className="pink">AI Photo&amp;Video </span><span className="white">Gallery</span>
+            <span className="pink">{t("gallery.titlePink")}</span><span className="white">{t("gallery.titleWhite")}</span>
           </div>
         </div>
 
         <div className="gallery-tabs">
           {[
-            { key: "all", label: "All" },
-            { key: "image", label: "Image" },
-            { key: "video", label: "Video" },
+            { key: "all", label: t("media.all") },
+            { key: "image", label: t("media.image") },
+            { key: "video", label: t("media.video") },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -507,9 +509,9 @@ export default function GalleryPage() {
         </div>
 
         <div className="gallery-filter-row">
-          <FilterDropdown label="Gender" value={gender} options={GENDER_OPTIONS} onChange={setGender} />
-          <FilterDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-          <FilterDropdown label="Sort by" value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
+          <FilterDropdown label={t("filter.gender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
+          <FilterDropdown label={t("filter.style")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
+          <FilterDropdown label={t("filter.sortBy")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
         </div>
 
         {tags.length > 0 && (
@@ -541,7 +543,7 @@ export default function GalleryPage() {
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
               </svg>
-              <span>No items found in the gallery yet.</span>
+              <span>{t("gallery.empty")}</span>
             </div>
           ) : (
             filteredItems.map((item) => (

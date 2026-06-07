@@ -3,11 +3,13 @@
 import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useT } from "../../context/language";
 import Logo from "../components/Logo";
 
 type Status = "loading" | "success" | "error";
 
 function VerifyEmailContent() {
+  const { t } = useT();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<Status>("loading");
@@ -16,7 +18,7 @@ function VerifyEmailContent() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setMessage("Токен не указан. Проверьте ссылку в письме.");
+      setMessage(t("auth.verifyNoToken"));
       return;
     }
 
@@ -24,7 +26,7 @@ function VerifyEmailContent() {
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.message || "Ошибка верификации");
+          throw new Error(body.message || t("auth.verifyError"));
         }
         return res.json();
       })
@@ -36,7 +38,7 @@ function VerifyEmailContent() {
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.message || "Ссылка недействительна или истекла.");
+        setMessage(err.message || t("auth.verifyInvalid"));
       });
   }, [token]);
 
@@ -50,25 +52,25 @@ function VerifyEmailContent() {
         {status === "loading" && (
           <>
             <div style={styles.spinner} />
-            <p style={styles.text}>Подтверждение email...</p>
+            <p style={styles.text}>{t("auth.verifying")}</p>
           </>
         )}
 
         {status === "success" && (
           <>
             <div style={styles.iconSuccess}>✓</div>
-            <h2 style={styles.title}>Email подтверждён!</h2>
-            <p style={styles.text}>Переходим в приложение...</p>
+            <h2 style={styles.title}>{t("auth.verifySuccess")}</h2>
+            <p style={styles.text}>{t("auth.verifyRedirecting")}</p>
           </>
         )}
 
         {status === "error" && (
           <>
             <div style={styles.iconError}>✕</div>
-            <h2 style={styles.title}>Ошибка верификации</h2>
+            <h2 style={styles.title}>{t("auth.verifyError")}</h2>
             <p style={{ ...styles.text, color: "#ff7675" }}>{message}</p>
             <Link href="/register" style={styles.link}>
-              Зарегистрироваться заново
+              {t("auth.registerAgain")}
             </Link>
           </>
         )}

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useT } from "../../context/language";
 
 interface Option {
   value: string;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function FilterDropdown({ label, value, options, onChange }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +35,7 @@ export default function FilterDropdown({ label, value, options, onChange }: Prop
     <div ref={ref} style={s.wrapper}>
       <button style={s.btn} onClick={() => setOpen(!open)}>
         <span style={s.label}>{label}:</span>
-        <span style={s.value}>{selected?.label || "All"}</span>
+        <span style={s.value}>{selected?.label || t("common.all")}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="2">
           <path d="M6 9l6 6 6-6" />
         </svg>

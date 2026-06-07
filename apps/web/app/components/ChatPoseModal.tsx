@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
+import { useT } from "../../context/language";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ const getActiveCategoryId = (categories: PoseCategory[], selected: string | null
 };
 
 export default function ChatPoseModal({ open, onClose, onGenerate, options }: Props) {
+  const { t } = useT();
   const [selectedPose, setSelectedPose] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -47,7 +49,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
 
         <div style={s.header}>
-          <span style={s.title}>Выберите позу</span>
+          <span style={s.title}>{t("gen.choosePoseTitle")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
@@ -64,14 +66,14 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
               </svg>
               <input
                 style={s.searchInput}
-                placeholder="Search"
+                placeholder={t("common.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
             {options.POSE.length === 0 ? (
-              <div style={s.emptyHint}>No poses available.</div>
+              <div style={s.emptyHint}>{t("gen.noPoses")}</div>
             ) : (
               <>
                 <div style={s.catPillRow} className="chat-pose-cat-pills">
@@ -102,7 +104,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
                     );
                   })}
                   {items.length === 0 && (
-                    <div style={s.emptyHint}>{search ? "No results" : "No options in this category."}</div>
+                    <div style={s.emptyHint}>{search ? t("gen.noResults") : t("gen.noOptions")}</div>
                   )}
                 </div>
               </>
@@ -111,13 +113,13 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
         </div>
 
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Отмена</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
           <button
             style={{ ...s.generateBtn, ...(!selectedPose ? s.generateBtnDisabled : {}) }}
             onClick={handleGenerate}
             disabled={!selectedPose}
           >
-            Сгенерировать
+            {t("gen.generate")}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { StoryCharacter } from "../../lib/api";
 import StoryViewer from "./StoryViewer";
+import { useT } from "../../context/language";
 
 interface Props {
   /** Открыть профиль персонажа без активной истории (reuse CharacterProfilePopup) */
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function StoriesRail({ onOpenProfile }: Props) {
+  const { t } = useT();
   const [items, setItems] = useState<StoryCharacter[]>([]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -63,10 +65,10 @@ export default function StoriesRail({ onOpenProfile }: Props) {
   return (
     <div className="stories-section">
       <style>{STORIES_CSS}</style>
-      <div className="stories-label">STORIES</div>
+      <div className="stories-label">{t("stories.label")}</div>
       <div className="stories-rail-wrap">
         {showLeft && (
-          <button className="stories-arrow stories-arrow-left" onClick={() => scroll(-1)} aria-label="Scroll left">
+          <button className="stories-arrow stories-arrow-left" onClick={() => scroll(-1)} aria-label={t("stories.scrollLeft")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
         )}
@@ -97,7 +99,7 @@ export default function StoriesRail({ onOpenProfile }: Props) {
           ))}
         </div>
         {showRight && (
-          <button className="stories-arrow stories-arrow-right" onClick={() => scroll(1)} aria-label="Scroll right">
+          <button className="stories-arrow stories-arrow-right" onClick={() => scroll(1)} aria-label={t("stories.scrollRight")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
           </button>
         )}

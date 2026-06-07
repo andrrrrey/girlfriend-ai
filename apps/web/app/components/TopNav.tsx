@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useGeneration } from "../../context/generation";
+import { useT } from "../../context/language";
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Math.floor((Date.now() - timestamp) / 1000);
@@ -16,8 +17,14 @@ function formatTimeAgo(timestamp: number): string {
 export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const { t } = useT();
+  // Human label for a generation notification based on its source/type.
+  const sourceLabel = (source?: string, type?: string) =>
+    source === "character-creation" ? t("notif.character")
+    : source === "chat" ? t("notif.chatImage")
+    : type === "video" ? t("notif.video") : t("notif.image");
   const {
-    activeJobs, completedCount, notificationHistory,
+    activeJobs, notificationHistory,
     dismissAllNotifications, dismissHistoryItem, clearNotificationHistory,
   } = useGeneration();
   const isGenerating = activeJobs.length > 0;
@@ -79,15 +86,15 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
       <div className="search-box">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
-        <span>Search</span>
+        <span>{t("topnav.search")}</span>
       </div>
       <nav className="topnav-links">
-        <a href="#">Blog</a>
-        <a href="#">Guide</a>
-        <a href="#">Subscription</a>
+        <a href="#">{t("topnav.blog")}</a>
+        <a href="#">{t("topnav.guide")}</a>
+        <a href="#">{t("topnav.subscription")}</a>
       </nav>
       <div className="topnav-buttons">
-        <button className="topnav-search-icon-btn" aria-label="Search">
+        <button className="topnav-search-icon-btn" aria-label={t("topnav.search")}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>
         {user && (
@@ -95,7 +102,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
             <button
               className={`topnav-bell-btn${isGenerating ? " generating" : ""}`}
               onClick={() => setBellOpen((prev) => !prev)}
-              aria-label="Notifications"
+              aria-label={t("topnav.notifications")}
             >
               {isGenerating && (
                 <svg className="topnav-bell-spinner" width="38" height="38" viewBox="0 0 38 38">
@@ -107,27 +114,27 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
-              {(completedCount > 0 || historyCount > 0) && (
-                <span className="topnav-bell-badge">{completedCount || historyCount}</span>
+              {historyCount > 0 && (
+                <span className="topnav-bell-badge">{historyCount}</span>
               )}
             </button>
 
             {bellOpen && (
               <div className="bell-dropdown">
                 <div className="bell-dropdown-header">
-                  <span className="bell-dropdown-title">Notifications</span>
+                  <span className="bell-dropdown-title">{t("topnav.notifications")}</span>
                   {(notificationHistory.length > 0 || activeJobs.length > 0) && (
                     <button
                       className="bell-clear-btn"
                       onClick={(e) => { e.stopPropagation(); clearNotificationHistory(); dismissAllNotifications(); }}
                     >
-                      Clear all
+                      {t("topnav.clearAll")}
                     </button>
                   )}
                 </div>
                 <div className="bell-dropdown-list">
                   {activeJobs.length === 0 && notificationHistory.length === 0 && (
-                    <div className="bell-dropdown-empty">No notifications</div>
+                    <div className="bell-dropdown-empty">{t("topnav.noNotifications")}</div>
                   )}
                   {activeJobs.map((job) => (
                     <div key={job.jobId} className="bell-dropdown-item started">
@@ -138,7 +145,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       </div>
                       <div className="bell-item-body">
                         <div className="bell-item-title">
-                          {job.source === "character-creation" ? "Character" : job.source === "chat" ? "Chat image" : job.type === "video" ? "Video" : "Image"} generating...
+                          {t("notif.generating", { label: sourceLabel(job.source, job.type) })}
                         </div>
                         <div className="bell-item-time">{formatTimeAgo(new Date(job.startedAt).getTime())}</div>
                       </div>
@@ -171,8 +178,8 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       <div className="bell-item-body">
                         <div className="bell-item-title">
                           {n.status === "completed"
-                            ? `${n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : n.type === "video" ? "Video" : "Image"} ready!`
-                            : `${n.source === "character-creation" ? "Character" : n.source === "chat" ? "Chat image" : n.type === "video" ? "Video" : "Image"} failed`}
+                            ? t("notif.ready", { label: sourceLabel(n.source, n.type) })
+                            : t("notif.failed", { label: sourceLabel(n.source, n.type) })}
                         </div>
                         <div className="bell-item-time">{formatTimeAgo(n.timestamp)}</div>
                       </div>
@@ -195,11 +202,11 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
           // Плейсхолдер, пока подтверждается авторизация — без мигания кнопок.
           <span aria-hidden style={{width:92,height:36,borderRadius:8,background:'rgba(255,255,255,0.06)',display:'inline-block'}} />
         ) : isLoggedIn ? (
-          <button className="btn-secondary" onClick={handleLogout}>Log out <span style={{width:6,height:6,borderRadius:'50%',background:'#E36466',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(227,100,102,0.6)'}}></span></button>
+          <button className="btn-secondary" onClick={handleLogout}>{t("topnav.logout")} <span style={{width:6,height:6,borderRadius:'50%',background:'#E36466',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(227,100,102,0.6)'}}></span></button>
         ) : (
           <>
-            <button className="btn-primary" onClick={() => router.push("/register")}>Create Free Account</button>
-            <button className="btn-secondary" onClick={() => router.push("/login")}>Log in <span style={{width:6,height:6,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(74,222,128,0.6)'}}></span></button>
+            <button className="btn-primary" onClick={() => router.push("/register")}>{t("topnav.createAccount")}</button>
+            <button className="btn-secondary" onClick={() => router.push("/login")}>{t("topnav.login")} <span style={{width:6,height:6,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginLeft:4,boxShadow:'0 0 8px 3px rgba(74,222,128,0.6)'}}></span></button>
           </>
         )}
       </div>

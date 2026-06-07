@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { CameraOptionsResponse } from "../../lib/api";
+import { useT } from "../../context/language";
+import type { TKey } from "../../lib/i18n";
 
 export interface CameraSelections {
   framing: string[];
@@ -27,11 +29,11 @@ interface Props {
 
 type Section = "framing" | "cameraAngle" | "lens" | "lighting";
 const SECTIONS: Section[] = ["framing", "cameraAngle", "lens", "lighting"];
-const SECTION_LABELS: Record<Section, string> = {
-  framing: "Framing",
-  cameraAngle: "Camera Angle",
-  lens: "Lens",
-  lighting: "Lighting",
+const SECTION_KEYS: Record<Section, TKey> = {
+  framing: "prompt.framing",
+  cameraAngle: "gen.cameraAngle",
+  lens: "gen.lens",
+  lighting: "prompt.lighting",
 };
 
 export const LENS_OPTIONS = [
@@ -74,6 +76,7 @@ const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
 export default function CameraModal({ open, onClose, selections, onSave, options }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState<CameraSelections>({
     framing: [...selections.framing],
     cameraAngle: [...selections.cameraAngle],
@@ -137,7 +140,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
       <div className="camera-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={s.header}>
-          <span style={s.title}>Camera</span>
+          <span style={s.title}>{t("gen.titleCamera")}</span>
           <div style={s.headerActions}>
             <button style={s.closeBtn} onClick={onClose}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -152,14 +155,14 @@ export default function CameraModal({ open, onClose, selections, onSave, options
             <nav style={s.sidebarNav}>
               {SECTIONS.map((sec) => (
                 <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>
-                  {SECTION_LABELS[sec]}
+                  {t(SECTION_KEYS[sec])}
                 </button>
               ))}
             </nav>
             <div style={s.sidebarDivider} />
             <button style={s.sidebarGenerate} onClick={handleRandom}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.33 8C6.58 8 8 6.63 8 3.33C8 6.63 9.41 8 12.67 8C9.41 8 8 9.41 8 12.67C8 9.41 6.58 8 3.33 8Z" stroke="#C1F0AA" strokeLinejoin="round"/><path d="M1.83 4.83C3.92 4.83 4.83 3.95 4.83 1.83C4.83 3.95 5.74 4.83 7.83 4.83C5.74 4.83 4.83 5.74 4.83 7.83C4.83 5.74 3.92 4.83 1.83 4.83Z" stroke="#C1F0AA" strokeLinejoin="round"/></svg>
-              Generate Random
+              {t("gen.generateRandom")}
             </button>
           </div>
 
@@ -167,9 +170,9 @@ export default function CameraModal({ open, onClose, selections, onSave, options
           <div style={s.content} ref={contentRef}>
             {/* ── Framing ── */}
             <div ref={sectionRefs.framing} style={s.section}>
-              <div style={s.sectionTitle}>Framing</div>
+              <div style={s.sectionTitle}>{t("prompt.framing")}</div>
               {options.FRAMING.length === 0 ? (
-                <div style={s.emptyHint}>No framing options added yet. Add them in the admin panel.</div>
+                <div style={s.emptyHint}>{t("gen.noFraming")}</div>
               ) : (
                 <div style={s.imageGrid}>
                   {options.FRAMING.map((opt) => {
@@ -188,9 +191,9 @@ export default function CameraModal({ open, onClose, selections, onSave, options
 
             {/* ── Camera Angle ── */}
             <div ref={sectionRefs.cameraAngle} style={s.section}>
-              <div style={s.sectionTitle}>Camera Angle</div>
+              <div style={s.sectionTitle}>{t("gen.cameraAngle")}</div>
               {options.CAMERA_ANGLE.length === 0 ? (
-                <div style={s.emptyHint}>No camera angle options added yet. Add them in the admin panel.</div>
+                <div style={s.emptyHint}>{t("gen.noCameraAngle")}</div>
               ) : (
                 <div style={s.imageGrid}>
                   {options.CAMERA_ANGLE.map((opt) => {
@@ -209,7 +212,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
 
             {/* ── Lens ── */}
             <div ref={sectionRefs.lens} style={s.section}>
-              <div style={s.sectionTitle}>Lens</div>
+              <div style={s.sectionTitle}>{t("gen.lens")}</div>
               <div style={s.pillRow}>
                 {LENS_OPTIONS.map((opt) => {
                   const selected = draft.lens.includes(opt);
@@ -224,7 +227,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
 
             {/* ── Lighting ── */}
             <div ref={sectionRefs.lighting} style={s.section}>
-              <div style={s.sectionTitle}>Lighting</div>
+              <div style={s.sectionTitle}>{t("prompt.lighting")}</div>
               <div style={s.pillRow}>
                 {LIGHTING_OPTIONS.map((opt) => {
                   const selected = draft.lighting.includes(opt);
@@ -241,8 +244,8 @@ export default function CameraModal({ open, onClose, selections, onSave, options
 
         {/* Footer */}
         <div style={s.footer}>
-          <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>Save</button>
+          <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
+          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 

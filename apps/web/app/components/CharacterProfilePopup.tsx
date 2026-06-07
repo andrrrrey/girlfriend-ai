@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
+import { useT } from "../../context/language";
 import { likes, comments as commentsApi, users, characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { Character, CommentItem, StoryImage } from "../../lib/api";
 import LikeButton from "./LikeButton";
@@ -20,6 +21,7 @@ type Tab = "about" | "gallery" | "comments";
 export default function CharacterProfilePopup({ character, onClose, onLikeChange }: Props) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t: tr } = useT();
   const [tab, setTab] = useState<Tab>("about");
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -155,7 +157,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                 <div
                   style={{ ...s.thumb, ...(mainImage === character.avatarUrl ? s.thumbActive : {}) }}
                   onClick={() => setMainImage(character.avatarUrl)}
-                  title="Avatar"
+                  title={tr("char.avatar")}
                 >
                   {character.avatarUrl && (
                     <img src={resizedMediaUrl(character.avatarUrl, { w: 120 }) ?? character.avatarUrl} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
@@ -166,7 +168,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                     key={img.id}
                     style={{ ...s.thumb, ...(mainImage === img.url ? s.thumbActive : {}) }}
                     onClick={() => setMainImage(img.url)}
-                    title={img.label || "Generated"}
+                    title={img.label || tr("myai.generated")}
                   >
                     <img src={resizedMediaUrl(img.url, { w: 120 }) ?? img.url} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
                   </div>
@@ -178,17 +180,17 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
           <div style={s.stats}>
             <div style={s.stat}>
               <span style={s.statVal}>{formatCount(likeCount)}</span>
-              <span style={s.statLbl}>LIKES</span>
+              <span style={s.statLbl}>{tr("char.statLikes")}</span>
             </div>
             <div style={s.statSep} />
             <div style={s.stat}>
               <span style={s.statVal}>{formatCount(commentCount)}</span>
-              <span style={s.statLbl}>COMMENTS</span>
+              <span style={s.statLbl}>{tr("char.statComments")}</span>
             </div>
             <div style={s.statSep} />
             <div style={s.stat}>
               <span style={s.statVal}>{formatCount(genCount)}</span>
-              <span style={s.statLbl}>GENERATED</span>
+              <span style={s.statLbl}>{tr("char.statGenerated")}</span>
             </div>
           </div>
 
@@ -212,15 +214,15 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                 <circle cx="8.5" cy="8.5" r="1.5"/>
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
-              <span>Generate</span>
+              <span>{tr("char.generate")}</span>
             </button>
-            <button style={s.chatBtn} onClick={handleStartChat}>Start Chatting</button>
+            <button style={s.chatBtn} onClick={handleStartChat}>{tr("char.startChatting")}</button>
           </div>
         </div>
 
         {/* ═══════════════════ RIGHT PANEL ═══════════════════ */}
         <div className="cpp-right" style={s.right}>
-          <button style={s.closeBtn} onClick={onClose} aria-label="Close">
+          <button style={s.closeBtn} onClick={onClose} aria-label={tr("common.close")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
@@ -242,7 +244,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                 style={{ ...s.tabBtn, ...(tab === t ? s.tabActive : {}) }}
                 onClick={() => setTab(t)}
               >
-                {t === "about" ? "About me" : t === "gallery" ? "Gallery" : "Comments"}
+                {t === "about" ? tr("char.aboutTab") : t === "gallery" ? tr("nav.gallery") : tr("char.commentsTab")}
                 {tab === t && <div style={s.tabLine} />}
               </button>
             ))}
@@ -278,7 +280,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                 <>
                   <input
                     style={s.commentInput}
-                    placeholder="Leave a comment..."
+                    placeholder={tr("char.commentPlaceholder")}
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleSendComment(); }}
@@ -295,7 +297,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                   style={{ ...s.commentInput, cursor: "pointer", textAlign: "left", color: "#848484" }}
                   onClick={() => router.push("/login")}
                 >
-                  Sign in to comment...
+                  {tr("char.signInToComment")}
                 </button>
               )}
             </div>
@@ -332,27 +334,28 @@ function AboutTab({ description, age, personality, lifestyle, relationships, kin
   relationships: string; kinks: string; hobbies: string;
   creator: Character["creator"] | null;
 }) {
+  const { t: tr } = useT();
   const rows: { icon: string; label: string; value: string }[] = [
-    { icon: "age",           label: "AGE",           value: age },
-    { icon: "personality",   label: "PERSONALITY",   value: personality },
-    { icon: "lifestyle",     label: "LIFESTYLE",     value: lifestyle },
-    { icon: "relationships", label: "RELATIONSHIPS", value: relationships },
-    { icon: "kinks",         label: "KINKS",         value: kinks },
-    { icon: "hobbies",       label: "HOBBIES",       value: hobbies },
+    { icon: "age",           label: tr("char.age"),           value: age },
+    { icon: "personality",   label: tr("char.personality"),   value: personality },
+    { icon: "lifestyle",     label: tr("char.lifestyle"),     value: lifestyle },
+    { icon: "relationships", label: tr("char.relationships"), value: relationships },
+    { icon: "kinks",         label: tr("char.kinks"),         value: kinks },
+    { icon: "hobbies",       label: tr("char.hobbies"),       value: hobbies },
   ].filter((r) => r.value);
 
   return (
     <div>
       {description && (
         <>
-          <p style={s.secLabel}>DESCRIPTION</p>
+          <p style={s.secLabel}>{tr("char.secDescription")}</p>
           <p style={s.descText}>{description}</p>
         </>
       )}
 
       {rows.length > 0 && (
         <>
-          <p style={{ ...s.secLabel, marginTop: description ? 22 : 0 }}>ABOUT ME</p>
+          <p style={{ ...s.secLabel, marginTop: description ? 22 : 0 }}>{tr("char.secAboutMe")}</p>
           <div style={s.aboutGrid}>
             {rows.map((row, i) => (
               <div key={i} style={s.aboutItem}>
@@ -369,7 +372,7 @@ function AboutTab({ description, age, personality, lifestyle, relationships, kin
 
       {creator && (
         <>
-          <p style={{ ...s.secLabel, marginTop: 22 }}>CREATOR</p>
+          <p style={{ ...s.secLabel, marginTop: 22 }}>{tr("char.secCreator")}</p>
           <CreatorSection creator={creator} />
         </>
       )}
@@ -382,6 +385,7 @@ function CreatorSection({ creator }: {
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t: tr } = useT();
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -446,7 +450,7 @@ function CreatorSection({ creator }: {
       </div>
       <div style={{ flex: 1 }} />
       {creator.nickname && (
-        <button style={s.outlineBtn} onClick={goToProfile}>More Characters</button>
+        <button style={s.outlineBtn} onClick={goToProfile}>{tr("char.moreCharacters")}</button>
       )}
       {user && creator.nickname && user.id !== creator.id && (
         <button
@@ -454,7 +458,7 @@ function CreatorSection({ creator }: {
           onClick={handleFollow}
           disabled={followLoading}
         >
-          {following ? "Following 🟢" : "Follow 🟢"}
+          {following ? tr("char.following") : tr("char.follow")}
         </button>
       )}
     </div>
@@ -462,6 +466,7 @@ function CreatorSection({ creator }: {
 }
 
 function GalleryTab({ avatarUrl, images, total }: { avatarUrl: string | null; images: StoryImage[]; total: number }) {
+  const { t: tr } = useT();
   const tiles: { url: string }[] = [];
   if (avatarUrl) tiles.push({ url: avatarUrl });
   for (const img of images) tiles.push({ url: img.url });
@@ -469,22 +474,22 @@ function GalleryTab({ avatarUrl, images, total }: { avatarUrl: string | null; im
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <p style={{ ...s.secLabel, margin: 0 }}>GENERATED CONTENT</p>
-        <span style={{ color: "#f95bad", fontSize: 11, fontWeight: 700 }}>{total} total</span>
+        <p style={{ ...s.secLabel, margin: 0 }}>{tr("char.secGeneratedContent")}</p>
+        <span style={{ color: "#f95bad", fontSize: 11, fontWeight: 700 }}>{tr("char.total", { count: total })}</span>
       </div>
       {tiles.length === 0 ? (
         <p style={{ color: "#848484", fontSize: 13, textAlign: "center", padding: "30px 0" }}>
-          No images generated yet.
+          {tr("char.noImages")}
         </p>
       ) : (
         <div style={s.galGrid}>
-          {tiles.map((t, i) => (
+          {tiles.map((tile, i) => (
             <div
               key={i}
               style={{ ...s.galCard, cursor: "pointer" }}
-              onClick={() => window.open(t.url, "_blank")}
+              onClick={() => window.open(tile.url, "_blank")}
             >
-              <img src={resizedMediaUrl(t.url, { w: 400 }) ?? t.url} alt="" style={s.galImg} loading="lazy" decoding="async" />
+              <img src={resizedMediaUrl(tile.url, { w: 400 }) ?? tile.url} alt="" style={s.galImg} loading="lazy" decoding="async" />
             </div>
           ))}
         </div>
@@ -499,17 +504,18 @@ function CommentsTab({ items, commentCount, hasMore, onLoadMore }: {
   hasMore: boolean;
   onLoadMore: () => void;
 }) {
+  const { t: tr } = useT();
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <p style={{ ...s.secLabel, margin: 0 }}>COMMENTS</p>
+        <p style={{ ...s.secLabel, margin: 0 }}>{tr("char.secComments")}</p>
         <span style={{ color: "#f95bad", fontSize: 11, fontWeight: 700 }}>
-          {commentCount} total
+          {tr("char.total", { count: commentCount })}
         </span>
       </div>
       {items.length === 0 && (
         <p style={{ color: "#848484", fontSize: 13, textAlign: "center", padding: "30px 0" }}>
-          No comments yet. Be the first to comment!
+          {tr("char.noComments")}
         </p>
       )}
       {items.map((c) => (
@@ -533,7 +539,7 @@ function CommentsTab({ items, commentCount, hasMore, onLoadMore }: {
       ))}
       {hasMore && (
         <button onClick={onLoadMore} style={s.loadMoreBtn}>
-          Load more comments
+          {tr("char.loadMoreComments")}
         </button>
       )}
     </div>
