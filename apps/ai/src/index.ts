@@ -763,8 +763,17 @@ async function generateImageCivitai(params: {
   prompt: string;
   negativePrompt?: string;
   aspectRatio?: string;
+  /**
+   * Если задан — генерация идёт в режиме img2img на том же чекпоинте стиля:
+   * исходное фото передаётся как `images: [{ url }]`, сила изменения — `denoise`.
+   * Так результат сохраняет внешность персонажа И его стиль (в отличие от
+   * ModelsLab img2img, который работает только на своих realistic-vision и т.п.).
+   */
+  initImageUrl?: string;
+  /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
+  denoise?: number;
 }): Promise<{ url: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise } = params;
 
   const pool = CIVITAI_MODELS[generationStyle];
   if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
@@ -772,13 +781,22 @@ async function generateImageCivitai(params: {
   const model = pool[Math.floor(Math.random() * pool.length)];
   const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
 
+  const isImg2Img = !!initImageUrl;
   const requestBody = {
     steps: [{
       $type: "imageGen",
       input: {
         engine: "sdcpp",
         ecosystem: model.base === "sd1" ? "sd1" : "sdxl",
-        operation: "createImage",
+        // Для img2img Civitai ждёт workflow "img2img" + массив исходных изображений
+        // и параметр denoise (см. payload их генератора Image Variations).
+        ...(isImg2Img
+          ? {
+              workflow: "img2img",
+              images: [{ url: initImageUrl, width: w, height: h }],
+              denoise: denoise ?? 0.65,
+            }
+          : { operation: "createImage" }),
         model: model.air,
         prompt,
         negativePrompt: negativePrompt || "worst quality, low quality, blurry, deformed",
@@ -792,7 +810,7 @@ async function generateImageCivitai(params: {
     }],
   };
 
-  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h }, "civitai_image_request");
+  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
 
   const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
     method: "POST",
@@ -1001,7 +1019,8 @@ async function generateImageAtlasCloud(params: {
  * на исходное изображение, поэтому результат сохраняет внешность персонажа,
  * а текстовый промпт меняет позу/действие/окружение.
  *
- * strength ~0.45 — баланс: достаточно похоже на оригинал, но поза меняется.
+ * strength ~0.6 — баланс: достаточно похоже на оригинал, но поза заметно
+ * меняется (0.45 давало почти точную копию аватара).
  * Возвращает прямой URL результата (с поллингом при processing).
  */
 async function generateImg2ImgModelsLab(params: {
@@ -1027,7 +1046,7 @@ async function generateImg2ImgModelsLab(params: {
       width,
       height,
       samples: 1,
-      strength: 0.45,
+      strength: 0.6,
       safety_checker: "no",
       enhance_prompt: "no",
       num_inference_steps: 30,
@@ -1088,10 +1107,53 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
 
   // ─── img2img: генерация по фото персонажа ──────────────────────────────
-  // Если передан initImageUrl — пытаемся сделать img2img через ModelsLab,
-  // чтобы результат был похож на исходного персонажа. При любой ошибке
-  // мягко падаем в обычный (text2img/провайдерный) поток ниже.
+  // Если передан initImageUrl — генерируем «новую позу того же персонажа».
+  // Приоритет — Civitai img2img на ТОМ ЖЕ стиле персонажа (сохраняет и
+  // внешность, и стиль). Если персонаж не civitai или Civitai упал — мягкий
+  // фолбэк на ModelsLab img2img, а затем на обычный text2img-поток ниже.
   if (initImageUrl) {
+    // 1) Civitai img2img на стиле персонажа.
+    if (provider === "civitai") {
+      const civitaiToken = settings.CIVITAI_API_TOKEN;
+      if (civitaiToken) {
+        try {
+          const generationStyle = req.body.generationStyle || "realism";
+          const denoise = Number(settings.CIVITAI_IMG2IMG_DENOISE) || 0.65;
+          const result = await generateImageCivitai({
+            apiToken: civitaiToken,
+            generationStyle,
+            prompt,
+            negativePrompt,
+            aspectRatio: req.body.aspectRatio,
+            initImageUrl,
+            denoise,
+          });
+
+          const imageResponse = await fetch(result.url);
+          if (imageResponse.ok) {
+            const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+            const s3 = createS3Client();
+            const bucket = env.S3_BUCKET || "media";
+            if (s3) {
+              try {
+                const key = `images/${randomUUID()}.png`;
+                const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
+                logger.info({ key, generationStyle, denoise }, "civitai_img2img_uploaded_to_s3");
+                return reply.send({ url });
+              } catch (s3Err: any) {
+                logger.warn({ err: s3Err }, "civitai_img2img_s3_upload_failed");
+              }
+            }
+          }
+          return reply.send({ url: result.url });
+        } catch (err: any) {
+          logger.warn({ err: err?.message }, "civitai_img2img_failed_fallback_to_modelslab");
+          // продолжаем в ModelsLab img2img ниже
+        }
+      }
+    }
+
+    // 2) Fallback: ModelsLab img2img (не-civitai стили или ошибка Civitai выше).
     const mlKey = settings.MODELSLAB_API_KEY;
     if (mlKey) {
       try {
