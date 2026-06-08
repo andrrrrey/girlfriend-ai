@@ -95,6 +95,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [notifications, setNotifications] = useState<GenerationNotification[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<GenerationNotification[]>(() => loadHistory());
   const pollErrorsRef = useRef<Map<string, number>>(new Map());
+  // Задачи, по которым уже выпущено финальное уведомление (completed/failed).
+  // Защищает от дублей: при долгой генерации поллинг (каждые 3с) может
+  // наложиться сам на себя и увидеть одну и ту же завершённую задачу несколько
+  // раз, пока setActiveJobs ещё не убрал её из activeJobsRef.
+  const finalizedJobsRef = useRef<Set<string>>(new Set());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dismissTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const activeJobsRef = useRef<ActiveJob[]>(activeJobs);
@@ -119,10 +124,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       id: `${n.jobId}-${n.status}`,
       timestamp: Date.now(),
     };
-    setNotifications((prev) => [...prev, notif]);
+    // Дедуп по id (id = `${jobId}-${status}`, детерминирован): не плодим
+    // одинаковые уведомления, если по какой-то причине пришло повторно.
+    setNotifications((prev) => (prev.some((x) => x.id === notif.id) ? prev : [...prev, notif]));
     // Also add to persistent history (only completed and failed)
     if (n.status === "completed" || n.status === "failed") {
-      setNotificationHistory((prev) => [...prev, notif]);
+      setNotificationHistory((prev) => (prev.some((x) => x.id === notif.id) ? prev : [...prev, notif]));
     }
   }, []);
 
@@ -184,11 +191,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       if (currentJobs.length === 0) return;
 
       for (const job of currentJobs) {
+        // Уже финализирована (наложившимся циклом поллинга) — пропускаем,
+        // чтобы не выпустить второе уведомление по той же задаче.
+        if (finalizedJobsRef.current.has(job.jobId)) continue;
         try {
           const status = await getJobStatus(job.jobId);
           pollErrorsRef.current.set(job.jobId, 0);
 
           if (status.status === "completed") {
+            if (finalizedJobsRef.current.has(job.jobId)) continue;
+            finalizedJobsRef.current.add(job.jobId);
             setActiveJobs((prev) => prev.filter((j) => j.jobId !== job.jobId));
             pollErrorsRef.current.delete(job.jobId);
             addNotification({
@@ -200,6 +212,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               metadata: job.metadata,
             });
           } else if (status.status === "failed") {
+            if (finalizedJobsRef.current.has(job.jobId)) continue;
+            finalizedJobsRef.current.add(job.jobId);
             setActiveJobs((prev) => prev.filter((j) => j.jobId !== job.jobId));
             pollErrorsRef.current.delete(job.jobId);
             addNotification({
@@ -215,6 +229,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           const errs = (pollErrorsRef.current.get(job.jobId) ?? 0) + 1;
           pollErrorsRef.current.set(job.jobId, errs);
           if (errs >= 3) {
+            if (finalizedJobsRef.current.has(job.jobId)) continue;
+            finalizedJobsRef.current.add(job.jobId);
             setActiveJobs((prev) => prev.filter((j) => j.jobId !== job.jobId));
             pollErrorsRef.current.delete(job.jobId);
             addNotification({
