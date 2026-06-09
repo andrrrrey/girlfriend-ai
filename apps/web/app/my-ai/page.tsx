@@ -117,17 +117,16 @@ const PAGE_CSS = `
   .my-ai-search input::placeholder { color: #848484; }
 
   .my-ai-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 18px;
     width: 100%;
   }
 
   .ai-card-wrap {
     position: relative;
-    width: 220px;
-    height: 300px;
-    flex-shrink: 0;
+    width: 100%;
+    aspect-ratio: 22 / 30;
   }
   .ai-card-wrap:hover { z-index: 5; }
 
@@ -135,8 +134,8 @@ const PAGE_CSS = `
     position: absolute;
     left: 0;
     top: 0;
-    width: 220px;
-    height: 300px;
+    width: 100%;
+    height: 100%;
     background: rgba(9,9,9,0.75);
     backdrop-filter: blur(2px);
     border: 0.8px solid rgba(228,0,120,0.2);
@@ -240,8 +239,8 @@ const PAGE_CSS = `
   .ai-card {
     border: 1px solid #313131;
     border-radius: 8px;
-    width: 220px;
-    height: 300px;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     position: relative;
     cursor: pointer;
@@ -361,13 +360,12 @@ const PAGE_CSS = `
   }
 
   .ai-card-skeleton {
-    width: 220px;
-    height: 300px;
+    width: 100%;
+    aspect-ratio: 22 / 30;
     border-radius: 8px;
     background: #1e1e1e;
     position: relative;
     overflow: hidden;
-    flex-shrink: 0;
   }
   .ai-card-skeleton::after {
     content: '';
@@ -399,11 +397,7 @@ const PAGE_CSS = `
     .my-ai-title { font-size: 22px; }
     .manage-btn { display: none; }
     .my-ai-filter-row { flex-wrap: wrap; }
-    .ai-card-wrap { width: calc(50% - 9px); height: auto; }
-    .ai-card { width: 100%; height: 220px; }
-    .ai-hover-panel { width: 100%; height: 220px; }
-    .ai-card-skeleton { width: calc(50% - 9px); height: 220px; }
-    .my-ai-grid { gap: 12px; }
+    .my-ai-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   }
 `;
 

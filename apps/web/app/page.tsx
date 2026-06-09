@@ -41,10 +41,10 @@ const PAGE_CSS = `
     .chars-header { display: flex; flex-direction: column; gap: 5px; max-width: 570px; }
     .chars-title { font-size: 32px; font-weight: 700; line-height: 1.1; }
     .chars-title .pink { color: #ff99ce; }
-    .cards-row { display: flex; flex-wrap: wrap; gap: 18px; height: auto; width: 100%; }
+    .cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; width: 100%; }
     .card {
-      border: 1px solid #313131; border-radius: 8px; width: 220px; height: 300px;
-      overflow: hidden; position: relative; flex-shrink: 0; display: flex;
+      border: 1px solid #313131; border-radius: 8px; width: 100%; height: 100%;
+      overflow: hidden; position: relative; display: flex;
       flex-direction: column; justify-content: flex-end; padding: 8px; cursor: pointer;
     }
     .card-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; }
@@ -54,10 +54,10 @@ const PAGE_CSS = `
       background: linear-gradient(to bottom, rgba(9,9,9,0) 56.167%, rgba(9,9,9,0.8) 100%);
     }
     .card-name { font-size: 20px; font-weight: 700; color: #fff; position: relative; z-index: 1; white-space: nowrap; line-height: 1.2; }
-    .card-featured-wrap { position: relative; height: 300px; width: 220px; flex-shrink: 0; }
+    .card-featured-wrap { position: relative; width: 100%; aspect-ratio: 22 / 30; }
     .card-featured-wrap:hover { z-index: 5; }
     .hover-panel {
-      position: absolute; left: 0; top: 0; width: 220px; height: 300px;
+      position: absolute; left: 0; top: 0; width: 100%; height: 100%;
       background: rgba(9,9,9,0.75); backdrop-filter: blur(2px);
       border: 0.8px solid rgba(228,0,120,0.2); border-radius: 8px; overflow: hidden;
       display: flex; flex-direction: column; align-items: flex-start;
@@ -104,16 +104,10 @@ const PAGE_CSS = `
       .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
-      .cards-row { gap: 10px; }
-      .card { width: calc(50% - 9px); height: 230px; }
-      .card-featured-wrap { width: calc(50% - 9px); height: 230px; }
-      .hover-panel { width: 100%; height: 230px; }
+      .cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .card-name { font-size: 15px; }
     }
     @media (max-width: 480px) {
-      .card { width: calc(50% - 9px); height: 190px; }
-      .card-featured-wrap { width: calc(50% - 9px); height: 190px; }
-      .hover-panel { width: 100%; height: 190px; }
       .hero-title { font-size: 18px; }
     }
 `;
