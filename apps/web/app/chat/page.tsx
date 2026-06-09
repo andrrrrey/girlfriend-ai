@@ -190,6 +190,11 @@ function ChatPageInner() {
     if (candidates.length === 0) return;
     const newest = new Date(Math.max(...candidates)).toISOString();
     localStorage.setItem(`chat-read-${activeChat}`, newest);
+    // Запоминаем, сколько сообщений ассистента «прочитано» — для бейджа
+    // непрочитанных в списке чатов (unread = assistantCount − это значение).
+    if (chat && typeof chat.assistantCount === "number") {
+      localStorage.setItem(`chat-read-acount-${activeChat}`, String(chat.assistantCount));
+    }
     window.dispatchEvent(new Event("chat-read"));
   }, [activeChat, chatList, messages]);
 
@@ -753,6 +758,7 @@ function ChatPageInner() {
 .chat-item-name { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-item-preview { font-size: 10px; font-weight: 500; color: #848484; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-item-dots { width: 24px; height: 24px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: transparent; border: none; color: #969696; font-size: 14px; }
+.chat-item-unread { align-self: center; flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: linear-gradient(to right, #f95bad, #ff0084); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .chat-center { flex: 1; display: flex; min-width: 0; padding: 0 18px; }
 .chat-center-inner { width: 100%; display: flex; flex-direction: column; height: calc(100vh - 46px); }
 .chat-header { display: flex; align-items: center; gap: 20px; padding: 20px 0 0 0; }
@@ -938,6 +944,13 @@ function ChatPageInner() {
                   {c.lastMessage?.content?.slice(0, 40) || c.title || t("chat.newChat")}
                 </div>
               </div>
+              {(() => {
+                if (c.id === activeChat) return null;
+                const readAcount = Number(localStorage.getItem(`chat-read-acount-${c.id}`) || "0");
+                const unread = Math.max(0, (c.assistantCount ?? 0) - readAcount);
+                if (unread <= 0) return null;
+                return <span className="chat-item-unread">{unread > 99 ? "99+" : unread}</span>;
+              })()}
               <button
                 onClick={(e) => {
                   e.stopPropagation();

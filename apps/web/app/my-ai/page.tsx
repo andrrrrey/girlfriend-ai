@@ -429,12 +429,14 @@ function MyAICard({
   selected,
   onToggleSelect,
   likeStatus,
+  onOpen,
 }: {
   item: GridItem;
   manageMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   likeStatus?: { liked: boolean; count: number };
+  onOpen?: (item: GridItem) => void;
 }) {
   const router = useRouter();
   const { t } = useT();
@@ -484,19 +486,10 @@ function MyAICard({
                 <>
                   <button className="ai-hover-btn primary" onClick={(e) => {
                     e.stopPropagation();
-                    const url = item.url;
-                    if (!url) return;
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `${item.type === "Video" ? "video" : "image"}-${item.jobId || Date.now()}.${item.type === "Video" ? "mp4" : "png"}`;
-                    a.target = "_blank";
-                    a.rel = "noopener";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    if (item.url) onOpen?.(item);
                   }}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    {t("myai.download")}
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="8" r="6"/><path d="M6 5l5 3-5 3V5z" fill="currentColor" stroke="none"/></svg>
+                    {t("gallery.view")}
                   </button>
                   <button className="ai-hover-btn secondary" onClick={(e) => {
                     e.stopPropagation();
@@ -600,6 +593,7 @@ export default function MyAIPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
+  const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
 
   const loadCreated = useCallback(() => {
     if (!user) return;
@@ -888,6 +882,7 @@ export default function MyAIPage() {
                   selected={selectedIds.has(itemId)}
                   onToggleSelect={() => toggleSelect(itemId)}
                   likeStatus={likeStatuses[itemId]}
+                  onOpen={(it) => { if (it.url) setLightbox({ url: it.url, type: it.type }); }}
                 />
               );
             })
@@ -936,6 +931,44 @@ export default function MyAIPage() {
           </div>
         )}
       </div>
+
+      {/* Lightbox: просмотр изображения/видео + кнопка Download внутри */}
+      {lightbox && (
+        <div
+          onClick={(e) => { if (!(e.target as HTMLElement).closest("[data-lb-media]")) setLightbox(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label={t("common.close")}
+            style={{ position: "absolute", top: 20, right: 24, width: 40, height: 40, borderRadius: 8, border: "1px solid #313131", background: "rgba(0,0,0,0.4)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+          {lightbox.type === "Video" ? (
+            <video data-lb-media src={lightbox.url} controls autoPlay loop style={{ maxWidth: "90vw", maxHeight: "78vh", borderRadius: 8 }} />
+          ) : (
+            <img data-lb-media src={lightbox.url} alt="" decoding="async" style={{ maxWidth: "90vw", maxHeight: "78vh", borderRadius: 8, objectFit: "contain" }} />
+          )}
+          <button
+            data-lb-media
+            onClick={() => {
+              const a = document.createElement("a");
+              a.href = lightbox.url;
+              a.download = `${lightbox.type === "Video" ? "video" : "image"}-${Date.now()}.${lightbox.type === "Video" ? "mp4" : "png"}`;
+              a.target = "_blank";
+              a.rel = "noopener";
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Syne', sans-serif" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {t("myai.download")}
+          </button>
+        </div>
+      )}
     </>
   );
 }

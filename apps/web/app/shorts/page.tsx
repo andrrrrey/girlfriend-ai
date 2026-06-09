@@ -25,7 +25,8 @@ const PAGE_CSS = `
     border-radius: 8px; overflow: hidden; background: #1e1e1e;
     border: 1px solid #313131; flex-shrink: 0;
   }
-  .shorts-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* contain — горизонтальные видео показываем целиком (с полями), не обрезая и не растягивая по высоте; вертикальные при этом заполняют карточку. */
+  .shorts-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
   .shorts-gradient {
     position: absolute; inset: 0;
     background: linear-gradient(to bottom, transparent 44%, rgba(9,9,9,0.82) 100%);

@@ -41,6 +41,60 @@ let cachedCameraOptions: CameraOptionsResponse | null = null;
 // Module-level translator, set from the component before content is built so the
 // many string-template builders below can localize without threading `t` through.
 let tr: (key: TKey, vars?: Record<string, string | number>) => string = (k) => k;
+// Текущий язык — для отображаемых подписей значений шага «Характер». Сами
+// значения (data-value / data-selected) остаются английскими: они уходят в
+// промпты/профиль, поэтому переводим только то, что видит пользователь.
+let currentLang: "en" | "ru" = "en";
+
+const REL_RU: Record<string, string> = {
+  "Girlfriend": "Девушка", "Boyfriend": "Парень", "Friend": "Друг", "Companion": "Спутник",
+  "Mentor": "Наставник", "Rival": "Соперник", "Secret Lover": "Тайный любовник",
+  "Soulmate": "Родственная душа", "Sugar Baby": "Содержанка", "Mistress": "Любовница",
+  "Dominatrix": "Госпожа", "Submissive Partner": "Покорный партнёр",
+};
+const FAM_RU: Record<string, string> = {
+  "Single": "Свободна", "In a Relationship": "В отношениях", "Married": "Замужем",
+  "Divorced": "В разводе", "Widowed": "Вдова", "Separated": "В расставании", "Complicated": "Всё сложно",
+};
+const PERS_NAME_RU: Record<string, string> = {
+  "Overly Confident": "Чрезмерно уверенная", "Mysterious": "Таинственная",
+  "Obsessed With You": "Одержима тобой", "Caregiver": "Заботливая", "Dominant": "Доминантная",
+  "Submissive": "Покорная", "Seductress": "Соблазнительница", "Cruel & Unforgiving": "Жестокая и беспощадная",
+  "Free Spirited": "Свободолюбивая", "Demanding Bully": "Требовательная задира",
+  "Hopeless Romantic": "Безнадёжный романтик", "Insatiable": "Ненасытная",
+  "Shy & Innocent": "Скромная и невинная", "Playful Tease": "Игривая кокетка",
+  "Intellectual": "Интеллектуалка", "Motherly": "Материнская", "Tsundere": "Цундэрэ", "Yandere": "Яндэрэ",
+};
+const PERS_DESC_RU: Record<string, string> = {
+  "Overly Confident": "Смелая и доминирующая, с магнетическим присутствием в близости.",
+  "Mysterious": "Скрытная и интригующая, пробуждает любопытство в других.",
+  "Obsessed With You": "Собственническая и нуждающаяся, с сильной зацикленностью на любви.",
+  "Caregiver": "Нежная и опекающая, дарит успокаивающую чувственность.",
+  "Dominant": "Напористая и властная, возбуждающая в эротических сценах.",
+  "Submissive": "Уступчивая и послушная, находит удовольствие в подчинении.",
+  "Seductress": "Соблазнительно скрытная, разжигает любопытство и желание.",
+  "Cruel & Unforgiving": "Сурова и безжалостна, дарит мрачно-захватывающий опыт.",
+  "Free Spirited": "Раскрепощённая и авантюрная, страстно спонтанная.",
+  "Demanding Bully": "Агрессивная, использует силу, чтобы добиться своего.",
+  "Hopeless Romantic": "Глубоко страстная, ценит эмоциональную близость.",
+  "Insatiable": "Бесконечная страсть, постоянно требует твоей любви.",
+  "Shy & Innocent": "Робкая и милая, легко смущается, с нежным обаянием.",
+  "Playful Tease": "Остроумная и кокетливая — всё легко и весело.",
+  "Intellectual": "Вдумчивая и красноречивая, любит глубокие беседы.",
+  "Motherly": "Тёплая и оберегающая, дарит уют и поддержку.",
+  "Tsundere": "Холодная снаружи, но глубоко заботливая внутри.",
+  "Yandere": "Одержимо преданная, с сильной собственнической любовью.",
+};
+
+/** Отображаемая подпись значения дропдауна (RU при ru, иначе само значение). */
+function cvLabel(field: string, value: string): string {
+  if (currentLang !== "ru") return value;
+  if (field === "relationshipType") return REL_RU[value] ?? value;
+  if (field === "familyStatus") return FAM_RU[value] ?? value;
+  return value;
+}
+const persName = (name: string) => (currentLang === "ru" ? PERS_NAME_RU[name] ?? name : name);
+const persDesc = (name: string, desc: string) => (currentLang === "ru" ? PERS_DESC_RU[name] ?? desc : desc);
 
 // Translation keys for the 9 stage titles (parallel to STAGE_NAMES).
 const STAGE_TITLE_KEYS: TKey[] = [
@@ -52,9 +106,9 @@ const STAGE_TITLE_KEYS: TKey[] = [
 const pad = (n: number) => String(n).padStart(2, "0");
 
 function dropdown(field: string, label: string, options: string[], def: string) {
-  const opts = options.map((o) => `<div class="dropdown-option" data-value="${o}">${o}</div>`).join("");
+  const opts = options.map((o) => `<div class="dropdown-option" data-value="${o}">${cvLabel(field, o)}</div>`).join("");
   return `<div class="dropdown-container" data-field="${field}" data-selected="${def}">
-    <div class="dropdown-btn"><div class="text"><span class="lbl">${label}:</span><span class="val">${def}</span></div>${CHEVRON_SVG}</div>
+    <div class="dropdown-btn"><div class="text"><span class="lbl">${label}:</span><span class="val">${cvLabel(field, def)}</span></div>${CHEVRON_SVG}</div>
     <div class="dropdown-menu">${opts}</div></div>`;
 }
 
@@ -162,7 +216,7 @@ function stage04() {
 
 function stage05() {
   const persCards = PERSONALITIES.map((p) =>
-    `<div class="personality-card" data-value="${p.name}"><div class="p-icon">${p.icon}</div><div class="p-title">${p.name}</div><div class="p-desc">${p.desc}</div></div>`
+    `<div class="personality-card" data-value="${p.name}"><div class="p-icon">${p.icon}</div><div class="p-title">${persName(p.name)}</div><div class="p-desc">${persDesc(p.name, p.desc)}</div></div>`
   ).join("");
   return `<div class="stage-content" id="stage-05-content">
     ${stageHeader(5, "create.stagePersonality")}
@@ -415,7 +469,7 @@ function restoreFormState(): boolean {
       if (!container) return;
       container.dataset.selected = value;
       const valEl = container.querySelector<HTMLElement>(".val");
-      if (valEl) valEl.textContent = value;
+      if (valEl) valEl.textContent = cvLabel(field, value);
     };
     restoreDropdown("gender", d.gender);
     restoreDropdown("orientation", d.orientation);
@@ -648,7 +702,7 @@ function randomizeStage(n: number) {
     if (!container) return;
     container.dataset.selected = value;
     const valEl = container.querySelector<HTMLElement>(".val");
-    if (valEl) valEl.textContent = value;
+    if (valEl) valEl.textContent = cvLabel(field, value);
   };
 
   switch (n) {
@@ -796,10 +850,10 @@ function populatePreview() {
   const per = document.getElementById("tab-personality");
   if (per) {
     per.innerHTML = `<div class="s9-pers-list">
-      ${s9PersRow("💬", tr("create.pvPersonality"), d.personality || "")}
+      ${s9PersRow("💬", tr("create.pvPersonality"), d.personality ? persName(d.personality) : "")}
       ${s9PersRow("🏠", tr("create.pvLifestyle"), d.lifestyle || "")}
-      ${s9PersRow("💑", tr("create.pvRelationship"), d.relationshipType || "")}
-      ${s9PersRow("👨‍👩‍👧", tr("create.pvFamilyStatus"), d.familyStatus || "")}
+      ${s9PersRow("💑", tr("create.pvRelationship"), d.relationshipType ? cvLabel("relationshipType", d.relationshipType) : "")}
+      ${s9PersRow("👨‍👩‍👧", tr("create.pvFamilyStatus"), d.familyStatus ? cvLabel("familyStatus", d.familyStatus) : "")}
       ${s9PersRow("💼", tr("create.pvWork"), d.work?.join(", ") || "")}
       ${s9PersRow("🎯", tr("create.pvHobbies"), d.hobbies?.join(", ") || "")}
       ${s9PersRow("🔥", tr("create.pvKinks"), d.kinks?.join(", ") || "")}
@@ -1143,8 +1197,9 @@ function initInteractive() {
 
 export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
-  const { t } = useT();
+  const { t, lang } = useT();
   tr = t; // keep the module-level translator in sync for the HTML builders
+  currentLang = lang;
   const router = useRouter();
   const initRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1290,7 +1345,9 @@ export default function CreateCharacterPage() {
       });
       menu?.querySelectorAll<HTMLElement>(".dropdown-option").forEach((opt) => {
         opt.addEventListener("click", () => {
-          if (valEl) valEl.textContent = opt.dataset.value!;
+          // Отображаем переведённую подпись (textContent опции), а в data-selected
+          // храним английское значение (data-value) — оно уходит в промпты/профиль.
+          if (valEl) valEl.textContent = opt.textContent;
           container.dataset.selected = opt.dataset.value!;
           menu.classList.remove("open");
         });

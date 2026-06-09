@@ -55,6 +55,8 @@ export class ChatsService {
         userId,
         characterId,
         title: title || `Chat with ${character.name}`, // Дефолтный заголовок
+        // Новый чат сразу наверху списка (sort по lastMessageAt DESC).
+        lastMessageAt: new Date(),
       },
       include: {
         character: {
@@ -98,6 +100,18 @@ export class ChatsService {
     const hasMore = chats.length > limit;
     const items = hasMore ? chats.slice(0, limit) : chats;
 
+    // Кол-во сообщений ассистента по каждому чату — для бейджа непрочитанных.
+    // Клиент хранит «прочитанное» значение и показывает разницу как непрочитанные.
+    const ids = items.map((c) => c.id);
+    const counts = ids.length
+      ? await this.prisma.message.groupBy({
+          by: ["chatSessionId"],
+          where: { chatSessionId: { in: ids }, role: "assistant", deletedAt: null },
+          _count: { _all: true },
+        })
+      : [];
+    const countMap = new Map(counts.map((r) => [r.chatSessionId, r._count._all]));
+
     return {
       items: items.map((c) => ({
         id: c.id,
@@ -107,6 +121,7 @@ export class ChatsService {
         lastMessage: c.messages[0] || null, // null если сообщений нет
         lastMessageAt: c.lastMessageAt,
         createdAt: c.createdAt,
+        assistantCount: countMap.get(c.id) ?? 0, // всего сообщений ассистента
       })),
       nextCursor: hasMore ? items[items.length - 1]?.id : null, // null = последняя страница
     };
