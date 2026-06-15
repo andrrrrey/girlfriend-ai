@@ -237,6 +237,13 @@ export const ru: Record<keyof typeof en, string> = {
   "gallery.share": "Поделиться",
   "gallery.empty": "В галерее пока нет элементов.",
 
+  // Share
+  "share.title": "Поделиться",
+  "share.subtitle": "Вы можете поделиться ссылкой с друзьями.",
+  "share.copy": "Копировать",
+  "share.copied": "Скопировано!",
+  "share.notFound": "Этот контент больше недоступен.",
+
   // Shorts
   "shorts.signInTitle": "Войдите, чтобы смотреть Shorts",
   "shorts.signInSubtitle": "Создайте аккаунт или войдите, чтобы смотреть короткие видео",

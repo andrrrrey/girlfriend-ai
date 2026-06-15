@@ -209,6 +209,28 @@ export class GenerationService {
     };
   }
 
+  /** Публично возвращает один завершённый медиа-элемент (image|video) по id — для шеринга. */
+  async getPublicJob(jobId: string) {
+    const job = await this.prisma.aiJob.findFirst({
+      where: { id: jobId, status: "completed", type: { in: ["image", "video"] } },
+      include: {
+        user: { select: { id: true, nickname: true, avatarUrl: true } },
+      },
+    });
+
+    if (!job) return null;
+
+    const input = job.input as Record<string, unknown> | null;
+    return {
+      jobId: job.id,
+      type: job.type,
+      output: await this.signOutput(job.output),
+      input: input ? { prompt: input["prompt"], model: input["model"] } : {},
+      createdAt: job.createdAt,
+      user: job.user,
+    };
+  }
+
   async getImageStyles() {
     const setting = await this.prisma.appSetting.findUnique({
       where: { key: "ENABLED_IMAGE_MODELS" },

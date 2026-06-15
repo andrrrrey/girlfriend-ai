@@ -8,6 +8,7 @@ import type { Character } from "../../lib/api";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import LikeButton from "../components/LikeButton";
+import ShareModal from "../components/ShareModal";
 import { useT } from "../../context/language";
 
 const PAGE_CSS = `
@@ -424,6 +425,7 @@ function MyAICard({
   onToggleSelect,
   likeStatus,
   onOpen,
+  onShare,
 }: {
   item: GridItem;
   manageMode: boolean;
@@ -431,6 +433,7 @@ function MyAICard({
   onToggleSelect: () => void;
   likeStatus?: { liked: boolean; count: number };
   onOpen?: (item: GridItem) => void;
+  onShare?: (item: GridItem) => void;
 }) {
   const router = useRouter();
   const { t } = useT();
@@ -487,8 +490,7 @@ function MyAICard({
                   </button>
                   <button className="ai-hover-btn secondary" onClick={(e) => {
                     e.stopPropagation();
-                    const shareUrl = item.url;
-                    if (shareUrl && navigator.share) navigator.share({ url: shareUrl }).catch(() => {});
+                    onShare?.(item);
                   }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" strokeWidth="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                     {t("gallery.share")}
@@ -588,6 +590,7 @@ export default function MyAIPage() {
   const [deleting, setDeleting] = useState(false);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [shareItem, setShareItem] = useState<GridItem | null>(null);
 
   const loadCreated = useCallback(() => {
     if (!user) return;
@@ -877,6 +880,7 @@ export default function MyAIPage() {
                   onToggleSelect={() => toggleSelect(itemId)}
                   likeStatus={likeStatuses[itemId]}
                   onOpen={(it) => { if (it.url) setLightbox({ url: it.url, type: it.type }); }}
+                  onShare={setShareItem}
                 />
               );
             })
@@ -962,6 +966,13 @@ export default function MyAIPage() {
             {t("myai.download")}
           </button>
         </div>
+      )}
+
+      {shareItem && (shareItem.id || shareItem.jobId) && (
+        <ShareModal
+          url={`${window.location.origin}/share/${shareItem.jobId}`}
+          onClose={() => setShareItem(null)}
+        />
       )}
     </>
   );

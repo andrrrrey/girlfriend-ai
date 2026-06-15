@@ -235,6 +235,13 @@ export const en = {
   "gallery.share": "Share",
   "gallery.empty": "No items found in the gallery yet.",
 
+  // Share
+  "share.title": "Share",
+  "share.subtitle": "You can share the link with friends.",
+  "share.copy": "Copy",
+  "share.copied": "Copied!",
+  "share.notFound": "This content is no longer available.",
+
   // Shorts
   "shorts.signInTitle": "Sign in to watch Shorts",
   "shorts.signInSubtitle": "Create an account or sign in to view short videos",

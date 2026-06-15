@@ -1827,6 +1827,10 @@ export async function getGalleryTags(): Promise<{ tag: string; count: number }[]
   return apiFetch<{ tag: string; count: number }[]>("/generation/gallery/tags");
 }
 
+export async function getPublicGalleryItem(jobId: string): Promise<GalleryItem> {
+  return apiFetch<GalleryItem>(`/generation/public/${jobId}`);
+}
+
 export interface UserLimitsResponse {
   subscription: string;
   limits: {

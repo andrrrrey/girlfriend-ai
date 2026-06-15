@@ -9,6 +9,7 @@ import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import { formatTag } from "../../lib/tags";
 import LikeButton from "../components/LikeButton";
+import ShareModal from "../components/ShareModal";
 import { useT } from "../../context/language";
 
 const PAGE_CSS = `
@@ -294,7 +295,7 @@ const PAGE_CSS = `
   }
 `;
 
-function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
+function GalleryCard({ item, onOpen, onShare, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; onShare: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
   const { t } = useT();
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
@@ -311,7 +312,7 @@ function GalleryCard({ item, onOpen, likeStatus }: { item: GalleryItem; onOpen: 
           </button>
           <button className="g-hover-btn secondary" onClick={(e) => {
             e.stopPropagation();
-            if (url && navigator.share) navigator.share({ url }).catch(() => {});
+            onShare(item);
           }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" strokeWidth="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
             {t("gallery.share")}
@@ -387,6 +388,7 @@ export default function GalleryPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [shareItem, setShareItem] = useState<GalleryItem | null>(null);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -536,7 +538,7 @@ export default function GalleryPage() {
             </div>
           ) : (
             filteredItems.map((item) => (
-              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} likeStatus={likeStatuses[item.jobId]} />
+              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} onShare={setShareItem} likeStatus={likeStatuses[item.jobId]} />
             ))
           )}
           {loadingMore && Array.from({ length: 4 }).map((_, i) => (
@@ -568,6 +570,13 @@ export default function GalleryPage() {
             )}
           </div>
         </div>
+
+        {shareItem && (
+          <ShareModal
+            url={`${window.location.origin}/share/${shareItem.jobId}`}
+            onClose={() => setShareItem(null)}
+          />
+        )}
       </div>
     </>
   );

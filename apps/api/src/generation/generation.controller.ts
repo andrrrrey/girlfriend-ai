@@ -157,6 +157,15 @@ export class GenerationController {
     return this.generationService.getGalleryTags();
   }
 
+  @Get("public/:jobId")
+  async getPublicJob(@Param("jobId") jobId: string) {
+    const result = await this.generationService.getPublicJob(jobId);
+    if (!result) {
+      throw new HttpException("Not found", HttpStatus.NOT_FOUND);
+    }
+    return result;
+  }
+
   @Get("history")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
