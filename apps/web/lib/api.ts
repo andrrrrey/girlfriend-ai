@@ -1539,6 +1539,79 @@ export function streamMessage(
 }
 
 /**
+ * Запрашивает первое приветствие персонажа для пустого чата (POST /chats/:chatId/greeting).
+ *
+ * Персонаж пишет первым — стримит приветствие «в образе». Сохраняется только
+ * ответ ассистента (на бэке). `lang` задаёт язык приветствия.
+ *
+ * @param {string} chatId - ID чата
+ * @param {"en" | "ru"} lang - язык приветствия
+ * @returns {AbortController} Контроллер для отмены
+ */
+export function streamGreeting(
+  chatId: string,
+  lang: "en" | "ru",
+  onDelta: (text: string) => void,
+  onDone: () => void,
+  onError: (err: string, code?: number, body?: any) => void,
+): AbortController {
+  const controller = new AbortController();
+  const tokens = getTokens();
+
+  fetch(`${API_BASE}/chats/${chatId}/greeting`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    },
+    body: JSON.stringify({ lang }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        onError(err.error || err.message || res.statusText, res.status, err);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line === "data: [DONE]") {
+            onDone();
+            return;
+          }
+          if (line.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.content) onDelta(parsed.content);
+              if (parsed.error) onError(parsed.error);
+              if (parsed.done) onDone();
+            } catch {
+              // ignore malformed SSE lines
+            }
+          }
+        }
+      }
+      onDone();
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") {
+        onError(err.message);
+      }
+    });
+
+  return controller;
+}
+
+/**
  * Перегенерирует AI-ответ для существующего сообщения (POST /chats/:chatId/messages/:messageId/regenerate).
  *
  * Удаляет старые сообщения начиная с messageId и стримит новый AI-ответ.

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
   createImageJob,
@@ -25,7 +26,7 @@ import {
   getCachedCameraOptions,
 } from "../../lib/options-cache";
 import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse } from "../../lib/api";
-import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, GENDERS, HEIGHTS } from "../components/CharacterModal";
+import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, GENDERS, HEIGHTS, BREAST_SIZES, BUTT_SIZES } from "../components/CharacterModal";
 import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
 import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
 import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
@@ -958,7 +959,7 @@ const GALLERY_TAG_STOP_WORDS = new Set([
 
 export default function GenerationPage() {
   const { user, loading } = useAuth();
-  const { t: tr } = useT();
+  const { t: tr, lang } = useT();
   const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
@@ -1231,11 +1232,11 @@ export default function GenerationPage() {
     }
     if (characterSelections.breastSize) {
       const p = findCharPrompt(characterSelections.breastSize, "BREAST_SIZE");
-      if (p) bodyParts.push(p);
+      bodyParts.push(p || `${characterSelections.breastSize.toLowerCase()} breasts`);
     }
     if (characterSelections.buttSize) {
       const p = findCharPrompt(characterSelections.buttSize, "BUTT_SIZE");
-      if (p) bodyParts.push(p);
+      bodyParts.push(p || `${characterSelections.buttSize.toLowerCase()} butt`);
     }
     if (characterSelections.height) {
       const heightMap: Record<string, string> = {
@@ -1339,8 +1340,6 @@ export default function GenerationPage() {
     const races = byCategory("HUMAN_RACE");
     const hairStyles = byCategory("HAIR_STYLE");
     const bodyTypes = byCategory("BODY_TYPE");
-    const breastSizes = byCategory("BREAST_SIZE");
-    const buttSizes = byCategory("BUTT_SIZE");
 
     setCharacterSelections({
       style: nameOf(styles),
@@ -1354,8 +1353,8 @@ export default function GenerationPage() {
       hairLength: pick(HAIR_LENGTHS),
       hairColor: pick(HAIR_COLORS).name,
       bodyType: nameOf(bodyTypes),
-      breastSize: nameOf(breastSizes),
-      buttSize: nameOf(buttSizes),
+      breastSize: pick(BREAST_SIZES),
+      buttSize: pick(BUTT_SIZES),
       height: pick(HEIGHTS),
     });
 
@@ -1836,7 +1835,7 @@ export default function GenerationPage() {
                     </div>
                     {actionTags.length > 0 && (
                       <div className="editor-tags">
-                        {visibleActionTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                        {visibleActionTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                         {extraActionTags > 0 && <span className="editor-tag">+{extraActionTags}</span>}
                       </div>
                     )}
@@ -1878,7 +1877,7 @@ export default function GenerationPage() {
                 </div>
                 {hasCharSelections && (
                   <div className="editor-tags">
-                    {visibleCharTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {visibleCharTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraCharTags > 0 && <span className="editor-tag">+{extraCharTags}</span>}
                   </div>
                 )}
@@ -1897,7 +1896,7 @@ export default function GenerationPage() {
                 </div>
                 {hasAppearanceSelections && (
                   <div className="editor-tags">
-                    {visibleAppearanceTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {visibleAppearanceTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraAppearanceTags > 0 && <span className="editor-tag">+{extraAppearanceTags}</span>}
                   </div>
                 )}
@@ -1916,7 +1915,7 @@ export default function GenerationPage() {
                 </div>
                 {hasPoseSelections && (
                   <div className="editor-tags">
-                    {visiblePoseTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {visiblePoseTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraPoseTags > 0 && <span className="editor-tag">+{extraPoseTags}</span>}
                   </div>
                 )}
@@ -1935,7 +1934,7 @@ export default function GenerationPage() {
                 </div>
                 {hasSceneSelections && (
                   <div className="editor-tags">
-                    {visibleSceneTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {visibleSceneTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraSceneTags > 0 && <span className="editor-tag">+{extraSceneTags}</span>}
                   </div>
                 )}
@@ -1954,7 +1953,7 @@ export default function GenerationPage() {
                 </div>
                 {hasCameraSelections && (
                   <div className="editor-tags">
-                    {visibleCameraTags.map((t) => <span key={t} className="editor-tag">{t}</span>)}
+                    {visibleCameraTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraCameraTags > 0 && <span className="editor-tag">+{extraCameraTags}</span>}
                   </div>
                 )}
@@ -1969,7 +1968,7 @@ export default function GenerationPage() {
                 </div>
                 <div className="editor-text">
                   <div className="name" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    Prompt Details
+                    {tr("prompt.title")}
                     <span dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />
                   </div>
                   <div className="sub premium-label">{tr("gp.premiumFeature")}</div>
@@ -2004,7 +2003,7 @@ export default function GenerationPage() {
                   }}
                 >
                   <span className="orient-icon"><span className={`orient-rect ${opt.rect}`} /></span>
-                  {opt.label}
+                  {tr(opt.value === "4:5" ? "gp.aspectPortrait" : "gp.aspectLandscape")}
                   {!opt.free && <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />}
                 </div>
               ))}
@@ -2016,7 +2015,7 @@ export default function GenerationPage() {
 
           {/* Number of items */}
           <div className="chips-section">
-            <div className="section-title">Number of {activeTab === "video" ? "Videos" : "Images"}</div>
+            <div className="section-title">{tr(activeTab === "video" ? "gp.numberVideos" : "gp.numberImages")}</div>
             <div className="chips-row">
               {COUNT_OPTIONS.map((opt) => (
                 <div

@@ -12,6 +12,7 @@ import {
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
 import {
@@ -91,8 +92,20 @@ function cvLabel(field: string, value: string): string {
   if (currentLang !== "ru") return value;
   if (field === "relationshipType") return REL_RU[value] ?? value;
   if (field === "familyStatus") return FAM_RU[value] ?? value;
-  return value;
+  return localizeOption(value, currentLang);
 }
+
+// HEX-карты для цветовых плашек (Цвет глаз / Цвет волос) — как в генерации изображения.
+const EYE_COLOR_HEX: Record<string, string> = {
+  Blue: "#4A90D9", Brown: "#8B4513", Green: "#228B22", Hazel: "#A8784E",
+  Gray: "#808080", Amber: "#FFBF00", Violet: "#8B008B", Black: "#1a1a1a",
+};
+const HAIR_COLOR_HEX: Record<string, string> = {
+  Blonde: "#F5DEB3", Brunette: "#5A3A22", Black: "#1a1a1a", Red: "#DC143C",
+  Auburn: "#922724", Platinum: "#E5E4E2", Silver: "#C0C0C0", Pink: "#FF69B4",
+  Blue: "#4169E1", Purple: "#8B008B", Ombre: "linear-gradient(135deg, #1a1a1a 40%, #F5DEB3 100%)",
+  "Strawberry Blonde": "#D9A066", Copper: "#B87333", Caramel: "#AF6E4D",
+};
 const persName = (name: string) => (currentLang === "ru" ? PERS_NAME_RU[name] ?? name : name);
 const persDesc = (name: string, desc: string) => (currentLang === "ru" ? PERS_DESC_RU[name] ?? desc : desc);
 
@@ -113,8 +126,19 @@ function dropdown(field: string, label: string, options: string[], def: string) 
 }
 
 function cardGrid(field: string, items: string[], scrollable = false) {
-  const cards = items.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${v}</span></div>`).join("");
+  const cards = items.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${cvLabel(field, v)}</span></div>`).join("");
   return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}">${cards}</div>`;
+}
+
+// Сетка цветовых плашек с цветным кружком (data-value остаётся английским).
+function colorCardGrid(field: string, items: string[], colorMap: Record<string, string>) {
+  const cards = items
+    .map((v) => {
+      const c = colorMap[v] || "#888";
+      return `<div class="ethnicity-card color-card" data-value="${v}"><span class="color-dot" style="background:${c}"></span><span class="card-name">${cvLabel(field, v)}</span></div>`;
+    })
+    .join("");
+  return `<div class="ethnicity-grid color-grid" data-field="${field}">${cards}</div>`;
 }
 
 function imageCardGrid(field: string, containerId: string, scrollable = false) {
@@ -141,7 +165,7 @@ function populateImageCards(containerId: string, options: CharacterOption[]) {
 }
 
 function chips(field: string, items: string[]) {
-  return `<div class="tags-wrap" data-field="${field}">${items.map((v) => `<div class="tag-chip" data-value="${v}">${v}</div>`).join("")}</div>`;
+  return `<div class="tags-wrap" data-field="${field}">${items.map((v) => `<div class="tag-chip" data-value="${v}">${cvLabel(field, v)}</div>`).join("")}</div>`;
 }
 
 function stageHeader(num: number, titleKey: TKey, genDisabled = false) {
@@ -173,7 +197,7 @@ function stage01() {
         <div class="slider-track" data-value="25"><div class="slider-fill"><div class="slider-thumb"><div class="slider-tooltip">25</div></div></div></div>
         <span class="slider-max">100</span></div></div>
     <div class="field-style"><div class="field-label">${tr("create.style")}</div>
-      <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${s}</span></div>`).join("")}</div></div>
+      <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${cvLabel("style", s)}</span></div>`).join("")}</div></div>
     ${navButtons(1, 2)}
   </div>`;
 }
@@ -185,7 +209,7 @@ function stage02() {
     <div class="ethnicity-section"><div class="field-label">${tr("create.ethnicity")}</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
     <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">${tr("create.fantasyRace")} <span style="color:#969696;font-weight:400">${tr("create.optional")}</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
     <div class="voice-section"><div class="field-label">${tr("create.voice")}</div>
-      <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${v}</span></div>`).join("")}</div></div>
+      <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${cvLabel("voice", v)}</span></div>`).join("")}</div></div>
     ${navButtons(1, 3)}
   </div>`;
 }
@@ -194,9 +218,9 @@ function stage03() {
   return `<div class="stage-content" id="stage-03-content">
     ${stageHeader(3, "create.stageFacial")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">${tr("create.eyeColor")}</div>${cardGrid("eyeColor", EYE_COLORS, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.eyeColor")}</div>${colorCardGrid("eyeColor", EYE_COLORS, EYE_COLOR_HEX)}</div>
       <div class="ethnicity-section"><div class="field-label">${tr("create.hairStyle")}</div>${imageCardGrid("hairStyle", "hairstyle-grid-container", true)}</div>
-      <div class="ethnicity-section"><div class="field-label">${tr("create.hairColor")}</div>${cardGrid("hairColor", HAIR_COLORS, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.hairColor")}</div>${colorCardGrid("hairColor", HAIR_COLORS, HAIR_COLOR_HEX)}</div>
     </div>
     ${navButtons(2, 4)}
   </div>`;
@@ -640,7 +664,7 @@ function showValidationErrors(stageNum: number, errors: { field: string; message
     errorDiv.className = "create-error stage-validation-error";
     errorDiv.textContent = errors.length === 1
       ? errors[0].message
-      : `Please fill in the highlighted fields (${errors.length} remaining)`;
+      : tr("create.errFillHighlighted", { count: errors.length });
     buttonsRow.parentElement?.insertBefore(errorDiv, buttonsRow);
   }
 
@@ -802,7 +826,8 @@ function s9Tile(icon: string, name: string, label: string) {
 
 function s9ColorTile(color: string | undefined, label: string) {
   const hex = colorNameToHex(color);
-  return `<div class="s9-color-tile"><div class="s9-color-dot" style="background:${hex}"></div><div class="s9-color-info"><div class="s9-color-name">${color || "—"}</div><div class="s9-tile-label">${label}</div></div></div>`;
+  const disp = color ? localizeOption(color, currentLang) : "—";
+  return `<div class="s9-color-tile"><div class="s9-color-dot" style="background:${hex}"></div><div class="s9-color-info"><div class="s9-color-name">${disp}</div><div class="s9-tile-label">${label}</div></div></div>`;
 }
 
 function s9PersRow(icon: string, label: string, value: string) {
@@ -821,18 +846,18 @@ function populatePreview() {
   if (app) {
     app.innerHTML = `
       <div class="s9-attr-grid">
-        ${s9Tile("🔊", d.voice || "—", tr("create.pvVoice"))}
-        ${s9Tile("💇", d.hairStyle || "—", tr("create.pvHairstyle"))}
-        ${s9Tile("🌍", d.ethnicity || "—", tr("create.pvEthnicity"))}
+        ${s9Tile("🔊", d.voice ? localizeOption(d.voice, currentLang) : "—", tr("create.pvVoice"))}
+        ${s9Tile("💇", d.hairStyle ? localizeOption(d.hairStyle, currentLang) : "—", tr("create.pvHairstyle"))}
+        ${s9Tile("🌍", d.ethnicity ? localizeOption(d.ethnicity, currentLang) : "—", tr("create.pvEthnicity"))}
         <div class="s9-color-tiles">
           ${s9ColorTile(d.eyeColor, tr("create.pvEyes"))}
           ${s9ColorTile(d.hairColor, tr("create.pvHair"))}
         </div>
       </div>
       <div class="s9-attr-grid" style="grid-template-columns:repeat(3,1fr)">
-        ${s9Tile("🏋️", d.bodyType || "—", tr("create.pvBodyType"))}
-        ${s9Tile("🌸", d.breastSize || "—", tr("create.pvBreastSize"))}
-        ${s9Tile("🍑", d.buttSize || "—", tr("create.pvButtSize"))}
+        ${s9Tile("🏋️", d.bodyType ? localizeOption(d.bodyType, currentLang) : "—", tr("create.pvBodyType"))}
+        ${s9Tile("🌸", d.breastSize ? localizeOption(d.breastSize, currentLang) : "—", tr("create.pvBreastSize"))}
+        ${s9Tile("🍑", d.buttSize ? localizeOption(d.buttSize, currentLang) : "—", tr("create.pvButtSize"))}
       </div>
       <div class="s9-custom-textareas">
         <div>
@@ -851,7 +876,7 @@ function populatePreview() {
   if (per) {
     per.innerHTML = `<div class="s9-pers-list">
       ${s9PersRow("💬", tr("create.pvPersonality"), d.personality ? persName(d.personality) : "")}
-      ${s9PersRow("🏠", tr("create.pvLifestyle"), d.lifestyle || "")}
+      ${s9PersRow("🏠", tr("create.pvLifestyle"), d.lifestyle ? localizeOption(d.lifestyle, currentLang) : "")}
       ${s9PersRow("💑", tr("create.pvRelationship"), d.relationshipType ? cvLabel("relationshipType", d.relationshipType) : "")}
       ${s9PersRow("👨‍👩‍👧", tr("create.pvFamilyStatus"), d.familyStatus ? cvLabel("familyStatus", d.familyStatus) : "")}
       ${s9PersRow("💼", tr("create.pvWork"), d.work?.join(", ") || "")}
@@ -1442,7 +1467,7 @@ export default function CreateCharacterPage() {
       const submitBtn = document.getElementById("btn-submit");
       if (!submitBtn || submitBtn.classList.contains("disabled")) return;
       submitBtn.classList.add("disabled");
-      submitBtn.textContent = "Creating...";
+      submitBtn.textContent = tr("create.creating");
       try {
         const data = collectFormData();
         // Remove prompt fields — they're only used for image generation, not character creation API.
@@ -1458,7 +1483,7 @@ export default function CreateCharacterPage() {
         router.push(`/chat?sessionId=${newChat.id}`);
       } catch (err: unknown) {
         submitBtn.classList.remove("disabled");
-        submitBtn.textContent = "Bring to Life";
+        submitBtn.textContent = tr("create.bringToLife");
         if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
           premiumPopupRef.current({
             limitType: err.body.limitType as PremiumLimitType,
@@ -1466,7 +1491,7 @@ export default function CreateCharacterPage() {
             used: err.body.used,
           });
         } else {
-          const msg = err instanceof Error ? err.message : "Failed to create character";
+          const msg = err instanceof Error ? err.message : tr("create.errCreate");
           alert(msg);
         }
       }

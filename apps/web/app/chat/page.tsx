@@ -10,6 +10,7 @@ import {
   type ChatProfile,
   characters as charactersApi,
   streamMessage,
+  streamGreeting,
   streamRegenerate,
   streamVoiceMessage,
   streamEditMessage,
@@ -33,7 +34,7 @@ const DEMO_MESSAGE_LIMIT = 20;
 
 function ChatPageInner() {
   const { user, loading } = useAuth();
-  const { t } = useT();
+  const { t, lang } = useT();
   const router = useRouter();
   const { startGeneration, notifications, activeJobs } = useGeneration();
   const isDemo = !user || user.subscription === "free";
@@ -98,14 +99,19 @@ function ChatPageInner() {
   }, []);
 
   // Load messages for active chat
-  const loadMessages = useCallback(async (chatId: string) => {
+  const loadMessages = useCallback(async (chatId: string): Promise<Message[]> => {
     try {
       const res = await chats.getMessages(chatId);
       setMessages(res.items);
+      return res.items;
     } catch {
       setMessages([]);
+      return [];
     }
   }, []);
+
+  // Чаты, для которых приветствие уже запрошено в этой сессии — чтобы не дублировать.
+  const greetedRef = useRef<Set<string>>(new Set());
 
   // Load user's chat profiles (personas) for the header dropdown
   useEffect(() => {
@@ -164,7 +170,32 @@ function ChatPageInner() {
   // until the AI reply arrives.
   useEffect(() => {
     if (activeChat) {
-      loadMessages(activeChat);
+      const chatId = activeChat;
+      loadMessages(chatId).then((items) => {
+        // Пустой чат → персонаж здоровается первым (один раз на сессию/чат).
+        if (items.length === 0 && !greetedRef.current.has(chatId)) {
+          greetedRef.current.add(chatId);
+          setStreaming(true);
+          setStreamContent("");
+          abortRef.current = streamGreeting(
+            chatId,
+            lang === "ru" ? "ru" : "en",
+            (delta) => setStreamContent((prev) => prev + delta),
+            () => {
+              setStreaming(false);
+              loadMessages(chatId);
+              loadChats();
+              setStreamContent("");
+            },
+            () => {
+              // Ошибка — позволяем повторить при следующем открытии чата.
+              setStreaming(false);
+              setStreamContent("");
+              greetedRef.current.delete(chatId);
+            },
+          );
+        }
+      });
       setGalleryIndex(0);
       // Auto-focus the message input
       setTimeout(() => chatInputRef.current?.focus(), 100);

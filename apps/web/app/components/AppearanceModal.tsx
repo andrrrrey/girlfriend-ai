@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { AppearanceCategory, AppearanceOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 import type { TKey } from "../../lib/i18n";
 
 const CONDITION_LABEL_KEYS: Record<string, TKey> = {
@@ -53,7 +54,7 @@ function SelectedOverlay() {
 }
 
 export default function AppearanceModal({ open, onClose, selections, onSave, options }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [draft, setDraft] = useState<AppearanceSelections>({ outfits: [...selections.outfits], outfitDetails: [...selections.outfitDetails], condition: [...selections.condition] });
   const [activeId, setActiveId] = useState<string>("");
 
@@ -105,11 +106,11 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
   const sidebarItems: SidebarEntry[] = [];
   if (options.OUTFITS.length > 0) {
     sidebarItems.push({ type: "header", label: t("gen.outfits") });
-    options.OUTFITS.forEach((cat) => sidebarItems.push({ type: "item", id: `outfits-${cat.id}`, label: cat.name }));
+    options.OUTFITS.forEach((cat) => sidebarItems.push({ type: "item", id: `outfits-${cat.id}`, label: localizeOption(cat.name, lang) }));
   }
   if (options.OUTFIT_DETAILS.length > 0) {
     sidebarItems.push({ type: "header", label: t("gen.outfitDetails") });
-    options.OUTFIT_DETAILS.forEach((cat) => sidebarItems.push({ type: "item", id: `details-${cat.id}`, label: cat.name }));
+    options.OUTFIT_DETAILS.forEach((cat) => sidebarItems.push({ type: "item", id: `details-${cat.id}`, label: localizeOption(cat.name, lang) }));
   }
   sidebarItems.push({ type: "item", id: "condition", label: t("gen.conditionOfClothes") });
 
@@ -147,7 +148,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
             {/* Outfits categories */}
             {options.OUTFITS.map((cat) => (
               <div key={cat.id} data-section-id={`outfits-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{cat.name}</div>
+                <div style={s.sectionTitle}>{localizeOption(cat.name, lang)}</div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.outfits.includes(opt.name);
@@ -155,7 +156,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, outfits: toggle(draft.outfits, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}
@@ -170,7 +171,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
             {/* Outfit Details categories */}
             {options.OUTFIT_DETAILS.map((cat) => (
               <div key={cat.id} data-section-id={`details-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{cat.name}</div>
+                <div style={s.sectionTitle}>{localizeOption(cat.name, lang)}</div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.outfitDetails.includes(opt.name);
@@ -178,7 +179,7 @@ export default function AppearanceModal({ open, onClose, selections, onSave, opt
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, outfitDetails: toggle(draft.outfitDetails, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}

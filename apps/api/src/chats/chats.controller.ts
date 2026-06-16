@@ -73,6 +73,7 @@ import { S3Service } from "../s3/s3.service";
 import { ChatsService } from "./chats.service";
 import { CreateChatDto } from "./dto/create-chat.dto";
 import { EditMessageDto } from "./dto/edit-message.dto";
+import { GreetingDto } from "./dto/greeting.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
 import { loadEnv } from "@repo/config";
@@ -412,6 +413,115 @@ export class ChatsController {
     // Record job completion and usage
     await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
     await this.chatsService.logUsage(req.user.id, "chat_message", tokensUsed || undefined);
+
+    res.end();
+  }
+
+  // ─── First greeting: character opens the conversation (streamed) ───
+
+  /**
+   * Генерирует первое приветственное сообщение персонажа для ПУСТОГО чата.
+   *
+   * Персонаж пишет первым — короткое приветствие «в образе» по своему промпту.
+   * Скрытый kickoff-запрос к LLM не сохраняется как сообщение пользователя;
+   * сохраняется только ответ ассистента. Если в чате уже есть сообщения —
+   * приветствие не генерируется (идемпотентность).
+   *
+   * @returns SSE-поток (text/event-stream) с фрагментами приветствия.
+   */
+  @ApiOperation({ summary: "Generate the character's first greeting for an empty chat (SSE)" })
+  @Post(":id/greeting")
+  async greeting(
+    @Req() req: any,
+    @Res() res: Response,
+    @Param("id") id: string,
+    @Body() dto: GreetingDto,
+  ) {
+    const chat = await this.chatsService.getChat(id, req.user.id);
+
+    // Приветствуем только пустые чаты — никогда не перезаписываем существующий диалог.
+    const history = await this.chatsService.getMessageHistory(id, 1);
+    if (history.length > 0) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.write("data: [DONE]\n\n");
+      res.end();
+      return;
+    }
+
+    const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
+      chatSessionId: id,
+      characterId: chat.characterId,
+    });
+
+    // Скрытый kickoff: НЕ сохраняется как сообщение, лишь провоцирует приветствие.
+    // Язык реплики повторяет язык kickoff (LANGUAGE-правило системного промпта).
+    const kickoff = dto.lang === "ru"
+      ? "*заходит в чат* Поздоровайся со мной первой — коротко и в образе своего персонажа."
+      : "*enters the chat* Greet me first — keep it short and in character.";
+
+    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: kickoff }],
+        characterId: chat.characterId,
+        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
+          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
+          : undefined,
+      }),
+    });
+
+    if (!aiRes.ok || !aiRes.body) {
+      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
+      res.status(aiRes.status || 502).json(err);
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    let aborted = false;
+    req.on("close", () => { aborted = true; });
+
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let tokensUsed = 0;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done || aborted) break;
+
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.content) fullContent += parsed.content;
+              if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
+            } catch {
+              // ignore parse errors
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (fullContent) {
+      await this.chatsService.saveMessage(id, "assistant", fullContent);
+    }
+
+    await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
+    await this.chatsService.logUsage(req.user.id, "chat_greeting", tokensUsed || undefined);
 
     res.end();
   }

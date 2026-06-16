@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { SceneCategory, SceneOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 import type { TKey } from "../../lib/i18n";
 
 const ATMOSPHERE_LABEL_KEYS: Record<string, TKey> = {
@@ -61,7 +62,7 @@ function SelectedOverlay() {
 }
 
 export default function SceneModal({ open, onClose, selections, onSave, options }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [draft, setDraft] = useState<SceneSelections>({
     locations: [...selections.locations],
     timeOfDay: [...selections.timeOfDay],
@@ -132,7 +133,7 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
   const sidebarItems: SidebarEntry[] = [];
   if (options.LOCATION.length > 0) {
     sidebarItems.push({ type: "header", label: t("gen.location") });
-    options.LOCATION.forEach((cat) => sidebarItems.push({ type: "item", id: `location-${cat.id}`, label: cat.name }));
+    options.LOCATION.forEach((cat) => sidebarItems.push({ type: "item", id: `location-${cat.id}`, label: localizeOption(cat.name, lang) }));
   }
   sidebarItems.push({ type: "item", id: "atmosphere", label: t("gen.atmosphere") });
 
@@ -170,7 +171,7 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
             {/* Location categories */}
             {options.LOCATION.map((cat) => (
               <div key={cat.id} data-section-id={`location-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{cat.name}</div>
+                <div style={s.sectionTitle}>{localizeOption(cat.name, lang)}</div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.locations.includes(opt.name);
@@ -178,7 +179,7 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, locations: toggle(draft.locations, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}

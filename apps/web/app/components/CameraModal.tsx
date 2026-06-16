@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { CameraOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 import type { TKey } from "../../lib/i18n";
 
 export interface CameraSelections {
@@ -76,7 +77,7 @@ const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
 export default function CameraModal({ open, onClose, selections, onSave, options }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [draft, setDraft] = useState<CameraSelections>({
     framing: [...selections.framing],
     cameraAngle: [...selections.cameraAngle],
@@ -181,7 +182,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, framing: toggle(draft.framing, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}
@@ -202,7 +203,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, cameraAngle: toggle(draft.cameraAngle, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}

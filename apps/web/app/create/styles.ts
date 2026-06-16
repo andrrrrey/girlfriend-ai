@@ -136,6 +136,20 @@ export const PAGE_CSS = `
   .ethnicity-card.selected .ethnicity-card-img { opacity: 0.65; }
   .facial-grid { flex-wrap: wrap; overflow-x: hidden; overflow-y: hidden; }
   .facial-grid .ethnicity-card { width: calc(25% - 8px); flex-shrink: 0; }
+  /* Цветовые плашки (Цвет глаз / Цвет волос) — как в генерации изображения. */
+  .color-grid { gap: 8px; overflow: visible; }
+  .color-card {
+    width: auto; aspect-ratio: auto; flex: 0 0 auto;
+    flex-direction: row; gap: 6px; padding: 6px 12px;
+    border: 1px solid #3a3a3a; border-radius: 8px;
+  }
+  .color-card .color-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .color-card .card-name { font-size: 13px; font-weight: 500; color: #ccc; }
+  .color-card.selected { border: 1px solid #f95bad; background: rgba(249,91,173,0.12); }
+  .color-card.selected .card-name { color: #f95bad; }
   .facial-scroll {
     display: flex; flex-direction: column; gap: 22px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   }

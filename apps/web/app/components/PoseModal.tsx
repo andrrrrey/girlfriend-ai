@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 
 export interface PoseSelections {
   facialExpressions: string[];
@@ -41,7 +42,7 @@ function SelectedOverlay() {
 }
 
 export default function PoseModal({ open, onClose, selections, onSave, options, posesOnly = false }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [draft, setDraft] = useState<PoseSelections>({
     facialExpressions: [...selections.facialExpressions],
     poses: [...selections.poses],
@@ -101,11 +102,11 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
   const sidebarItems: SidebarEntry[] = [];
   if (!posesOnly && options.FACIAL_EXPRESSION.length > 0) {
     sidebarItems.push({ type: "header", label: t("gen.facialExpression") });
-    options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: cat.name }));
+    options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: localizeOption(cat.name, lang) }));
   }
   if (poseCategories.length > 0) {
     sidebarItems.push({ type: "header", label: t("gen.poseHeader") });
-    poseCategories.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: cat.name }));
+    poseCategories.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: localizeOption(cat.name, lang) }));
   }
 
   return (
@@ -142,7 +143,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
             {/* Facial Expression categories */}
             {!posesOnly && options.FACIAL_EXPRESSION.map((cat) => (
               <div key={cat.id} data-section-id={`facial-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{cat.name}</div>
+                <div style={s.sectionTitle}>{localizeOption(cat.name, lang)}</div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.facialExpressions.includes(opt.name);
@@ -150,7 +151,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, facialExpressions: toggle(draft.facialExpressions, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}
@@ -165,7 +166,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
             {/* Pose categories */}
             {poseCategories.map((cat) => (
               <div key={cat.id} data-section-id={`pose-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{cat.name}</div>
+                <div style={s.sectionTitle}>{localizeOption(cat.name, lang)}</div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.poses.includes(opt.name);
@@ -173,7 +174,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, poses: toggle(draft.poses, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}

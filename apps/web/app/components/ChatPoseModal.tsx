@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
+import { localizeOption } from "../../lib/optionLabel";
 
 interface Props {
   open: boolean;
@@ -18,7 +19,7 @@ const getActiveCategoryId = (categories: PoseCategory[], selected: string | null
 };
 
 export default function ChatPoseModal({ open, onClose, onGenerate, options }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [selectedPose, setSelectedPose] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -29,8 +30,14 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
     const cat = options.POSE.find((c) => c.id === catId);
     if (!cat) return [];
     const q = search.toLowerCase();
-    return q ? cat.options.filter((o) => o.name.toLowerCase().includes(q)) : cat.options;
-  }, [options.POSE, catId, search]);
+    return q
+      ? cat.options.filter(
+          (o) =>
+            o.name.toLowerCase().includes(q) ||
+            localizeOption(o.name, lang).toLowerCase().includes(q),
+        )
+      : cat.options;
+  }, [options.POSE, catId, search, lang]);
 
   const allOptions = useMemo(() => options.POSE.flatMap((c) => c.options), [options.POSE]);
 
@@ -83,7 +90,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
                       style={{ ...s.catPill, ...(catId === cat.id ? s.catPillActive : {}) }}
                       onClick={() => { setActiveCategory(cat.id); setSearch(""); }}
                     >
-                      {cat.name}
+                      {localizeOption(cat.name, lang)}
                       {catId === cat.id && <div style={s.catPillUnderline} />}
                     </button>
                   ))}
@@ -99,7 +106,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
                         onClick={() => setSelectedPose(isSelected ? null : opt.name)}
                       >
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
-                        <span style={s.imgCardLabel}>{opt.name}</span>
+                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
                       </button>
                     );
                   })}
