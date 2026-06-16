@@ -651,6 +651,17 @@ export interface StoryCharacter {
   latestStoryAt: string | null;
 }
 
+/** Жалоба на персонажа (admin-панель). */
+export interface AdminReport {
+  id: string;
+  reasons: string[];
+  details: string | null;
+  status: string;
+  createdAt: string;
+  user: { id: string; email: string; nickname: string | null } | null;
+  character: { id: string; name: string } | null;
+}
+
 export interface StoryImage {
   id: string;
   url: string;
@@ -759,6 +770,41 @@ export const admin = {
 
   async getUserStats(id: string): Promise<AdminUserDetailedStats> {
     return apiFetch<AdminUserDetailedStats>(`/admin/users/${id}/stats`);
+  },
+
+  /**
+   * Список жалоб с фильтрами и пагинацией (GET /admin/reports).
+   */
+  async getReports(params?: {
+    search?: string;
+    characterId?: string;
+    reason?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ reports: AdminReport[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set("search", params.search);
+    if (params?.characterId) query.set("characterId", params.characterId);
+    if (params?.reason) query.set("reason", params.reason);
+    if (params?.status) query.set("status", params.status);
+    if (params?.limit != null) query.set("limit", String(params.limit));
+    if (params?.offset != null) query.set("offset", String(params.offset));
+    const qs = query.toString();
+    return apiFetch(`/admin/reports${qs ? `?${qs}` : ""}`);
+  },
+
+  /** Меняет статус жалобы (PATCH /admin/reports/:id). */
+  async updateReportStatus(id: string, status: string): Promise<{ id: string; status: string }> {
+    return apiFetch(`/admin/reports/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  /** Удаляет жалобу (DELETE /admin/reports/:id). */
+  async deleteReport(id: string): Promise<void> {
+    return apiFetch(`/admin/reports/${id}`, { method: "DELETE" });
   },
 
   async getCharacterOptions(category?: string): Promise<CharacterOption[]> {
@@ -1395,6 +1441,22 @@ export const comments = {
 
   async getCount(characterId: string): Promise<{ count: number }> {
     return apiFetch<{ count: number }>(`/comments/count?characterId=${characterId}`);
+  },
+};
+
+// ─── Reports (жалобы на персонажей) ──────────────────────────
+
+export const reports = {
+  /** Отправляет жалобу на персонажа (POST /reports). Требует авторизации. */
+  async create(data: {
+    characterId: string;
+    reasons: string[];
+    details?: string;
+  }): Promise<{ id: string }> {
+    return apiFetch<{ id: string }>("/reports", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
 

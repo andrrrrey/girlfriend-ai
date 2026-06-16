@@ -439,6 +439,85 @@ export class AdminService {
     });
   }
 
+  // ─── Reports (жалобы на персонажей) ────────────────────────
+
+  /**
+   * Возвращает список жалоб с фильтрами и пагинацией.
+   *
+   * @param params.search      — поиск по email/нику репортёра или имени персонажа.
+   * @param params.characterId — фильтр по конкретному персонажу.
+   * @param params.reason      — фильтр по причине (наличие ключа в массиве `reasons`).
+   * @param params.status      — фильтр по статусу (open | resolved).
+   */
+  async getReports(params: {
+    search?: string;
+    characterId?: string;
+    reason?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const { search, characterId, reason, status, limit = 20, offset = 0 } =
+      params;
+
+    const where: Prisma.ReportWhereInput = {
+      ...(characterId ? { characterId } : {}),
+      ...(reason ? { reasons: { has: reason } } : {}),
+      ...(status ? { status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { user: { email: { contains: search, mode: "insensitive" } } },
+              { user: { nickname: { contains: search, mode: "insensitive" } } },
+              { character: { name: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.report.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          user: { select: { id: true, email: true, nickname: true } },
+          character: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.report.count({ where }),
+    ]);
+
+    const reports = rows.map((r) => ({
+      id: r.id,
+      reasons: r.reasons,
+      details: r.details,
+      status: r.status,
+      createdAt: r.createdAt.toISOString(),
+      user: r.user,
+      character: r.character,
+    }));
+
+    return { reports, total };
+  }
+
+  async updateReportStatus(id: string, status: string) {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) throw new NotFoundException("Report not found");
+    const updated = await this.prisma.report.update({
+      where: { id },
+      data: { status },
+    });
+    return { id: updated.id, status: updated.status };
+  }
+
+  async deleteReport(id: string) {
+    const report = await this.prisma.report.findUnique({ where: { id } });
+    if (!report) throw new NotFoundException("Report not found");
+    await this.prisma.report.delete({ where: { id } });
+  }
+
   // ─── Character Options ─────────────────────────────────────
 
   async getCharacterOptions(category?: string) {

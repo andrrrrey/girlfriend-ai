@@ -60,7 +60,8 @@ export default function StoriesRail({ onOpenProfile }: Props) {
     }
   };
 
-  if (items.length === 0) return null;
+  // Скрываем блок целиком, если нет ни одного персонажа с активной историей.
+  if (activeStories.length === 0) return null;
 
   return (
     <div className="stories-section">

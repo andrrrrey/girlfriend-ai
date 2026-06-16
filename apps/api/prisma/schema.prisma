@@ -39,6 +39,7 @@ model User {
   messageCopyAudit MessageCopyAudit[]
   likes            Like[]
   comments         Comment[]
+  reports          Report[]
   following        Follow[]           @relation("follower")
   followers        Follow[]           @relation("followee")
 
@@ -133,6 +134,7 @@ model Character {
 
   chatSessions ChatSession[]
   comments     Comment[]
+  reports      Report[]
 
   @@map("characters")
 }
@@ -410,4 +412,24 @@ model Comment {
   @@index([characterId, deletedAt])
   @@index([userId])
   @@map("comments")
+}
+
+// ─── Reports (жалобы на персонажей) ──────────────────────────
+
+model Report {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  characterId String   @map("character_id") @db.Uuid
+  reasons     String[] @default([])
+  details     String?
+  status      String   @default("open") // open | resolved
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("reports")
 }

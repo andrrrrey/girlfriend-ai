@@ -285,6 +285,41 @@ export class AdminController {
     await this.adminService.deleteUser(id);
   }
 
+  // ─── Reports (жалобы на персонажей) ────────────────────────
+
+  @Get("reports")
+  async getReports(
+    @Query("search") search?: string,
+    @Query("characterId") characterId?: string,
+    @Query("reason") reason?: string,
+    @Query("status") status?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    return this.adminService.getReports({
+      search,
+      characterId,
+      reason,
+      status,
+      limit: limit ? parseInt(limit, 10) : 20,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+  }
+
+  @Patch("reports/:id")
+  async updateReportStatus(
+    @Param("id") id: string,
+    @Body() body: { status: string },
+  ) {
+    return this.adminService.updateReportStatus(id, body.status);
+  }
+
+  @Delete("reports/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteReport(@Param("id") id: string) {
+    await this.adminService.deleteReport(id);
+  }
+
   // ─── Character Options ─────────────────────────────────────
 
   @Get("character-options")

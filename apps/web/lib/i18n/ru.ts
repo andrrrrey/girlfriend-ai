@@ -16,6 +16,7 @@ export const ru: Record<keyof typeof en, string> = {
   "common.retry": "Повторить",
   "common.back": "Назад",
   "common.all": "Все",
+  "common.error": "Что-то пошло не так. Попробуйте ещё раз.",
 
   // Sidebar navigation
   "nav.main": "Главное",
@@ -244,6 +245,27 @@ export const ru: Record<keyof typeof en, string> = {
   "share.copy": "Копировать",
   "share.copied": "Скопировано!",
   "share.notFound": "Этот контент больше недоступен.",
+
+  // Report
+  "report.title": "Пожаловаться",
+  "report.subtitle": "Защита публичного контента нашего сообщества требует усилий каждого пользователя!",
+  "report.selectReason": "Выберите причину (можно несколько)",
+  "report.others": "Другое (укажите) (0-1000 символов)",
+  "report.placeholder": "Введите дополнительные детали здесь.",
+  "report.charCount": "{n} символов",
+  "report.cancel": "Отмена",
+  "report.send": "Отправить",
+  "report.sent": "Спасибо! Ваша жалоба отправлена.",
+  "report.loginRequired": "Войдите, чтобы отправить жалобу.",
+  "report.login": "Войти",
+  "report.reason.underage_porn": "детское порно",
+  "report.reason.real_people_porn": "порно с реальными людьми",
+  "report.reason.character_plagiarism": "Плагиат персонажа",
+  "report.reason.wrong_classification": "Неверная классификация персонажа (относится к 18+)",
+  "report.reason.violence_gore": "насилие или жестокость",
+  "report.reason.hate_speech": "разжигание ненависти или дискриминация",
+  "report.reason.horror_dangerous": "Ужасающий или опасный контент",
+  "report.reason.low_quality_spam": "Низкокачественный спам-контент",
 
   // Shorts
   "shorts.signInTitle": "Войдите, чтобы смотреть Shorts",

@@ -32,6 +32,7 @@ import { GenerationModule } from "./generation/generation.module";
 import { MediaModule } from "./media/media.module";
 import { LikesModule } from "./likes/likes.module";
 import { CommentsModule } from "./comments/comments.module";
+import { ReportsModule } from "./reports/reports.module";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { CommentsModule } from "./comments/comments.module";
     CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов
     LikesModule,      // Лайки (полиморфные: персонажи, комментарии, галерея, shorts)
     CommentsModule,   // Комментарии к персонажам
+    ReportsModule,    // Жалобы на персонажей
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

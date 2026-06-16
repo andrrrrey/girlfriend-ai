@@ -5,6 +5,7 @@ import { characters, auth, likes, resizedMediaUrl } from "../lib/api";
 import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ShareModal from "./components/ShareModal";
+import ReportModal from "./components/ReportModal";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
@@ -224,6 +225,7 @@ export default function HomePage() {
   const [chars, setChars] = useState<Character[]>([]);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [shareCharId, setShareCharId] = useState<string | null>(null);
+  const [reportCharId, setReportCharId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
@@ -332,12 +334,13 @@ export default function HomePage() {
       return;
     }
 
-    // Menu item: Report (no action yet).
+    // Menu item: Report → open the report popup for this character.
     const reportItem = target.closest('.card-more-item[data-action="report"]') as HTMLElement | null;
     if (reportItem) {
       e.preventDefault();
       e.stopPropagation();
       document.querySelectorAll(".card-more-menu.open").forEach((m) => m.classList.remove("open"));
+      if (reportItem.dataset.charId) setReportCharId(reportItem.dataset.charId);
       return;
     }
 
@@ -471,6 +474,13 @@ export default function HomePage() {
         <ShareModal
           url={`${window.location.origin}/?character=${shareCharId}`}
           onClose={() => setShareCharId(null)}
+        />
+      )}
+
+      {reportCharId && (
+        <ReportModal
+          characterId={reportCharId}
+          onClose={() => setReportCharId(null)}
         />
       )}
     </>

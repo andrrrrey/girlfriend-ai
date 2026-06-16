@@ -14,6 +14,7 @@ export const en = {
   "common.retry": "Retry",
   "common.back": "Back",
   "common.all": "All",
+  "common.error": "Something went wrong. Please try again.",
 
   // Sidebar navigation
   "nav.main": "Main",
@@ -242,6 +243,27 @@ export const en = {
   "share.copy": "Copy",
   "share.copied": "Copied!",
   "share.notFound": "This content is no longer available.",
+
+  // Report
+  "report.title": "Report",
+  "report.subtitle": "Protecting the public content of our community requires the efforts of every user!",
+  "report.selectReason": "Please select reason (multiple choices)",
+  "report.others": "Others (Please specify) (0-1000 characters)",
+  "report.placeholder": "Enter more details here.",
+  "report.charCount": "{n} characters",
+  "report.cancel": "Cancel",
+  "report.send": "Send",
+  "report.sent": "Thank you! Your report has been sent.",
+  "report.loginRequired": "Please log in to submit a report.",
+  "report.login": "Log in",
+  "report.reason.underage_porn": "underage porn",
+  "report.reason.real_people_porn": "real people porn",
+  "report.reason.character_plagiarism": "Character plagiarism",
+  "report.reason.wrong_classification": "The character classification is wrong (belongs to 18+)",
+  "report.reason.violence_gore": "violence or gore",
+  "report.reason.hate_speech": "hate speech or discrimination",
+  "report.reason.horror_dangerous": "Horror or dangerous content",
+  "report.reason.low_quality_spam": "Low quality spam content",
 
   // Shorts
   "shorts.signInTitle": "Sign in to watch Shorts",

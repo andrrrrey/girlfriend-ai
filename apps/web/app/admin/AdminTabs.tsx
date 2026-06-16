@@ -7,6 +7,7 @@ export type AdminTab =
   | "settings"
   | "characters"
   | "users"
+  | "reports"
   | "gen-settings"
   | "generations"
   | "costs";
@@ -15,6 +16,7 @@ const TABS: { id: AdminTab; label: string; href: string }[] = [
   { id: "settings", label: "Настройки", href: "/admin" },
   { id: "characters", label: "Персонажи", href: "/admin/characters" },
   { id: "users", label: "Пользователи", href: "/admin/users" },
+  { id: "reports", label: "Жалобы", href: "/admin/reports" },
   { id: "gen-settings", label: "Настройки генераций", href: "/admin/character-options" },
   { id: "generations", label: "Генерации", href: "/admin/generations" },
   { id: "costs", label: "Расходы", href: "/admin/costs" },
