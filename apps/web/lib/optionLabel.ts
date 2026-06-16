@@ -153,6 +153,31 @@ const RU_PHRASE: Record<string, string> = {
   "over shoulder": "Из-за плеча", "pov first person": "От первого лица (POV)", "from behind": "Сзади",
   "from side": "Сбоку", "three quarter": "Три четверти", "selfie angle": "Ракурс селфи",
   "mirror reflection": "Отражение в зеркале",
+  // Сцена → Атмосфера → Время суток
+  sunrise: "Рассвет", morning: "Утро", daylight: "Дневной свет", "strong sun": "Яркое солнце",
+  "golden hour": "Золотой час", sunset: "Закат", night: "Ночь", moonlight: "Лунный свет",
+  // Сцена → Атмосфера → Погода
+  "clear sky": "Ясное небо", overcast: "Пасмурно", "light rain": "Лёгкий дождь",
+  "heavy rain": "Сильный дождь", thunderstorm: "Гроза", "light snow": "Лёгкий снег",
+  blizzard: "Метель", fog: "Туман", "strong wind": "Сильный ветер", rainbow: "Радуга",
+  "aurora / northern lights": "Северное сияние", heat: "Жара", frost: "Мороз",
+  // Сцена → Атмосфера → Частицы
+  "sakura petals": "Лепестки сакуры", "falling leaves": "Падающие листья", fireflies: "Светлячки",
+  "flying sparks": "Летящие искры", "magic sparkles": "Волшебные блёстки", "dust in light": "Пыль в свете",
+  "soap bubbles": "Мыльные пузыри", ash: "Пепел", confetti: "Конфетти", "falling feathers": "Падающие перья",
+  // Сцена → Атмосфера → Эффекты окружения
+  smoke: "Дым", steam: "Пар", "wet surfaces": "Мокрые поверхности", "god rays": "Лучи света",
+  "volumetric fog": "Объёмный туман", "sun glare": "Блики солнца", "neon glow": "Неоновое свечение",
+  bioluminescence: "Биолюминесценция",
+  // Камера → Объектив
+  "ultra wide 14mm": "Сверхширокий 14mm", "wide 24mm": "Широкий 24mm", "standard 35mm": "Стандартный 35mm",
+  "normal 50mm": "Обычный 50mm", "portrait 85mm": "Портретный 85mm", "telephoto 135mm": "Телеобъектив 135mm",
+  fisheye: "Рыбий глаз",
+  // Камера → Освещение
+  "natural light": "Естественный свет", "soft diffused": "Мягкий рассеянный",
+  "hard directional": "Жёсткий направленный", "studio softbox": "Студийный софтбокс",
+  backlight: "Контровой свет", "high key": "Высокий ключ", neon: "Неон", candlelight: "Свет свечей",
+  spotlight: "Прожектор", "window light": "Свет из окна", ultraviolet: "Ультрафиолет",
 };
 
 // ─── Пословный перевод (fallback для поз/действий/меток) ──────────

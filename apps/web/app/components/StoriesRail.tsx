@@ -9,9 +9,11 @@ import { useT } from "../../context/language";
 interface Props {
   /** Открыть профиль персонажа без активной истории (reuse CharacterProfilePopup) */
   onOpenProfile: (characterId: string) => void;
+  /** Сообщает родителю, есть ли активные истории (для лейаута главной). */
+  onActiveChange?: (hasActive: boolean) => void;
 }
 
-export default function StoriesRail({ onOpenProfile }: Props) {
+export default function StoriesRail({ onOpenProfile, onActiveChange }: Props) {
   const { t } = useT();
   const [items, setItems] = useState<StoryCharacter[]>([]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -27,6 +29,11 @@ export default function StoriesRail({ onOpenProfile }: Props) {
   }, []);
 
   const activeStories = items.filter((c) => c.hasActiveStory);
+
+  // Сообщаем родителю о наличии активных историй (для подъёма блока персонажей).
+  useEffect(() => {
+    onActiveChange?.(activeStories.length > 0);
+  }, [activeStories.length, onActiveChange]);
 
   const updateArrows = () => {
     const el = scrollRef.current;

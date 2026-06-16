@@ -153,7 +153,7 @@ function populateImageCards(containerId: string, options: CharacterOption[]) {
     const imgHtml = src
       ? `<img src="${src}" alt="${o.name}" class="ethnicity-card-img" loading="lazy" decoding="async" />`
       : "";
-    return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${o.name}</span></div>`;
+    return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${localizeOption(o.name, currentLang)}</span></div>`;
   }).join("");
   container.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
     card.onclick = () => {

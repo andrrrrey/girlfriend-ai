@@ -40,6 +40,8 @@ const PAGE_CSS = `
       position: absolute; left: 36px; right: 36px; top: 324px;
       display: flex; flex-direction: column; gap: 16px;
     }
+    /* Нет активных историй → поднимаем блок персонажей к баннеру, без пустоты. */
+    .characters-section.no-stories { top: 200px; }
     .chars-header { display: flex; flex-direction: column; gap: 5px; max-width: 570px; }
     .chars-title { font-size: 32px; font-weight: 700; line-height: 1.1; }
     .chars-title .pink { color: #ff99ce; }
@@ -117,6 +119,7 @@ const PAGE_CSS = `
       .hero-content { width: 100%; padding: 0 8px; }
       .hero-title { font-size: 20px; white-space: normal; text-align: center; }
       .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
+      .characters-section.no-stories { top: 170px; }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
       .cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -223,6 +226,7 @@ export default function HomePage() {
     { value: "name", label: t("home.sortName") },
   ];
   const [chars, setChars] = useState<Character[]>([]);
+  const [hasStories, setHasStories] = useState(false);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [shareCharId, setShareCharId] = useState<string | null>(null);
   const [reportCharId, setReportCharId] = useState<string | null>(null);
@@ -405,9 +409,9 @@ export default function HomePage() {
       <div className="content">
         <div dangerouslySetInnerHTML={{ __html: heroHtml(t) }} />
 
-        <StoriesRail onOpenProfile={handleOpenProfile} />
+        <StoriesRail onOpenProfile={handleOpenProfile} onActiveChange={setHasStories} />
 
-        <div className="characters-section">
+        <div className={`characters-section${hasStories ? "" : " no-stories"}`}>
           <div className="chars-header">
             <div className="section-label" style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", color: "#969696" }}>{t("home.charactersLabel")}</div>
             <h2 className="chars-title"><span className="pink">{t("home.choosePartner")}</span>{t("home.forToday")}</h2>

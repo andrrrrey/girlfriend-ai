@@ -203,7 +203,7 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
                         const selected = (draft[sec.key] as string[]).includes(opt);
                         return (
                           <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => toggleAtmosphere(sec.key, opt)}>
-                            {opt}
+                            {localizeOption(opt, lang)}
                           </button>
                         );
                       })}

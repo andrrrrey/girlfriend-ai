@@ -219,7 +219,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                   const selected = draft.lens.includes(opt);
                   return (
                     <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, lens: toggle(draft.lens, opt) })}>
-                      {opt}
+                      {localizeOption(opt, lang)}
                     </button>
                   );
                 })}
@@ -234,7 +234,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                   const selected = draft.lighting.includes(opt);
                   return (
                     <button key={opt} style={{ ...s.pill, ...(selected ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, lighting: toggle(draft.lighting, opt) })}>
-                      {opt}
+                      {localizeOption(opt, lang)}
                     </button>
                   );
                 })}
