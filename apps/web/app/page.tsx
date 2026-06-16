@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { characters, auth, likes, resizedMediaUrl } from "../lib/api";
 import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
+import ShareModal from "./components/ShareModal";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
@@ -92,8 +93,21 @@ const PAGE_CSS = `
     .card.featured { border-color: #5b5b5b; left: 0; z-index: 2; }
     .card-action-btn {
       width: 28px; height: 28px; background: rgba(48,39,43,0.4); backdrop-filter: blur(2px);
-      border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;
     }
+    .card-more-wrap { position: relative; }
+    .card-more-menu {
+      display: none; position: absolute; top: 32px; right: 0;
+      background: #1b1b2e; border: 1px solid #313131; border-radius: 8px;
+      padding: 4px; min-width: 130px; z-index: 20; flex-direction: column; gap: 2px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .card-more-menu.open { display: flex; }
+    .card-more-item {
+      padding: 8px 10px; font-size: 11px; font-weight: 600; color: #fff;
+      border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    }
+    .card-more-item:hover { background: rgba(255,255,255,0.08); }
     .card-progress { display: flex; gap: 2px; width: 100%; position: relative; z-index: 2; }
     .card-progress .progress-bar { flex: 1; height: 2px; }
     @media (max-width: 768px) {
@@ -166,6 +180,19 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
   </div>
   <div class="card-actions">
     <div class="card-action-btn card-like-btn" data-char-id="${char.id}"><svg width="16" height="16" viewBox="0 0 16 16" fill="${heartFill}"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="${heartStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="card-more-wrap">
+      <div class="card-action-btn card-more-btn" data-char-id="${char.id}"><svg width="16" height="16" viewBox="0 0 16 16" fill="#fff"><circle cx="8" cy="3.5" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="8" cy="12.5" r="1.3"/></svg></div>
+      <div class="card-more-menu" data-char-id="${char.id}">
+        <div class="card-more-item" data-action="share" data-char-id="${char.id}">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" stroke-width="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" stroke-width="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" stroke-width="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>
+          ${t("gallery.share")}
+        </div>
+        <div class="card-more-item" data-action="report" data-char-id="${char.id}">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/><path d="M3 2.5h8l-1.5 3L11 8.5H3" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          ${t("home.report")}
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card featured">
     <div class="card-bg">${bgContent}<div class="card-overlay"></div></div>
@@ -196,6 +223,7 @@ export default function HomePage() {
   ];
   const [chars, setChars] = useState<Character[]>([]);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
+  const [shareCharId, setShareCharId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
@@ -281,6 +309,38 @@ export default function HomePage() {
 
   const handleCardClick = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
+
+    // Three-dots: toggle the share/report menu.
+    const moreBtn = target.closest(".card-more-btn") as HTMLElement | null;
+    if (moreBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = moreBtn.parentElement?.querySelector(".card-more-menu");
+      const willOpen = menu ? !menu.classList.contains("open") : false;
+      document.querySelectorAll(".card-more-menu.open").forEach((m) => m.classList.remove("open"));
+      if (menu && willOpen) menu.classList.add("open");
+      return;
+    }
+
+    // Menu item: Share → open the copy-link popup for this character.
+    const shareItem = target.closest('.card-more-item[data-action="share"]') as HTMLElement | null;
+    if (shareItem) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll(".card-more-menu.open").forEach((m) => m.classList.remove("open"));
+      if (shareItem.dataset.charId) setShareCharId(shareItem.dataset.charId);
+      return;
+    }
+
+    // Menu item: Report (no action yet).
+    const reportItem = target.closest('.card-more-item[data-action="report"]') as HTMLElement | null;
+    if (reportItem) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll(".card-more-menu.open").forEach((m) => m.classList.remove("open"));
+      return;
+    }
+
     const likeBtn = target.closest(".card-like-btn") as HTMLElement | null;
     if (likeBtn) {
       e.preventDefault();
@@ -318,6 +378,23 @@ export default function HomePage() {
     container.addEventListener("click", handleCardClick as EventListener);
     return () => container.removeEventListener("click", handleCardClick as EventListener);
   }, [dynamicCardsHtml, handleCardClick]);
+
+  // Close any open card menu when clicking outside of it.
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".card-more-wrap")) {
+        document.querySelectorAll(".card-more-menu.open").forEach((m) => m.classList.remove("open"));
+      }
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
+
+  // Open the character profile popup if the page was opened via a shared link (?character=<id>).
+  useEffect(() => {
+    const cid = new URLSearchParams(window.location.search).get("character");
+    if (cid) handleOpenProfile(cid);
+  }, [handleOpenProfile]);
 
   return (
     <>
@@ -389,6 +466,13 @@ export default function HomePage() {
           setLikeStatuses((prev) => ({ ...prev, [charId]: { liked, count } }))
         }
       />
+
+      {shareCharId && (
+        <ShareModal
+          url={`${window.location.origin}/?character=${shareCharId}`}
+          onClose={() => setShareCharId(null)}
+        />
+      )}
     </>
   );
 }

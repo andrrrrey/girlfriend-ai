@@ -162,6 +162,7 @@ export const en = {
   "home.generated": "generated",
   "home.view": "View",
   "home.chat": "Chat",
+  "home.report": "Report",
   "home.filterAll": "All",
   "home.genderFemale": "Female",
   "home.genderMale": "Male",

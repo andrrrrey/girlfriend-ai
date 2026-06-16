@@ -164,6 +164,7 @@ export const ru: Record<keyof typeof en, string> = {
   "home.generated": "создано",
   "home.view": "Открыть",
   "home.chat": "Чат",
+  "home.report": "Пожаловаться",
   "home.filterAll": "Все",
   "home.genderFemale": "Женский",
   "home.genderMale": "Мужской",
