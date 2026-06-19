@@ -81,7 +81,7 @@ export default function StoriesRail({ onOpenProfile, onActiveChange }: Props) {
           </button>
         )}
         <div className="stories-rail" ref={scrollRef}>
-          {items.map((c) => (
+          {activeStories.map((c) => (
             <button
               key={c.id}
               className="story-item"
