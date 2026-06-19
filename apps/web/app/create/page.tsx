@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
-  characters, chats, createImageJob, getJobStatus, getCharacterOptions, ApiError,
+  characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, ApiError,
   type CharacterOption,
   getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
   type AppearanceOptionsResponse, type PoseOptionsResponse, type SceneOptionsResponse, type CameraOptionsResponse,
@@ -36,6 +36,11 @@ let cachedAppearanceOptions: AppearanceOptionsResponse | null = null;
 let cachedPoseOptions: PoseOptionsResponse | null = null;
 let cachedSceneOptions: SceneOptionsResponse | null = null;
 let cachedCameraOptions: CameraOptionsResponse | null = null;
+
+// Включённые в админке модели изображений (как на странице генерации). Аватар
+// персонажа генерируем через активную модель — её провайдер задаёт маршрут.
+type ImageModel = { id: string; name: string; description: string; provider?: string };
+let enabledImageModels: ImageModel[] = [];
 
 /* ── HTML Builders ────────────────────────────── */
 
@@ -914,6 +919,14 @@ async function loadGenerationOptions() {
   } catch { /* ignore — will use basic prompt */ }
 }
 
+// Загружает список включённых в админке моделей изображений (для выбора провайдера аватара).
+async function loadImageModels() {
+  if (enabledImageModels.length) return;
+  try {
+    enabledImageModels = await getImageStyles();
+  } catch { /* ignore — упадём на дефолтный провайдер */ }
+}
+
 function pickRandomPrompts(): string[] {
   const pick = <T,>(arr: T[]): T | undefined => arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined;
   const prompts: string[] = [];
@@ -1002,6 +1015,7 @@ async function startAvatarGeneration() {
   const data = collectFormData();
   // Don't await — use cached options if available, load in background for next time
   loadGenerationOptions();
+  loadImageModels();
   const extraPrompts = pickRandomPrompts();
   const prompt = buildAvatarPrompt(data, extraPrompts);
 
@@ -1017,8 +1031,21 @@ async function startAvatarGeneration() {
   if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
 
   try {
+    // Маршрут по включённой в админке модели (как на странице генерации):
+    // активная модель = первая включённая; её провайдер определяет бэкенд.
+    await loadImageModels();
+    const activeModel = enabledImageModels[0];
     const jobPayload: Parameters<typeof createImageJob>[0] = { prompt };
-    if (data.generationStyle) {
+    if (activeModel) {
+      jobPayload.model = activeModel.id;
+      jobPayload.provider = activeModel.provider;
+      if (activeModel.provider === "civitai") {
+        // generationStyle из выбранного стиля; иначе дефолт realism, чтобы Civitai
+        // использовался даже для стилей без явного маппинга.
+        jobPayload.generationStyle = data.generationStyle || "realism";
+      }
+    } else if (data.generationStyle) {
+      // Фолбэк, если список моделей не загрузился: прежнее поведение.
       jobPayload.provider = "civitai";
       jobPayload.generationStyle = data.generationStyle;
     }
@@ -1218,6 +1245,48 @@ function initInteractive() {
   }
 }
 
+/* ── Age slider (DOM-query based, survives page rebuilds) ── */
+
+// Состояние и хелперы слайдера держим на уровне модуля и читаем элементы из DOM
+// в момент события — так глобальные слушатели регистрируются один раз и
+// продолжают работать после перестроения разметки (смена языка).
+let sliderDragging = false;
+
+function setSliderValue(val: number) {
+  const track = document.querySelector<HTMLElement>(".slider-track");
+  const fill = document.querySelector<HTMLElement>(".slider-fill");
+  const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
+  if (!track || !fill || !tooltip) return;
+  const v = Math.max(18, Math.min(100, Math.round(val)));
+  const pct = (v - 18) / 82;
+  fill.style.width = pct * 100 + "%";
+  tooltip.textContent = String(v);
+  track.dataset.value = String(v);
+}
+
+function setSliderByClientX(clientX: number) {
+  const track = document.querySelector<HTMLElement>(".slider-track");
+  if (!track) return;
+  const rect = track.getBoundingClientRect();
+  setSliderValue(18 + Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 82);
+}
+
+// Глобальные слушатели (закрытие дропдаунов, перетаскивание слайдера) —
+// регистрируем ровно один раз; они находят актуальные элементы при событии.
+let globalListenersRegistered = false;
+
+function registerGlobalListeners() {
+  if (globalListenersRegistered) return;
+  globalListenersRegistered = true;
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".dropdown-menu.open").forEach((m) => m.classList.remove("open"));
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (sliderDragging) setSliderByClientX(e.clientX);
+  });
+  document.addEventListener("mouseup", () => { sliderDragging = false; });
+}
+
 /* ── Component ────────────────────────────────── */
 
 export default function CreateCharacterPage() {
@@ -1235,20 +1304,21 @@ export default function CreateCharacterPage() {
   const startGenRef = useRef(startGeneration);
   startGenRef.current = startGeneration;
 
-  useEffect(() => {
-    if (!user || initRef.current) return;
-    initRef.current = true;
+  // Сборка + инициализация всей разметки визарда. Вынесена в ref, чтобы
+  // вызывать и при монтировании, и при смене языка (полная перестройка DOM).
+  const buildAndInitPageRef = useRef<() => void>(() => {});
+  const prevLangRef = useRef(lang);
+  buildAndInitPageRef.current = () => {
+    const container = containerRef.current;
+    if (!container) return;
 
     // Set HTML content via ref — React will never touch this DOM on re-renders
-    if (containerRef.current) {
-      containerRef.current.innerHTML = buildContent();
-    }
-
-    // Bridge GenerationContext to module-level functions
-    generationContextStartFn = startGenRef.current;
+    container.innerHTML = buildContent();
 
     // Pre-load generation options (appearance, pose, scene, camera) so they're cached before Stage 09
     loadGenerationOptions();
+    // Pre-load enabled image models so the avatar uses the admin-selected provider
+    loadImageModels();
 
     // Load dynamic options from DB
     getCharacterOptions().then((allOpts) => {
@@ -1378,37 +1448,15 @@ export default function CreateCharacterPage() {
         });
       });
     });
-    document.addEventListener("click", () => {
-      document.querySelectorAll(".dropdown-menu.open").forEach((m) => m.classList.remove("open"));
-    });
 
-    // Age slider
-    const track = document.querySelector<HTMLElement>(".slider-track");
-    const fill = document.querySelector<HTMLElement>(".slider-fill");
-    const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
-    if (track && fill && tooltip) {
-      let dragging = false;
-      const update = (pct: number) => {
-        pct = Math.max(0, Math.min(1, pct));
-        const val = Math.round(18 + pct * 82);
-        fill.style.width = pct * 100 + "%";
-        tooltip.textContent = String(val);
-        track.dataset.value = String(val);
-      };
-      update((25 - 18) / 82);
-      const thumb = document.querySelector<HTMLElement>(".slider-thumb");
-      thumb?.addEventListener("mousedown", (e) => { e.preventDefault(); dragging = true; });
-      document.addEventListener("mousemove", (e) => {
-        if (!dragging) return;
-        const rect = track.getBoundingClientRect();
-        update((e.clientX - rect.left) / rect.width);
-      });
-      document.addEventListener("mouseup", () => { dragging = false; });
-      track.addEventListener("click", (e) => {
-        const rect = track.getBoundingClientRect();
-        update((e.clientX - rect.left) / rect.width);
-      });
-    }
+    // Age slider — поэлементная привязка; перетаскивание обрабатывают
+    // глобальные слушатели (registerGlobalListeners), общие для всех перестроек.
+    setSliderValue(25);
+    const thumb = document.querySelector<HTMLElement>(".slider-thumb");
+    thumb?.addEventListener("mousedown", (e) => { e.preventDefault(); sliderDragging = true; });
+    document.querySelector<HTMLElement>(".slider-track")?.addEventListener("click", (e) => {
+      setSliderByClientX((e as MouseEvent).clientX);
+    });
 
     // Clear name validation on input
     document.getElementById("input-name")?.addEventListener("input", () => {
@@ -1458,7 +1506,10 @@ export default function CreateCharacterPage() {
         avatarGenerated = false;
         lastAvatarJobId = null;
         if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
-        window.location.href = "/create";
+        // Полная перезагрузка: повторное присвоение того же URL не перерисовывает
+        // страницу надёжно (контент пропадает). reload() гарантированно
+        // пересоздаёт визард с чистого черновика и возвращает на шаг 1.
+        window.location.reload();
       });
     });
 
@@ -1498,6 +1549,17 @@ export default function CreateCharacterPage() {
     });
 
     initInteractive();
+  };
+
+  useEffect(() => {
+    if (!user || initRef.current) return;
+    initRef.current = true;
+
+    // Bridge GenerationContext to module-level functions
+    generationContextStartFn = startGenRef.current;
+    // Глобальные слушатели регистрируем один раз — переживают перестройку разметки
+    registerGlobalListeners();
+    buildAndInitPageRef.current();
 
     // Cleanup on unmount
     return () => {
@@ -1507,7 +1569,21 @@ export default function CreateCharacterPage() {
       }
       generationContextStartFn = null;
     };
-  }, [user, router]);
+  }, [user]);
+
+  // Перестроение разметки при смене языка (после первого монтирования) —
+  // с сохранением введённых данных и текущего шага.
+  useEffect(() => {
+    if (!initRef.current) return;
+    if (prevLangRef.current === lang) return;
+    prevLangRef.current = lang;
+    const activeStage = document.querySelector(".stage-content.active");
+    const curStage = activeStage
+      ? parseInt(activeStage.id.replace("stage-", "").replace("-content", ""))
+      : 1;
+    saveFormState(curStage || 1);
+    buildAndInitPageRef.current();
+  }, [lang]);
 
   if (loading) return null;
   if (!user) { router.push("/login"); return null; }

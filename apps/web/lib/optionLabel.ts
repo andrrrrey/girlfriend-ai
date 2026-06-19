@@ -286,14 +286,44 @@ const RU_WORD: Record<string, string> = {
   exit: "выход", jack: "дрочит",
 };
 
+// ─── Обратный перевод RU→EN для названий, хранящихся в манифесте на русском ──
+// Категории HUMAN_RACE / FANTASY_RACE / HAIR_STYLE заведены в manifest.json
+// русскими подписями (в отличие от BODY_TYPE с англ. ключами type_*). Чтобы при
+// EN не показывать русский, переводим их обратно. Ключ — name в нижнем регистре.
+const RU_TO_EN: Record<string, string> = {
+  // Этничность (человеческие)
+  "европейская": "Caucasian", "латиноамериканская": "Latina", "восточноазиатская": "East Asian",
+  "юго-восточная азия": "Southeast Asian", "южноазиатская": "South Asian", "арабская": "Arab",
+  "африканская": "African", "смешанная": "Mixed",
+  // Этничность (фэнтезийные)
+  "эльф": "Elf", "демон / суккуб": "Demon / Succubus", "ангел": "Angel", "вампир": "Vampire",
+  "оборотень": "Werewolf", "неко": "Neko", "кицунэ": "Kitsune", "банни": "Bunny",
+  "инопланетянин": "Alien", "андроид": "Android", "фурри": "Furry", "фея": "Fairy",
+  "орк": "Orc", "дроу": "Drow",
+  // Причёски
+  "прямые": "Straight", "волнистые": "Wavy", "кудрявые": "Curly", "хвост": "Ponytail",
+  "боковой хвост": "Side Ponytail", "два хвоста": "Twin Tails", "косы": "Braids",
+  "две косички": "Twin Braids", "боковая коса": "Side Braid", "хвост с косой": "Braided Ponytail",
+  "пучок": "Bun", "два пучка": "Double Buns", "высокая укладка": "Updo",
+  "зачёсанные назад": "Slicked Back", "прямая чёлка": "Straight Bangs", "чёлка на пробор": "Parted Bangs",
+  "боковая чёлка": "Side Bangs", "на один глаз": "Hair Over One Eye", "за ухо": "Tucked Behind Ear",
+  "афро": "Afro", "дреды": "Dreadlocks", "асимметричная": "Asymmetrical", "волосы-сверло": "Drill Hair",
+  "растрёпанные": "Messy", "каре": "Bob", "пикси": "Pixie", "ирокез": "Mohawk",
+  "химэ-стрижка": "Hime Cut", "распущенные": "Loose", "низкий хвост": "Low Ponytail",
+};
+
 /**
  * Локализованная подпись опции.
  * @param name — сырое значение (`opt.name` / data-value), может быть ключом или англ. подписью.
  */
 export function localizeOption(name: string, lang: Lang): string {
   if (!name) return "";
-  // Данные, уже хранящиеся на русском (часть манифеста), не трогаем.
-  if (/[Ѐ-ӿ]/.test(name)) return name;
+  // Данные, хранящиеся на русском (часть манифеста). При RU оставляем как есть,
+  // при EN переводим обратно по словарю (если знаем), иначе показываем как есть.
+  if (/[Ѐ-ӿ]/.test(name)) {
+    if (lang === "ru") return name;
+    return RU_TO_EN[name.trim().toLowerCase()] ?? name;
+  }
 
   const en = humanizeEn(name);
   if (lang !== "ru") return en;
