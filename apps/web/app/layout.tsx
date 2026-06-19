@@ -6,7 +6,7 @@ import ServiceWorkerInit from "./components/ServiceWorkerInit";
 import "./globals.css";
 
 export const metadata = {
-  title: "lovecast.AI",
+  title: "virtflirt.ai",
 };
 
 export default function RootLayout({ children }: { children: import("react").ReactNode }) {
