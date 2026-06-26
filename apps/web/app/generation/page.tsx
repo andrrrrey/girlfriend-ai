@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import { localizeOption } from "../../lib/optionLabel";
+import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
   createImageJob,
@@ -962,6 +963,10 @@ export default function GenerationPage() {
   const { t: tr, lang } = useT();
   const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
+
+  // Префетчим thumb-картинки опций только на этой странице (раньше это делалось
+  // глобально после логина и забивало сеть на всех страницах).
+  usePrefetchAllOptions(!!user);
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
   const [videoSubTab, setVideoSubTab] = useState<VideoSubTab>("scratch");
   const [promptOpen, setPromptOpen] = useState(false);

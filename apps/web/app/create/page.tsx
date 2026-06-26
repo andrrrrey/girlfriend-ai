@@ -13,6 +13,7 @@ import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup"
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { localizeOption } from "../../lib/optionLabel";
+import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
 import {
@@ -1301,6 +1302,10 @@ export default function CreateCharacterPage() {
   const premiumPopupRef = useRef(setPremiumPopup);
   premiumPopupRef.current = setPremiumPopup;
   const { startGeneration } = useGeneration();
+
+  // Префетчим thumb-картинки опций только на этой странице (раньше это делалось
+  // глобально после логина и забивало сеть на всех страницах).
+  usePrefetchAllOptions(!!user);
   const startGenRef = useRef(startGeneration);
   startGenRef.current = startGeneration;
 

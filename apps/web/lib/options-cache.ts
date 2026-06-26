@@ -104,9 +104,9 @@ function collectUrls(value: unknown, acc: Set<string>) {
   }
   if (typeof value === "object") {
     const opt = value as OptionLike & { options?: unknown };
+    // Префетчим ТОЛЬКО thumb-версии. Полноразмерный imageUrl (jpg по 400KB+)
+    // намеренно не трогаем — он подгрузится лениво при открытии попапа.
     if (opt.imageThumbUrl) acc.add(opt.imageThumbUrl);
-    // base64 data: URI не имеет смысла предзагружать.
-    if (opt.imageUrl && !opt.imageUrl.startsWith("data:")) acc.add(opt.imageUrl);
     if (opt.options) collectUrls(opt.options, acc);
     // Обходим прочие вложенные массивы (например, OUTFITS/OUTFIT_DETAILS).
     for (const v of Object.values(opt as Record<string, unknown>)) {
@@ -127,22 +127,44 @@ function schedule(cb: () => void) {
   }
 }
 
+// Сколько картинок качаем одновременно. Браузер держит ~6 соединений на хост —
+// берём малую долю, чтобы префетч не забивал пул и не блокировал контент страницы.
+const MAX_CONCURRENT = 4;
+
+function loadOne(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
 /**
  * Стартует фоновую подгрузку картинок: только thumb-версии,
  * чтобы попап потом открывался мгновенно. Service Worker сам положит в кеш.
+ * Грузим пулом с ограничением параллелизма (MAX_CONCURRENT), а не все разом,
+ * чтобы не насыщать сеть и не мешать загрузке текущей страницы.
  */
 export function prefetchOptionImages(data: unknown): void {
   if (typeof window === "undefined") return;
   const urls = new Set<string>();
   collectUrls(data, urls);
-  for (const url of urls) {
-    if (prefetched.has(url)) continue;
-    prefetched.add(url);
-    schedule(() => {
-      const img = new Image();
-      img.decoding = "async";
-      img.loading = "eager";
-      img.src = url;
-    });
-  }
+  const queue = [...urls].filter((url) => !prefetched.has(url));
+  for (const url of queue) prefetched.add(url);
+  if (queue.length === 0) return;
+
+  schedule(() => {
+    let next = 0;
+    const worker = async () => {
+      while (next < queue.length) {
+        const url = queue[next++];
+        await loadOne(url);
+      }
+    };
+    for (let i = 0; i < Math.min(MAX_CONCURRENT, queue.length); i++) {
+      void worker();
+    }
+  });
 }

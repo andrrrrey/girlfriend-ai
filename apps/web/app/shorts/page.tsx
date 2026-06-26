@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/auth";
 import { getPublicShorts, likes, resizedMediaUrl } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
@@ -101,12 +101,30 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  // Монтируем <video src> только когда карточка близко к вьюпорту. Иначе браузер
+  // начинает качать сразу все видео ленты.
+  const [shouldLoad, setShouldLoad] = useState(false);
 
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
   const creatorName = item.user?.nickname || t("shorts.aiGenerated");
   const creatorAvatar = item.user?.avatarUrl;
 
+  // Грузим/выгружаем видео в пределах ~2 экранов от вьюпорта. Выгрузка безопасна:
+  // ответы /media/stream кешируются service worker'ом, поэтому скролл назад дешёвый.
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShouldLoad(entry.isIntersecting),
+      { rootMargin: "200% 0px" },
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
+
+  // Играем только когда карточка реально в кадре. Эффект перезапускается после
+  // монтирования <video> (зависит от shouldLoad), чтобы получить актуальный ref.
   useEffect(() => {
     const video = videoRef.current;
     const card = cardRef.current;
@@ -121,12 +139,12 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
     );
     observer.observe(card);
     return () => observer.disconnect();
-  }, []);
+  }, [shouldLoad]);
 
   return (
     <div className="shorts-card-wrap">
       <div className="shorts-card" ref={cardRef}>
-        {url ? (
+        {url && shouldLoad ? (
           <video ref={videoRef} className="shorts-video" src={url} muted loop playsInline preload="metadata" />
         ) : (
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)" }} />
@@ -178,20 +196,51 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
   );
 }
 
+const SHORTS_PAGE_SIZE = 5;
+
 export default function ShortsPage() {
   const { user, loading } = useAuth();
   const { t } = useT();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const fetchItems = useCallback((pageNum: number, append: boolean) => {
+    if (append) setLoadingMore(true); else setFetching(true);
+    getPublicShorts({ page: pageNum, limit: SHORTS_PAGE_SIZE })
+      .then((data) => {
+        const newItems = data.items || [];
+        if (append) setItems((prev) => [...prev, ...newItems]);
+        else setItems(newItems);
+        setHasMore(newItems.length >= SHORTS_PAGE_SIZE);
+      })
+      .catch(() => { if (!append) setItems([]); })
+      .finally(() => { setFetching(false); setLoadingMore(false); });
+  }, []);
 
   useEffect(() => {
     if (loading) return;
-    getPublicShorts()
-      .then((data) => setItems(data.items || []))
-      .catch(() => setItems([]))
-      .finally(() => setFetching(false));
-  }, [loading]);
+    setPage(1);
+    setHasMore(true);
+    fetchItems(1, false);
+  }, [loading, fetchItems]);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasMore && !loadingMore) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchItems(nextPage, true);
+      }
+    }, { rootMargin: "100% 0px" });
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, fetching, loadingMore, page, fetchItems]);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -234,7 +283,10 @@ export default function ShortsPage() {
             </div>
           </div>
         ) : (
-          items.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} />)
+          <>
+            {items.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} />)}
+            {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+          </>
         )}
       </div>
     </>
