@@ -32,7 +32,7 @@ const ETHNICITIES = [
   "arabian", "african",
   // фэнтези из manifest
   "elf", "demon", "angel", "vampire", "werewolf", "neko", "kitsune",
-  "bunny_girl", "alien", "android", "furry",
+  "bunny_girl", "alien", "android", "furry", "fairy", "orc", "drow",
 ];
 const VOICES = ["gentle", "high_pitched", "deep", "rough", "calm"];
 const EYE_COLORS = ["blue", "brown", "green", "hazel", "gray", "amber", "violet", "black"];
@@ -95,8 +95,40 @@ const RU_ALIASES: Record<string, string> = {
   "инопланетянин": "alien",
   "андроид": "android",
   "фурри": "furry",
-  // hair (если manifest шлёт русское "Волосы-сверло" → пробуем мягко)
-  "волосы-сверло": "curly",
+  "фея": "fairy",
+  "орк": "orc",
+  "дроу": "drow",
+  // hairStyle (manifest заводит причёски русскими подписями HAIR_STYLE)
+  "прямые": "straight",
+  "волнистые": "wavy",
+  "кудрявые": "curly",
+  "хвост": "ponytail",
+  "низкий хвост": "low_ponytail",
+  "боковой хвост": "side_ponytail",
+  "два хвоста": "twin_tails",
+  "косы": "braids",
+  "две косички": "twin_braids",
+  "боковая коса": "side_braid",
+  "хвост с косой": "braided_ponytail",
+  "пучок": "bun",
+  "два пучка": "double_buns",
+  "высокая укладка": "updo",
+  "зачёсанные назад": "slicked_back",
+  "прямая чёлка": "bangs",
+  "чёлка на пробор": "parted_bangs",
+  "боковая чёлка": "side_bangs",
+  "на один глаз": "hair_over_one_eye",
+  "за ухо": "tucked_behind_ear",
+  "афро": "afro",
+  "дреды": "dreadlocks",
+  "асимметричная": "asymmetrical",
+  "волосы-сверло": "drill_hair",
+  "растрёпанные": "messy",
+  "каре": "bob",
+  "пикси": "pixie_cut",
+  "ирокез": "mohawk",
+  "химэ-стрижка": "hime_cut",
+  "распущенные": "loose",
   // тут можно дополнять по мере появления новых проблем
 };
 

@@ -29,6 +29,7 @@ import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup"
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { formatTags } from "../../lib/tags";
+import { toEnglishTag } from "../../lib/optionLabel";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -674,38 +675,44 @@ function ChatPageInner() {
   const buildChatImagePrompt = (personality: Record<string, unknown>, posePrompt: string): string => {
     const parts: string[] = ["masterpiece", "best quality", "highres", "nsfw", "explicit"];
 
-    const genderMap: Record<string, string> = { Female: "woman", Male: "man", Femboy: "femboy, feminine male", "Non-binary": "androgynous person" };
-    const gender = personality.gender as string | undefined;
-    if (gender) parts.push(genderMap[gender] || gender.toLowerCase());
+    // Все атрибуты персонажа прогоняем через toEnglishTag: что бы ни лежало в БД
+    // (русские значения из манифеста вроде `орк`/`дреды`, snake_case-ключи
+    // `pixie_cut`, англ. подписи `Hazel`) — в промпт уходит только английский
+    // lowercase-тег. Иначе ИИ получает смешанный RU/EN промпт и ломает генерацию.
+    const genderMap: Record<string, string> = { female: "woman", male: "man", femboy: "femboy, feminine male", "non binary": "androgynous person", "non-binary": "androgynous person" };
+    const gender = toEnglishTag(personality.gender as string | undefined);
+    if (gender) parts.push(genderMap[gender] || gender);
 
     const age = personality.age as string | number | undefined;
     if (age) parts.push(`${age}-year-old`);
 
-    const ethnicity = (personality.ethnicity || personality.nationality) as string | undefined;
-    if (ethnicity) parts.push(ethnicity.toLowerCase());
+    const ethnicity = toEnglishTag((personality.ethnicity || personality.nationality) as string | undefined);
+    if (ethnicity) parts.push(ethnicity);
 
-    const eyeColor = personality.eyeColor as string | undefined;
-    if (eyeColor) parts.push(`${eyeColor.toLowerCase()} eyes`);
+    const eyeColor = toEnglishTag(personality.eyeColor as string | undefined);
+    if (eyeColor) parts.push(`${eyeColor} eyes`);
 
-    const hairColor = personality.hairColor as string | undefined;
-    if (hairColor) parts.push(`${hairColor.toLowerCase()} hair`);
+    const hairColor = toEnglishTag(personality.hairColor as string | undefined);
+    if (hairColor) parts.push(`${hairColor} hair`);
 
-    const hairStyle = personality.hairStyle as string | undefined;
-    if (hairStyle) parts.push(hairStyle.toLowerCase());
+    const hairStyle = toEnglishTag(personality.hairStyle as string | undefined);
+    if (hairStyle) parts.push(hairStyle);
 
-    const bodyType = personality.bodyType as string | undefined;
-    if (bodyType) parts.push(bodyType.toLowerCase());
+    const bodyType = toEnglishTag(personality.bodyType as string | undefined);
+    if (bodyType) parts.push(bodyType);
 
-    const breastSize = personality.breastSize as string | undefined;
-    if (breastSize) parts.push(`${breastSize.toLowerCase()} breasts`);
+    const breastSize = toEnglishTag(personality.breastSize as string | undefined);
+    if (breastSize) parts.push(`${breastSize} breasts`);
 
-    const buttSize = personality.buttSize as string | undefined;
-    if (buttSize) parts.push(`${buttSize.toLowerCase()} butt`);
+    const buttSize = toEnglishTag(personality.buttSize as string | undefined);
+    if (buttSize) parts.push(`${buttSize} butt`);
 
-    const height = personality.height as string | undefined;
-    if (height) parts.push(height.toLowerCase());
+    const height = toEnglishTag(personality.height as string | undefined);
+    if (height) parts.push(height);
 
-    parts.push(posePrompt);
+    // Поза приходит из выбранной опции (opt.prompt) — он уже на английском,
+    // но прогоняем через toEnglishTag на случай, если попал opt.name (RU).
+    if (posePrompt) parts.push(toEnglishTag(posePrompt));
 
     return parts.filter(Boolean).join(", ");
   };

@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
-import { localizeOption } from "../../lib/optionLabel";
+import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
@@ -1190,7 +1190,7 @@ export default function GenerationPage() {
       const genderMap: Record<string, string> = {
         Female: "woman", Male: "man", Femboy: "femboy, feminine male", "Non-binary": "androgynous person",
       };
-      subjectParts.push(genderMap[characterSelections.gender] || characterSelections.gender.toLowerCase());
+      subjectParts.push(genderMap[characterSelections.gender] || toEnglishTag(characterSelections.gender));
     }
     if (characterSelections.age) {
       subjectParts.push(`${characterSelections.age}-year-old`);
@@ -1207,22 +1207,22 @@ export default function GenerationPage() {
     // --- 3. Face: eye color + eye features + face features ---
     const faceParts: string[] = [];
     if (characterSelections.eyeColor) {
-      faceParts.push(`${characterSelections.eyeColor.toLowerCase()} eyes`);
+      faceParts.push(`${toEnglishTag(characterSelections.eyeColor)} eyes`);
     }
     for (const f of characterSelections.eyeFeatures) {
-      if (f !== "Normal") faceParts.push(f.toLowerCase());
+      if (f !== "Normal") faceParts.push(toEnglishTag(f));
     }
     for (const f of characterSelections.faceFeatures) {
-      if (f !== "None") faceParts.push(f.toLowerCase());
+      if (f !== "None") faceParts.push(toEnglishTag(f));
     }
 
     // --- 4. Hair: style + color + length ---
     const hairParts: string[] = [];
     if (characterSelections.hairColor) {
-      hairParts.push(`${characterSelections.hairColor.toLowerCase()} hair`);
+      hairParts.push(`${toEnglishTag(characterSelections.hairColor)} hair`);
     }
     if (characterSelections.hairLength) {
-      hairParts.push(`${characterSelections.hairLength.toLowerCase()} hair`);
+      hairParts.push(`${toEnglishTag(characterSelections.hairLength)} hair`);
     }
     if (characterSelections.hairStyle) {
       const p = findCharPrompt(characterSelections.hairStyle, "HAIR_STYLE");
@@ -1237,18 +1237,18 @@ export default function GenerationPage() {
     }
     if (characterSelections.breastSize) {
       const p = findCharPrompt(characterSelections.breastSize, "BREAST_SIZE");
-      bodyParts.push(p || `${characterSelections.breastSize.toLowerCase()} breasts`);
+      bodyParts.push(p || `${toEnglishTag(characterSelections.breastSize)} breasts`);
     }
     if (characterSelections.buttSize) {
       const p = findCharPrompt(characterSelections.buttSize, "BUTT_SIZE");
-      bodyParts.push(p || `${characterSelections.buttSize.toLowerCase()} butt`);
+      bodyParts.push(p || `${toEnglishTag(characterSelections.buttSize)} butt`);
     }
     if (characterSelections.height) {
       const heightMap: Record<string, string> = {
         Short: "short height", "Below Average": "below average height", Average: "average height",
         Tall: "tall height", "Very Tall": "very tall height",
       };
-      bodyParts.push(heightMap[characterSelections.height] || characterSelections.height.toLowerCase());
+      bodyParts.push(heightMap[characterSelections.height] || toEnglishTag(characterSelections.height));
     }
 
     // --- 6. Expression ---
@@ -1270,7 +1270,7 @@ export default function GenerationPage() {
       if (p) clothingParts.push(p);
     }
     for (const c of appearanceSelections.condition) {
-      clothingParts.push(c.toLowerCase());
+      clothingParts.push(toEnglishTag(c));
     }
 
     // --- 8. Pose ---
@@ -1288,10 +1288,10 @@ export default function GenerationPage() {
       const p = findPrompt(name, allSceneOpts);
       if (p) sceneParts.push(p);
     }
-    for (const t of sceneSelections.timeOfDay) sceneParts.push(TIME_PROMPTS[t] || t.toLowerCase());
-    for (const w of sceneSelections.weather) sceneParts.push(WEATHER_PROMPTS[w] || w.toLowerCase());
-    for (const p of sceneSelections.particles) sceneParts.push(PARTICLE_PROMPTS[p] || p.toLowerCase());
-    for (const e of sceneSelections.environmentEffects) sceneParts.push(e.toLowerCase());
+    for (const t of sceneSelections.timeOfDay) sceneParts.push(TIME_PROMPTS[t] || toEnglishTag(t));
+    for (const w of sceneSelections.weather) sceneParts.push(WEATHER_PROMPTS[w] || toEnglishTag(w));
+    for (const p of sceneSelections.particles) sceneParts.push(PARTICLE_PROMPTS[p] || toEnglishTag(p));
+    for (const e of sceneSelections.environmentEffects) sceneParts.push(toEnglishTag(e));
     if (sceneSelections.props?.trim()) sceneParts.push(sceneSelections.props.trim());
 
     // --- 10. Camera: framing + angle + lens + lighting ---
@@ -1304,8 +1304,8 @@ export default function GenerationPage() {
       const p = findPrompt(name, cameraOptions.CAMERA_ANGLE);
       if (p) cameraParts.push(p);
     }
-    for (const l of cameraSelections.lens) cameraParts.push(LENS_PROMPTS[l] || l.toLowerCase());
-    for (const l of cameraSelections.lighting) cameraParts.push(LIGHTING_PROMPTS[l] || l.toLowerCase());
+    for (const l of cameraSelections.lens) cameraParts.push(LENS_PROMPTS[l] || toEnglishTag(l));
+    for (const l of cameraSelections.lighting) cameraParts.push(LIGHTING_PROMPTS[l] || toEnglishTag(l));
 
     // --- Assemble in structured order ---
     const sections = [

@@ -313,6 +313,24 @@ const RU_TO_EN: Record<string, string> = {
 };
 
 /**
+ * Английское значение опции для ПРОМПТА (не для UI).
+ *
+ * В отличие от `localizeOption(value, "en")`, которая нужна для подписи в UI,
+ * здесь цель — гарантированно англоязычный тег для image/video-промпта:
+ *   - русские значения из БД/манифеста (`орк`, `дреды`) → английский эквивалент;
+ *   - сырые ключи/snake_case (`pixie_cut`, `type_petite`) → «pixie cut», «petite»;
+ *   - уже англоязычные подписи (`Hazel`, `Caramel`) → нижний регистр.
+ *
+ * Результат всегда lowercase — так теги единообразны в промпте.
+ */
+export function toEnglishTag(value: string | null | undefined): string {
+  if (value == null) return "";
+  const v = String(value).trim();
+  if (!v) return "";
+  return localizeOption(v, "en").toLowerCase();
+}
+
+/**
  * Локализованная подпись опции.
  * @param name — сырое значение (`opt.name` / data-value), может быть ключом или англ. подписью.
  */

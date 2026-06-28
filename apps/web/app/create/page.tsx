@@ -12,7 +12,7 @@ import {
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
-import { localizeOption } from "../../lib/optionLabel";
+import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -964,15 +964,18 @@ function pickRandomPrompts(): string[] {
 }
 
 function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: string[] = []): string {
+  // Предпочитаем английский data-prompt опции; если его нет — берём name и
+  // прогоняем через toEnglishTag, чтобы русские подписи из манифеста
+  // (Орк, Дреды) не попали в промпт как есть.
   const parts = [
     d.style === "Anime" ? "anime style" : "photorealistic",
-    d.gender?.toLowerCase() ?? "female",
+    toEnglishTag(d.gender) || "female",
     d.age ? `${d.age} years old` : "",
-    d.fantasyRacePrompt || d.fantasyRace || d.ethnicityPrompt || d.ethnicity || "",
-    d.hairColor ? `${d.hairColor} hair` : "",
-    d.hairStylePrompt || (d.hairStyle ? `${d.hairStyle} hairstyle` : ""),
-    d.eyeColor ? `${d.eyeColor} eyes` : "",
-    d.bodyTypePrompt || (d.bodyType ? `${d.bodyType} body` : ""),
+    d.fantasyRacePrompt || toEnglishTag(d.fantasyRace) || d.ethnicityPrompt || toEnglishTag(d.ethnicity),
+    d.hairColor ? `${toEnglishTag(d.hairColor)} hair` : "",
+    d.hairStylePrompt || (d.hairStyle ? `${toEnglishTag(d.hairStyle)} hairstyle` : ""),
+    d.eyeColor ? `${toEnglishTag(d.eyeColor)} eyes` : "",
+    d.bodyTypePrompt || (d.bodyType ? `${toEnglishTag(d.bodyType)} body` : ""),
     ...extraPrompts,
     "beautiful, high quality, detailed",
   ].filter(Boolean);
