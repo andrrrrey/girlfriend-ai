@@ -695,6 +695,16 @@ export const admin = {
     return apiFetch<Character[]>("/admin/characters");
   },
 
+  /**
+   * Запускает фоновую генерацию SEO-описаний/slug для всех персонажей
+   * (POST /admin/characters/backfill-seo).
+   */
+  async backfillCharacterSeo(): Promise<{ started: boolean; total: number }> {
+    return apiFetch<{ started: boolean; total: number }>("/admin/characters/backfill-seo", {
+      method: "POST",
+    });
+  },
+
   /** Один персонаж по ID (GET /admin/characters/:id). */
   async getCharacter(id: string): Promise<Character> {
     return apiFetch<Character>(`/admin/characters/${id}`);

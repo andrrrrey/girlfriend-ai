@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { resizedMediaUrl } from "../../lib/api";
+import { localizeOption } from "../../lib/optionLabel";
 import { listCharactersForSeo } from "../../lib/serverApi";
 
 // Рендерим на каждый запрос (SSR), а НЕ пререндерим при сборке: в CI бэкенд
@@ -46,11 +47,12 @@ export default async function CharactersCatalogPage() {
             const img = char.avatarUrl
               ? resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl
               : null;
-            const tags = (char.tags || []).slice(0, 3);
+            const tags = (char.tags || []).slice(0, 3).map((tg) => localizeOption(tg, "en"));
+            const slug = (typeof personality.slug === "string" && personality.slug) || char.id;
             return (
               <Link
                 key={char.id}
-                href={`/characters/${char.id}`}
+                href={`/characters/${slug}`}
                 className="seo-card-wrap"
                 aria-label={char.name}
               >
@@ -87,35 +89,36 @@ export default async function CharactersCatalogPage() {
 }
 
 const catalogCss = `
-  .seo-catalog { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
-  .seo-catalog-head { margin-bottom: 28px; }
-  .seo-catalog-title { font-size: 34px; font-weight: 700; line-height: 1.1; color: #fff; margin: 0 0 8px; }
+  .seo-catalog { padding: 28px 36px 64px; }
+  .seo-catalog-head { margin-bottom: 24px; }
+  .seo-catalog-title { font-size: 32px; font-weight: 700; line-height: 1.1; color: #fff; margin: 0 0 8px; }
   .seo-catalog-title .pink { color: #ff99ce; }
   .seo-catalog-sub { color: #969696; font-size: 15px; margin: 0; }
   .seo-catalog-empty { color: #969696; font-size: 15px; }
-  .seo-cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
+  /* Плотная сетка как на главной: много небольших карточек. */
+  .seo-cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
   .seo-card-wrap { position: relative; width: 100%; aspect-ratio: 22 / 30; display: block; text-decoration: none; }
   .seo-card {
     border: 1px solid #313131; border-radius: 8px; width: 100%; height: 100%;
     overflow: hidden; position: relative; display: flex; flex-direction: column;
-    justify-content: flex-end; padding: 10px; transition: border-color 0.2s ease;
+    justify-content: flex-end; padding: 8px; transition: border-color 0.2s ease;
   }
   .seo-card-wrap:hover .seo-card { border-color: #5b5b5b; }
   .seo-card-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; }
   .seo-card-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
   .seo-card-placeholder { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%); }
   .seo-card-overlay { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(to bottom, rgba(9,9,9,0) 50%, rgba(9,9,9,0.85) 100%); }
-  .seo-card-info { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; }
-  .seo-card-name { font-size: 19px; font-weight: 700; color: #fff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seo-card-info { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 5px; }
+  .seo-card-name { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .seo-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
   .seo-card-tag {
     background: rgba(255,153,206,0.55); backdrop-filter: blur(2px);
-    border-radius: 4px; padding: 3px 7px; font-size: 9px; font-weight: 500; color: #fff; white-space: nowrap;
+    border-radius: 4px; padding: 3px 6px; font-size: 8px; font-weight: 500; color: #fff; white-space: nowrap;
   }
   @media (max-width: 768px) {
     .seo-catalog { padding: 20px 16px 48px; }
-    .seo-catalog-title { font-size: 24px; }
-    .seo-cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .seo-card-name { font-size: 15px; }
+    .seo-catalog-title { font-size: 22px; }
+    .seo-cards-row { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .seo-card-name { font-size: 14px; }
   }
 `;

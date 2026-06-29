@@ -23,6 +23,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
+import { backfillAllCharacterSeo } from "../chats/character-seo";
 import { loadEnv } from "@repo/config";
 
 const env = loadEnv();
@@ -58,6 +59,16 @@ export class AdminService {
    * @param prisma — сервис Prisma ORM для работы с базой данных.
    */
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Запускает фоновую генерацию SEO-описаний и slug для всех персонажей,
+   * у которых их ещё нет. Возвращает число поставленных в очередь персонажей
+   * сразу — сама генерация идёт в фоне (последовательно, с паузами).
+   */
+  async backfillCharacterSeo(): Promise<{ started: true; total: number }> {
+    const total = await backfillAllCharacterSeo(this.prisma);
+    return { started: true, total };
+  }
 
   // ─── Settings ──────────────────────────────────────────────
 

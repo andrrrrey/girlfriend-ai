@@ -126,6 +126,19 @@ export class AdminController {
   }
 
   /**
+   * Запускает фоновую генерацию SEO-описаний и slug для всех персонажей,
+   * у которых их ещё нет.
+   *
+   * `POST /admin/characters/backfill-seo`
+   *
+   * @returns `{ started: true, total }` — число поставленных в очередь персонажей.
+   */
+  @Post("characters/backfill-seo")
+  async backfillCharacterSeo() {
+    return this.adminService.backfillCharacterSeo();
+  }
+
+  /**
    * Возвращает одного AI-персонажа по идентификатору.
    *
    * `GET /admin/characters/:id`

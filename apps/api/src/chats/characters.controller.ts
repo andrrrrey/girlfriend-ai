@@ -5,8 +5,11 @@ import { DemoService } from "../demo/demo.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
 import { normalizeCharacterDto } from "./character-normalize";
-import { generateSeoBio } from "./generate-seo-bio";
+import { ensureCharacterSeo, uniqueSlug } from "./character-seo";
 import type { Prisma } from "@prisma/client";
+
+/** Проверка, что строка — UUID (а не SEO-slug). */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Controller("characters")
 export class CharactersController {
@@ -307,52 +310,53 @@ export class CharactersController {
   }
 
   /**
-   * Данные персонажа для публичной SEO-страницы (/characters/:id).
+   * Данные персонажа для публичной SEO-страницы (/characters/:idOrSlug).
    *
-   * Возвращает персонажа вместе с AI-сгенерированным SEO-описанием (биография +
-   * описание внешности на английском). Текст генерируется ЛЕНИВО при первом
-   * обращении и кэшируется в personality.seo, далее отдаётся из БД.
+   * Параметр — SEO-slug (personality.slug) ИЛИ UUID (фолбэк для персонажей без
+   * slug). Возвращает персонажа + AI-описание (bio/appearance). Описание и slug
+   * обычно уже подготовлены заранее (при создании персонажа или бэкфилле); если
+   * чего-то нет — генерится здесь как фолбэк (ensureCharacterSeo) и кэшируется.
    *
    * Публичный (без авторизации), как остальные read-методы.
    */
   @Get(":id/seo")
-  async getSeo(@Param("id") id: string) {
-    const character = await this.prisma.character.findFirst({
-      where: { id, deletedAt: null },
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        tags: true,
-        personality: true,
-        createdBy: true,
-        createdAt: true,
-        isPublic: true,
-        voiceId: true,
-      },
-    });
+  async getSeo(@Param("id") idOrSlug: string) {
+    const select = {
+      id: true,
+      name: true,
+      avatarUrl: true,
+      tags: true,
+      personality: true,
+      createdBy: true,
+      createdAt: true,
+      isPublic: true,
+      voiceId: true,
+    } as const;
 
+    const where: Prisma.CharacterWhereInput = UUID_RE.test(idOrSlug)
+      ? { id: idOrSlug, deletedAt: null }
+      : { personality: { path: ["slug"], equals: idOrSlug }, deletedAt: null };
+
+    let character = await this.prisma.character.findFirst({ where, select });
     if (!character) return null;
 
-    const personality = (character.personality as Record<string, unknown> | null) || {};
+    let personality = (character.personality as Record<string, unknown> | null) || {};
     let seo = personality.seo as { bio?: string; appearance?: string } | undefined;
 
-    // Кэш-промах — генерируем и сохраняем в personality.seo.
+    // Фолбэк: описание/slug ещё не подготовлены — генерим и перечитываем.
     if (!seo || !seo.bio) {
       try {
-        const generated = await generateSeoBio(character.name, personality);
-        seo = { ...generated };
-        const newPersonality = {
-          ...personality,
-          seo: { ...generated, version: 1, generatedAt: new Date().toISOString() },
-        };
-        await this.prisma.character.update({
+        await ensureCharacterSeo(this.prisma, character.id);
+        const fresh = await this.prisma.character.findFirst({
           where: { id: character.id },
-          data: { personality: newPersonality as Prisma.InputJsonValue },
+          select,
         });
+        if (fresh) {
+          character = fresh;
+          personality = (fresh.personality as Record<string, unknown> | null) || {};
+        }
+        seo = (personality.seo as { bio?: string; appearance?: string }) || { bio: "", appearance: "" };
       } catch {
-        // Генерация не удалась (AI недоступен) — отдаём страницу без прозы,
-        // на следующем заходе попробуем снова.
         seo = { bio: "", appearance: "" };
       }
     }
@@ -423,7 +427,12 @@ export class CharactersController {
 
     const systemPrompt = generateSystemPrompt(dto);
 
+    // SEO-slug проставляем сразу, чтобы у персонажа был «красивый» URL с момента
+    // создания. Само описание (bio/appearance) генерим в фоне ниже.
+    const slug = await uniqueSlug(this.prisma, dto.name);
+
     const personalityJson: Record<string, unknown> = {
+      slug,
       gender: dto.gender,
       orientation: dto.orientation,
       age: dto.age,
@@ -470,6 +479,12 @@ export class CharactersController {
         isPublic: true,
         createdBy: req.user.id,
       },
+    });
+
+    // Генерим SEO-описание в фоне (fire-and-forget): создание персонажа не должно
+    // ждать ~20с ответа AI. slug уже проставлен, поэтому страница доступна сразу.
+    void ensureCharacterSeo(this.prisma, character.id).catch(() => {
+      // Не удалось — подтянется лениво при первом открытии SEO-страницы.
     });
 
     return character;

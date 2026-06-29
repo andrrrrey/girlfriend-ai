@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resizedMediaUrl } from "../../../lib/api";
-import { humanizeEn } from "../../../lib/optionLabel";
+import { localizeOption } from "../../../lib/optionLabel";
 import { getCharacterForSeo, type SeoCharacter } from "../../../lib/serverApi";
 import CharacterPageActions from "./CharacterPageActions";
 
@@ -37,10 +37,10 @@ const FACT_ROWS: { key: string; label: string }[] = [
 /** Превращает значение personality (строка/число/массив) в человекочитаемую строку EN. */
 function factValue(v: unknown): string {
   if (v == null) return "";
-  if (Array.isArray(v)) return v.map((x) => humanizeEn(String(x))).filter(Boolean).join(", ");
+  if (Array.isArray(v)) return v.map((x) => localizeOption(String(x), "en")).filter(Boolean).join(", ");
   if (typeof v === "number") return String(v);
   const s = String(v).trim();
-  return /^\d+$/.test(s) ? s : humanizeEn(s);
+  return /^\d+$/.test(s) ? s : localizeOption(s, "en");
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -110,7 +110,7 @@ export default async function CharacterDetailPage({ params }: PageProps) {
           <div className="seo-detail-tags">
             {tags.map((tg) => (
               <span key={tg} className="seo-detail-tag">
-                {tg}
+                {localizeOption(tg, "en")}
               </span>
             ))}
           </div>
@@ -160,8 +160,13 @@ export default async function CharacterDetailPage({ params }: PageProps) {
 
 const detailCss = `
   .seo-detail { max-width: 820px; margin: 0 auto; padding: 24px 24px 64px; }
-  .seo-hero { width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 24px; border: 1px solid #313131; }
-  .seo-hero-img { width: 100%; max-height: 560px; object-fit: cover; display: block; }
+  /* Картинка показывается целиком (contain), без кадрирования; компактная высота. */
+  .seo-hero {
+    width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 24px;
+    border: 1px solid #313131; background: #0d0d0d;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .seo-hero-img { max-width: 100%; max-height: 460px; width: auto; height: auto; object-fit: contain; display: block; }
   .seo-detail-head { margin-bottom: 20px; }
   .seo-detail-title { font-size: 38px; font-weight: 800; line-height: 1.05; color: #fff; margin: 0 0 12px; }
   .seo-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -80,6 +80,21 @@ export default function AdminCharactersPage() {
     }
   };
 
+  const [backfilling, setBackfilling] = useState(false);
+  const handleBackfillSeo = async () => {
+    if (!confirm("Сгенерировать SEO-описания и slug для всех персонажей без них? Генерация идёт в фоне.")) return;
+    setBackfilling(true);
+    setError("");
+    try {
+      const res = await admin.backfillCharacterSeo();
+      alert(`Запущено в фоне для ${res.total} персонажей. Описания появятся постепенно.`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить этого персонажа?")) return;
     try {
@@ -187,12 +202,17 @@ export default function AdminCharactersPage() {
           <div style={adminStyles.card}>
             <div style={adminStyles.headerRow}>
               <h2 style={adminStyles.title}>Персонажи</h2>
-              <button
-                onClick={() => setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true })}
-                style={adminStyles.button}
-              >
-                + Новый персонаж
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleBackfillSeo} disabled={backfilling} style={adminStyles.btnSecondary}>
+                  {backfilling ? "Запуск..." : "Сгенерировать SEO"}
+                </button>
+                <button
+                  onClick={() => setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true })}
+                  style={adminStyles.button}
+                >
+                  + Новый персонаж
+                </button>
+              </div>
             </div>
 
             {error && <div style={adminStyles.error}>{error}</div>}
