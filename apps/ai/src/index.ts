@@ -475,6 +475,136 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
   }
 });
 
+/**
+ * Тело запроса для one-shot генерации текста.
+ */
+interface TextCompletionBody {
+  /** Системный промпт (роль/задача модели). */
+  system?: string;
+  /** Пользовательский промпт с данными для генерации. */
+  prompt: string;
+  /** Лимит токенов (input + output для ModelsLab). По умолчанию 4096. */
+  maxTokens?: number;
+}
+
+/**
+ * POST /ai/text/completion
+ *
+ * One-shot генерация длинного текста (НЕ чат). В отличие от /ai/chat/completion
+ * здесь НЕТ чат-постамбулы («1–3 коротких предложения», «отвечай на языке
+ * пользователя» и т.п.) — она бы ломала длинные структурированные ответы.
+ * Используется для генерации SEO-биографий персонажей и подобных задач.
+ *
+ * Возвращает обычный JSON `{ content: string }` (без SSE).
+ */
+app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply) => {
+  const { system, prompt, maxTokens } = req.body;
+
+  if (!prompt || typeof prompt !== "string") {
+    return reply.status(400).send({ error: "prompt is required" });
+  }
+
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "text_completion_failed_to_fetch_settings");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+
+  const apiKey = settings.MODELSLAB_API_KEY;
+  if (!apiKey) {
+    return reply.status(503).send({ error: "ModelsLab API key not configured" });
+  }
+
+  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3-8b-instruct";
+
+  const abortController = new AbortController();
+  req.raw.on("close", () => {
+    if (!req.raw.complete) abortController.abort();
+  });
+
+  try {
+    const mlRes = await fetch("https://modelslab.com/api/v6/llm/uncensored_chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: apiKey,
+        model_id: model,
+        system_prompt: system || undefined,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: maxTokens || 4096,
+        temperature: 0.7,
+        top_p: 0.9,
+      }),
+      signal: abortController.signal,
+    });
+
+    if (!mlRes.ok) {
+      const text = await mlRes.text().catch(() => "");
+      logger.error({ status: mlRes.status, text: text.slice(0, 500) }, "text_completion_http_error");
+      if ([502, 503, 504, 524].includes(mlRes.status)) {
+        return reply.status(503).send({ error: "AI provider temporarily unavailable", retryable: true });
+      }
+      return reply.status(502).send({ error: "ModelsLab API error", providerStatus: mlRes.status });
+    }
+
+    let data: any = await mlRes.json();
+
+    if (data.status === "error") {
+      logger.error({ data }, "text_completion_api_error");
+      return reply.status(502).send({ error: "ModelsLab API error", details: data.message });
+    }
+
+    // Поллим fetch_result, если ответ ещё обрабатывается (как в чат-эндпоинте).
+    if ((data.status === "processing" || data.status === "queued") && data.fetch_result) {
+      const fetchUrl: string = data.fetch_result;
+      const maxAttempts = 15; // 15 * 2s = 30s
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const pollRes = await fetch(fetchUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: apiKey }),
+            signal: abortController.signal,
+          });
+          if (!pollRes.ok) continue;
+          const pollData: any = await pollRes.json();
+          if (pollData.status === "success" || pollData.output || pollData.message) {
+            data = pollData;
+            break;
+          }
+          if (pollData.status === "failed" || pollData.status === "error") {
+            logger.error({ pollData }, "text_completion_poll_failed");
+            return reply.status(502).send({ error: "ModelsLab generation failed" });
+          }
+        } catch (pollErr: any) {
+          if (pollErr.name === "AbortError") throw pollErr;
+          logger.warn({ err: pollErr.message, attempt: i }, "text_completion_poll_error");
+        }
+      }
+    }
+
+    let output: string = (Array.isArray(data.output) ? data.output.join("") : data.output) ?? data.message ?? "";
+    output = (output || "").trim();
+
+    if (!output) {
+      logger.error({ data, model }, "text_completion_empty_output");
+      return reply.status(502).send({ error: "Empty response from AI model" });
+    }
+
+    logger.info({ model, outputLength: output.length }, "text_completion_done");
+    return reply.send({ content: output });
+  } catch (err: any) {
+    if (err.name === "AbortError" || abortController.signal.aborted) {
+      return reply.status(499).send({ error: "Request aborted by client" });
+    }
+    logger.error({ err }, "text_completion_error");
+    return reply.status(502).send({ error: "AI service error", details: err.message });
+  }
+});
+
 // ─── STT (Speech-to-Text via OpenAI Whisper) ─────────────────────────────────
 
 /**

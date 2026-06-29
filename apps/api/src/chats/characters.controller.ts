@@ -5,6 +5,7 @@ import { DemoService } from "../demo/demo.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
 import { normalizeCharacterDto } from "./character-normalize";
+import { generateSeoBio } from "./generate-seo-bio";
 import type { Prisma } from "@prisma/client";
 
 @Controller("characters")
@@ -302,6 +303,74 @@ export class CharactersController {
         label: m.content || "",
         createdAt: m.createdAt,
       })),
+    };
+  }
+
+  /**
+   * Данные персонажа для публичной SEO-страницы (/characters/:id).
+   *
+   * Возвращает персонажа вместе с AI-сгенерированным SEO-описанием (биография +
+   * описание внешности на английском). Текст генерируется ЛЕНИВО при первом
+   * обращении и кэшируется в personality.seo, далее отдаётся из БД.
+   *
+   * Публичный (без авторизации), как остальные read-методы.
+   */
+  @Get(":id/seo")
+  async getSeo(@Param("id") id: string) {
+    const character = await this.prisma.character.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        tags: true,
+        personality: true,
+        createdBy: true,
+        createdAt: true,
+        isPublic: true,
+        voiceId: true,
+      },
+    });
+
+    if (!character) return null;
+
+    const personality = (character.personality as Record<string, unknown> | null) || {};
+    let seo = personality.seo as { bio?: string; appearance?: string } | undefined;
+
+    // Кэш-промах — генерируем и сохраняем в personality.seo.
+    if (!seo || !seo.bio) {
+      try {
+        const generated = await generateSeoBio(character.name, personality);
+        seo = { ...generated };
+        const newPersonality = {
+          ...personality,
+          seo: { ...generated, version: 1, generatedAt: new Date().toISOString() },
+        };
+        await this.prisma.character.update({
+          where: { id: character.id },
+          data: { personality: newPersonality as Prisma.InputJsonValue },
+        });
+      } catch {
+        // Генерация не удалась (AI недоступен) — отдаём страницу без прозы,
+        // на следующем заходе попробуем снова.
+        seo = { bio: "", appearance: "" };
+      }
+    }
+
+    let creator = null;
+    if (character.createdBy) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: character.createdBy },
+        select: { id: true, nickname: true, avatarUrl: true },
+      });
+      if (user) creator = user;
+    }
+
+    return {
+      ...character,
+      systemPrompt: "",
+      creator,
+      seo: { bio: seo.bio || "", appearance: seo.appearance || "" },
     };
   }
 

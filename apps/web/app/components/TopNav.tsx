@@ -92,6 +92,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <a href="#">{t("topnav.blog")}</a>
         <a href="#">{t("topnav.guide")}</a>
         <a href="#">{t("topnav.subscription")}</a>
+        <a href="/characters">{t("topnav.characters")}</a>
       </nav>
       <div className="topnav-buttons">
         <button className="topnav-search-icon-btn" aria-label={t("topnav.search")}>
