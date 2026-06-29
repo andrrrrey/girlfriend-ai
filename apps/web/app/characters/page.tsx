@@ -3,8 +3,10 @@ import Link from "next/link";
 import { resizedMediaUrl } from "../../lib/api";
 import { listCharactersForSeo } from "../../lib/serverApi";
 
-// ISR: каталог пересобирается раз в час.
-export const revalidate = 3600;
+// Рендерим на каждый запрос (SSR), а НЕ пререндерим при сборке: в CI бэкенд
+// недоступен во время `next build`, иначе каталог запёкся бы пустым. Содержимое
+// всё равно попадает в исходный HTML (SSR) — поисковики его видят.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "AI Characters — Browse All Companions",
