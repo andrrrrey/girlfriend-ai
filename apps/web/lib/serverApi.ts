@@ -46,8 +46,11 @@ export async function listCharactersForSeo(opts?: { limit?: number }): Promise<C
   const limit = opts?.limit ?? 60;
   let res: Response;
   try {
+    // no-store: каталог рендерится динамически и должен сразу отражать свежие
+    // данные (новые персонажи, проставленные slug'и после бэкфилла), а не
+    // отдавать закэшированный на час ответ.
     res = await fetch(`${API_URL}/characters?limit=${limit}`, {
-      next: { revalidate: 3600 },
+      cache: "no-store",
     });
   } catch {
     return [];
