@@ -139,6 +139,28 @@ model Character {
   @@map("characters")
 }
 
+// ─── Blog ────────────────────────────────────────────────────
+
+model BlogPost {
+  id            String    @id @default(uuid()) @db.Uuid
+  title         String
+  slug          String    @unique
+  content       String // HTML из редактора (Tiptap), санитизирован на бэкенде
+  excerpt       String? // meta description: заполняется вручную или автогенерится из тела
+  coverImageUrl String?   @map("cover_image_url")
+  tags          String[]  @default([])
+  isPublished   Boolean   @default(false) @map("is_published")
+  publishedAt   DateTime? @map("published_at")
+  createdBy     String?   @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  @@index([isPublished, publishedAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("blog_posts")
+}
+
 // ─── Chat ────────────────────────────────────────────────────
 
 model ChatSession {

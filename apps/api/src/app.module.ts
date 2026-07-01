@@ -33,6 +33,7 @@ import { MediaModule } from "./media/media.module";
 import { LikesModule } from "./likes/likes.module";
 import { CommentsModule } from "./comments/comments.module";
 import { ReportsModule } from "./reports/reports.module";
+import { BlogModule } from "./blog/blog.module";
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ReportsModule } from "./reports/reports.module";
     LikesModule,      // Лайки (полиморфные: персонажи, комментарии, галерея, shorts)
     CommentsModule,   // Комментарии к персонажам
     ReportsModule,    // Жалобы на персонажей
+    BlogModule,       // Блог: публичное чтение + админский CRUD записей
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

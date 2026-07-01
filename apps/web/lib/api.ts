@@ -651,6 +651,21 @@ export interface StoryCharacter {
   latestStoryAt: string | null;
 }
 
+/** Запись блога (админ-панель). Тело `content` — HTML из редактора. */
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string | null;
+  coverImageUrl: string | null;
+  tags: string[];
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Жалоба на персонажа (admin-панель). */
 export interface AdminReport {
   id: string;
@@ -729,6 +744,39 @@ export const admin = {
   /** Мягко удаляет персонажа (DELETE /admin/characters/:id). */
   async deleteCharacter(id: string): Promise<void> {
     return apiFetch(`/admin/characters/${id}`, { method: "DELETE" });
+  },
+
+  // ─── Блог ───────────────────────────────────────────────────
+
+  /** Список всех записей блога, включая черновики (GET /admin/blog-posts). */
+  async getBlogPosts(): Promise<BlogPost[]> {
+    return apiFetch<BlogPost[]>("/admin/blog-posts");
+  },
+
+  /** Одна запись блога по ID (GET /admin/blog-posts/:id). */
+  async getBlogPost(id: string): Promise<BlogPost> {
+    return apiFetch<BlogPost>(`/admin/blog-posts/${id}`);
+  },
+
+  /** Создаёт запись блога (POST /admin/blog-posts). */
+  async createBlogPost(data: Partial<BlogPost>): Promise<BlogPost> {
+    return apiFetch<BlogPost>("/admin/blog-posts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Обновляет запись блога (PATCH /admin/blog-posts/:id). */
+  async updateBlogPost(id: string, data: Partial<BlogPost>): Promise<BlogPost> {
+    return apiFetch<BlogPost>(`/admin/blog-posts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Мягко удаляет запись блога (DELETE /admin/blog-posts/:id). */
+  async deleteBlogPost(id: string): Promise<void> {
+    return apiFetch(`/admin/blog-posts/${id}`, { method: "DELETE" });
   },
 
   /**

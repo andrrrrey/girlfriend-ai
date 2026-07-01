@@ -59,3 +59,55 @@ export async function listCharactersForSeo(opts?: { limit?: number }): Promise<C
   const data = await res.json().catch(() => null);
   return (data?.items as Character[]) ?? [];
 }
+
+/** Публичная запись блога для SEO-страницы (/blog/[slug]). */
+export interface BlogPostSeo {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string | null;
+  coverImageUrl: string | null;
+  tags: string[];
+  publishedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Загружает одну опубликованную запись блога по slug (GET /blog/:slug).
+ * Возвращает null, если запись не найдена/не опубликована.
+ */
+export async function getBlogPostForSeo(slug: string): Promise<BlogPostSeo | null> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/blog/${encodeURIComponent(slug)}`, {
+      // ISR: страница кэшируется на час (как у персонажей).
+      next: { revalidate: 3600 },
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  if (!data || !data.id) return null;
+  return data as BlogPostSeo;
+}
+
+/**
+ * Загружает список опубликованных записей блога для каталога (GET /blog).
+ * no-store: каталог рендерится динамически и сразу отражает новые записи.
+ */
+export async function listBlogPostsForSeo(opts?: { limit?: number }): Promise<BlogPostSeo[]> {
+  const limit = opts?.limit ?? 60;
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/blog?limit=${limit}`, {
+      cache: "no-store",
+    });
+  } catch {
+    return [];
+  }
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => null);
+  return (data?.items as BlogPostSeo[]) ?? [];
+}

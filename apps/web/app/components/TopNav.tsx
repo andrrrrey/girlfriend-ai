@@ -89,7 +89,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <span>{t("topnav.search")}</span>
       </div>
       <nav className="topnav-links">
-        <a href="#">{t("topnav.blog")}</a>
+        <a href="/blog">{t("topnav.blog")}</a>
         <a href="#">{t("topnav.guide")}</a>
         <a href="#">{t("topnav.subscription")}</a>
         <a href="/characters">{t("topnav.characters")}</a>
