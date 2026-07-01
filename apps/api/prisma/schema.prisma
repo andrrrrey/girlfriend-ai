@@ -147,6 +147,7 @@ model BlogPost {
   slug          String    @unique
   content       String // HTML из редактора (Tiptap), санитизирован на бэкенде
   excerpt       String? // meta description: заполняется вручную или автогенерится из тела
+  category      String    @default("News") // News | Updates | AI | Relationship
   coverImageUrl String?   @map("cover_image_url")
   tags          String[]  @default([])
   isPublished   Boolean   @default(false) @map("is_published")
@@ -157,6 +158,7 @@ model BlogPost {
   deletedAt     DateTime? @map("deleted_at")
 
   @@index([isPublished, publishedAt(sort: Desc)])
+  @@index([category])
   @@index([deletedAt])
   @@map("blog_posts")
 }

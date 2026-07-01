@@ -13,24 +13,56 @@ import { CreateBlogPostDto } from "./dto/create-blog-post.dto";
 import { UpdateBlogPostDto } from "./dto/update-blog-post.dto";
 import { excerptFromHtml, sanitizeBlogHtml, uniqueBlogSlug } from "./blog-seo";
 
+/** Допустимые категории записи. "All" — это фильтр «без категории», не значение. */
+export const BLOG_CATEGORIES = ["News", "Updates", "AI", "Relationship"] as const;
+const DEFAULT_CATEGORY = "News";
+
+/** Приводит присланную категорию к допустимой; иначе — дефолт. */
+function normalizeCategory(value?: string): string {
+  if (!value) return DEFAULT_CATEGORY;
+  const match = BLOG_CATEGORIES.find((c) => c.toLowerCase() === value.trim().toLowerCase());
+  return match ?? DEFAULT_CATEGORY;
+}
+
 @Injectable()
 export class BlogService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ─── Public ────────────────────────────────────────────────
 
-  /** Список опубликованных записей для публичного каталога (новые первыми). */
-  async listPublic(limit = 60): Promise<{ items: unknown[]; total: number }> {
-    const where: Prisma.BlogPostWhereInput = { deletedAt: null, isPublished: true };
+  /**
+   * Публичный каталог опубликованных записей: фильтр по категории, сортировка
+   * (new = новые первыми, old = старые первыми) и постраничная выдача.
+   */
+  async listPublic(opts?: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    sort?: string;
+  }): Promise<{ items: unknown[]; total: number; page: number; pageSize: number }> {
+    const pageSize = Math.min(Math.max(opts?.limit ?? 8, 1), 48);
+    const page = Math.max(1, opts?.page ?? 1);
+    const category =
+      opts?.category && BLOG_CATEGORIES.some((c) => c.toLowerCase() === opts.category!.toLowerCase())
+        ? BLOG_CATEGORIES.find((c) => c.toLowerCase() === opts.category!.toLowerCase())
+        : undefined;
+    const dir: Prisma.SortOrder = opts?.sort === "old" ? "asc" : "desc";
+
+    const where: Prisma.BlogPostWhereInput = {
+      deletedAt: null,
+      isPublished: true,
+      ...(category ? { category } : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.blogPost.findMany({
         where,
-        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-        take: Math.min(Math.max(limit, 1), 100),
+        orderBy: [{ publishedAt: dir }, { createdAt: dir }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       }),
       this.prisma.blogPost.count({ where }),
     ]);
-    return { items, total };
+    return { items, total, page, pageSize };
   }
 
   /** Одна опубликованная запись по slug. 404, если не найдена. */
@@ -71,6 +103,7 @@ export class BlogService {
         slug,
         content,
         excerpt,
+        category: normalizeCategory(dto.category),
         coverImageUrl: dto.coverImageUrl,
         tags: dto.tags ?? [],
         isPublished,
@@ -85,6 +118,7 @@ export class BlogService {
     const data: Prisma.BlogPostUpdateInput = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.content !== undefined) data.content = sanitizeBlogHtml(dto.content);
+    if (dto.category !== undefined) data.category = normalizeCategory(dto.category);
     if (dto.coverImageUrl !== undefined) data.coverImageUrl = dto.coverImageUrl;
     if (dto.tags !== undefined) data.tags = dto.tags;
 

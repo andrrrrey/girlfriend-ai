@@ -100,6 +100,7 @@ export default function AdminBlogPage() {
                         <span style={p.isPublished ? s.badgePub : s.badgeDraft}>
                           {p.isPublished ? "Опубликовано" : "Черновик"}
                         </span>
+                        {p.category && <span style={s.tag}>{p.category}</span>}
                         <span style={s.date}>{new Date(p.createdAt).toLocaleDateString()}</span>
                         <span style={s.date}>/{p.slug}</span>
                       </div>

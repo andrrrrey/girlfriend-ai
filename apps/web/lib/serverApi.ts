@@ -67,10 +67,19 @@ export interface BlogPostSeo {
   slug: string;
   content: string;
   excerpt: string | null;
+  category: string;
   coverImageUrl: string | null;
   tags: string[];
   publishedAt: string | null;
   createdAt: string;
+}
+
+/** Постраничный результат каталога блога. */
+export interface BlogListResult {
+  items: BlogPostSeo[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 /**
@@ -94,20 +103,35 @@ export async function getBlogPostForSeo(slug: string): Promise<BlogPostSeo | nul
 }
 
 /**
- * Загружает список опубликованных записей блога для каталога (GET /blog).
- * no-store: каталог рендерится динамически и сразу отражает новые записи.
+ * Загружает страницу каталога блога (GET /blog) с фильтром по категории,
+ * сортировкой и пагинацией. no-store: каталог динамический и сразу отражает
+ * новые записи.
  */
-export async function listBlogPostsForSeo(opts?: { limit?: number }): Promise<BlogPostSeo[]> {
-  const limit = opts?.limit ?? 60;
+export async function listBlogPostsForSeo(opts?: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  sort?: string;
+}): Promise<BlogListResult> {
+  const params = new URLSearchParams();
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.category) params.set("category", opts.category);
+  if (opts?.sort) params.set("sort", opts.sort);
+  const empty: BlogListResult = { items: [], total: 0, page: 1, pageSize: opts?.limit ?? 8 };
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/blog?limit=${limit}`, {
-      cache: "no-store",
-    });
+    res = await fetch(`${API_URL}/blog?${params.toString()}`, { cache: "no-store" });
   } catch {
-    return [];
+    return empty;
   }
-  if (!res.ok) return [];
+  if (!res.ok) return empty;
   const data = await res.json().catch(() => null);
-  return (data?.items as BlogPostSeo[]) ?? [];
+  if (!data) return empty;
+  return {
+    items: (data.items as BlogPostSeo[]) ?? [],
+    total: data.total ?? 0,
+    page: data.page ?? 1,
+    pageSize: data.pageSize ?? (opts?.limit ?? 8),
+  };
 }

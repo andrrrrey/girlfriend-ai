@@ -11,10 +11,20 @@ import { BlogService } from "./blog.service";
 export class BlogController {
   constructor(private readonly blog: BlogService) {}
 
-  /** `GET /blog?limit=60` — опубликованные записи для каталога. */
+  /** `GET /blog?page=&limit=&category=&sort=` — опубликованные записи для каталога. */
   @Get()
-  async list(@Query("limit") limit?: string) {
-    return this.blog.listPublic(limit ? parseInt(limit, 10) : 60);
+  async list(
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("category") category?: string,
+    @Query("sort") sort?: string,
+  ) {
+    return this.blog.listPublic({
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      category,
+      sort,
+    });
   }
 
   /** `GET /blog/:slug` — одна опубликованная запись по slug (404, если нет). */

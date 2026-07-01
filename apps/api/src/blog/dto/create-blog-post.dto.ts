@@ -26,6 +26,10 @@ export class CreateBlogPostDto {
 
   @IsOptional()
   @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsString()
   coverImageUrl?: string;
 
   @IsOptional()

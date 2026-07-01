@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../../context/auth";
 import { admin, resizedMediaUrl, streamUrlForKey, type BlogPost } from "../../../../lib/api";
+import { BLOG_CATEGORIES } from "../../../../lib/blogCategories";
 import { adminStyles } from "../../admin-styles";
 import { AdminTabs } from "../../AdminTabs";
 import BlogEditor from "../BlogEditor";
@@ -19,14 +20,25 @@ export default function AdminBlogEditorPage() {
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const isNew = id === "new";
 
-  const [draft, setDraft] = useState<Draft | null>(isNew ? { title: "", content: "", tags: [], isPublished: false } : null);
+  const [draft, setDraft] = useState<Draft | null>(
+    isNew ? { title: "", content: "", category: BLOG_CATEGORIES[0], tags: [], isPublished: false } : null,
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  // Сырой текст поля тегов: держим отдельно от массива, чтобы можно было
+  // печатать запятые/пробелы. В массив парсим только при сохранении.
+  const [tagsInput, setTagsInput] = useState("");
 
   useEffect(() => {
     if (loading || user?.role !== "admin" || isNew || !id) return;
-    admin.getBlogPost(id).then(setDraft).catch(() => setError("Запись не найдена"));
+    admin
+      .getBlogPost(id)
+      .then((post) => {
+        setDraft(post);
+        setTagsInput((post.tags || []).join(", "));
+      })
+      .catch(() => setError("Запись не найдена"));
   }, [loading, user, id, isNew]);
 
   if (loading) return <div style={adminStyles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
@@ -66,12 +78,17 @@ export default function AdminBlogEditorPage() {
     setSaving(true);
     setError("");
     try {
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       const payload: Partial<BlogPost> = {
         title: draft.title,
         content: draft.content,
         excerpt: draft.excerpt ?? "",
+        category: draft.category ?? BLOG_CATEGORIES[0],
         coverImageUrl: draft.coverImageUrl ?? null,
-        tags: draft.tags ?? [],
+        tags,
         isPublished: draft.isPublished ?? false,
       };
       if (isNew) {
@@ -146,15 +163,25 @@ export default function AdminBlogEditorPage() {
           </div>
 
           <div style={adminStyles.field}>
+            <label style={adminStyles.label}>Категория</label>
+            <select
+              value={draft.category || BLOG_CATEGORIES[0]}
+              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+              style={{ ...adminStyles.input, cursor: "pointer" }}
+            >
+              {BLOG_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={adminStyles.field}>
             <label style={adminStyles.label}>Теги (через запятую)</label>
             <input
-              value={(draft.tags || []).join(", ")}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean),
-                })
-              }
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
               style={adminStyles.input}
               placeholder="новости, гайды"
             />

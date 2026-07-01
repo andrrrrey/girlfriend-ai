@@ -658,6 +658,7 @@ export interface BlogPost {
   slug: string;
   content: string;
   excerpt: string | null;
+  category: string;
   coverImageUrl: string | null;
   tags: string[];
   isPublished: boolean;

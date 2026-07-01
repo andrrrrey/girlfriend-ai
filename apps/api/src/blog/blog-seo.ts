@@ -1,5 +1,33 @@
 import type { PrismaService } from "../prisma.service";
-import { toUrlSlug } from "../chats/character-seo";
+
+/** Таблица транслитерации кириллицы (RU/UK) в латиницу для slug'ов. */
+const CYRILLIC_MAP: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z",
+  и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r",
+  с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh",
+  щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+  і: "i", ї: "yi", є: "ye", ґ: "g",
+};
+
+/**
+ * URL-slug записи блога из заголовка: сначала транслитерируем кириллицу в
+ * латиницу (чтобы русские заголовки давали читаемый URL, а не фолбэк), затем —
+ * та же нормализация, что у персонажей (lowercase, только a-z0-9, разделитель
+ * «-», максимум 60 символов). Пустой результат → фолбэк "post".
+ */
+export function toBlogSlug(title: string): string {
+  const transliterated = (title || "")
+    .toLowerCase()
+    .replace(/[а-яёіїєґ]/g, (ch) => CYRILLIC_MAP[ch] ?? "");
+  const slug = transliterated
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+  return slug || "post";
+}
 
 /**
  * Возвращает уникальный slug записи блога на основе заголовка: base, base-2, ...
@@ -12,7 +40,7 @@ export async function uniqueBlogSlug(
   title: string,
   excludeId?: string,
 ): Promise<string> {
-  const base = toUrlSlug(title);
+  const base = toBlogSlug(title);
   let slug = base;
   let n = 2;
   for (let guard = 0; guard < 1000; guard++) {
