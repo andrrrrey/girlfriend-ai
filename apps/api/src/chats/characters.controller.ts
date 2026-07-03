@@ -2,10 +2,9 @@ import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nest
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
 import { DemoService } from "../demo/demo.service";
+import { CharactersService } from "./characters.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
-import { generateSystemPrompt } from "./generate-system-prompt";
-import { normalizeCharacterDto } from "./character-normalize";
-import { ensureCharacterSeo, uniqueSlug } from "./character-seo";
+import { ensureCharacterSeo } from "./character-seo";
 import type { Prisma } from "@prisma/client";
 
 /** Проверка, что строка — UUID (а не SEO-slug). */
@@ -16,6 +15,7 @@ export class CharactersController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly demoService: DemoService,
+    private readonly charactersService: CharactersService,
   ) {}
 
   @Get()
@@ -420,74 +420,8 @@ export class CharactersController {
   async createCharacter(@Req() req: any, @Body() rawDto: CreateUserCharacterDto) {
     await this.demoService.checkCharacterCreation(req.user.id, req.user.subscription);
 
-    // Нормализуем входящий DTO: что бы ни прислал фронт (английские лейблы из
-    // /create, русские локализованные из /generation, кривые ключи из manifest)
-    // — в БД и в systemPrompt лягут английские lowercase-snake ключи.
-    const dto = normalizeCharacterDto(rawDto);
-
-    const systemPrompt = generateSystemPrompt(dto);
-
-    // SEO-slug проставляем сразу, чтобы у персонажа был «красивый» URL с момента
-    // создания. Само описание (bio/appearance) генерим в фоне ниже.
-    const slug = await uniqueSlug(this.prisma, dto.name);
-
-    const personalityJson: Record<string, unknown> = {
-      slug,
-      gender: dto.gender,
-      orientation: dto.orientation,
-      age: dto.age,
-      style: dto.style,
-      generationStyle: dto.generationStyle,
-      surname: dto.surname,
-      nationality: dto.nationality,
-      language: dto.language,
-      ethnicity: dto.ethnicity,
-      voice: dto.voice,
-      eyeColor: dto.eyeColor,
-      hairStyle: dto.hairStyle,
-      hairColor: dto.hairColor,
-      bodyType: dto.bodyType,
-      breastSize: dto.breastSize,
-      buttSize: dto.buttSize,
-      personality: dto.personality,
-      relationshipType: dto.relationshipType,
-      familyStatus: dto.familyStatus,
-      lifestyle: dto.lifestyle,
-      work: dto.work,
-      hobbies: dto.hobbies,
-      kinks: dto.kinks,
-      childhoodMemory: dto.childhoodMemory,
-      lifeStory: dto.lifeStory,
-      phobias: dto.phobias,
-    };
-
-    const tags: string[] = [];
-    if (dto.personality) tags.push(dto.personality);
-    if (dto.ethnicity) tags.push(dto.ethnicity);
-    if (dto.bodyType) tags.push(dto.bodyType);
-    if (dto.lifestyle) tags.push(dto.lifestyle);
-    if (dto.hobbies) tags.push(...dto.hobbies.slice(0, 3));
-    if (dto.kinks) tags.push(...dto.kinks.slice(0, 3));
-
-    const character = await this.prisma.character.create({
-      data: {
-        name: dto.name,
-        systemPrompt,
-        personality: personalityJson as Prisma.InputJsonValue,
-        tags,
-        avatarUrl: dto.avatarUrl,
-        voiceId: dto.voiceId ?? null,
-        isPublic: true,
-        createdBy: req.user.id,
-      },
-    });
-
-    // Генерим SEO-описание в фоне (fire-and-forget): создание персонажа не должно
-    // ждать ~20с ответа AI. slug уже проставлен, поэтому страница доступна сразу.
-    void ensureCharacterSeo(this.prisma, character.id).catch(() => {
-      // Не удалось — подтянется лениво при первом открытии SEO-страницы.
-    });
-
-    return character;
+    // Создание делегируем общему сервису (тот же пайплайн использует автогенерация
+    // в админке). Владелец — текущий пользователь.
+    return this.charactersService.createFromDto(rawDto, { createdBy: req.user.id });
   }
 }

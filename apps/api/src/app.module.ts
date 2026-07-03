@@ -35,6 +35,7 @@ import { CommentsModule } from "./comments/comments.module";
 import { ReportsModule } from "./reports/reports.module";
 import { BlogModule } from "./blog/blog.module";
 import { VoicesModule } from "./voices/voices.module";
+import { AutogenModule } from "./admin/autogen/autogen.module";
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { VoicesModule } from "./voices/voices.module";
     ReportsModule,    // Жалобы на персонажей
     BlogModule,       // Блог: публичное чтение + админский CRUD записей
     VoicesModule,     // Каталог голосов ElevenLabs: публичный список + админский CRUD
+    AutogenModule,    // Фоновая автогенерация персонажей (админка)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

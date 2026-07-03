@@ -139,6 +139,27 @@ model Character {
   @@map("characters")
 }
 
+// ─── AutoGen (фоновая автогенерация персонажей в админке) ─────
+
+model AutoGenTask {
+  id           String    @id @default(uuid()) @db.Uuid
+  // running | paused | completed | cancelled | stopped_no_balance | failed
+  status       String    @default("running")
+  total        Int
+  succeeded    Int       @default(0)
+  failed       Int       @default(0)
+  params       Json      @default("{}") // ограничения рандома (на будущее)
+  lastError    String?   @map("last_error")
+  characterIds String[]  @default([]) @db.Uuid // созданные персонажи (для ссылок в UI)
+  createdBy    String    @map("created_by") @db.Uuid // админ, запустивший задачу
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  finishedAt   DateTime? @map("finished_at")
+
+  @@index([status])
+  @@map("autogen_tasks")
+}
+
 // ─── Blog ────────────────────────────────────────────────────
 
 model BlogPost {

@@ -24,6 +24,7 @@ import { Module } from "@nestjs/common";
 import { ChatsController } from "./chats.controller";
 import { CharactersController } from "./characters.controller";
 import { ChatsService } from "./chats.service";
+import { CharactersService } from "./characters.service";
 import { PrismaService } from "../prisma.service";
 import { DemoModule } from "../demo/demo.module";
 import { S3Module } from "../s3/s3.module";
@@ -34,6 +35,8 @@ import { S3Module } from "../s3/s3.module";
     S3Module,   // Для S3Service — скачиваем TTS-аудио по ключу через внутренний S3 endpoint
   ],
   controllers: [ChatsController, CharactersController],
-  providers: [ChatsService, PrismaService],
+  providers: [ChatsService, CharactersService, PrismaService],
+  // CharactersService экспортируем — его переиспользует AutogenModule (админка).
+  exports: [CharactersService],
 })
 export class ChatsModule {}

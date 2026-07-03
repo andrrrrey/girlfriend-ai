@@ -9,5 +9,7 @@ import { DemoModule } from "../demo/demo.module";
   imports: [S3Module, DemoModule],
   controllers: [GenerationController],
   providers: [GenerationService, PrismaService],
+  // Экспортируем для AutogenModule (фоновая автогенерация персонажей).
+  exports: [GenerationService],
 })
 export class GenerationModule {}

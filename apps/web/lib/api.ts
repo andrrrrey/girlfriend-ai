@@ -451,6 +451,29 @@ export async function getVoices(): Promise<Voice[]> {
   return apiFetch<Voice[]>("/voices");
 }
 
+/** Статус фоновой задачи автогенерации персонажей. */
+export type AutogenStatus =
+  | "running"
+  | "paused"
+  | "completed"
+  | "cancelled"
+  | "stopped_no_balance"
+  | "failed";
+
+/** Задача автогенерации персонажей (админка). */
+export interface AutogenTask {
+  id: string;
+  status: AutogenStatus;
+  total: number;
+  succeeded: number;
+  failed: number;
+  lastError: string | null;
+  characterIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+}
+
 // ─── Appearance Options ──────────────────────────────────────
 
 export interface AppearanceOption {
@@ -823,6 +846,41 @@ export const admin = {
   /** Удаляет голос (DELETE /admin/voices/:id). */
   async deleteVoice(id: string): Promise<void> {
     return apiFetch(`/admin/voices/${id}`, { method: "DELETE" });
+  },
+
+  // ─── Автогенерация персонажей ───────────────────────────────
+
+  /** Запускает фоновую автогенерацию N персонажей (POST /admin/autogen). */
+  async startAutogen(count: number): Promise<AutogenTask> {
+    return apiFetch<AutogenTask>("/admin/autogen", {
+      method: "POST",
+      body: JSON.stringify({ count }),
+    });
+  },
+
+  /** Последние задачи автогенерации (GET /admin/autogen). */
+  async getAutogenTasks(): Promise<AutogenTask[]> {
+    return apiFetch<AutogenTask[]>("/admin/autogen");
+  },
+
+  /** Одна задача — для поллинга прогресса (GET /admin/autogen/:id). */
+  async getAutogenTask(id: string): Promise<AutogenTask> {
+    return apiFetch<AutogenTask>(`/admin/autogen/${id}`);
+  },
+
+  /** Пауза задачи (POST /admin/autogen/:id/pause). */
+  async pauseAutogen(id: string): Promise<AutogenTask> {
+    return apiFetch<AutogenTask>(`/admin/autogen/${id}/pause`, { method: "POST" });
+  },
+
+  /** Возобновление задачи (POST /admin/autogen/:id/resume). */
+  async resumeAutogen(id: string): Promise<AutogenTask> {
+    return apiFetch<AutogenTask>(`/admin/autogen/${id}/resume`, { method: "POST" });
+  },
+
+  /** Отмена задачи (POST /admin/autogen/:id/cancel). */
+  async cancelAutogen(id: string): Promise<AutogenTask> {
+    return apiFetch<AutogenTask>(`/admin/autogen/${id}/cancel`, { method: "POST" });
   },
 
   /**

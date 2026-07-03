@@ -39,6 +39,18 @@ const logger = createLogger({ service: "ai", env: env.ENV, level: env.LOG_LEVEL 
 /** Базовый URL внутреннего API NestJS (используется для чтения настроек и персонажей) */
 const API_BASE = `http://${env.API_HOST}:${env.API_PORT}`;
 
+/**
+ * Эвристика: похоже ли на «нет баланса/кредитов» у провайдера генерации.
+ * Проверяет HTTP-статус (402) и текст ответа. Нужна автогенерации персонажей,
+ * которая по этому сигналу останавливает всю фоновую задачу.
+ */
+function isInsufficientBalance(status: number, body: string): boolean {
+  if (status === 402) return true;
+  return /insufficient|not enough|no\s+(?:credit|balance)|out of credit|balance is low|recharge|top ?up|billing|payment required/i.test(
+    body || "",
+  );
+}
+
 // Создаём Fastify-приложение (без встроенного логгера — используем Pino напрямую)
 const app = Fastify({ logger: false });
 
@@ -543,6 +555,9 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
     if (!mlRes.ok) {
       const text = await mlRes.text().catch(() => "");
       logger.error({ status: mlRes.status, text: text.slice(0, 500) }, "text_completion_http_error");
+      if (isInsufficientBalance(mlRes.status, text)) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "modelslab" });
+      }
       if ([502, 503, 504, 524].includes(mlRes.status)) {
         return reply.status(503).send({ error: "AI provider temporarily unavailable", retryable: true });
       }
@@ -553,6 +568,9 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
 
     if (data.status === "error") {
       logger.error({ data }, "text_completion_api_error");
+      if (isInsufficientBalance(0, String(data.message ?? ""))) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "modelslab" });
+      }
       return reply.status(502).send({ error: "ModelsLab API error", details: data.message });
     }
 
@@ -1365,6 +1383,9 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       return reply.send({ url: result.url });
     } catch (err: any) {
       logger.error({ err }, "atlascloud_image_generation_error");
+      if (isInsufficientBalance(0, String(err?.message ?? ""))) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "atlascloud" });
+      }
       return reply.status(502).send({ error: "AtlasCloud image generation failed", details: err.message });
     }
   }
@@ -1405,6 +1426,9 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       return reply.send({ url: result.url });
     } catch (err: any) {
       logger.error({ err }, "civitai_image_generation_error");
+      if (isInsufficientBalance(0, String(err?.message ?? ""))) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "civitai" });
+      }
       return reply.status(502).send({ error: "Civitai image generation failed", details: err.message });
     }
   }
@@ -1449,6 +1473,9 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     if (!mlResponse.ok) {
       const errBody = await mlResponse.text();
       logger.error({ status: mlResponse.status, body: errBody }, "modelslab_api_error");
+      if (isInsufficientBalance(mlResponse.status, errBody)) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "modelslab" });
+      }
       return reply.status(502).send({ error: "ModelsLab API error" });
     }
 
@@ -1457,7 +1484,18 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       output?: string[];
       fetch_result?: string;
       eta?: number;
+      message?: string;
     };
+
+    // ModelsLab отдаёт нехватку баланса как 200 + { status: "error", message }.
+    if (mlResult.status === "error") {
+      const msg = String(mlResult.message ?? "");
+      logger.error({ message: msg }, "modelslab_image_error");
+      if (isInsufficientBalance(0, msg)) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "modelslab" });
+      }
+      return reply.status(502).send({ error: "Image generation failed" });
+    }
 
     // 2. Если статус "processing" — поллить fetch_result
     if (mlResult.status === "processing" && mlResult.fetch_result) {
