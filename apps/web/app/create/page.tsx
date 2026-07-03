@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
   characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, ApiError,
+  getVoices, type Voice,
   type CharacterOption,
   getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
   type AppearanceOptionsResponse, type PoseOptionsResponse, type SceneOptionsResponse, type CameraOptionsResponse,
@@ -170,6 +171,26 @@ function populateImageCards(containerId: string, options: CharacterOption[]) {
   });
 }
 
+// Перестраивает блок Voice (Шаг 2) голосами из каталога админки. Каждая кнопка
+// несёт имя (для отображения/превью) и data-voice-id — реальный ElevenLabs voice
+// id, который уйдёт в Character.voiceId и будет использован при озвучке в чате.
+function populateVoiceCards(voices: Voice[]) {
+  const container = document.getElementById("voice-row-container");
+  if (!container || voices.length === 0) return;
+  container.innerHTML = voices
+    .map((v, i) => {
+      const name = v.name.replace(/"/g, "&quot;");
+      return `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${name}" data-voice-id="${v.voiceId}">${VOICE_ICON_SVG}<span>${name}</span></div>`;
+    })
+    .join("");
+  container.querySelectorAll<HTMLElement>(".voice-btn").forEach((btn) => {
+    btn.onclick = () => {
+      container.querySelectorAll(".voice-btn").forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    };
+  });
+}
+
 function chips(field: string, items: string[]) {
   return `<div class="tags-wrap" data-field="${field}">${items.map((v) => `<div class="tag-chip" data-value="${v}">${cvLabel(field, v)}</div>`).join("")}</div>`;
 }
@@ -212,10 +233,12 @@ function stage02() {
   return `<div class="stage-content" id="stage-02-content">
     ${stageHeader(2, "create.stageOrigin")}
     <div class="dropdown-row">${dropdown("nationality", tr("create.nationality"), NATIONALITIES, "American")}${dropdown("language", tr("create.language"), LANGUAGES, "English")}</div>
-    <div class="ethnicity-section"><div class="field-label">${tr("create.ethnicity")}</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
-    <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">${tr("create.fantasyRace")} <span style="color:#969696;font-weight:400">${tr("create.optional")}</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
-    <div class="voice-section"><div class="field-label">${tr("create.voice")}</div>
-      <div class="voice-row">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${cvLabel("voice", v)}</span></div>`).join("")}</div></div>
+    <div class="facial-scroll">
+      <div class="ethnicity-section"><div class="field-label">${tr("create.ethnicity")}</div>${imageCardGrid("ethnicity", "ethnicity-grid-container")}</div>
+      <div class="ethnicity-section" id="fantasy-race-section" style="display:none"><div class="field-label">${tr("create.fantasyRace")} <span style="color:#969696;font-weight:400">${tr("create.optional")}</span></div>${imageCardGrid("fantasyRace", "fantasy-race-grid-container")}</div>
+      <div class="voice-section"><div class="field-label">${tr("create.voice")}</div>
+        <div class="voice-row" id="voice-row-container">${VOICES.map((v, i) => `<div class="voice-btn${i === 0 ? " selected" : ""}" data-value="${v}">${VOICE_ICON_SVG}<span>${cvLabel("voice", v)}</span></div>`).join("")}</div></div>
+    </div>
     ${navButtons(1, 3)}
   </div>`;
 }
@@ -400,6 +423,9 @@ function collectFormData() {
   const chipVals = (f: string) => Array.from(document.querySelectorAll<HTMLElement>(`.tags-wrap[data-field="${f}"] .tag-chip.selected`)).map((c) => c.dataset.value!);
   const pers = () => document.querySelector<HTMLElement>(".personality-card.selected")?.dataset?.value;
   const voice = () => document.querySelector<HTMLElement>(".voice-btn.selected")?.querySelector("span")?.textContent?.trim();
+  // Реальный ElevenLabs voice id есть только у голосов из каталога админки.
+  // У захардкоженного фолбэка его нет → voiceId undefined → голос по умолчанию.
+  const voiceId = () => document.querySelector<HTMLElement>(".voice-btn.selected")?.dataset?.voiceId || undefined;
   const style = () => document.querySelector<HTMLElement>(".style-card.selected")?.dataset?.value;
   const genStyle = () => document.querySelector<HTMLElement>(".style-card.selected")?.dataset?.generationStyle;
 
@@ -418,6 +444,7 @@ function collectFormData() {
     fantasyRace: card("fantasyRace"),
     fantasyRacePrompt: cardPrompt("fantasyRace"),
     voice: voice(),
+    voiceId: voiceId(),
     eyeColor: card("eyeColor"),
     hairStyle: card("hairStyle"),
     hairStylePrompt: cardPrompt("hairStyle"),
@@ -1327,6 +1354,10 @@ export default function CreateCharacterPage() {
     loadGenerationOptions();
     // Pre-load enabled image models so the avatar uses the admin-selected provider
     loadImageModels();
+
+    // Загружаем каталог голосов (админка) и перестраиваем блок Voice в Шаге 2.
+    // Если каталог пуст — остаётся захардкоженный фолбэк без voiceId (голос по умолчанию).
+    getVoices().then(populateVoiceCards).catch(() => {});
 
     // Load dynamic options from DB
     getCharacterOptions().then((allOpts) => {

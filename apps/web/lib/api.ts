@@ -434,6 +434,23 @@ export async function getCharacterOptions(): Promise<CharacterOption[]> {
   return apiFetch<CharacterOption[]>("/generation/character-options");
 }
 
+// ─── Voices (каталог голосов ElevenLabs) ─────────────────────
+
+export interface Voice {
+  id: string;
+  name: string;      // отображаемое имя (в Шаге 2 создания персонажа)
+  voiceId: string;   // ElevenLabs voice id, используется при TTS
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Активные голоса для флоу создания персонажа (GET /voices). */
+export async function getVoices(): Promise<Voice[]> {
+  return apiFetch<Voice[]>("/voices");
+}
+
 // ─── Appearance Options ──────────────────────────────────────
 
 export interface AppearanceOption {
@@ -778,6 +795,34 @@ export const admin = {
   /** Мягко удаляет запись блога (DELETE /admin/blog-posts/:id). */
   async deleteBlogPost(id: string): Promise<void> {
     return apiFetch(`/admin/blog-posts/${id}`, { method: "DELETE" });
+  },
+
+  // ─── Голоса (ElevenLabs) ────────────────────────────────────
+
+  /** Все голоса, включая неактивные (GET /admin/voices). */
+  async getVoices(): Promise<Voice[]> {
+    return apiFetch<Voice[]>("/admin/voices");
+  },
+
+  /** Создаёт голос (POST /admin/voices). */
+  async createVoice(data: { name: string; voiceId: string; order?: number; isActive?: boolean }): Promise<Voice> {
+    return apiFetch<Voice>("/admin/voices", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Обновляет голос (PATCH /admin/voices/:id). */
+  async updateVoice(id: string, data: { name?: string; voiceId?: string; order?: number; isActive?: boolean }): Promise<Voice> {
+    return apiFetch<Voice>(`/admin/voices/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /** Удаляет голос (DELETE /admin/voices/:id). */
+  async deleteVoice(id: string): Promise<void> {
+    return apiFetch(`/admin/voices/${id}`, { method: "DELETE" });
   },
 
   /**
@@ -1340,6 +1385,7 @@ export interface CreateCharacterFormData {
   language?: string;
   ethnicity?: string;
   voice?: string;
+  voiceId?: string;
   eyeColor?: string;
   hairStyle?: string;
   hairColor?: string;

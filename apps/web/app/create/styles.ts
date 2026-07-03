@@ -154,6 +154,9 @@ export const PAGE_CSS = `
     display: flex; flex-direction: column; gap: 22px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   }
   .facial-scroll .ethnicity-section { flex: none; }
+  /* Внутри общей области скролла сетки не должны скроллиться отдельно —
+     скроллится только сам .facial-scroll (актуально для Шага 2). */
+  .facial-scroll .ethnicity-grid { overflow-y: visible; }
 
   /* Voice section */
   .voice-section { display: flex; flex-direction: column; gap: 16px; width: 100%; flex-shrink: 0; }

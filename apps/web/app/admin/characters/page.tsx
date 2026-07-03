@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
-import { admin, type Character } from "../../../lib/api";
+import { admin, type Character, type Voice } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 
@@ -37,13 +37,18 @@ export default function AdminCharactersPage() {
   const [editing, setEditing] = useState<Partial<Character> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [voiceManual, setVoiceManual] = useState(false);
 
   const loadChars = () => {
     admin.getCharacters().then(setChars).catch(() => {});
   };
 
   useEffect(() => {
-    if (!loading && user?.role === "admin") loadChars();
+    if (!loading && user?.role === "admin") {
+      loadChars();
+      admin.getVoices().then(setVoices).catch(() => {});
+    }
   }, [loading, user]);
 
   if (loading) return <div style={adminStyles.page}><p style={{ color: "#aaa" }}>Загрузка...</p></div>;
@@ -167,13 +172,44 @@ export default function AdminCharactersPage() {
                 </div>
               </div>
               <div style={{ flex: 1 }}>
-                <label style={adminStyles.label}>ID голоса</label>
-                <input
-                  value={editing.voiceId || ""}
-                  onChange={(e) => setEditing({ ...editing, voiceId: e.target.value })}
-                  style={adminStyles.input}
-                  placeholder="nova"
-                />
+                <label style={adminStyles.label}>Голос (ElevenLabs)</label>
+                {(() => {
+                  const catalogIds = voices.map((v) => v.voiceId);
+                  const isManual = voiceManual || (!!editing.voiceId && !catalogIds.includes(editing.voiceId));
+                  return (
+                    <>
+                      <select
+                        value={isManual ? "__manual__" : (editing.voiceId || "")}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__manual__") {
+                            setVoiceManual(true);
+                          } else {
+                            setVoiceManual(false);
+                            setEditing({ ...editing, voiceId: val || null });
+                          }
+                        }}
+                        style={adminStyles.input}
+                      >
+                        <option value="">— не задан (голос по умолчанию) —</option>
+                        {voices.map((v) => (
+                          <option key={v.id} value={v.voiceId}>
+                            {v.name} — {v.voiceId}
+                          </option>
+                        ))}
+                        <option value="__manual__">— вручную —</option>
+                      </select>
+                      {isManual && (
+                        <input
+                          value={editing.voiceId || ""}
+                          onChange={(e) => setEditing({ ...editing, voiceId: e.target.value })}
+                          style={{ ...adminStyles.input, marginTop: 8 }}
+                          placeholder="21m00Tcm4TlvDq8ikWAM"
+                        />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -207,7 +243,7 @@ export default function AdminCharactersPage() {
                   {backfilling ? "Запуск..." : "Сгенерировать SEO"}
                 </button>
                 <button
-                  onClick={() => setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true })}
+                  onClick={() => { setVoiceManual(false); setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true }); }}
                   style={adminStyles.button}
                 >
                   + Новый персонаж
@@ -240,7 +276,7 @@ export default function AdminCharactersPage() {
                       </div>
                     </div>
                     <div style={charStyles.charActions}>
-                      <button onClick={() => setEditing(c)} style={adminStyles.btnSmall}>
+                      <button onClick={() => { setVoiceManual(false); setEditing(c); }} style={adminStyles.btnSmall}>
                         Изменить
                       </button>
                       <button

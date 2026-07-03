@@ -476,6 +476,7 @@ export class CharactersController {
         personality: personalityJson as Prisma.InputJsonValue,
         tags,
         avatarUrl: dto.avatarUrl,
+        voiceId: dto.voiceId ?? null,
         isPublic: true,
         createdBy: req.user.id,
       },

@@ -23,7 +23,7 @@ const SETTING_GROUPS = [
     keys: [
       { key: "ELEVENLABS_API_KEY", label: "Ключ API ElevenLabs", type: "password" },
       { key: "ELEVENLABS_DEFAULT_VOICE_ID", label: "ID голоса по умолчанию", type: "text" },
-      { key: "ELEVENLABS_MODEL_ID", label: "Модель ElevenLabs", type: "select", options: ["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_turbo_v2", "eleven_monolingual_v1"] },
+      { key: "ELEVENLABS_MODEL_ID", label: "Модель ElevenLabs", type: "select", options: ["eleven_v3", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5", "eleven_turbo_v2", "eleven_monolingual_v1"] },
     ],
   },
   {

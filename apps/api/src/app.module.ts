@@ -34,6 +34,7 @@ import { LikesModule } from "./likes/likes.module";
 import { CommentsModule } from "./comments/comments.module";
 import { ReportsModule } from "./reports/reports.module";
 import { BlogModule } from "./blog/blog.module";
+import { VoicesModule } from "./voices/voices.module";
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { BlogModule } from "./blog/blog.module";
     CommentsModule,   // Комментарии к персонажам
     ReportsModule,    // Жалобы на персонажей
     BlogModule,       // Блог: публичное чтение + админский CRUD записей
+    VoicesModule,     // Каталог голосов ElevenLabs: публичный список + админский CRUD
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

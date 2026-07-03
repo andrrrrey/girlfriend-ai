@@ -54,6 +54,12 @@ export class CreateUserCharacterDto {
   @IsString()
   voice?: string;
 
+  // ElevenLabs voice id из каталога голосов (админка). Пишется в Character.voiceId
+  // и используется при TTS в чате. Хранится как есть, без нормализации.
+  @IsOptional()
+  @IsString()
+  voiceId?: string;
+
   @IsOptional()
   @IsString()
   eyeColor?: string;
