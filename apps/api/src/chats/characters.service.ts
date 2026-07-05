@@ -18,6 +18,7 @@ import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
 import { normalizeCharacterDto } from "./character-normalize";
 import { ensureCharacterSeo, uniqueSlug } from "./character-seo";
+import { resolveEnabledGenders } from "../common/genders";
 
 @Injectable()
 export class CharactersService {
@@ -36,7 +37,18 @@ export class CharactersService {
     rawDto: CreateUserCharacterDto,
     opts: { createdBy: string | null },
   ) {
-    const dto = normalizeCharacterDto(rawDto);
+    // Гендеры, отключённые админом (ENABLED_GENDERS), нельзя протолкнуть даже
+    // прямым API-запросом — приводим к Female (базовый гендер).
+    const genderSetting = await this.prisma.appSetting.findUnique({
+      where: { key: "ENABLED_GENDERS" },
+    });
+    const enabledGenders = resolveEnabledGenders(genderSetting?.value);
+    const safeDto =
+      rawDto.gender && !enabledGenders.includes(rawDto.gender)
+        ? { ...rawDto, gender: "Female" }
+        : rawDto;
+
+    const dto = normalizeCharacterDto(safeDto);
 
     const systemPrompt = generateSystemPrompt(dto);
     const slug = await uniqueSlug(this.prisma, dto.name);

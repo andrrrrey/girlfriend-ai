@@ -6,6 +6,7 @@ import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import type { ImageJobData, VideoJobData } from "../queue/queue.types";
 import { loadEnv } from "@repo/config";
+import { resolveEnabledGenders } from "../common/genders";
 
 const env = loadEnv();
 const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
@@ -247,6 +248,13 @@ export class GenerationService {
 
   getAllImageModels() {
     return IMAGE_MODELS;
+  }
+
+  async getEnabledGenders(): Promise<string[]> {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: "ENABLED_GENDERS" },
+    });
+    return resolveEnabledGenders(setting?.value);
   }
 
   async getCharacterOptions(category?: string) {

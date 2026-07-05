@@ -2037,6 +2037,11 @@ export async function getImageStyles() {
   );
 }
 
+/** Гендеры, разрешённые админом (ENABLED_GENDERS). Female присутствует всегда. */
+export async function getEnabledGenders() {
+  return apiFetch<string[]>("/generation/genders");
+}
+
 export async function createVideoJob(data: {
   prompt: string;
   model?: string;

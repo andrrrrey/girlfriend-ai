@@ -73,6 +73,10 @@ const ALL_VIDEO_MODELS = [
   { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored" },
 ];
 
+// Мастер-список гендеров (зеркало apps/api/src/common/genders.ts).
+// Female — базовый, отключить нельзя.
+const ALL_GENDERS = ["Female", "Male", "Non-binary", "Trans Female", "Trans Male", "Femboy"];
+
 // Flat list for backward compat
 const SETTING_KEYS = SETTING_GROUPS.flatMap((g) => g.keys);
 
@@ -225,6 +229,45 @@ export default function AdminSettingsPage() {
                 />
                 <span style={{ color: "#fff", fontWeight: 600 }}>{model.name}</span>
                 <span style={{ color: "#848484" }}>— {model.description}</span>
+              </label>
+            );
+          })}
+        </div>
+
+        <div style={{ ...adminStyles.card, marginBottom: 20 }}>
+          <h2 style={adminStyles.title}>Gender / Гендеры</h2>
+          <p style={adminStyles.subtitle}>
+            Какие гендеры доступны пользователям при создании персонажа, генерации изображений/видео и в авто-генерации. Female отключить нельзя.
+          </p>
+
+          {ALL_GENDERS.map((g) => {
+            let enabled: string[];
+            try {
+              enabled = JSON.parse(settings["ENABLED_GENDERS"] || "null") ?? ALL_GENDERS;
+            } catch {
+              enabled = ALL_GENDERS;
+            }
+            const isFemale = g === "Female";
+            const checked = isFemale || enabled.includes(g);
+            return (
+              <label key={g} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#ccc", fontSize: 13, cursor: isFemale ? "default" : "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={isFemale}
+                  onChange={() => {
+                    if (isFemale) return;
+                    const base = enabled.filter((x) => ALL_GENDERS.includes(x));
+                    const newList = checked
+                      ? base.filter((x) => x !== g)
+                      : [...base, g];
+                    // Female всегда присутствует
+                    if (!newList.includes("Female")) newList.unshift("Female");
+                    setSettings({ ...settings, ENABLED_GENDERS: JSON.stringify(newList) });
+                  }}
+                />
+                <span style={{ color: "#fff", fontWeight: 600 }}>{g}</span>
+                {isFemale && <span style={{ color: "#848484" }}>— базовый, всегда включён</span>}
               </label>
             );
           })}

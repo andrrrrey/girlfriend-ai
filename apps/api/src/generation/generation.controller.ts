@@ -89,6 +89,13 @@ export class GenerationController {
     return this.generationService.getImageStyles();
   }
 
+  @Get("genders")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getGenders() {
+    return this.generationService.getEnabledGenders();
+  }
+
   @Get("character-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

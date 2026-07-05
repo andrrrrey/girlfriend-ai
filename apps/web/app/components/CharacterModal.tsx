@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import type { CharacterOption } from "../../lib/api";
+import { getEnabledGenders, type CharacterOption } from "../../lib/api";
 import { useT } from "../../context/language";
 import { localizeOption } from "../../lib/optionLabel";
 
@@ -98,11 +98,25 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
   const { t, lang } = useT();
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [activeId, setActiveId] = useState<string>("style");
+  const [allowedGenders, setAllowedGenders] = useState<string[]>(GENDERS);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft({ ...selections });
   }, [selections]);
+
+  // Гендеры, разрешённые админом (ENABLED_GENDERS). Female присутствует всегда.
+  useEffect(() => {
+    if (!open) return;
+    getEnabledGenders()
+      .then((allowed) => {
+        if (Array.isArray(allowed) && allowed.length > 0) {
+          const filtered = GENDERS.filter((g) => allowed.includes(g));
+          setAllowedGenders(filtered.length > 0 ? filtered : ["Female"]);
+        }
+      })
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     const container = contentRef.current;
@@ -219,7 +233,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                 <div>
                   <div style={s.sectionLabel}>{t("gen.gender")}</div>
                   <div style={s.pillRow}>
-                    {GENDERS.map((g) => (
+                    {allowedGenders.map((g) => (
                       <button key={g} style={{ ...s.pill, ...(draft.gender === g ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
                         {localizeOption(g, lang)}
                       </button>

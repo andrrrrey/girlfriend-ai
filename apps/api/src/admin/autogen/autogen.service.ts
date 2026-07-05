@@ -133,6 +133,9 @@ export class AutogenService implements OnModuleInit {
       const models = await this.generation.getImageStyles();
       const activeModel = models[0];
 
+      // Разрешённые админом гендеры (для авто-генерации).
+      const allowedGenders = await this.generation.getEnabledGenders();
+
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const task = await this.prisma.autoGenTask.findUnique({ where: { id: taskId } });
@@ -147,7 +150,7 @@ export class AutogenService implements OnModuleInit {
         }
 
         try {
-          const characterId = await this.generateOneCharacter(task.createdBy, activeModel);
+          const characterId = await this.generateOneCharacter(task.createdBy, activeModel, allowedGenders);
           await this.prisma.autoGenTask.update({
             where: { id: taskId },
             data: { succeeded: { increment: 1 }, characterIds: { push: characterId } },
@@ -182,11 +185,12 @@ export class AutogenService implements OnModuleInit {
   private async generateOneCharacter(
     adminId: string,
     activeModel: { id: string; provider?: string } | undefined,
+    allowedGenders?: string[],
   ): Promise<string> {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const dto = buildRandomCharacterDto();
+        const dto = buildRandomCharacterDto(allowedGenders);
 
         // 1. Аватар — ставим image-job и ждём результат.
         const avatarUrl = await this.generateAvatar(adminId, dto, activeModel);

@@ -62,8 +62,12 @@ function randInt(min: number, max: number): number {
  * Собирает полностью случайный DTO персонажа (английские лейблы, как с фронта).
  * Нормализация значений произойдёт при создании (normalizeCharacterDto).
  */
-export function buildRandomCharacterDto(): CreateUserCharacterDto {
-  const gender = pick(GENDERS);
+export function buildRandomCharacterDto(allowedGenders?: string[]): CreateUserCharacterDto {
+  const genderPool =
+    allowedGenders && allowedGenders.length > 0
+      ? GENDERS.filter((g) => allowedGenders.includes(g))
+      : GENDERS;
+  const gender = pick(genderPool.length > 0 ? genderPool : ["Female"]);
   const isFemale = gender === "Female" || gender === "Trans Female";
   const namePool = isFemale ? FEMALE_NAMES : Math.random() < 0.5 ? MALE_NAMES : FEMALE_NAMES;
 

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
-  characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, ApiError,
+  characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, getEnabledGenders, ApiError,
   getVoices, type Voice,
   type CharacterOption,
   getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
@@ -1354,6 +1354,18 @@ export default function CreateCharacterPage() {
     loadGenerationOptions();
     // Pre-load enabled image models so the avatar uses the admin-selected provider
     loadImageModels();
+
+    // Ограничиваем список гендеров теми, что включены в админке (Female всегда доступен).
+    getEnabledGenders().then((allowed) => {
+      if (!Array.isArray(allowed) || allowed.length === 0) return;
+      const menu = container.querySelector('.dropdown-container[data-field="gender"] .dropdown-menu');
+      if (!menu) return;
+      const filtered = GENDERS.filter((g) => allowed.includes(g));
+      const list = filtered.length > 0 ? filtered : ["Female"];
+      menu.innerHTML = list
+        .map((o) => `<div class="dropdown-option" data-value="${o}">${cvLabel("gender", o)}</div>`)
+        .join("");
+    }).catch(() => {});
 
     // Загружаем каталог голосов (админка) и перестраиваем блок Voice в Шаге 2.
     // Если каталог пуст — остаётся захардкоженный фолбэк без voiceId (голос по умолчанию).
