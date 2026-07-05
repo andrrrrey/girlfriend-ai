@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { getEnabledGenders, type CharacterOption } from "../../lib/api";
+import { getEnabledGenders, resizedMediaUrl, type CharacterOption, type Character } from "../../lib/api";
 import { useT } from "../../context/language";
 import { localizeOption } from "../../lib/optionLabel";
 
@@ -36,6 +36,12 @@ interface Props {
   onSave: (selections: CharacterSelections) => void;
   options: CharacterOption[];
   onRandomize?: () => void;
+  /** Список публичных персонажей для таба «Choose Character». */
+  characters?: Character[];
+  /** ID выбранного готового персонажа (null — выбран режим Custom). */
+  selectedCharacterId?: string | null;
+  /** Выбор/сброс готового персонажа. null — сброс. */
+  onSelectCharacter?: (character: Character | null) => void;
 }
 
 export const EYE_COLORS = [
@@ -94,11 +100,12 @@ function SelectedOverlay() {
 const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
-export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize }: Props) {
+export default function CharacterModal({ open, onClose, selections, onSave, options, onRandomize, characters = [], selectedCharacterId = null, onSelectCharacter }: Props) {
   const { t, lang } = useT();
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [activeId, setActiveId] = useState<string>("style");
   const [allowedGenders, setAllowedGenders] = useState<string[]>(GENDERS);
+  const [tab, setTab] = useState<"choose" | "custom">(selectedCharacterId ? "choose" : "custom");
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -174,6 +181,12 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
           </button>
         </div>
 
+        <div style={s.tabRow}>
+          <button style={{ ...s.tabBtn, ...(tab === "choose" ? s.tabBtnActive : {}) }} onClick={() => setTab("choose")}>{t("gen.tabChoose")}</button>
+          <button style={{ ...s.tabBtn, ...(tab === "custom" ? s.tabBtnActive : {}) }} onClick={() => setTab("custom")}>{t("gen.tabCustom")}</button>
+        </div>
+
+        {tab === "custom" ? (
         <div style={s.body}>
           <div style={s.sidebar}>
             <nav style={s.sidebarNav}>
@@ -420,10 +433,33 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
             </div>
           </div>
         </div>
+        ) : (
+        <div style={s.chooseBody}>
+          {characters.length === 0 ? (
+            <div style={s.chooseEmpty}>{t("gen.noCharacters")}</div>
+          ) : (
+            <div style={s.charGrid}>
+              {characters.map((c) => {
+                const selected = selectedCharacterId === c.id;
+                const thumb = resizedMediaUrl(c.avatarUrl, { w: 400 }) || c.avatarUrl;
+                return (
+                  <button key={c.id} style={s.charCard} onClick={() => onSelectCharacter?.(selected ? null : c)}>
+                    <div style={{ ...s.charThumbWrap, ...(selected ? { border: "2px solid #f95bad" } : {}) }}>
+                      {thumb && <img src={thumb} alt={c.name} style={s.charThumb} loading="lazy" decoding="async" />}
+                      {selected && <SelectedOverlay />}
+                    </div>
+                    <div style={s.charName}>{c.name}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        )}
 
         <div style={s.footer}>
           <button style={s.cancelBtn} onClick={onClose}>{t("common.cancel")}</button>
-          <button style={s.saveBtn} onClick={() => { onSave(draft); onClose(); }}>{t("common.save")}</button>
+          <button style={s.saveBtn} onClick={() => { if (tab === "custom") onSave(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </div>
 
@@ -462,7 +498,17 @@ const s: Record<string, React.CSSProperties> = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #2a2a2a", flexShrink: 0 },
   title: { color: "#fff", fontSize: 20, fontWeight: 700 },
   closeBtn: { width: 32, height: 32, borderRadius: 8, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  body: { display: "flex", flex: 1, overflow: "hidden" },
+  tabRow: { display: "flex", gap: 8, padding: "12px 24px 0", flexShrink: 0 },
+  tabBtn: { flex: 1, padding: "10px 16px", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 10, color: "#888", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" },
+  tabBtnActive: { color: "#fff", border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)" },
+  body: { display: "flex", flex: 1, overflow: "hidden", marginTop: 12 },
+  chooseBody: { flex: 1, overflowY: "auto", padding: "20px 24px", marginTop: 12 },
+  chooseEmpty: { color: "#888", fontSize: 14, textAlign: "center" as const, padding: "48px 0" },
+  charGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 14 },
+  charCard: { display: "flex", flexDirection: "column", gap: 8, padding: 0, background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const },
+  charThumbWrap: { position: "relative", width: "100%", aspectRatio: "3 / 4", borderRadius: 12, overflow: "hidden", background: "#1a1a1a", border: "2px solid transparent" },
+  charThumb: { width: "100%", height: "100%", objectFit: "cover" as const, display: "block" },
+  charName: { color: "#fff", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" },
   sidebar: { width: 200, flexShrink: 0, background: "#151515", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto" },
   sidebarNav: { display: "flex", flexDirection: "column" },
   sidebarHeader: { padding: "8px 20px 4px", color: "#666", fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em" },

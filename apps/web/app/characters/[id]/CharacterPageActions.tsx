@@ -22,7 +22,7 @@ export default function CharacterPageActions({ characterId }: { characterId: str
       </button>
       <button
         className="seo-cta-secondary"
-        onClick={() => router.push(`/chat?characterId=${characterId}`)}
+        onClick={() => router.push(`/generation?characterId=${characterId}`)}
       >
         {t("characters.generateImage")}
       </button>

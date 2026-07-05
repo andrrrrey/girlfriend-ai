@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useGeneration } from "../../context/generation";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
@@ -18,7 +18,9 @@ import {
   deleteGenerationJob,
   uploadMedia,
   resizedMediaUrl,
+  characters as charactersApi,
 } from "../../lib/api";
+import { buildCharacterImagePrompt } from "../../lib/prompt";
 import {
   getCachedCharacterOptions,
   getCachedAppearanceOptions,
@@ -26,7 +28,7 @@ import {
   getCachedSceneOptions,
   getCachedCameraOptions,
 } from "../../lib/options-cache";
-import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse } from "../../lib/api";
+import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse, Character } from "../../lib/api";
 import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, GENDERS, HEIGHTS, BREAST_SIZES, BUTT_SIZES } from "../components/CharacterModal";
 import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
 import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
@@ -252,6 +254,15 @@ const CSS = `
   }
   .editor-icon.premium { background: rgba(249, 91, 173, 0.3); }
   .editor-icon svg { width: 20px; height: 20px; }
+  .editor-char-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(48, 39, 43, 0.4);
+  }
+  .editor-char-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .editor-text { text-align: center; width: 100%; }
   .editor-text .name {
     font-size: 16px;
@@ -395,16 +406,17 @@ const CSS = `
   }
   .chips-row {
     display: flex;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 6px;
     width: 100%;
   }
   .chip {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     height: 32px;
-    padding: 7px 30px;
+    padding: 7px 16px;
     border-radius: 4px;
     background: #1e1e1e;
     font-size: 12px;
@@ -417,13 +429,14 @@ const CSS = `
   }
   .chip:hover { background: #2a2a2a; }
   .chip.active { background: #313131; }
-  .chip.orient { width: 171px; }
-  .chip.orient-sm { width: 112.667px; }
+  .chip.orient { flex: 0 0 auto; }
+  .chip.orient-sm { flex: 0 0 auto; }
   .chip.flex-1 { flex: 1; }
   .chip svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   .orient-icon {
     width: 16px; height: 16px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -555,6 +568,7 @@ const CSS = `
     font-size: 14px;
   }
 
+  .premium-gem { flex-shrink: 0; display: inline-flex; align-items: center; }
   .premium-gem svg {
     width: 16px;
     height: 16px;
@@ -958,11 +972,12 @@ const GALLERY_TAG_STOP_WORDS = new Set([
   "photo", "image", "video", "prompt", "generate", "creating",
 ]);
 
-export default function GenerationPage() {
+function GenerationPageInner() {
   const { user, loading } = useAuth();
   const { t: tr, lang } = useT();
   const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Префетчим thumb-картинки опций только на этой странице (раньше это делалось
   // глобально после логина и забивало сеть на всех страницах).
@@ -978,6 +993,9 @@ export default function GenerationPage() {
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterSelections, setCharacterSelections] = useState<CharacterSelections>(DEFAULT_CHARACTER_SELECTIONS);
   const [characterOptions, setCharacterOptions] = useState<CharacterOption[]>([]);
+  // Готовый персонаж, выбранный в табе «Choose Character» (взаимоисключающе с custom).
+  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [appearanceSelections, setAppearanceSelections] = useState<AppearanceSelections>(DEFAULT_APPEARANCE_SELECTIONS);
   const [appearanceOptions, setAppearanceOptions] = useState<AppearanceOptionsResponse>({ OUTFITS: [], OUTFIT_DETAILS: [] });
@@ -1083,7 +1101,33 @@ export default function GenerationPage() {
     prevActiveCountRef.current = activeJobs.length;
   }, [activeJobs.length]);
 
+  // Список публичных персонажей для таба «Choose Character».
+  useEffect(() => {
+    if (!user) return;
+    charactersApi.listPublic({ limit: 100 })
+      .then((res) => setAllCharacters(res.items))
+      .catch(() => {});
+  }, [user]);
+
+  // Автоподстановка персонажа при переходе с ?characterId= (кнопки Generate).
+  useEffect(() => {
+    const id = searchParams.get("characterId");
+    if (!id) return;
+    const found = allCharacters.find((c) => c.id === id);
+    if (found) {
+      setSelectedCharacter(found);
+      setCharacterSelections(DEFAULT_CHARACTER_SELECTIONS);
+      return;
+    }
+    // Персонажа нет в первых 100 — дозагружаем по id.
+    charactersApi.getOne(id)
+      .then((c) => { setSelectedCharacter(c); setCharacterSelections(DEFAULT_CHARACTER_SELECTIONS); })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, allCharacters]);
+
   const hasAnySelection = useMemo(() => {
+    if (selectedCharacter) return true;
     if (characterSelections.humanRace || characterSelections.fantasyRace ||
         characterSelections.hairStyle || characterSelections.bodyType ||
         characterSelections.style || characterSelections.gender ||
@@ -1096,7 +1140,7 @@ export default function GenerationPage() {
     if (sceneSelections.locations.length > 0) return true;
     if (cameraSelections.framing.length > 0 || cameraSelections.cameraAngle.length > 0) return true;
     return false;
-  }, [characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
+  }, [selectedCharacter, characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
 
   const buildCompositePrompt = useCallback((userPrompt: string, model: string, isVideo: boolean): string => {
     const findPrompt = (name: string, options: Array<{ name: string; prompt?: string | null }>) =>
@@ -1432,6 +1476,26 @@ export default function GenerationPage() {
           count,
         });
         jobIds = result.jobIds;
+      } else if (selectedCharacter) {
+        // Готовый персонаж: img2img по его фото (как в чате). Промпт = атрибуты
+        // персонажа + выбранные Appearance/Pose/Scene/Camera + кастомный текст.
+        // compositePrompt уже содержит quality-префикс, поэтому в хелпер его не
+        // добавляем (includeQuality=false).
+        const personality = (selectedCharacter.personality || {}) as Record<string, unknown>;
+        const personalityPart = buildCharacterImagePrompt(personality, undefined, false);
+        const finalPrompt = personalityPart ? `${personalityPart}, ${compositePrompt}` : compositePrompt;
+        const charStyle = personality.generationStyle as string | undefined;
+        const result = await createImageJob({
+          prompt: finalPrompt,
+          negativePrompt,
+          ...(selectedCharacter.avatarUrl ? { initImageUrl: selectedCharacter.avatarUrl } : {}),
+          ...(charStyle
+            ? { provider: "civitai", generationStyle: charStyle }
+            : { model: "alibaba/wan-2.6/text-to-image", provider: "atlascloud" }),
+          aspectRatio,
+          count,
+        });
+        jobIds = result.jobIds;
       } else {
         const imageProvider = imageModels.find((m) => m.id === selectedModel)?.provider;
         const selectedStyleOption = characterOptions.find(
@@ -1466,7 +1530,7 @@ export default function GenerationPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration, selectedCharacter]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1555,7 +1619,7 @@ export default function GenerationPage() {
   charTags.push(...characterSelections.eyeFeatures, ...characterSelections.faceFeatures);
   const visibleCharTags = charTags.slice(0, 5);
   const extraCharTags = charTags.length > 5 ? charTags.length - 5 : 0;
-  const hasCharSelections = charTags.length > 0;
+  const hasCharSelections = charTags.length > 0 || !!selectedCharacter;
 
   const appearanceTags: string[] = [
     ...appearanceSelections.outfits,
@@ -1873,14 +1937,22 @@ export default function GenerationPage() {
             {/* Character */}
             <div className={`editor-card${hasCharSelections ? " active" : ""}`} onClick={() => setCharacterOpen(true)}>
               <div className="card-content">
-                <div className="editor-icon">
-                  <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
-                </div>
+                {selectedCharacter ? (
+                  <div className="editor-char-avatar">
+                    {selectedCharacter.avatarUrl && (
+                      <img src={resizedMediaUrl(selectedCharacter.avatarUrl, { w: 200 }) || selectedCharacter.avatarUrl} alt={selectedCharacter.name} />
+                    )}
+                  </div>
+                ) : (
+                  <div className="editor-icon">
+                    <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#fff" strokeWidth="1.3"/><path d="M16 18c0-3.31-2.69-6-6-6s-6 2.69-6 6" stroke="#fff" strokeWidth="1.3"/></svg>
+                  </div>
+                )}
                 <div className="editor-text">
-                  <div className="name">{tr("media.character")}</div>
+                  <div className="name">{selectedCharacter ? selectedCharacter.name : tr("media.character")}</div>
                   <div className="sub required">{tr("gp.required")}</div>
                 </div>
-                {hasCharSelections && (
+                {!selectedCharacter && hasCharSelections && (
                   <div className="editor-tags">
                     {visibleCharTags.map((t) => <span key={t} className="editor-tag">{localizeOption(t, lang)}</span>)}
                     {extraCharTags > 0 && <span className="editor-tag">+{extraCharTags}</span>}
@@ -2234,9 +2306,15 @@ export default function GenerationPage() {
         open={characterOpen}
         onClose={() => setCharacterOpen(false)}
         selections={characterSelections}
-        onSave={(s) => setCharacterSelections(s)}
+        onSave={(s) => { setCharacterSelections(s); setSelectedCharacter(null); }}
         options={characterOptions}
         onRandomize={handleRandomize}
+        characters={allCharacters}
+        selectedCharacterId={selectedCharacter?.id ?? null}
+        onSelectCharacter={(c) => {
+          setSelectedCharacter(c);
+          if (c) setCharacterSelections(DEFAULT_CHARACTER_SELECTIONS);
+        }}
       />
 
       <AppearanceModal
@@ -2296,5 +2374,13 @@ export default function GenerationPage() {
         />
       )}
     </>
+  );
+}
+
+export default function GenerationPage() {
+  return (
+    <Suspense fallback={null}>
+      <GenerationPageInner />
+    </Suspense>
   );
 }
