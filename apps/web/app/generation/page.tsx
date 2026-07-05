@@ -1484,14 +1484,15 @@ function GenerationPageInner() {
         const personality = (selectedCharacter.personality || {}) as Record<string, unknown>;
         const personalityPart = buildCharacterImagePrompt(personality, undefined, false);
         const finalPrompt = personalityPart ? `${personalityPart}, ${compositePrompt}` : compositePrompt;
-        const charStyle = personality.generationStyle as string | undefined;
+        // Всегда Civitai img2img: только он использует фото персонажа как референс
+        // и сохраняет его стиль. Нет своего generationStyle → дефолт "realism".
+        const charStyle = (personality.generationStyle as string | undefined) || "realism";
         const result = await createImageJob({
           prompt: finalPrompt,
           negativePrompt,
           ...(selectedCharacter.avatarUrl ? { initImageUrl: selectedCharacter.avatarUrl } : {}),
-          ...(charStyle
-            ? { provider: "civitai", generationStyle: charStyle }
-            : { model: "alibaba/wan-2.6/text-to-image", provider: "atlascloud" }),
+          provider: "civitai",
+          generationStyle: charStyle,
           aspectRatio,
           count,
         });

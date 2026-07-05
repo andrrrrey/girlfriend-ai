@@ -695,8 +695,12 @@ function ChatPageInner() {
     const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
 
     try {
-      const charStyle = activeCharPersonality.generationStyle as string | undefined;
-      const useCivitai = !!charStyle;
+      // Генерация изображений персонажа всегда идёт через Civitai img2img: только
+      // этот провайдер использует фото персонажа как референс И сохраняет его стиль.
+      // AtlasCloud/ModelsLab-фолбэки давали несовпадение с внешностью персонажа.
+      // Если у персонажа нет своего generationStyle — дефолт "realism" (валидный
+      // ключ CIVITAI_MODELS, бэкенд тоже дефолтит в него).
+      const charStyle = (activeCharPersonality.generationStyle as string | undefined) || "realism";
       // Фото персонажа → img2img, чтобы сгенерированная поза была похожа на
       // исходного персонажа, а не на случайного человека по текстовому промпту.
       const initImageUrl = activeChatData?.character?.avatarUrl || undefined;
@@ -704,13 +708,12 @@ function ChatPageInner() {
         prompt,
         negativePrompt: "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo",
         ...(initImageUrl ? { initImageUrl } : {}),
-        ...(useCivitai
-          ? { provider: "civitai", generationStyle: charStyle }
-          : { model: "alibaba/wan-2.6/text-to-image", provider: "atlascloud" }),
+        provider: "civitai",
+        generationStyle: charStyle,
       };
       const { jobId } = await createImageJob(jobPayload);
 
-      startGeneration(jobId, "image", prompt, useCivitai ? charStyle! : "alibaba/wan-2.6", "chat", {
+      startGeneration(jobId, "image", prompt, charStyle, "chat", {
         chatId: activeChat,
         poseName,
       });
