@@ -44,6 +44,10 @@ let cachedCameraOptions: CameraOptionsResponse | null = null;
 type ImageModel = { id: string; name: string; description: string; provider?: string };
 let enabledImageModels: ImageModel[] = [];
 
+// Гендеры, разрешённые админом (ENABLED_GENDERS). До загрузки — полный список.
+// Female присутствует всегда. Кэшируется на уровне модуля, переживает перестройку.
+let allowedGenders: string[] = [...GENDERS];
+
 /* ── HTML Builders ────────────────────────────── */
 
 // Module-level translator, set from the component before content is built so the
@@ -216,7 +220,7 @@ function navButtons(prev: number, next: number | "submit") {
 function stage01() {
   return `<div class="stage-content active" id="stage-01-content">
     ${stageHeader(1, "create.stageBasic")}
-    <div class="dropdown-row">${dropdown("gender", tr("create.gender"), GENDERS, "Female")}${dropdown("orientation", tr("create.orientation"), ORIENTATIONS, "Heterosexual")}</div>
+    <div class="dropdown-row">${dropdown("gender", tr("create.gender"), allowedGenders, "Female")}${dropdown("orientation", tr("create.orientation"), ORIENTATIONS, "Heterosexual")}</div>
     <div class="field"><div class="field-label">${tr("create.name")}</div><input type="text" class="input-text" id="input-name" placeholder="${tr("create.namePlaceholder")}" value=""></div>
     <div class="field"><div class="field-label">${tr("create.surname")}</div><input type="text" class="input-text" id="input-surname" placeholder="${tr("create.surnamePlaceholder")}"></div>
     <div class="field-age"><div class="field-label">${tr("create.age")}</div>
@@ -528,7 +532,8 @@ function restoreFormState(): boolean {
       const valEl = container.querySelector<HTMLElement>(".val");
       if (valEl) valEl.textContent = cvLabel(field, value);
     };
-    restoreDropdown("gender", d.gender);
+    // Не восстанавливаем гендер, отключённый админом — остаётся дефолтный Female.
+    restoreDropdown("gender", d.gender && allowedGenders.includes(d.gender) ? d.gender : undefined);
     restoreDropdown("orientation", d.orientation);
     restoreDropdown("nationality", d.nationality);
     restoreDropdown("language", d.language);
@@ -777,7 +782,7 @@ function randomizeStage(n: number) {
         tooltip.textContent = String(age);
         track.dataset.value = String(age);
       }
-      setDropdown("gender", pick(GENDERS));
+      setDropdown("gender", pick(allowedGenders));
       setDropdown("orientation", pick(ORIENTATIONS));
       const styleRow = document.getElementById("style-row-container");
       if (styleRow) {
@@ -953,6 +958,18 @@ async function loadImageModels() {
   try {
     enabledImageModels = await getImageStyles();
   } catch { /* ignore — упадём на дефолтный провайдер */ }
+}
+
+// Загружает разрешённые админом гендеры. Вызывается ДО сборки разметки, чтобы
+// dropdown, восстановление черновика и рандом сразу использовали корректный список.
+async function loadAllowedGenders() {
+  try {
+    const allowed = await getEnabledGenders();
+    if (Array.isArray(allowed) && allowed.length > 0) {
+      const filtered = GENDERS.filter((g) => allowed.includes(g));
+      allowedGenders = filtered.length > 0 ? filtered : ["Female"];
+    }
+  } catch { /* ignore — оставляем полный список */ }
 }
 
 function pickRandomPrompts(): string[] {
@@ -1355,18 +1372,6 @@ export default function CreateCharacterPage() {
     // Pre-load enabled image models so the avatar uses the admin-selected provider
     loadImageModels();
 
-    // Ограничиваем список гендеров теми, что включены в админке (Female всегда доступен).
-    getEnabledGenders().then((allowed) => {
-      if (!Array.isArray(allowed) || allowed.length === 0) return;
-      const menu = container.querySelector('.dropdown-container[data-field="gender"] .dropdown-menu');
-      if (!menu) return;
-      const filtered = GENDERS.filter((g) => allowed.includes(g));
-      const list = filtered.length > 0 ? filtered : ["Female"];
-      menu.innerHTML = list
-        .map((o) => `<div class="dropdown-option" data-value="${o}">${cvLabel("gender", o)}</div>`)
-        .join("");
-    }).catch(() => {});
-
     // Загружаем каталог голосов (админка) и перестраиваем блок Voice в Шаге 2.
     // Если каталог пуст — остаётся захардкоженный фолбэк без voiceId (голос по умолчанию).
     getVoices().then(populateVoiceCards).catch(() => {});
@@ -1610,7 +1615,9 @@ export default function CreateCharacterPage() {
     generationContextStartFn = startGenRef.current;
     // Глобальные слушатели регистрируем один раз — переживают перестройку разметки
     registerGlobalListeners();
-    buildAndInitPageRef.current();
+    // Сначала узнаём разрешённые гендеры, затем строим разметку — чтобы dropdown,
+    // восстановление черновика и рандом использовали уже отфильтрованный список.
+    loadAllowedGenders().finally(() => buildAndInitPageRef.current());
 
     // Cleanup on unmount
     return () => {
