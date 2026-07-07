@@ -55,4 +55,12 @@ export class CreateImageJobDto {
   @IsOptional()
   @IsString()
   initImageUrl?: string;
+
+  /**
+   * ID выбранного персонажа (кнопка «Choose Character» на /generation).
+   * Сохраняется в AiJob, чтобы эти картинки показывались в сторис персонажа.
+   */
+  @IsOptional()
+  @IsString()
+  characterId?: string;
 }

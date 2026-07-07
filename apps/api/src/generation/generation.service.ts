@@ -138,7 +138,7 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -161,6 +161,7 @@ export class GenerationService {
           userId,
           type: "image",
           status: "pending",
+          characterId: data.characterId || null,
           input: {
             prompt,
             originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,

@@ -180,6 +180,18 @@ function getMediaUrl(item: any): string | null {
   return item.output?.url || null;
 }
 
+// Реальные параметры генерации: сначала meta (что фактически отправили в
+// нейросеть — с настоящим чекпоинтом), затем fallback на input (старые записи).
+function getFinalPrompt(item: any): string {
+  return item.output?.meta?.finalPrompt || item.input?.prompt || item.input?.originalPrompt || "";
+}
+function getFinalModel(item: any): string {
+  return item.output?.meta?.model || item.input?.model || "";
+}
+function getProvider(item: any): string {
+  return item.output?.meta?.provider || item.input?.provider || "";
+}
+
 function isVideo(item: any): boolean {
   return item.type === "video";
 }
@@ -223,8 +235,14 @@ function CardThumbnail({ item }: { item: any }) {
 function FullscreenModal({ item, onClose }: { item: any; onClose: () => void }) {
   const url = getMediaUrl(item);
   const video = isVideo(item);
-  const prompt = item.input?.prompt || item.input?.originalPrompt || "";
-  const model = item.input?.model || "";
+  const meta = item.output?.meta || {};
+  const prompt = getFinalPrompt(item);
+  const originalPrompt = item.input?.originalPrompt && item.input.originalPrompt !== prompt ? item.input.originalPrompt : "";
+  const negativePrompt = meta.finalNegativePrompt || item.input?.negativePrompt || "";
+  const model = getFinalModel(item);
+  const provider = getProvider(item);
+  const generationStyle = meta.generationStyle || item.input?.generationStyle || "";
+  const dims = meta.width && meta.height ? `${meta.width}×${meta.height}` : "";
   const userDisplay = item.user?.nickname || item.user?.email || item.userId || "Unknown";
   const date = item.createdAt ? new Date(item.createdAt).toLocaleString("ru-RU") : "";
 
@@ -246,10 +264,33 @@ function FullscreenModal({ item, onClose }: { item: any; onClose: () => void }) 
           )
         )}
         <div style={pageStyles.modalBody}>
-          <div style={pageStyles.modalLabel}>Prompt</div>
+          <div style={pageStyles.modalLabel}>Промпт (отправлен в нейросеть)</div>
           <div style={pageStyles.modalValue}>{prompt || "N/A"}</div>
-          <div style={pageStyles.modalLabel}>Model</div>
-          <div style={pageStyles.modalValue}>{model || "N/A"}</div>
+          {originalPrompt && (
+            <>
+              <div style={pageStyles.modalLabel}>Оригинальный промпт (до перевода)</div>
+              <div style={pageStyles.modalValue}>{originalPrompt}</div>
+            </>
+          )}
+          {negativePrompt && (
+            <>
+              <div style={pageStyles.modalLabel}>Негативный промпт</div>
+              <div style={pageStyles.modalValue}>{negativePrompt}</div>
+            </>
+          )}
+          <div style={pageStyles.modalLabel}>Модель</div>
+          <div style={pageStyles.modalValue}>
+            {model || "N/A"}
+            {!item.output?.meta?.model && (model || provider) ? " (без meta — старая запись)" : ""}
+          </div>
+          {(provider || generationStyle || dims) && (
+            <>
+              <div style={pageStyles.modalLabel}>Провайдер / стиль / размер</div>
+              <div style={pageStyles.modalValue}>
+                {[provider, generationStyle, dims].filter(Boolean).join(" · ") || "N/A"}
+              </div>
+            </>
+          )}
           <div style={pageStyles.modalLabel}>User</div>
           <div style={pageStyles.modalValue}>{userDisplay}</div>
           <div style={pageStyles.modalLabel}>Date</div>
@@ -392,10 +433,10 @@ export default function AdminGenerationsPage() {
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const prompt = item.input?.prompt || item.input?.originalPrompt || "";
+                    const prompt = getFinalPrompt(item);
                     const truncated = prompt.length > 90 ? prompt.slice(0, 90) + "..." : prompt;
                     const userDisplay = item.user?.nickname || item.user?.email || item.userId || "";
-                    const model = item.input?.model || "—";
+                    const model = getFinalModel(item) || "—";
                     const date = item.createdAt ? new Date(item.createdAt).toLocaleString("ru-RU") : "";
                     const video = isVideo(item);
 

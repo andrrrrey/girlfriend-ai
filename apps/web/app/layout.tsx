@@ -3,6 +3,7 @@ import { GenerationProvider } from "../context/generation";
 import { LanguageProvider } from "../context/language";
 import LayoutShell from "./components/LayoutShell";
 import ServiceWorkerInit from "./components/ServiceWorkerInit";
+import MediaErrorHandler from "./components/MediaErrorHandler";
 import "./globals.css";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: import("react").Rea
     <html lang="en">
       <body>
         <ServiceWorkerInit />
+        <MediaErrorHandler />
         <AuthProvider>
           <LanguageProvider>
             <GenerationProvider>

@@ -150,9 +150,9 @@ export default function CameraModal({ open, onClose, selections, onSave, options
         </div>
 
         {/* Body */}
-        <div style={s.body}>
+        <div className="cm-body" style={s.body}>
           {/* Sidebar */}
-          <div style={s.sidebar}>
+          <div className="cm-sidebar" style={s.sidebar}>
             <nav style={s.sidebarNav}>
               {SECTIONS.map((sec) => (
                 <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>

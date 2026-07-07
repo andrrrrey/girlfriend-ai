@@ -30,8 +30,10 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard, Roles } from "../auth/guards/roles.guard";
 import { AdminService } from "./admin.service";
@@ -539,6 +541,23 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCameraOption(@Param("id") id: string) {
     await this.adminService.deleteCameraOption(id);
+  }
+
+  // ─── Экспорт опций генерации ───────────────────────────────
+
+  /**
+   * Выгружает все опции генерации (название, промпт, имена картинок) одним CSV.
+   * `GET /admin/generation-options/export`
+   */
+  @Get("generation-options/export")
+  async exportGenerationOptions(@Res() res: Response) {
+    const csv = await this.adminService.exportGenerationOptionsCsv();
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="generation-options-${new Date().toISOString().slice(0, 10)}.csv"`,
+    );
+    res.send(csv);
   }
 
   // ─── Generations ───────────────────────────────────────────

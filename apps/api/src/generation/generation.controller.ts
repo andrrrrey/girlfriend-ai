@@ -41,6 +41,7 @@ export class GenerationController {
       generationStyle: dto.generationStyle,
       count: dto.count,
       initImageUrl: dto.initImageUrl,
+      characterId: dto.characterId,
     });
   }
 

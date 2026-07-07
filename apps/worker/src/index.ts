@@ -326,9 +326,17 @@ async function handleImageJob(job: Job): Promise<void> {
     throw new Error(`Image generation service returned ${response.status}: ${errText}`);
   }
 
-  const result = await response.json() as { url: string };
+  const result = await response.json() as {
+    url: string;
+    // meta — фактические параметры генерации от AI-сервиса (реальный чекпоинт,
+    // отправленный промпт/негатив, провайдер, размеры). Нужны админ-разделу
+    // «Генерации», чтобы показывать настоящую модель, а не generic-значение.
+    meta?: Record<string, unknown>;
+  };
 
-  await updateJobStatus(jobId, "completed", { output: { url: result.url } });
+  await updateJobStatus(jobId, "completed", {
+    output: result.meta ? { url: result.url, meta: result.meta } : { url: result.url },
+  });
   await logUsage(userId, "generation");
   logger.info({ jobId, url: result.url }, "image_job_done");
 }

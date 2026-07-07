@@ -806,6 +806,61 @@ export class AdminService {
     await this.prisma.cameraOption.delete({ where: { id } });
   }
 
+  // ─── Экспорт опций генерации в CSV ─────────────────────────
+
+  /**
+   * Собирает все опции генерации (character/appearance/pose/scene/camera) в один
+   * CSV: раздел, категория, название, промпт, имена картинок (S3-ключи/URL),
+   * порядок. Категории appearance/pose/scene резолвятся в человекочитаемое имя.
+   */
+  async exportGenerationOptionsCsv(): Promise<string> {
+    const [character, appearance, pose, scene, camera] = await Promise.all([
+      this.prisma.characterOption.findMany({ orderBy: [{ category: "asc" }, { order: "asc" }] }),
+      this.prisma.appearanceOption.findMany({
+        orderBy: [{ order: "asc" }],
+        include: { category: { select: { tab: true, name: true } } },
+      }),
+      this.prisma.poseOption.findMany({
+        orderBy: [{ order: "asc" }],
+        include: { category: { select: { tab: true, name: true } } },
+      }),
+      this.prisma.sceneOption.findMany({
+        orderBy: [{ order: "asc" }],
+        include: { category: { select: { tab: true, name: true } } },
+      }),
+      this.prisma.cameraOption.findMany({ orderBy: [{ section: "asc" }, { order: "asc" }] }),
+    ]);
+
+    const header = ["section", "category", "name", "prompt", "imageUrl", "imageThumbKey", "imageFullKey", "order"];
+    const rows: (string | number | null | undefined)[][] = [];
+
+    for (const o of character) {
+      rows.push(["character", o.category, o.name, o.prompt, o.imageUrl, o.imageThumbKey, o.imageFullKey, o.order]);
+    }
+    for (const o of appearance) {
+      rows.push(["appearance", `${o.category?.tab ?? ""} / ${o.category?.name ?? ""}`, o.name, o.prompt, o.imageUrl, o.imageThumbKey, o.imageFullKey, o.order]);
+    }
+    for (const o of pose) {
+      rows.push(["pose", `${o.category?.tab ?? ""} / ${o.category?.name ?? ""}`, o.name, o.prompt, o.imageUrl, o.imageThumbKey, o.imageFullKey, o.order]);
+    }
+    for (const o of scene) {
+      rows.push(["scene", `${o.category?.tab ?? ""} / ${o.category?.name ?? ""}`, o.name, o.prompt, o.imageUrl, o.imageThumbKey, o.imageFullKey, o.order]);
+    }
+    for (const o of camera) {
+      rows.push(["camera", o.section, o.name, o.prompt, o.imageUrl, o.imageThumbKey, o.imageFullKey, o.order]);
+    }
+
+    const escape = (v: string | number | null | undefined): string => {
+      const s = v == null ? "" : String(v);
+      // RFC 4180: экранируем кавычки удвоением и оборачиваем поля со спецсимволами.
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const lines = [header.join(","), ...rows.map((r) => r.map(escape).join(","))];
+    // BOM — чтобы Excel корректно открывал UTF-8 (кириллица в промптах).
+    return "﻿" + lines.join("\r\n");
+  }
+
   // ─── Generations ───────────────────────────────────────────
 
   async getGenerations(opts: { type?: string; limit?: number; offset?: number; search?: string }) {

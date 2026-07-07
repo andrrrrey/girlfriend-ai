@@ -399,5 +399,12 @@ export const PAGE_CSS = `
     .s9-attrs-col { width: 100%; }
     .s9-custom-textareas { grid-template-columns: 1fr; }
     .dropdown-row { flex-direction: column; gap: 8px; }
+    /* Плотные сетки на узком экране: 5 колонок нечитаемы. */
+    .personality-grid { grid-template-columns: repeat(2, 1fr); }
+    .ethnicity-card { width: calc(33.333% - 7px); }
+    .facial-grid .ethnicity-card { width: calc(50% - 5px); }
+    .s9-attr-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Кнопки шага занимают всю ширину, чтобы не сжимались. */
+    .buttons-row { flex-wrap: wrap; }
   }
 `;

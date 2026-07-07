@@ -11,6 +11,15 @@ body {
   font-feature-settings: 'lnum', 'pnum';
 }
 
+/* Битые медиа-картинки (протухший/пропавший /media/*): вместо сломанной
+   иконки браузера показываем нейтральный плейсхолдер. Класс проставляет
+   глобальный MediaErrorHandler. */
+img.media-broken {
+  background: #1a1a1a;
+  object-fit: cover;
+  color: transparent;
+}
+
 /* ─── Layout ─────────────────────────────────── */
 .layout {
   display: flex;
@@ -602,8 +611,19 @@ body {
 
 /* ─── Responsive breakpoints ─────────────────── */
 @media (max-width: 768px) {
+  /* На мобиле сайдбар не убираем из потока через display:none (тогда
+     mobile-open ничего бы не показал), а прячем сдвигом за левый край и
+     выезжаем по .mobile-open. z-index выше оверлея (150), чтобы пункты меню
+     были кликабельны поверх затемнения. */
   .sidebar {
-    display: none;
+    display: flex;
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    z-index: 200;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
   }
   .main {
     margin-left: 0;
@@ -611,6 +631,9 @@ body {
   }
   .hamburger-btn {
     display: flex;
+  }
+  .topnav-logo-mobile {
+    cursor: pointer;
   }
   .topnav {
     gap: 8px;
@@ -646,4 +669,30 @@ body {
   .mobile-overlay.visible { display: block; }
   .gen-toast-container { right: 12px; top: 64px; left: 12px; }
   .gen-toast { min-width: unset; max-width: unset; }
+
+  /* Широкие таблицы (админка) не должны распирать вьюпорт: делаем их
+     горизонтально прокручиваемыми вместо разрыва вёрстки. */
+  .main table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Модалки-каталоги (персонаж/поза/одежда/сцена/камера): сайдбар 200px +
+     контент бок о бок не влезают на телефон. Складываем вертикально, а
+     навигацию сайдбара превращаем в горизонтальную ленту. Классы cm-body/
+     cm-sidebar проставлены на body/sidebar этих модалок. */
+  .cm-body { flex-direction: column !important; overflow: auto !important; }
+  .cm-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid #2a2a2a !important;
+    padding: 8px 12px !important;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cm-sidebar nav { flex-direction: row !important; }
 }

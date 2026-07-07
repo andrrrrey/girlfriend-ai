@@ -156,7 +156,7 @@ export default async function BlogCatalogPage({ searchParams }: PageProps) {
 }
 
 const catalogCss = `
-  .blog-catalog { max-width: 1360px; margin: 0 auto; padding: 32px 32px 72px; }
+  .blog-catalog { width: 100%; max-width: 1360px; margin: 0 auto; padding: 32px 32px 72px; box-sizing: border-box; }
   .blog-title { text-align: center; font-size: 44px; font-weight: 800; color: #fff; margin: 8px 0 32px; }
 
   .blog-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }

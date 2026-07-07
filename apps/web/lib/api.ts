@@ -1184,6 +1184,27 @@ export const admin = {
     return apiFetch(`/admin/generations?${qs}`);
   },
 
+  /**
+   * Скачивает CSV со всеми опциями генерации (название, промпт, имена картинок).
+   * Возвращает Blob-файл, поэтому идём мимо apiFetch (тот парсит JSON).
+   */
+  async exportGenerationOptions(): Promise<void> {
+    const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    const res = await fetch(`${API_BASE}/admin/generation-options/export`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+    if (!res.ok) throw new ApiError(res.status, `Export failed: ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `generation-options-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
   /** Список генераций + разбивка по моделям для расходов (GET /admin/generation-costs). */
   async getGenerationCosts(params?: {
     type?: string;
@@ -1981,6 +2002,7 @@ export async function createImageJob(data: {
   generationStyle?: string;
   count?: number;
   initImageUrl?: string;
+  characterId?: string;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",

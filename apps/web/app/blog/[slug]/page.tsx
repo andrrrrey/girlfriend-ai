@@ -100,7 +100,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
 }
 
 const detailCss = `
-  .blog-detail { max-width: 1120px; margin: 0 auto; padding: 24px 24px 80px; }
+  .blog-detail { width: 100%; max-width: 1120px; margin: 0 auto; padding: 24px 24px 80px; box-sizing: border-box; }
   .blog-detail-back { margin-bottom: 20px; }
   .blog-detail-back a { color: #9a9a9a; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-decoration: none; }
   .blog-detail-back a:hover { color: #fff; }

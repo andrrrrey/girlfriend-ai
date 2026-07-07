@@ -147,8 +147,8 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
           </button>
         </div>
 
-        <div style={s.body}>
-          <div style={s.sidebar}>
+        <div className="cm-body" style={s.body}>
+          <div className="cm-sidebar" style={s.sidebar}>
             <nav style={s.sidebarNav}>
               {sidebarItems.map((entry, i) =>
                 entry.type === "header" ? (

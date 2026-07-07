@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Res,
+  Logger,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 // Подтягивает type-augmentation для Express.Multer.File:
@@ -80,6 +81,8 @@ const UPLOAD_EXT: Record<string, string> = {
 @ApiTags("media")
 @Controller("media")
 export class MediaController {
+  private readonly logger = new Logger(MediaController.name);
+
   constructor(private readonly s3: S3Service) {}
 
   @ApiOperation({
@@ -109,8 +112,8 @@ export class MediaController {
         res.setHeader("Content-Type", contentType || "application/octet-stream");
         res.setHeader("Cache-Control", IMMUTABLE_CACHE);
         body.pipe(res);
-      } catch {
-        throw new NotFoundException("Media not found");
+      } catch (err) {
+        throw this.mediaNotFound(key, err);
       }
       return;
     }
@@ -133,8 +136,8 @@ export class MediaController {
     let original: { body: Readable; contentType?: string };
     try {
       original = await this.s3.getObject(key);
-    } catch {
-      throw new NotFoundException("Media not found");
+    } catch (err) {
+      throw this.mediaNotFound(key, err);
     }
 
     // Ресайзим только изображения. Видео/прочее — отдаём оригинал как есть.
@@ -169,10 +172,24 @@ export class MediaController {
         res.setHeader("Content-Type", contentType || "application/octet-stream");
         res.setHeader("Cache-Control", IMMUTABLE_CACHE);
         body.pipe(res);
-      } catch {
-        throw new NotFoundException("Media not found");
+      } catch (err) {
+        throw this.mediaNotFound(key, err);
       }
     }
+  }
+
+  /**
+   * Логирует пропавший S3-ключ (с причиной) и возвращает 404. Раньше 404 летел
+   * молча, из-за чего «Failed to load resource: 404» в консоли было невозможно
+   * связать с конкретным объектом. Теперь в логах видно, какой ключ отсутствует
+   * — это протухший результат генерации, не залитый в S3, либо превью опции,
+   * ссылающееся на несуществующий ключ.
+   */
+  private mediaNotFound(key: string, err: unknown): NotFoundException {
+    this.logger.warn(
+      `media_key_not_found key="${key}" reason="${(err as Error)?.message ?? "unknown"}"`,
+    );
+    return new NotFoundException("Media not found");
   }
 
   @ApiOperation({ summary: "Proxy an external media URL (server-side fetch)" })
@@ -192,6 +209,12 @@ export class MediaController {
     try {
       const upstream = await fetch(url);
       if (!upstream.ok) {
+        // Обычно это протухший временный URL Civitai/провайдера. Логируем и
+        // отдаём 404 с кэш-заголовком, чтобы браузер не долбил ту же ссылку.
+        this.logger.warn(
+          `upstream_media_not_found status=${upstream.status} url="${url}"`,
+        );
+        res.setHeader("Cache-Control", "public, max-age=3600");
         throw new NotFoundException("Upstream media not found");
       }
       const contentType = upstream.headers.get("content-type") || "application/octet-stream";
@@ -201,6 +224,7 @@ export class MediaController {
       res.send(buffer);
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
+      this.logger.warn(`upstream_media_fetch_failed url="${url}" reason="${(err as Error)?.message}"`);
       throw new ServiceUnavailableException("Failed to fetch upstream media");
     }
   }

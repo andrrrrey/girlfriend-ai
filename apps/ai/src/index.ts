@@ -131,14 +131,32 @@ async function uploadToS3(
   body: Buffer,
   contentType: string,
 ): Promise<string> {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    }),
-  );
+  // Ретраи: аплоад результата генерации в S3 иногда падает по сети/таймауту.
+  // Раньше единичный сбой означал, что в БД ложился прямой временный URL
+  // Civitai, который через несколько дней протухал и давал 404 в /media/proxy.
+  // Три попытки с бэкоффом резко снижают частоту таких «протухающих» ссылок.
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+        }),
+      );
+      lastErr = undefined;
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 300 * attempt));
+      }
+    }
+  }
+  if (lastErr) throw lastErr;
   // S3_PUBLIC_URL — публичный адрес MinIO/S3 для браузера (может отличаться от S3_ENDPOINT,
   // если S3_ENDPOINT — внутренний docker-адрес типа http://minio:9000)
   const publicBase = (env.S3_PUBLIC_URL || env.S3_ENDPOINT)!.replace(/\/$/, "");
@@ -920,7 +938,7 @@ async function generateImageCivitai(params: {
   initImageUrl?: string;
   /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
   denoise?: number;
-}): Promise<{ url: string }> {
+}): Promise<{ url: string; model: string }> {
   const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise } = params;
 
   const pool = CIVITAI_MODELS[generationStyle];
@@ -998,7 +1016,7 @@ async function generateImageCivitai(params: {
 
   if (result.status === "succeeded" || result.status === "completed") {
     const imageUrl = extractImageUrl(result);
-    if (imageUrl) return { url: imageUrl };
+    if (imageUrl) return { url: imageUrl, model: model.air };
   }
 
   if ((result.status === "scheduled" || result.status === "processing") && result.id) {
@@ -1018,7 +1036,7 @@ async function generateImageCivitai(params: {
 
       if (result.status === "succeeded" || result.status === "completed") {
         const imageUrl = extractImageUrl(result);
-        if (imageUrl) return { url: imageUrl };
+        if (imageUrl) return { url: imageUrl, model: model.air };
       }
       if (result.status === "failed") {
         logger.error({ result }, "civitai_step_failed");
@@ -1254,6 +1272,27 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
 
+  // Метаданные фактической генерации — возвращаем воркеру, чтобы админ-раздел
+  // «Генерации» показывал реальный отправленный промпт и настоящую модель
+  // (для Civitai это конкретный чекпоинт model.air, а не generic "civitai").
+  const sendResult = (
+    url: string,
+    meta: { model?: string; generationStyle?: string; width?: number; height?: number },
+  ) =>
+    reply.send({
+      url,
+      meta: {
+        finalPrompt: prompt,
+        finalNegativePrompt: negativePrompt,
+        provider: provider || "modelslab",
+        img2img: !!initImageUrl,
+        model: meta.model,
+        generationStyle: meta.generationStyle,
+        width: meta.width,
+        height: meta.height,
+      },
+    });
+
   // ─── img2img: генерация по фото персонажа ──────────────────────────────
   // Если передан initImageUrl — генерируем «новую позу того же персонажа».
   // Приоритет — Civitai img2img на ТОМ ЖЕ стиле персонажа (сохраняет и
@@ -1287,13 +1326,13 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
                 const key = `images/${randomUUID()}.png`;
                 const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
                 logger.info({ key, generationStyle, denoise }, "civitai_img2img_uploaded_to_s3");
-                return reply.send({ url });
+                return sendResult(url, { model: result.model, generationStyle });
               } catch (s3Err: any) {
                 logger.warn({ err: s3Err }, "civitai_img2img_s3_upload_failed");
               }
             }
           }
-          return reply.send({ url: result.url });
+          return sendResult(result.url, { model: result.model, generationStyle });
         } catch (err: any) {
           logger.warn({ err: err?.message }, "civitai_img2img_failed_fallback_to_modelslab");
           // продолжаем в ModelsLab img2img ниже
@@ -1334,13 +1373,13 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
               const key = `images/${randomUUID()}.png`;
               const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
               logger.info({ key, i2iModel }, "img2img_uploaded_to_s3");
-              return reply.send({ url });
+              return sendResult(url, { model: i2iModel, width: width || dft.w, height: height || dft.h });
             } catch (s3Err: any) {
               logger.warn({ err: s3Err }, "img2img_s3_upload_failed");
             }
           }
         }
-        return reply.send({ url: result.url });
+        return sendResult(result.url, { model: i2iModel, width: width || dft.w, height: height || dft.h });
       } catch (err: any) {
         logger.warn({ err: err?.message }, "img2img_failed_fallback_to_text2img");
         // продолжаем в обычный поток ниже
@@ -1365,7 +1404,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
 
       const imageResponse = await fetch(result.url);
       if (!imageResponse.ok) {
-        return reply.send({ url: result.url });
+        return sendResult(result.url, { model: modelId });
       }
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       const s3 = createS3Client();
@@ -1375,12 +1414,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           const key = `images/${randomUUID()}.png`;
           const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
           logger.info({ key, modelId }, "atlascloud_image_uploaded_to_s3");
-          return reply.send({ url });
+          return sendResult(url, { model: modelId });
         } catch (s3Err: any) {
           logger.warn({ err: s3Err }, "atlascloud_image_s3_upload_failed");
         }
       }
-      return reply.send({ url: result.url });
+      return sendResult(result.url, { model: modelId });
     } catch (err: any) {
       logger.error({ err }, "atlascloud_image_generation_error");
       if (isInsufficientBalance(0, String(err?.message ?? ""))) {
@@ -1408,7 +1447,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
 
       const imageResponse = await fetch(result.url);
       if (!imageResponse.ok) {
-        return reply.send({ url: result.url });
+        return sendResult(result.url, { model: result.model, generationStyle });
       }
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       const s3 = createS3Client();
@@ -1418,12 +1457,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           const key = `images/${randomUUID()}.png`;
           const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
           logger.info({ key, generationStyle }, "civitai_image_uploaded_to_s3");
-          return reply.send({ url });
+          return sendResult(url, { model: result.model, generationStyle });
         } catch (s3Err: any) {
           logger.warn({ err: s3Err }, "civitai_image_s3_upload_failed");
         }
       }
-      return reply.send({ url: result.url });
+      return sendResult(result.url, { model: result.model, generationStyle });
     } catch (err: any) {
       logger.error({ err }, "civitai_image_generation_error");
       if (isInsufficientBalance(0, String(err?.message ?? ""))) {
@@ -1569,14 +1608,14 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       try {
         const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
         logger.info({ key, modelId }, "image_uploaded_to_s3");
-        return reply.send({ url });
+        return sendResult(url, { model: modelId, width: imgWidth, height: imgHeight });
       } catch (s3Err: any) {
         logger.warn({ err: s3Err }, "image_s3_upload_failed");
       }
     }
 
     // Fallback: вернуть оригинальный URL если S3 не настроен
-    return reply.send({ url: imageUrl });
+    return sendResult(imageUrl, { model: modelId, width: imgWidth, height: imgHeight });
   } catch (err: any) {
     logger.error({ err }, "image_generation_error");
     return reply.status(502).send({ error: "Image generation failed", details: err.message });

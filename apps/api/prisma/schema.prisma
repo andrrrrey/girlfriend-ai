@@ -135,6 +135,7 @@ model Character {
   chatSessions ChatSession[]
   comments     Comment[]
   reports      Report[]
+  aiJobs       AiJob[]
 
   @@map("characters")
 }
@@ -244,20 +245,26 @@ model Message {
 
 model AiJob {
   id          String    @id @default(uuid()) @db.Uuid
-  type        String // chat | stt | tts
+  type        String // chat | stt | tts | image | video
   status      String    @default("pending") // pending | processing | completed | failed
   input       Json?
   output      Json?
   userId      String    @map("user_id") @db.Uuid
+  // Персонаж, на основе которого сделана генерация (выбор существующего
+  // персонажа на странице /generation). Позволяет показывать эти картинки в
+  // сторис персонажа. Nullable: обычные генерации без персонажа и старые записи.
+  characterId String?   @map("character_id") @db.Uuid
   tokensUsed  Int?      @map("tokens_used")
   error       String?
   createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([status])
+  @@index([characterId])
   @@map("ai_jobs")
 }
 

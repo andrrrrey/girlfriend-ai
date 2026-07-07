@@ -1495,6 +1495,7 @@ function GenerationPageInner() {
           generationStyle: charStyle,
           aspectRatio,
           count,
+          characterId: selectedCharacter.id,
         });
         jobIds = result.jobIds;
       } else {

@@ -76,7 +76,14 @@ export default function Sidebar({
     `nav-link${activePage === page ? " active" : ""}`;
 
   return (
-    <aside className={`sidebar${mobileOpen ? " mobile-open" : ""}`}>
+    <aside
+      className={`sidebar${mobileOpen ? " mobile-open" : ""}`}
+      // На мобиле закрываем выехавшее меню после перехода по ссылке (Link
+      // рендерится как <a href>). Тоглы без href (язык, настройки) не закрывают.
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("a[href]")) onClose?.();
+      }}
+    >
       <div className="sidebar-logo">
         <Logo />
       </div>
