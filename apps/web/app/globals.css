@@ -184,6 +184,12 @@ img.media-broken {
 .main {
   margin-left: 196px;
   flex: 1;
+  /* min-width:0 обязателен: без него флекс-ребёнок не сжимается ниже ширины
+     своего контента (min-width:auto по умолчанию), и любой широкий элемент
+     (заголовок nowrap, грид, таблица) распирает .main шире вьюпорта, а
+     body{overflow-x:hidden} обрезает контент — именно это ломало мобилку на
+     страницах генерации/чата/создания. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -695,4 +701,9 @@ img.media-broken {
     flex-shrink: 0;
   }
   .cm-sidebar nav { flex-direction: row !important; }
+
+  /* Админ-поиск: фиксированный input (260px) выталкивал кнопку «Найти» за экран.
+     На мобиле форма во всю ширину, input сжимается. */
+  .admin-search { width: 100%; }
+  .admin-search input { flex: 1 1 auto; min-width: 0; width: auto !important; }
 }

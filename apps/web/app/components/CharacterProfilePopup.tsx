@@ -317,8 +317,17 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
           }
           .cpp-left {
             width: 100% !important;
-            height: 300px !important;
+            /* Портрет персонажа: даём больше высоты и держим верх кадра, чтобы
+               лицо не обрезалось (раньше 300px + object-position center резал
+               голову). aspect-ratio 3/4 с ограничением по высоте показывает
+               персонажа целиком на большинстве экранов. */
+            height: auto !important;
+            aspect-ratio: 3 / 4;
+            max-height: 60vh !important;
             flex-shrink: 0 !important;
+          }
+          .cpp-left img {
+            object-position: top center !important;
           }
           .cpp-right { flex: 1 !important; min-height: 0 !important; }
         }

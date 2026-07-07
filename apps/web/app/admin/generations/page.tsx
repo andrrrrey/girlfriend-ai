@@ -382,7 +382,7 @@ export default function AdminGenerationsPage() {
               Генерации
               <span style={pageStyles.badge}>{total}</span>
             </h2>
-            <form onSubmit={handleSearch} style={{ display: "flex", gap: 8 }}>
+            <form className="admin-search" onSubmit={handleSearch} style={{ display: "flex", gap: 8 }}>
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}

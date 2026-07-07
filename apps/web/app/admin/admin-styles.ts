@@ -8,7 +8,9 @@ export const adminStyles: Record<string, React.CSSProperties> = {
   container: { width: "100%" },
   containerWide: { width: "100%" },
   containerXWide: { width: "100%" },
-  tabs: { display: "flex", gap: 0, marginBottom: 20 },
+  // overflowX:auto — на мобиле 10 вкладок не влезают, даём горизонтальный скролл
+  // вместо обрезки. На десктопе, если влезают, скролла нет.
+  tabs: { display: "flex", gap: 0, marginBottom: 20, overflowX: "auto", scrollbarWidth: "none" },
   tab: {
     padding: "8px 14px",
     color: "#969696",
@@ -18,6 +20,8 @@ export const adminStyles: Record<string, React.CSSProperties> = {
     borderBottom: "2px solid transparent",
     background: "transparent",
     fontFamily: "'Syne', sans-serif",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   tabActive: { color: "#fff", borderBottom: "2px solid #f95bad" },
   card: {
