@@ -146,7 +146,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
 
         {/* ═══════════════════ LEFT PANEL ═══════════════════ */}
         <div className="cpp-left" style={s.left}>
-          <div style={s.imgWrap}>
+          <div className="cpp-imgwrap" style={s.imgWrap}>
             {mainImage
               ? <img src={resizedMediaUrl(mainImage, { w: 768 }) ?? mainImage} alt={character.name} style={s.avatar} decoding="async" />
               : <div style={s.avatarBg} />
@@ -222,7 +222,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
 
         {/* ═══════════════════ RIGHT PANEL ═══════════════════ */}
         <div className="cpp-right" style={s.right}>
-          <button style={s.closeBtn} onClick={onClose} aria-label={tr("common.close")}>
+          <button className="cpp-close" style={s.closeBtn} onClick={onClose} aria-label={tr("common.close")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
@@ -308,28 +308,52 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
       <style>{`
         .cpp-scroll::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
+          /* Весь попап — единая вертикальная прокрутка (раньше контент-панель
+             имела фиксированную высоту с overflow:hidden, из-за чего табы
+             About/Gallery/Comments нельзя было проскроллить). */
           .cpp-modal {
             flex-direction: column !important;
             width: 100vw !important;
             height: 100dvh !important;
             max-height: 100dvh !important;
             border-radius: 0 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
           }
           .cpp-left {
             width: 100% !important;
-            /* Портрет персонажа: даём больше высоты и держим верх кадра, чтобы
-               лицо не обрезалось (раньше 300px + object-position center резал
-               голову). aspect-ratio 3/4 с ограничением по высоте показывает
-               персонажа целиком на большинстве экранов. */
             height: auto !important;
-            aspect-ratio: 3 / 4;
-            max-height: 60vh !important;
             flex-shrink: 0 !important;
           }
-          .cpp-left img {
-            object-position: top center !important;
+          /* Фото — полный портрет 3:4, верх кадра (лицо не обрезается). */
+          .cpp-imgwrap {
+            flex: none !important;
+            width: 100% !important;
+            aspect-ratio: 3 / 4;
+            max-height: 56vh;
           }
-          .cpp-right { flex: 1 !important; min-height: 0 !important; }
+          .cpp-imgwrap img { object-position: top center !important; }
+          /* Контент-панель раскрывается по содержимому, прокрутка — на модалке. */
+          .cpp-right {
+            flex: none !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+          .cpp-scroll {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+          }
+          /* Крестик закрытия — фиксированно вверху справа. */
+          .cpp-close {
+            position: fixed !important;
+            top: 12px !important;
+            right: 12px !important;
+            z-index: 10 !important;
+            background: rgba(0,0,0,0.55) !important;
+            backdrop-filter: blur(4px);
+            border-radius: 50% !important;
+          }
         }
       `}</style>
     </div>

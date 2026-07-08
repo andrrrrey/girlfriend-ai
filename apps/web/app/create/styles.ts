@@ -386,12 +386,30 @@ export const PAGE_CSS = `
   }
 
   @media (max-width: 900px) {
-    .create-content { padding: 20px 16px 0; }
+    /* На мобиле уходим от десктопной схемы «панель фикс. высоты + внутренние
+       скроллы» к естественной прокрутке всей страницы: иначе блоки (стиль,
+       позы) наезжают на кнопку «Далее», а низ формы уходит под нижний бар. */
+    .create-content { padding: 20px 16px 100px; overflow: visible; min-height: 0; }
     .stages-panel { display: none; }
     .page-title { padding-left: 0; font-size: 22px; }
     .create-body { gap: 0; }
-    .form-card { width: 100%; }
+    .form-card { width: 100%; height: auto !important; min-height: 0 !important; overflow: visible !important; }
     .mobile-progress-dots { display: flex; }
+    /* Внутренние скролл-области раскрываем по содержимому — скроллит страница. */
+    .field-style, .ethnicity-section, .facial-scroll, .personality-scroll,
+    .preview-tab-content, .s9-body, .s9-attrs-col {
+      flex: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+      height: auto !important;
+    }
+    /* Ряд выбора стиля — горизонтальная лента вместо сжатых/наезжающих карточек. */
+    .style-row { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .style-card { flex: 0 0 100px; height: 140px; }
+    /* Шапка шага (заголовок + Reset/Generate) переносится, не обрезается. */
+    .form-header { flex-wrap: wrap; gap: 8px; }
+    .header-actions { flex-wrap: wrap; }
+    .btn-generate, .btn-reset { flex: 1 1 auto; }
   }
   @media (max-width: 600px) {
     .s9-body { flex-direction: column; }

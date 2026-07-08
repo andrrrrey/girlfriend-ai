@@ -693,14 +693,37 @@ img.media-broken {
   .cm-sidebar {
     width: 100% !important;
     flex-direction: row !important;
+    align-items: center;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
     border-right: none !important;
     border-bottom: 1px solid #2a2a2a !important;
     padding: 8px 12px !important;
     gap: 8px;
     flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
   }
-  .cm-sidebar nav { flex-direction: row !important; }
+  .cm-sidebar nav { flex-direction: row !important; gap: 8px; align-items: center; }
+  /* Заголовки секций и разделитель избыточны в горизонтальной ленте на мобиле
+     (в контенте те же заголовки уже есть) — прячем, чтобы не было «прыгающих»
+     по высоте элементов. */
+  .cm-sidebar nav > div,
+  .cm-sidebar > div { display: none !important; }
+  /* Пункты навигации — одинаковые пилюли в одну строку, без переносов. */
+  .cm-sidebar nav > button,
+  .cm-sidebar > button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    width: auto !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #2a2a2a !important;
+  }
 
   /* Админ-поиск: фиксированный input (260px) выталкивал кнопку «Найти» за экран.
      На мобиле форма во всю ширину, input сжимается. */
