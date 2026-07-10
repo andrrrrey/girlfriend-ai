@@ -181,9 +181,9 @@ export default function PromptDetailsModal({
         </div>
 
         {/* Body */}
-        <div style={s.body}>
+        <div className="cm-body" style={s.body}>
           {/* Sidebar */}
-          <div style={s.sidebar}>
+          <div className="cm-sidebar" style={s.sidebar}>
             <nav style={s.sidebarNav}>
               {SECTIONS.filter((sec) => !(hideNegativePrompt && sec === "negativePrompt")).map((sec) => (
                 <button key={sec} style={{ ...s.sidebarItem, ...(activeSection === sec ? s.sidebarItemActive : {}) }} onClick={() => scrollTo(sec)}>
@@ -218,7 +218,7 @@ export default function PromptDetailsModal({
                   <div style={s.conditionNote}>
                     {t("prompt.conditionNote")}
                   </div>
-                  <div style={s.breakdownGrid}>
+                  <div className="pd-breakdown" style={s.breakdownGrid}>
                     <div style={s.col}>
                       <div style={s.colTitle}>{t("prompt.character")}</div>
                       <BreakdownField label={t("prompt.subject")} value={subject} />

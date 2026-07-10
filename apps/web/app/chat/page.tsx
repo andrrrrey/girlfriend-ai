@@ -740,7 +740,7 @@ function ChatPageInner() {
   if (!user) return null;
 
   return (
-    <div className="chat-content">
+    <div className={`chat-content${activeChat ? " chat-has-active" : ""}`}>
       <style>{`
 .chat-content { display: flex; flex: 1; min-height: 0; }
 /* Скроллбар в цвет сайта (розовый акцент на тёмном фоне) */
@@ -766,6 +766,7 @@ function ChatPageInner() {
 .chat-header { display: flex; align-items: center; gap: 20px; padding: 20px 0 0 0; }
 .chat-header-avatar { width: 46px; height: 46px; border-radius: 8px; border: 1px solid #313131; background: #313131; }
 .chat-header-name { flex: 1; font-size: 24px; font-weight: 700; }
+.chat-back-btn { display: none; }
 .chat-profile-select select {
   appearance: none;
   background: #1e1e1e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23848484' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
@@ -860,9 +861,20 @@ function ChatPageInner() {
 @media (max-width: 1024px) { .right-panel { display: none; } }
 @media (max-width: 768px) {
   .chat-content { flex-direction: column; }
-  .chats-panel { width: 100%; height: auto; max-height: 220px; flex-shrink: 0; }
-  .chat-center { padding: 0 8px; }
-  .chat-center-inner { height: calc(100vh - 266px); }
+  /* Показываем ЛИБО список чатов, ЛИБО переписку — не стопкой. Так логичнее:
+     тапнул чат → открылась переписка на весь экран, кнопка «назад» → список. */
+  .chats-panel { width: 100%; height: calc(100vh - 46px - 90px); max-height: none; flex-shrink: 1; }
+  .chat-center { padding: 0 10px; }
+  .chat-center-inner { height: calc(100vh - 46px); }
+  .chat-content.chat-has-active .chats-panel { display: none; }
+  .chat-content:not(.chat-has-active) .chat-center { display: none; }
+  .chat-back-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: #fff; padding: 4px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .chat-header { gap: 10px; }
+  .chat-header-name { font-size: 18px; }
 }
       `}</style>
 
@@ -973,6 +985,13 @@ function ChatPageInner() {
         {activeChat ? (
           <div className="chat-center-inner">
             <div className="chat-header">
+              <button
+                className="chat-back-btn"
+                onClick={() => setActiveChat(null)}
+                aria-label={t("common.back")}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
               <div className="chat-header-avatar" style={{overflow:'hidden'}}>
                 {activeChatData?.character?.avatarUrl && (
                   <img src={resizedMediaUrl(activeChatData.character.avatarUrl, { w: 256 }) ?? activeChatData.character.avatarUrl} alt={activeChatData.character.name} decoding="async" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:8}} />

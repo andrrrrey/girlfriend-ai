@@ -101,6 +101,9 @@ img.media-broken {
   width: 172px;
 }
 .nav-link:hover { background: #1a1a1a; }
+/* Ссылки Blog/Guide/Subscription/Characters дублируют верхнее меню — на десктопе
+   прячем, показываем только в мобильном гамбургере (см. медиазапрос ниже). */
+.sidebar-explore-link { display: none; }
 .nav-link.active {
   background: #121212;
   border: 1px solid #313131;
@@ -641,6 +644,7 @@ img.media-broken {
   .topnav-logo-mobile {
     cursor: pointer;
   }
+  .sidebar-explore-link { display: flex; }
   .topnav {
     gap: 8px;
     padding: 8px 12px;
@@ -729,4 +733,7 @@ img.media-broken {
      На мобиле форма во всю ширину, input сжимается. */
   .admin-search { width: 100%; }
   .admin-search input { flex: 1 1 auto; min-width: 0; width: auto !important; }
+
+  /* Prompt Details: разбивка промпта в 3 колонки не влезает — в одну колонку. */
+  .pd-breakdown { grid-template-columns: 1fr !important; }
 }
