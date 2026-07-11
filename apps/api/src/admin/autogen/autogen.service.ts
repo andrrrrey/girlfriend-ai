@@ -199,6 +199,7 @@ export class AutogenService implements OnModuleInit {
         dto.avatarUrl = avatar.url;
         dto.avatarPrompt = avatar.prompt;
         dto.avatarSeed = avatar.seed;
+        dto.avatarModel = avatar.model;
 
         // 2. Бэкстори (childhood/lifeStory/phobias).
         try {
@@ -236,7 +237,7 @@ export class AutogenService implements OnModuleInit {
     adminId: string,
     dto: ReturnType<typeof buildRandomCharacterDto>,
     activeModel: { id: string; provider?: string } | undefined,
-  ): Promise<{ url: string; prompt: string; seed: number }> {
+  ): Promise<{ url: string; prompt: string; seed: number; model?: string }> {
     const prompt = buildAvatarPrompt(dto);
     // Фиксируем seed, чтобы аватар был воспроизводим и совпадал с картинками в чате.
     const seed = Math.floor(Math.random() * 2_147_483_647);
@@ -253,8 +254,11 @@ export class AutogenService implements OnModuleInit {
       const status = await this.generation.getJobStatus(jobId, adminId);
       if (status) {
         if (status.status === "completed") {
-          const url = (status.output as { url?: string } | null)?.url;
-          if (url) return { url, prompt, seed };
+          const output = status.output as { url?: string; meta?: { model?: string } } | null;
+          const url = output?.url;
+          // Чекпоинт (для Civitai — AIR) фактической генерации — чтобы картинки
+          // персонажа шли на той же модели.
+          if (url) return { url, prompt, seed, model: output?.meta?.model };
           throw new Error("image job completed without url");
         }
         if (status.status === "failed") {

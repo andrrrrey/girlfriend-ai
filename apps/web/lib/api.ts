@@ -1486,6 +1486,8 @@ export interface CreateCharacterFormData {
   avatarPrompt?: string;
   /** Seed показанного аватара (для совпадения внешности). */
   avatarSeed?: number;
+  /** Чекпоинт показанного аватара (Civitai AIR) — чтобы генерация шла на той же модели. */
+  avatarModel?: string;
 }
 
 export const characters = {
@@ -2036,7 +2038,9 @@ export async function getJobStatus(jobId: string) {
   return apiFetch<{
     jobId: string;
     status: string;
-    output: { url?: string } | null;
+    // meta.model — фактический чекпоинт (для Civitai это AIR), нужен чтобы
+    // зафиксировать чекпоинт аватара и переиспользовать его в чате/генерации.
+    output: { url?: string; meta?: { model?: string; seed?: number } } | null;
     input: { prompt?: string; originalPrompt?: string; model?: string } | null;
     error: string | null;
     createdAt: string;

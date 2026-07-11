@@ -81,10 +81,11 @@ export class CharactersService {
       childhoodMemory: dto.childhoodMemory,
       lifeStory: dto.lifeStory,
       phobias: dto.phobias,
-      // Точный промпт и seed показанного аватара — для совпадения образа при
-      // последующей генерации картинок персонажа (чат, страница генерации).
+      // identity-промпт, seed и чекпоинт показанного аватара — для совпадения
+      // образа и модели при последующей генерации картинок персонажа.
       avatarPrompt: dto.avatarPrompt,
       avatarSeed: dto.avatarSeed,
+      avatarModel: dto.avatarModel,
     };
 
     const tags: string[] = [];

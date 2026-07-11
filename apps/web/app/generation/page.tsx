@@ -1489,13 +1489,15 @@ function GenerationPageInner() {
         // Всегда Civitai img2img: только он использует фото персонажа как референс
         // и сохраняет его стиль. Нет своего generationStyle → дефолт "realism".
         const charStyle = (personality.generationStyle as string | undefined) || "realism";
-        // Сохранённый seed персонажа → совпадение внешности с аватаром.
+        // Сохранённый seed и чекпоинт персонажа → совпадение внешности и модели.
         const charSeed = typeof personality.avatarSeed === "number" ? (personality.avatarSeed as number) : undefined;
+        const charModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
         const result = await createImageJob({
           prompt: finalPrompt,
           negativePrompt,
           ...(selectedCharacter.avatarUrl ? { initImageUrl: selectedCharacter.avatarUrl } : {}),
           ...(charSeed !== undefined ? { seed: charSeed } : {}),
+          ...(charModel ? { model: charModel } : {}),
           provider: "civitai",
           generationStyle: charStyle,
           aspectRatio,

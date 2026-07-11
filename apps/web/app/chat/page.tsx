@@ -710,10 +710,16 @@ function ChatPageInner() {
       const charSeed = typeof activeCharPersonality.avatarSeed === "number"
         ? (activeCharPersonality.avatarSeed as number)
         : undefined;
+      // Чекпоинт аватара (Civitai AIR) — генерируем на той же модели, иначе Civitai
+      // возьмёт случайный чекпоинт из пула и картинка не будет похожа на аватар.
+      const charModel = typeof activeCharPersonality.avatarModel === "string"
+        ? (activeCharPersonality.avatarModel as string)
+        : undefined;
       const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
         ...(initImageUrl ? { initImageUrl } : {}),
         ...(charSeed !== undefined ? { seed: charSeed } : {}),
+        ...(charModel ? { model: charModel } : {}),
         provider: "civitai",
         generationStyle: charStyle,
       };

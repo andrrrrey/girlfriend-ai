@@ -974,6 +974,24 @@ const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
 };
 
 /**
+ * Возвращает конфиг чекпоинта Civitai по его AIR. Сначала ищет во всех пулах
+ * (чтобы взять корректные base/dims/steps). Если AIR в пулах нет (пул изменился
+ * с момента генерации аватара) — синтезирует конфиг, определяя базу по самому AIR
+ * (`:sd1:` → SD1 512×768, иначе SDXL 1024×1536). Так переиспользование чекпоинта
+ * персонажа не ломается даже после правок пулов.
+ */
+function civitaiConfigForAir(air: string): CivitaiModelConfig {
+  for (const pool of Object.values(CIVITAI_MODELS)) {
+    const found = pool.find((m) => m.air === air);
+    if (found) return found;
+  }
+  const isSd1 = air.includes(":sd1:");
+  return isSd1
+    ? { air, base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 }
+    : { air, base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 };
+}
+
+/**
  * Размеры изображения по соотношению сторон, масштабированные под базу Stable Diffusion.
  * SDXL рассчитан на ~1 Мпикс (база 1024), SD1 — на базу 512. Используется Civitai и AtlasCloud.
  * Если соотношение не задано — возвращает переданный fallback.
@@ -1020,13 +1038,26 @@ async function generateImageCivitai(params: {
   denoise?: number;
   /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
   seed?: number;
+  /**
+   * Точный чекпоинт (AIR), которым нужно генерировать. Если задан — используется
+   * именно он (а не случайный из пула стиля). КРИТИЧНО для совпадения: аватар и
+   * последующие картинки персонажа должны идти на ОДНОМ чекпоинте, иначе стиль и
+   * внешность расходятся, а seed теряет смысл (seed воспроизводит только в рамках
+   * того же чекпоинта).
+   */
+  modelAir?: string;
 }): Promise<{ url: string; model: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed, modelAir } = params;
 
-  const pool = CIVITAI_MODELS[generationStyle];
-  if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
-
-  const model = pool[Math.floor(Math.random() * pool.length)];
+  // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
+  // иначе случайный чекпоинт из пула стиля (как при первичной генерации аватара).
+  const model = modelAir
+    ? civitaiConfigForAir(modelAir)
+    : (() => {
+        const pool = CIVITAI_MODELS[generationStyle];
+        if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
+        return pool[Math.floor(Math.random() * pool.length)];
+      })();
   const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
 
   const isImg2Img = !!initImageUrl;
@@ -1371,6 +1402,10 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   ({ prompt, negativePrompt } = applyGlobalPromptSettings(settings, prompt, negativePrompt));
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
+  // Точный чекпоинт Civitai для переиспользования: если сверху пришёл AIR
+  // (сохранённый avatarModel персонажа) — генерируем именно на нём, а не на
+  // случайном из пула, чтобы стиль/внешность совпадали с аватаром.
+  const civitaiModelAir = model?.startsWith("urn:air:") ? model : undefined;
 
   // Метаданные фактической генерации — возвращаем воркеру, чтобы админ-раздел
   // «Генерации» показывал реальный отправленный промпт и настоящую модель
@@ -1416,6 +1451,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             initImageUrl,
             denoise,
             seed,
+            modelAir: civitaiModelAir,
           });
 
           const imageResponse = await fetch(result.url);
@@ -1548,6 +1584,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         negativePrompt,
         aspectRatio: req.body.aspectRatio,
         seed,
+        modelAir: civitaiModelAir,
       });
 
       const imageResponse = await fetch(result.url);

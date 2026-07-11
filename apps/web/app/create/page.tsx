@@ -33,8 +33,16 @@ let previewImageUrl: string | null = null;
 // джоба), чтобы после перегенераций промпт/seed всегда соответствовали картинке.
 let previewImagePrompt: string | null = null;
 let previewImageSeed: number | null = null;
+// Чекпоинт (Civitai AIR) показанного аватара — из meta.model готового джоба.
+// Переиспользуется при генерации картинок персонажа, чтобы модель (а значит
+// стиль/внешность) совпадала. Без этого Civitai берёт СЛУЧАЙНЫЙ чекпоинт из пула
+// стиля каждый раз, и картинки в чате не похожи на аватар.
+let previewImageModel: string | null = null;
 // Промпт/seed текущего запущенного джоба — фиксируются в момент старта и
 // «применяются» к preview* только когда именно этот джоб успешно завершится.
+// avatarPrompt здесь — ТОЛЬКО внешность (identity), без случайной позы/сцены/кадра:
+// иначе при добавлении новой позы в чате получаются противоречивые позы (голова
+// на ногах, два силуэта).
 let pendingAvatarPrompt: string | null = null;
 let pendingAvatarSeed: number | null = null;
 let previewPollInterval: ReturnType<typeof setInterval> | null = null;
@@ -489,6 +497,7 @@ interface CreateDraft {
   previewImageUrl: string | null;
   previewImagePrompt: string | null;
   previewImageSeed: number | null;
+  previewImageModel: string | null;
   // pending — промпт/seed джоба, который мог быть в процессе на момент reload;
   // применяются к preview* когда джоб завершится (в pollForAvatarResult).
   pendingAvatarPrompt: string | null;
@@ -506,6 +515,7 @@ function saveFormState(stageNum: number) {
       previewImageUrl,
       previewImagePrompt,
       previewImageSeed,
+      previewImageModel,
       pendingAvatarPrompt,
       pendingAvatarSeed,
       avatarGenerated,
@@ -634,6 +644,7 @@ function restoreFormState(): boolean {
     if (draft.previewImageUrl) previewImageUrl = draft.previewImageUrl;
     if (draft.previewImagePrompt) previewImagePrompt = draft.previewImagePrompt;
     if (typeof draft.previewImageSeed === "number") previewImageSeed = draft.previewImageSeed;
+    if (draft.previewImageModel) previewImageModel = draft.previewImageModel;
     if (draft.pendingAvatarPrompt) pendingAvatarPrompt = draft.pendingAvatarPrompt;
     if (typeof draft.pendingAvatarSeed === "number") pendingAvatarSeed = draft.pendingAvatarSeed;
     if (draft.avatarGenerated) avatarGenerated = draft.avatarGenerated;
@@ -1058,9 +1069,10 @@ function pollForAvatarResult(jobId: string) {
       if (status.status === "completed" && (status.output as any)?.url) {
         if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
         previewImageUrl = (status.output as any).url;
-        // Промпт/seed показанного аватара = pending этого джоба (совпадение образа).
+        // identity-промпт/seed/чекпоинт показанного аватара = pending этого джоба.
         previewImagePrompt = pendingAvatarPrompt;
         previewImageSeed = pendingAvatarSeed;
+        previewImageModel = (status.output as any)?.meta?.model ?? previewImageModel;
         const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
         const spinner = document.getElementById("s9-avatar-spinner");
         const regenBtn = document.getElementById("s9-regen-btn");
@@ -1092,11 +1104,15 @@ async function startAvatarGeneration() {
   loadImageModels();
   const extraPrompts = pickRandomPrompts();
   const prompt = buildAvatarPrompt(data, extraPrompts);
-  // Фиксируем seed этой генерации и запоминаем промпт+seed как pending — они
+  // identity — только внешность, БЕЗ случайных позы/сцены/кадра (extraPrompts).
+  // Именно её сохраняем как avatarPrompt и переиспользуем в чате/генерации, добавляя
+  // нужную позу. Полный prompt (с extraPrompts) идёт только в текущую генерацию.
+  const identityPrompt = buildAvatarPrompt(data, []);
+  // Фиксируем seed этой генерации и запоминаем identity+seed как pending — они
   // «применятся» к preview* только при успешном завершении именно этого джоба,
   // поэтому при перегенерации не будет рассинхрона с показанной картинкой.
   const seed = Math.floor(Math.random() * 2_147_483_647);
-  pendingAvatarPrompt = prompt;
+  pendingAvatarPrompt = identityPrompt;
   pendingAvatarSeed = seed;
 
   const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
@@ -1142,9 +1158,10 @@ async function startAvatarGeneration() {
           clearInterval(previewPollInterval!);
           previewPollInterval = null;
           previewImageUrl = (status.output as any).url;
-          // Промпт/seed показанного аватара = именно те, что запускали этот джоб.
-          previewImagePrompt = prompt;
+          // identity-промпт/seed/чекпоинт показанного аватара = те, что запускали джоб.
+          previewImagePrompt = identityPrompt;
           previewImageSeed = seed;
+          previewImageModel = (status.output as any)?.meta?.model ?? previewImageModel;
           // Re-query DOM elements each poll (they may have been re-created)
           const curImg = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
           const curSpinner = document.getElementById("s9-avatar-spinner");
@@ -1596,6 +1613,7 @@ export default function CreateCharacterPage() {
         previewImageUrl = null;
         previewImagePrompt = null;
         previewImageSeed = null;
+        previewImageModel = null;
         pendingAvatarPrompt = null;
         pendingAvatarSeed = null;
         avatarGenerated = false;
@@ -1623,10 +1641,11 @@ export default function CreateCharacterPage() {
           ...charData,
           ethnicity: fantasyRace || charData.ethnicity,
           avatarUrl: previewImageUrl ?? undefined,
-          // Точный промпт и seed показанного аватара — чтобы картинки персонажа
-          // в чате/генерации совпадали с его аватаром.
+          // identity-промпт, seed и чекпоинт показанного аватара — чтобы картинки
+          // персонажа в чате/генерации шли на той же модели и совпадали по образу.
           avatarPrompt: previewImagePrompt ?? undefined,
           avatarSeed: previewImageSeed ?? undefined,
+          avatarModel: previewImageModel ?? undefined,
         });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);

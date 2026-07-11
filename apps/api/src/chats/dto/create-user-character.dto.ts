@@ -144,4 +144,12 @@ export class CreateUserCharacterDto {
   @IsOptional()
   @IsNumber()
   avatarSeed?: number;
+
+  /**
+   * Чекпоинт показанного аватара (для Civitai — AIR модели). Переиспользуется при
+   * генерации картинок персонажа, чтобы модель/стиль совпадали с аватаром.
+   */
+  @IsOptional()
+  @IsString()
+  avatarModel?: string;
 }
