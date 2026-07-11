@@ -24,6 +24,7 @@
 
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
+import { DEFAULT_NSFW_PROMPT_TAGS, DEFAULT_NEGATIVE_PROMPT } from "@repo/types";
 import { Client } from "pg";
 import { spawn } from "child_process";
 import { existsSync, readFileSync } from "fs";
@@ -112,6 +113,10 @@ async function seedDatabase(client: Client): Promise<void> {
     ELEVENLABS_API_KEY: "",
     ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM",
     ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
+    // Глобальные промпт-настройки генерации (редактируются в админке).
+    // Дефолты из @repo/types — единый источник с apps/ai и apps/api.
+    NSFW_PROMPT_TAGS: DEFAULT_NSFW_PROMPT_TAGS,
+    NEGATIVE_PROMPT: DEFAULT_NEGATIVE_PROMPT,
   };
 
   for (const [key, value] of Object.entries(defaults)) {

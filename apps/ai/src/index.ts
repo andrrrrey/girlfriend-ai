@@ -26,6 +26,7 @@ import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { getRequestId } from "@repo/logger";
 import type { HealthResponse } from "@repo/types";
+import { DEFAULT_NSFW_PROMPT_TAGS, DEFAULT_NEGATIVE_PROMPT } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
 import { translate as googleTranslate } from "@vitalets/google-translate-api";
@@ -185,26 +186,7 @@ async function fetchSettings(): Promise<Record<string, string>> {
 //   NSFW_PROMPT_TAGS — позитивные quality/NSFW-теги (добавляются к prompt).
 //   NEGATIVE_PROMPT  — базовый негатив (мерджится с пользовательским).
 // Пустая строка в настройке отключает соответствующий блок.
-
-/** Дефолтные позитивные теги: NSFW + базовое качество. */
-const DEFAULT_NSFW_TAGS = "nsfw, explicit, masterpiece, best quality, highres";
-
-/**
- * Дефолтный обязательный negative_prompt — защита от типовых артефактов
- * диффузионных моделей (кривые руки/пальцы, лишние конечности, лишние люди,
- * низкое качество) + возрастной safety-guard. Собран по практикам SD-гайдов.
- * Формат весов (term:1.x) понимают ModelsLab/Civitai/SD; провайдеры без весов
- * трактуют как обычный текст — не критично.
- */
-const DEFAULT_NEGATIVE_PROMPT = [
-  "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
-  "bad anatomy, wrong anatomy, deformed, disfigured, mutation, mutated, malformed",
-  "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands:1.3)",
-  "extra arms, missing arms, extra hands, extra limbs, missing limbs, extra legs, missing legs, fused limbs, malformed limbs, disconnected limbs, long neck, long body",
-  "(poorly drawn face, distorted face, asymmetric eyes, cross-eyed, extra eyes, deformed eyes, closed eyes:1.1)",
-  "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
-  "(child, kid, toddler, infant, underage, loli, shota:1.5)",
-].join(", ");
+// Дефолты берём из @repo/types — единый источник с apps/api (админка) и сидом.
 
 /**
  * Дедуплицирует список тегов, разделённых запятыми (регистронезависимо),
@@ -244,7 +226,7 @@ function applyGlobalPromptSettings(
   prompt: string,
   negativePrompt?: string,
 ): { prompt: string; negativePrompt: string } {
-  const nsfwTags = settings.NSFW_PROMPT_TAGS ?? DEFAULT_NSFW_TAGS;
+  const nsfwTags = settings.NSFW_PROMPT_TAGS ?? DEFAULT_NSFW_PROMPT_TAGS;
   const globalNegative = settings.NEGATIVE_PROMPT ?? DEFAULT_NEGATIVE_PROMPT;
   return {
     prompt: mergePromptParts(prompt, nsfwTags),

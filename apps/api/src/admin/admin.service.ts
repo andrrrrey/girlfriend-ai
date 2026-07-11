@@ -25,8 +25,20 @@ import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { backfillAllCharacterSeo } from "../chats/character-seo";
 import { loadEnv } from "@repo/config";
+import { DEFAULT_NSFW_PROMPT_TAGS, DEFAULT_NEGATIVE_PROMPT } from "@repo/types";
 
 const env = loadEnv();
+
+/**
+ * Дефолты для ключей AppSetting, у которых пока может не быть строки в БД, но
+ * админ должен видеть и редактировать исходное значение (иначе поле пустое, и
+ * «дополнять» negative_prompt не из чего). apps/ai использует те же значения из
+ * @repo/types как фолбэк, поэтому показанное в админке = реально применяемому.
+ */
+const SETTING_DEFAULTS: Record<string, string> = {
+  NSFW_PROMPT_TAGS: DEFAULT_NSFW_PROMPT_TAGS,
+  NEGATIVE_PROMPT: DEFAULT_NEGATIVE_PROMPT,
+};
 
 /**
  * Набор полей пользователя, возвращаемых администратору.
@@ -82,7 +94,15 @@ export class AdminService {
    * @returns Массив всех записей `AppSetting`, упорядоченных по полю `key` (A→Z).
    */
   async getAllSettings() {
-    return this.prisma.appSetting.findMany({ orderBy: { key: "asc" } });
+    const rows = await this.prisma.appSetting.findMany({ orderBy: { key: "asc" } });
+    // Для ключей с дефолтом, у которых ещё нет строки в БД, подставляем дефолт —
+    // чтобы админ сразу видел и мог редактировать/дополнять значение. Ключи с
+    // существующей строкой (в т.ч. пустой "" — осознанное отключение) не трогаем.
+    const present = new Set(rows.map((r) => r.key));
+    const injected = Object.entries(SETTING_DEFAULTS)
+      .filter(([key]) => !present.has(key))
+      .map(([key, value]) => ({ key, value, updatedAt: new Date() }));
+    return [...rows, ...injected].sort((a, b) => a.key.localeCompare(b.key));
   }
 
   /**
