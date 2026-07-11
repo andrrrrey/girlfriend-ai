@@ -704,10 +704,16 @@ function ChatPageInner() {
       // Фото персонажа → img2img, чтобы сгенерированная поза была похожа на
       // исходного персонажа, а не на случайного человека по текстовому промпту.
       const initImageUrl = activeChatData?.character?.avatarUrl || undefined;
+      // Обязательный negative_prompt против артефактов теперь добавляется
+      // глобально на сервере (apps/ai, настройка NEGATIVE_PROMPT) — здесь его не
+      // хардкодим. seed берём сохранённый у персонажа для совпадения внешности.
+      const charSeed = typeof activeCharPersonality.avatarSeed === "number"
+        ? (activeCharPersonality.avatarSeed as number)
+        : undefined;
       const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
-        negativePrompt: "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo",
         ...(initImageUrl ? { initImageUrl } : {}),
+        ...(charSeed !== undefined ? { seed: charSeed } : {}),
         provider: "civitai",
         generationStyle: charStyle,
       };

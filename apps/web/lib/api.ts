@@ -1482,6 +1482,10 @@ export interface CreateCharacterFormData {
   lifeStory?: string;
   phobias?: string;
   avatarUrl?: string;
+  /** Точный промпт показанного аватара (для совпадения образа в чате/генерации). */
+  avatarPrompt?: string;
+  /** Seed показанного аватара (для совпадения внешности). */
+  avatarSeed?: number;
 }
 
 export const characters = {
@@ -2003,6 +2007,7 @@ export async function createImageJob(data: {
   count?: number;
   initImageUrl?: string;
   characterId?: string;
+  seed?: number;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",
@@ -2074,6 +2079,7 @@ export async function createVideoJob(data: {
   initImageKey?: string;
   initVideoKey?: string;
   count?: number;
+  seed?: number;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/video", {
     method: "POST",

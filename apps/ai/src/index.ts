@@ -178,6 +178,102 @@ async function fetchSettings(): Promise<Record<string, string>> {
   return res.json();
 }
 
+// ─── Глобальные промпт-теги и negative_prompt ────────────────────────────────
+// Применяются на сервере ко ВСЕМ генерациям изображений и видео (аватар,
+// автоген, чат, страница генерации), чтобы поведение было единым независимо от
+// клиента. Оба значения редактируются в админке (AppSetting):
+//   NSFW_PROMPT_TAGS — позитивные quality/NSFW-теги (добавляются к prompt).
+//   NEGATIVE_PROMPT  — базовый негатив (мерджится с пользовательским).
+// Пустая строка в настройке отключает соответствующий блок.
+
+/** Дефолтные позитивные теги: NSFW + базовое качество. */
+const DEFAULT_NSFW_TAGS = "nsfw, explicit, masterpiece, best quality, highres";
+
+/**
+ * Дефолтный обязательный negative_prompt — защита от типовых артефактов
+ * диффузионных моделей (кривые руки/пальцы, лишние конечности, лишние люди,
+ * низкое качество) + возрастной safety-guard. Собран по практикам SD-гайдов.
+ * Формат весов (term:1.x) понимают ModelsLab/Civitai/SD; провайдеры без весов
+ * трактуют как обычный текст — не критично.
+ */
+const DEFAULT_NEGATIVE_PROMPT = [
+  "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
+  "bad anatomy, wrong anatomy, deformed, disfigured, mutation, mutated, malformed",
+  "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands:1.3)",
+  "extra arms, missing arms, extra hands, extra limbs, missing limbs, extra legs, missing legs, fused limbs, malformed limbs, disconnected limbs, long neck, long body",
+  "(poorly drawn face, distorted face, asymmetric eyes, cross-eyed, extra eyes, deformed eyes, closed eyes:1.1)",
+  "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
+  "(child, kid, toddler, infant, underage, loli, shota:1.5)",
+].join(", ");
+
+/**
+ * Дедуплицирует список тегов, разделённых запятыми (регистронезависимо),
+ * сохраняя порядок первого вхождения. Взвешенные группы `(a, b:1.3)` корректно
+ * переживают split/join, т.к. соединяем обратно через ", ".
+ */
+function dedupeCsv(value: string): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of value.split(",")) {
+    const term = raw.trim();
+    if (!term) continue;
+    const key = term.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(term);
+  }
+  return out.join(", ");
+}
+
+/**
+ * Объединяет части промпта (base + добавки) и убирает дубликаты тегов.
+ * Пустые части игнорируются.
+ */
+function mergePromptParts(...parts: (string | undefined)[]): string {
+  return dedupeCsv(parts.filter(Boolean).join(", "));
+}
+
+/**
+ * Применяет глобальные настройки к позитивному и негативному промпту:
+ *   prompt  += NSFW_PROMPT_TAGS (default DEFAULT_NSFW_TAGS)
+ *   negative = NEGATIVE_PROMPT (default DEFAULT_NEGATIVE_PROMPT) + пользовательский
+ * Оба результата дедуплицируются. Пустая строка настройки отключает блок.
+ */
+function applyGlobalPromptSettings(
+  settings: Record<string, string>,
+  prompt: string,
+  negativePrompt?: string,
+): { prompt: string; negativePrompt: string } {
+  const nsfwTags = settings.NSFW_PROMPT_TAGS ?? DEFAULT_NSFW_TAGS;
+  const globalNegative = settings.NEGATIVE_PROMPT ?? DEFAULT_NEGATIVE_PROMPT;
+  return {
+    prompt: mergePromptParts(prompt, nsfwTags),
+    negativePrompt: mergePromptParts(globalNegative, negativePrompt),
+  };
+}
+
+/** Детектор кириллицы (последняя сетка от русских слов в промпте). */
+const CYRILLIC_RE = /[а-яА-ЯёЁ]/;
+
+/**
+ * Гарантирует английский промпт перед отправкой провайдеру. Основной перевод
+ * пользовательского ввода делает NestJS (generation.service), но сюда может
+ * просочиться кириллица из данных (напр. RU `option.prompt` из манифеста). Если
+ * нашли кириллицу — переводим через Google Translate; при ошибке возвращаем
+ * исходный текст (лучше сгенерировать, чем упасть).
+ */
+async function ensureEnglishPrompt(prompt: string): Promise<string> {
+  if (!CYRILLIC_RE.test(prompt)) return prompt;
+  try {
+    const { text } = await googleTranslate(prompt, { to: "en" });
+    logger.warn({ original: prompt, translated: text }, "prompt_cyrillic_translated_safety_net");
+    return text;
+  } catch (err) {
+    logger.error({ err, prompt }, "prompt_cyrillic_translate_failed");
+    return prompt;
+  }
+}
+
 /**
  * Загружает данные персонажа из NestJS internal API.
  * Возвращает systemPrompt, personality, voiceId для использования в AI-запросах.
@@ -850,6 +946,8 @@ interface ImageGenerateBody {
    * (используется при генерации поз в чате).
    */
   initImageUrl?: string;
+  /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
+  seed?: number;
 }
 
 // ─── Civitai RED Orchestration API ─────────────────────────────────────────
@@ -938,8 +1036,10 @@ async function generateImageCivitai(params: {
   initImageUrl?: string;
   /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
   denoise?: number;
+  /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
+  seed?: number;
 }): Promise<{ url: string; model: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed } = params;
 
   const pool = CIVITAI_MODELS[generationStyle];
   if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
@@ -972,6 +1072,8 @@ async function generateImageCivitai(params: {
         steps: model.steps,
         clipSkip: model.clipSkip,
         quantity: 1,
+        // Фиксируем seed, если пришёл сверху (сохранение внешности персонажа).
+        ...(typeof seed === "number" ? { seed } : {}),
       },
     }],
   };
@@ -1062,8 +1164,9 @@ async function generateImageAtlasCloud(params: {
   prompt: string;
   negativePrompt?: string;
   aspectRatio?: string;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, aspectRatio } = params;
+  const { apiKey, modelId, prompt, negativePrompt, aspectRatio, seed } = params;
 
   // AtlasCloud требует 589824..2073600 пикселей всего (мин ~768x768). Размеры SDXL-шкалы
   // для каждого соотношения уже удовлетворяют этим границам; по умолчанию — квадрат 1024.
@@ -1078,6 +1181,9 @@ async function generateImageAtlasCloud(params: {
   };
   if (negativePrompt) {
     requestBody.negative_prompt = negativePrompt;
+  }
+  if (typeof seed === "number") {
+    requestBody.seed = seed;
   }
 
   logger.info({ requestBody }, "atlascloud_image_request_body");
@@ -1197,8 +1303,9 @@ async function generateImg2ImgModelsLab(params: {
   initImageUrl: string;
   width: number;
   height: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, initImageUrl, width, height } = params;
+  const { apiKey, modelId, prompt, negativePrompt, initImageUrl, width, height, seed } = params;
 
   const mlResponse = await fetch("https://modelslab.com/api/v6/images/img2img", {
     method: "POST",
@@ -1216,7 +1323,7 @@ async function generateImg2ImgModelsLab(params: {
       safety_checker: "no",
       enhance_prompt: "no",
       num_inference_steps: 30,
-      seed: null,
+      seed: seed ?? null,
     }),
   });
 
@@ -1256,7 +1363,10 @@ async function generateImg2ImgModelsLab(params: {
 }
 
 app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, provider, width, height, initImageUrl } = req.body;
+  // prompt/negativePrompt — let: ниже дописываем NSFW-теги и мерджим глобальный
+  // negative_prompt из настроек (единое поведение для всех путей генерации).
+  let { prompt, negativePrompt } = req.body;
+  const { model, provider, width, height, initImageUrl, seed } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
@@ -1269,6 +1379,14 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     logger.error({ err }, "failed_to_fetch_settings_image");
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
+
+  // Последняя сетка от русских слов: если после клиентской сборки в промпте
+  // осталась кириллица (например, RU option.prompt из манифеста), переводим на
+  // английский, иначе провайдер получит смешанный RU/EN промпт и сломает генерацию.
+  prompt = await ensureEnglishPrompt(prompt);
+
+  // Глобальные NSFW-теги (позитив) + обязательный negative_prompt (мердж с пользовательским).
+  ({ prompt, negativePrompt } = applyGlobalPromptSettings(settings, prompt, negativePrompt));
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
 
@@ -1290,6 +1408,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         generationStyle: meta.generationStyle,
         width: meta.width,
         height: meta.height,
+        seed,
       },
     });
 
@@ -1314,6 +1433,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             aspectRatio: req.body.aspectRatio,
             initImageUrl,
             denoise,
+            seed,
           });
 
           const imageResponse = await fetch(result.url);
@@ -1361,6 +1481,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           initImageUrl,
           width: width || dft.w,
           height: height || dft.h,
+          seed,
         });
 
         const imageResponse = await fetch(result.url);
@@ -1400,6 +1521,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         prompt,
         negativePrompt,
         aspectRatio: req.body.aspectRatio,
+        seed,
       });
 
       const imageResponse = await fetch(result.url);
@@ -1443,6 +1565,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         prompt,
         negativePrompt,
         aspectRatio: req.body.aspectRatio,
+        seed,
       });
 
       const imageResponse = await fetch(result.url);
@@ -1505,7 +1628,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         enhance_prompt: "no",
         self_attention: "yes",
         num_inference_steps: 30,
-        seed: null,
+        seed: seed ?? null,
       }),
     });
 
@@ -1650,6 +1773,8 @@ interface VideoGenerateBody {
   initImageKey?: string;
   /** S3-ключ исходного видео (режим continue) */
   initVideoKey?: string;
+  /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
+  seed?: number;
 }
 
 /** Строит публичный URL объекта S3 из ключа (для передачи провайдеру, который скачивает медиа). */
@@ -1699,8 +1824,9 @@ async function generateVideoModelsLab(params: {
   negativePrompt: string;
   width: number;
   height: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, width, height } = params;
+  const { apiKey, modelId, prompt, negativePrompt, width, height, seed } = params;
   return runModelsLabVideo(apiKey, "https://modelslab.com/api/v6/video/text2video", {
     key: apiKey,
     model_id: modelId,
@@ -1714,7 +1840,7 @@ async function generateVideoModelsLab(params: {
     output_type: "mp4",
     safety_checker: false,
     safety_checker_type: "none",
-    seed: null,
+    seed: seed ?? null,
   });
 }
 
@@ -1729,8 +1855,9 @@ async function generateVideoModelsLabFromImage(params: {
   imageUrl: string;
   width: number;
   height: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, imageUrl, width, height } = params;
+  const { apiKey, modelId, prompt, negativePrompt, imageUrl, width, height, seed } = params;
   return runModelsLabVideo(apiKey, "https://modelslab.com/api/v6/video/img2video", {
     key: apiKey,
     model_id: modelId || "svd",
@@ -1744,7 +1871,7 @@ async function generateVideoModelsLabFromImage(params: {
     output_type: "mp4",
     safety_checker: false,
     safety_checker_type: "none",
-    seed: null,
+    seed: seed ?? null,
   });
 }
 
@@ -1956,19 +2083,23 @@ async function generateVideoAtlasCloud(params: {
   apiKey: string;
   modelId: string;
   prompt: string;
+  negativePrompt?: string;
   aspectRatio?: string;
   duration?: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, aspectRatio, duration } = params;
+  const { apiKey, modelId, prompt, negativePrompt, aspectRatio, duration, seed } = params;
 
   return submitAndPollAtlasCloudVideo(apiKey, {
     model: modelId,
     prompt,
+    negative_prompt: negativePrompt || undefined,
     size: atlasSizeForAspect(aspectRatio),
     duration: duration || 5,
     enable_prompt_expansion: false,  // MUST be false for NSFW — default true rewrites/censors the prompt
     shot_type: "single",
     generate_audio: false,
+    seed: seed ?? -1,
   });
 }
 
@@ -1983,8 +2114,9 @@ async function generateVideoAtlasCloudFromImage(params: {
   negativePrompt?: string;
   imageUrl: string;
   duration?: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, imageUrl, duration } = params;
+  const { apiKey, modelId, prompt, negativePrompt, imageUrl, duration, seed } = params;
 
   return submitAndPollAtlasCloudVideo(apiKey, {
     model: modelId,
@@ -1996,7 +2128,7 @@ async function generateVideoAtlasCloudFromImage(params: {
     enable_prompt_expansion: false,
     shot_type: "single",
     generate_audio: false,
-    seed: -1,
+    seed: seed ?? -1,
   });
 }
 
@@ -2011,8 +2143,9 @@ async function generateVideoAtlasCloudContinue(params: {
   negativePrompt?: string;
   videoUrl: string;
   duration?: number;
+  seed?: number;
 }): Promise<{ url: string }> {
-  const { apiKey, modelId, prompt, negativePrompt, videoUrl, duration } = params;
+  const { apiKey, modelId, prompt, negativePrompt, videoUrl, duration, seed } = params;
 
   return submitAndPollAtlasCloudVideo(apiKey, {
     model: modelId,
@@ -2023,7 +2156,7 @@ async function generateVideoAtlasCloudContinue(params: {
     resolution: "720p",
     enable_prompt_expansion: false,
     generate_audio: false,
-    seed: -1,
+    seed: seed ?? -1,
   });
 }
 
@@ -2083,7 +2216,8 @@ async function downloadAndUploadVideo(videoUrl: string): Promise<string> {
  * Роутинг по провайдеру: "atlascloud" для NSFW моделей, "modelslab" по умолчанию.
  */
 app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) => {
-  const { prompt, negativePrompt, model, width, height, provider, mode, initImageKey, initVideoKey } = req.body;
+  let { prompt, negativePrompt } = req.body;
+  const { model, width, height, provider, mode, initImageKey, initVideoKey, seed } = req.body;
 
   if (!prompt) {
     return reply.status(400).send({ error: "prompt is required" });
@@ -2103,6 +2237,10 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     logger.error({ err }, "failed_to_fetch_settings_video");
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
+
+  // Русская сетка + глобальные NSFW-теги и обязательный negative_prompt (мердж).
+  prompt = await ensureEnglishPrompt(prompt);
+  ({ prompt, negativePrompt } = applyGlobalPromptSettings(settings, prompt, negativePrompt));
 
   const vidWidth = width || 512;
   const vidHeight = height || 512;
@@ -2126,6 +2264,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
           negativePrompt,
           imageUrl: await keyToBase64DataUri(initImageKey!),
           duration: req.body.duration,
+          seed,
         });
       } else if (mode === "continue") {
         videoResult = await generateVideoAtlasCloudContinue({
@@ -2135,14 +2274,17 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
           negativePrompt,
           videoUrl: await keyToBase64DataUri(initVideoKey!),
           duration: req.body.duration,
+          seed,
         });
       } else {
         videoResult = await generateVideoAtlasCloud({
           apiKey,
           modelId: model || "atlascloud/van-2.6/text-to-video",
           prompt,
+          negativePrompt,
           aspectRatio: req.body.aspectRatio,
           duration: req.body.duration,
+          seed,
         });
       }
     } else {
@@ -2162,6 +2304,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
           imageUrl: keyToPublicUrl(initImageKey!),
           width: vidWidth,
           height: vidHeight,
+          seed,
         });
       } else {
         // ModelsLab не поддерживает continue — для continue используйте Atlas Cloud.
@@ -2172,6 +2315,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
           negativePrompt: negativePrompt || "",
           width: vidWidth,
           height: vidHeight,
+          seed,
         });
       }
     }

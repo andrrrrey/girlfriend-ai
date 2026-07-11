@@ -63,4 +63,13 @@ export class CreateImageJobDto {
   @IsOptional()
   @IsString()
   characterId?: string;
+
+  /**
+   * Seed генерации. Если задан — прокидывается до провайдера, чтобы результат
+   * был воспроизводим (нужно для фиксации внешности персонажа). Если не задан —
+   * провайдер использует случайный seed.
+   */
+  @IsOptional()
+  @IsInt()
+  seed?: number;
 }

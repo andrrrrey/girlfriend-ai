@@ -1457,10 +1457,12 @@ function GenerationPageInner() {
     }
 
     try {
-      const defaultNeg = "bad anatomy, deformed, disfigured, mutation, extra limbs, extra fingers, bad hands, bad face, ugly, low quality, worst quality, blurry, watermark, text, logo, signature, cropped, out of frame";
+      // Обязательный базовый negative_prompt (артефакты) добавляется глобально на
+      // сервере (apps/ai, настройка NEGATIVE_PROMPT). Здесь отправляем только
+      // выбранные пользователем термины — сервер их смерджит с базовым.
       const negativePrompt = promptDetailsSelections.negativePromptTerms.length > 0
-        ? promptDetailsSelections.negativePromptTerms.join(", ") + ", " + defaultNeg
-        : defaultNeg;
+        ? promptDetailsSelections.negativePromptTerms.join(", ")
+        : undefined;
 
       let jobIds: string[];
       if (isVideo) {
@@ -1487,10 +1489,13 @@ function GenerationPageInner() {
         // Всегда Civitai img2img: только он использует фото персонажа как референс
         // и сохраняет его стиль. Нет своего generationStyle → дефолт "realism".
         const charStyle = (personality.generationStyle as string | undefined) || "realism";
+        // Сохранённый seed персонажа → совпадение внешности с аватаром.
+        const charSeed = typeof personality.avatarSeed === "number" ? (personality.avatarSeed as number) : undefined;
         const result = await createImageJob({
           prompt: finalPrompt,
           negativePrompt,
           ...(selectedCharacter.avatarUrl ? { initImageUrl: selectedCharacter.avatarUrl } : {}),
+          ...(charSeed !== undefined ? { seed: charSeed } : {}),
           provider: "civitai",
           generationStyle: charStyle,
           aspectRatio,

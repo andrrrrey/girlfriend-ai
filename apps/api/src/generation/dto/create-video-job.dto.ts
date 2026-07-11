@@ -59,4 +59,12 @@ export class CreateVideoJobDto {
   @IsInt()
   @IsIn(ALLOWED_COUNTS)
   count?: number;
+
+  /**
+   * Seed генерации. Если задан — прокидывается до провайдера для
+   * воспроизводимости. Если не задан — используется случайный seed.
+   */
+  @IsOptional()
+  @IsInt()
+  seed?: number;
 }

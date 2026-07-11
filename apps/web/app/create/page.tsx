@@ -28,6 +28,15 @@ import {
 /* ── Module-level state for AI image generation ── */
 
 let previewImageUrl: string | null = null;
+// Точный промпт и seed, которыми сгенерирован ПОКАЗАННЫЙ сейчас аватар.
+// Присваиваются строго вместе с previewImageUrl (в обработчиках завершения
+// джоба), чтобы после перегенераций промпт/seed всегда соответствовали картинке.
+let previewImagePrompt: string | null = null;
+let previewImageSeed: number | null = null;
+// Промпт/seed текущего запущенного джоба — фиксируются в момент старта и
+// «применяются» к preview* только когда именно этот джоб успешно завершится.
+let pendingAvatarPrompt: string | null = null;
+let pendingAvatarSeed: number | null = null;
 let previewPollInterval: ReturnType<typeof setInterval> | null = null;
 let avatarGenerated = false;
 let lastAvatarJobId: string | null = null;
@@ -478,6 +487,12 @@ interface CreateDraft {
   currentStage: number;
   formData: ReturnType<typeof collectFormData>;
   previewImageUrl: string | null;
+  previewImagePrompt: string | null;
+  previewImageSeed: number | null;
+  // pending — промпт/seed джоба, который мог быть в процессе на момент reload;
+  // применяются к preview* когда джоб завершится (в pollForAvatarResult).
+  pendingAvatarPrompt: string | null;
+  pendingAvatarSeed: number | null;
   avatarGenerated: boolean;
   lastAvatarJobId: string | null;
 }
@@ -489,6 +504,10 @@ function saveFormState(stageNum: number) {
       currentStage: stageNum,
       formData: data,
       previewImageUrl,
+      previewImagePrompt,
+      previewImageSeed,
+      pendingAvatarPrompt,
+      pendingAvatarSeed,
       avatarGenerated,
       lastAvatarJobId,
     };
@@ -613,6 +632,10 @@ function restoreFormState(): boolean {
 
     // Restore module-level state
     if (draft.previewImageUrl) previewImageUrl = draft.previewImageUrl;
+    if (draft.previewImagePrompt) previewImagePrompt = draft.previewImagePrompt;
+    if (typeof draft.previewImageSeed === "number") previewImageSeed = draft.previewImageSeed;
+    if (draft.pendingAvatarPrompt) pendingAvatarPrompt = draft.pendingAvatarPrompt;
+    if (typeof draft.pendingAvatarSeed === "number") pendingAvatarSeed = draft.pendingAvatarSeed;
     if (draft.avatarGenerated) avatarGenerated = draft.avatarGenerated;
     if (draft.lastAvatarJobId) lastAvatarJobId = draft.lastAvatarJobId;
 
@@ -1035,6 +1058,9 @@ function pollForAvatarResult(jobId: string) {
       if (status.status === "completed" && (status.output as any)?.url) {
         if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
         previewImageUrl = (status.output as any).url;
+        // Промпт/seed показанного аватара = pending этого джоба (совпадение образа).
+        previewImagePrompt = pendingAvatarPrompt;
+        previewImageSeed = pendingAvatarSeed;
         const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
         const spinner = document.getElementById("s9-avatar-spinner");
         const regenBtn = document.getElementById("s9-regen-btn");
@@ -1066,6 +1092,12 @@ async function startAvatarGeneration() {
   loadImageModels();
   const extraPrompts = pickRandomPrompts();
   const prompt = buildAvatarPrompt(data, extraPrompts);
+  // Фиксируем seed этой генерации и запоминаем промпт+seed как pending — они
+  // «применятся» к preview* только при успешном завершении именно этого джоба,
+  // поэтому при перегенерации не будет рассинхрона с показанной картинкой.
+  const seed = Math.floor(Math.random() * 2_147_483_647);
+  pendingAvatarPrompt = prompt;
+  pendingAvatarSeed = seed;
 
   const img = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
   const spinner = document.getElementById("s9-avatar-spinner");
@@ -1083,7 +1115,7 @@ async function startAvatarGeneration() {
     // активная модель = первая включённая; её провайдер определяет бэкенд.
     await loadImageModels();
     const activeModel = enabledImageModels[0];
-    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt };
+    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt, seed };
     if (activeModel) {
       jobPayload.model = activeModel.id;
       jobPayload.provider = activeModel.provider;
@@ -1110,6 +1142,9 @@ async function startAvatarGeneration() {
           clearInterval(previewPollInterval!);
           previewPollInterval = null;
           previewImageUrl = (status.output as any).url;
+          // Промпт/seed показанного аватара = именно те, что запускали этот джоб.
+          previewImagePrompt = prompt;
+          previewImageSeed = seed;
           // Re-query DOM elements each poll (they may have been re-created)
           const curImg = document.getElementById("s9-avatar-img") as HTMLImageElement | null;
           const curSpinner = document.getElementById("s9-avatar-spinner");
@@ -1559,6 +1594,10 @@ export default function CreateCharacterPage() {
       btn.addEventListener("click", () => {
         localStorage.removeItem(DRAFT_LS_KEY);
         previewImageUrl = null;
+        previewImagePrompt = null;
+        previewImageSeed = null;
+        pendingAvatarPrompt = null;
+        pendingAvatarSeed = null;
         avatarGenerated = false;
         lastAvatarJobId = null;
         if (previewPollInterval) { clearInterval(previewPollInterval); previewPollInterval = null; }
@@ -1584,6 +1623,10 @@ export default function CreateCharacterPage() {
           ...charData,
           ethnicity: fantasyRace || charData.ethnicity,
           avatarUrl: previewImageUrl ?? undefined,
+          // Точный промпт и seed показанного аватара — чтобы картинки персонажа
+          // в чате/генерации совпадали с его аватаром.
+          avatarPrompt: previewImagePrompt ?? undefined,
+          avatarSeed: previewImageSeed ?? undefined,
         });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);

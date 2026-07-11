@@ -130,4 +130,18 @@ export class CreateUserCharacterDto {
   @IsOptional()
   @IsString()
   avatarUrl?: string;
+
+  /**
+   * Точный промпт, которым был сгенерирован показанный аватар (previewImageUrl).
+   * Сохраняется в personality.avatarPrompt и переиспользуется при генерации
+   * изображений персонажа в чате/на странице генерации, чтобы образ совпадал.
+   */
+  @IsOptional()
+  @IsString()
+  avatarPrompt?: string;
+
+  /** Seed, которым был сгенерирован показанный аватар (для совпадения внешности). */
+  @IsOptional()
+  @IsNumber()
+  avatarSeed?: number;
 }

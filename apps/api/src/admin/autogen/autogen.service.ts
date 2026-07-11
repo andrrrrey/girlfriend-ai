@@ -192,9 +192,13 @@ export class AutogenService implements OnModuleInit {
       try {
         const dto = buildRandomCharacterDto(allowedGenders);
 
-        // 1. Аватар — ставим image-job и ждём результат.
-        const avatarUrl = await this.generateAvatar(adminId, dto, activeModel);
-        dto.avatarUrl = avatarUrl;
+        // 1. Аватар — ставим image-job и ждём результат. Сохраняем точный промпт
+        // и seed показанного аватара, чтобы генерация картинок этого персонажа
+        // (чат/страница генерации) совпадала с его аватаром.
+        const avatar = await this.generateAvatar(adminId, dto, activeModel);
+        dto.avatarUrl = avatar.url;
+        dto.avatarPrompt = avatar.prompt;
+        dto.avatarSeed = avatar.seed;
 
         // 2. Бэкстори (childhood/lifeStory/phobias).
         try {
@@ -232,9 +236,11 @@ export class AutogenService implements OnModuleInit {
     adminId: string,
     dto: ReturnType<typeof buildRandomCharacterDto>,
     activeModel: { id: string; provider?: string } | undefined,
-  ): Promise<string> {
+  ): Promise<{ url: string; prompt: string; seed: number }> {
     const prompt = buildAvatarPrompt(dto);
-    const payload: Parameters<GenerationService["createImageJob"]>[1] = { prompt };
+    // Фиксируем seed, чтобы аватар был воспроизводим и совпадал с картинками в чате.
+    const seed = Math.floor(Math.random() * 2_147_483_647);
+    const payload: Parameters<GenerationService["createImageJob"]>[1] = { prompt, seed };
     if (activeModel) {
       payload.model = activeModel.id;
       payload.provider = activeModel.provider;
@@ -248,7 +254,7 @@ export class AutogenService implements OnModuleInit {
       if (status) {
         if (status.status === "completed") {
           const url = (status.output as { url?: string } | null)?.url;
-          if (url) return url;
+          if (url) return { url, prompt, seed };
           throw new Error("image job completed without url");
         }
         if (status.status === "failed") {

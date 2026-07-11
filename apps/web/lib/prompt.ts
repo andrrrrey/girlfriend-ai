@@ -20,9 +20,20 @@ export function buildCharacterImagePrompt(
   extra?: string,
   includeQuality = true,
 ): string {
-  const parts: string[] = includeQuality
-    ? ["masterpiece", "best quality", "highres", "nsfw", "explicit"]
-    : [];
+  // Если у персонажа сохранён точный промпт его аватара (avatarPrompt) — берём
+  // ИМЕННО его как базу, а не пересобираем из атрибутов. Так генерация в чате и
+  // на странице генерации использует тот же промпт, что создал показанный аватар
+  // (включая наряд/позу/сцену), и образ не «плывёт». Хвост extra (поза/действие)
+  // добавляем в конец. Quality/NSFW-теги добавит сервер (apps/ai), поэтому здесь
+  // их не дублируем.
+  const savedPrompt = typeof personality.avatarPrompt === "string" ? personality.avatarPrompt.trim() : "";
+  if (savedPrompt) {
+    return [savedPrompt, extra?.trim()].filter(Boolean).join(", ");
+  }
+
+  // Фолбэк для персонажей без сохранённого промпта (созданных до этой фичи):
+  // пересобираем промпт из атрибутов personality, как раньше.
+  const parts: string[] = [];
 
   const genderMap: Record<string, string> = {
     female: "woman",

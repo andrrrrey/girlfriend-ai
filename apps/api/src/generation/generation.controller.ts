@@ -42,6 +42,7 @@ export class GenerationController {
       count: dto.count,
       initImageUrl: dto.initImageUrl,
       characterId: dto.characterId,
+      seed: dto.seed,
     });
   }
 
@@ -68,6 +69,7 @@ export class GenerationController {
       initImageKey: dto.initImageKey,
       initVideoKey: dto.initVideoKey,
       count: dto.count,
+      seed: dto.seed,
     });
   }
 

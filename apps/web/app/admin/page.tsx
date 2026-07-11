@@ -58,6 +58,14 @@ const SETTING_GROUPS = [
       { key: "DEFAULT_STT_LANGUAGE", label: "Язык STT по умолчанию (en, ru, etc.)", type: "text" },
     ],
   },
+  {
+    title: "Генерация изображений и видео",
+    subtitle: "Глобальные промпт-настройки, применяются ко ВСЕМ генерациям (аватары, чат, страница генерации, видео). Пустое поле отключает блок.",
+    keys: [
+      { key: "NSFW_PROMPT_TAGS", label: "Глобальные NSFW / quality-теги (добавляются к позитивному промпту). По умолчанию: nsfw, explicit, masterpiece, best quality, highres", type: "textarea" },
+      { key: "NEGATIVE_PROMPT", label: "Обязательный негативный промпт — защита от артефактов (лишние пальцы/руки, лишние люди, кривая анатомия и т.п.). Мерджится с пользовательским.", type: "textarea" },
+    ],
+  },
 ];
 
 const ALL_IMAGE_MODELS = [

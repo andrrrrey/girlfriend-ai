@@ -138,7 +138,7 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string; seed?: number },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -171,6 +171,7 @@ export class GenerationService {
             provider: resolvedProvider,
             generationStyle: data.generationStyle,
             img2img: initImageUrl ? true : undefined,
+            seed: data.seed,
           },
         },
       });
@@ -185,6 +186,7 @@ export class GenerationService {
         provider: resolvedProvider,
         generationStyle: data.generationStyle,
         initImageUrl,
+        seed: data.seed,
       };
 
       await this.queue.add(JOB_NAMES.IMAGE, jobData);
@@ -356,6 +358,7 @@ export class GenerationService {
       initImageKey?: string;
       initVideoKey?: string;
       count?: number;
+      seed?: number;
     },
   ) {
     let prompt = data.prompt;
@@ -390,6 +393,7 @@ export class GenerationService {
             mode,
             initImageKey: data.initImageKey,
             initVideoKey: data.initVideoKey,
+            seed: data.seed,
           },
         },
       });
@@ -405,6 +409,7 @@ export class GenerationService {
         mode,
         initImageKey: data.initImageKey,
         initVideoKey: data.initVideoKey,
+        seed: data.seed,
       };
 
       await this.queue.add(JOB_NAMES.VIDEO, jobData);

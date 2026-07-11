@@ -128,6 +128,8 @@ export interface ImageJobData {
   generationStyle?: string;
   /** Публичный URL исходного изображения (фото персонажа) для режима img2img. */
   initImageUrl?: string;
+  /** Seed генерации; если задан — прокидывается до провайдера для воспроизводимости. */
+  seed?: number;
 }
 
 /**
@@ -155,6 +157,8 @@ export interface VideoJobData {
   initImageKey?: string;
   /** S3-ключ исходного видео (режим continue) */
   initVideoKey?: string;
+  /** Seed генерации; если задан — прокидывается до провайдера для воспроизводимости. */
+  seed?: number;
 }
 
 /** Объединённый тип payload для всех заданий очереди */

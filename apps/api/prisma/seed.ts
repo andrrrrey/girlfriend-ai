@@ -50,6 +50,20 @@ async function main() {
     ELEVENLABS_DEFAULT_VOICE_ID: "21m00Tcm4TlvDq8ikWAM", // Rachel — дефолтный голос ElevenLabs
     ELEVENLABS_MODEL_ID: "eleven_multilingual_v2",
     MODELSLAB_CHAT_MODEL: "llama-3-8b-instruct",
+    // Глобальные промпт-настройки генерации (редактируются в админке).
+    // ВАЖНО: держать в синхроне с код-дефолтами в apps/ai/src/index.ts
+    // (DEFAULT_NSFW_TAGS / DEFAULT_NEGATIVE_PROMPT) — если ключа нет в БД,
+    // apps/ai использует те значения; сид лишь показывает их в админке.
+    NSFW_PROMPT_TAGS: "nsfw, explicit, masterpiece, best quality, highres",
+    NEGATIVE_PROMPT: [
+      "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
+      "bad anatomy, wrong anatomy, deformed, disfigured, mutation, mutated, malformed",
+      "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands:1.3)",
+      "extra arms, missing arms, extra hands, extra limbs, missing limbs, extra legs, missing legs, fused limbs, malformed limbs, disconnected limbs, long neck, long body",
+      "(poorly drawn face, distorted face, asymmetric eyes, cross-eyed, extra eyes, deformed eyes, closed eyes:1.1)",
+      "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
+      "(child, kid, toddler, infant, underage, loli, shota:1.5)",
+    ].join(", "),
   };
 
   for (const [key, value] of Object.entries(defaults)) {
