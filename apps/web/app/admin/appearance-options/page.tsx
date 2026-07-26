@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type AppearanceCategory, type AppearanceOption } from "../../../lib/api";
+import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
@@ -275,6 +276,7 @@ export default function AdminAppearanceOptionsPage() {
       }
       setShowOptForm(null);
       setEditingOpt(null);
+      clearOptionCache();
       loadOptions(showOptForm);
     } catch {
       setOptError("Failed to save");
@@ -288,6 +290,7 @@ export default function AdminAppearanceOptionsPage() {
     if (!confirm("Delete this option?")) return;
     try {
       await admin.deleteAppearanceOption(opt.id);
+      clearOptionCache();
       loadOptions(opt.categoryId);
     } catch {
       alert("Failed to delete");

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type CameraOption } from "../../../lib/api";
+import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
@@ -189,6 +190,7 @@ export default function AdminCameraOptionsPage() {
       }
       setShowForm(false);
       setEditing(null);
+      clearOptionCache();
       loadOptions();
     } catch {
       setError("Failed to save");
@@ -201,6 +203,7 @@ export default function AdminCameraOptionsPage() {
     if (!confirm("Delete this option?")) return;
     try {
       await admin.deleteCameraOption(id);
+      clearOptionCache();
       loadOptions();
     } catch {
       alert("Failed to delete");

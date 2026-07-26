@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type CharacterOption } from "../../../lib/api";
+import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
@@ -202,6 +203,7 @@ export default function AdminCharacterOptionsPage() {
       }
       setShowForm(false);
       setEditing(null);
+      clearOptionCache();
       loadOptions();
     } catch {
       setError("Failed to save");
@@ -214,6 +216,7 @@ export default function AdminCharacterOptionsPage() {
     if (!confirm("Delete this option?")) return;
     try {
       await admin.deleteCharacterOption(id);
+      clearOptionCache();
       loadOptions();
     } catch {
       alert("Failed to delete");

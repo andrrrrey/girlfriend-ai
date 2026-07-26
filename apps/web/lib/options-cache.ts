@@ -14,9 +14,25 @@ import type {
   CameraOptionsResponse,
 } from "./api";
 
-// Опции редко меняются (правит только админ), поэтому кеш живёт дольше.
-// localStorage переживает закрытие вкладки и перезагрузку.
-const CACHE_TTL = 60 * 60 * 1000;
+// Опции меняет только админ (в т.ч. галочка NSFW). Держим кеш недолго, чтобы
+// правки в админке (например, скрытие/показ опций в SFW-режиме) отражались у
+// пользователей без долгого ожидания. localStorage переживает перезагрузку.
+const CACHE_TTL = 5 * 60 * 1000;
+
+/**
+ * Полностью сбрасывает кеш опций (все ключи gen:*). Вызывается после изменений
+ * опций в админке, чтобы генерация/чат сразу получили свежие данные (иначе
+ * старый ответ живёт до истечения TTL — типовая причина «убрал галочку NSFW,
+ * а опция не появилась в SFW-режиме»).
+ */
+export function clearOptionCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("gen:")) localStorage.removeItem(k);
+    }
+  } catch {}
+}
 
 function getCached<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
