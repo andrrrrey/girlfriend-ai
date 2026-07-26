@@ -5,7 +5,38 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 import Logo from "./Logo";
+
+/**
+ * Сегментный переключатель режима контента SFW / NSFW в хедере.
+ * Несовершеннолетним (canToggle === false) NSFW заблокирован.
+ */
+function ContentModeToggle() {
+  const { mode, setMode, canToggle } = useContentMode();
+  return (
+    <div className="content-mode-toggle" role="group" aria-label="Content mode">
+      <button
+        type="button"
+        className={`cmt-seg${mode === "sfw" ? " active" : ""}`}
+        aria-pressed={mode === "sfw"}
+        onClick={() => setMode("sfw")}
+      >
+        SFW
+      </button>
+      <button
+        type="button"
+        className={`cmt-seg${mode === "nsfw" ? " active" : ""}${!canToggle ? " disabled" : ""}`}
+        aria-pressed={mode === "nsfw"}
+        disabled={!canToggle}
+        title={!canToggle ? "NSFW недоступен для аккаунтов младше 18" : undefined}
+        onClick={() => setMode("nsfw")}
+      >
+        NSFW
+      </button>
+    </div>
+  );
+}
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Math.floor((Date.now() - timestamp) / 1000);
@@ -92,6 +123,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <a href="/characters">{t("topnav.characters")}</a>
       </nav>
       <div className="topnav-buttons">
+        <ContentModeToggle />
         <button className="topnav-search-icon-btn" aria-label={t("topnav.search")}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>

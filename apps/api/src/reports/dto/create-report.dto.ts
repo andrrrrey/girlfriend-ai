@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -8,8 +9,20 @@ import {
 } from "class-validator";
 
 export class CreateReportDto {
+  /** Легаси-поле: цель-персонаж (эквивалент targetType="character"). */
+  @IsOptional()
   @IsUUID()
-  characterId!: string;
+  characterId?: string;
+
+  /** Полиморфная цель: "character" | "short". */
+  @IsOptional()
+  @IsString()
+  @IsIn(["character", "short"])
+  targetType?: string;
+
+  @IsOptional()
+  @IsUUID()
+  targetId?: string;
 
   @IsArray()
   @IsString({ each: true })

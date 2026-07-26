@@ -125,9 +125,10 @@ interface FormState {
   imageFullKey: string;
   previewUrl: string;
   generationStyle: string;
+  nsfw: boolean;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", generationStyle: "" };
+const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", generationStyle: "", nsfw: true };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -174,6 +175,7 @@ export default function AdminCharacterOptionsPage() {
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
       generationStyle: opt.generationStyle ?? "",
+      nsfw: opt.nsfw ?? true,
     });
     setShowForm(true);
     setError("");
@@ -191,6 +193,7 @@ export default function AdminCharacterOptionsPage() {
         imageThumbKey: form.imageThumbKey || undefined,
         imageFullKey: form.imageFullKey || undefined,
         generationStyle: activeCategory === "STYLE" ? (form.generationStyle || undefined) : undefined,
+        nsfw: form.nsfw,
       };
       if (editing) {
         await admin.updateCharacterOption(editing.id, data);
@@ -267,6 +270,14 @@ export default function AdminCharacterOptionsPage() {
               value={form.prompt}
               onChange={(e) => setForm({ ...form, prompt: e.target.value })}
             />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={form.nsfw}
+                onChange={(e) => setForm({ ...form, nsfw: e.target.checked })}
+              />
+              NSFW (скрывать в SFW-режиме)
+            </label>
             {activeCategory === "STYLE" && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ color: "#848484", fontSize: 13, whiteSpace: "nowrap" }}>Стиль генерации:</span>

@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, IsString, MinLength } from "class-validator";
 
 export class UpdateCharacterOptionDto {
   @IsOptional()
@@ -34,4 +34,9 @@ export class UpdateCharacterOptionDto {
   @IsOptional()
   @IsString()
   generationStyle?: string;
+
+  /** Опция NSFW: при SFW-режиме скрывается в пикерах генерации. */
+  @IsOptional()
+  @IsBoolean()
+  nsfw?: boolean;
 }

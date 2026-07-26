@@ -138,10 +138,13 @@ export class GenerationService {
 
   async createImageJob(
     userId: string,
-    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string; seed?: number },
+    data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string; seed?: number; contentMode?: "nsfw" | "sfw" },
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
+    // Режим контента: sfw помечает джобу nsfw=false (скрыта в SFW-фидах) и
+    // передаёт SFW-набор промптов в AI-сервис.
+    const contentMode: "nsfw" | "sfw" = data.contentMode === "sfw" ? "sfw" : "nsfw";
 
     if (CYRILLIC_RE.test(prompt)) {
       this.logger.log("Cyrillic detected in prompt, translating to English");
@@ -162,6 +165,7 @@ export class GenerationService {
           type: "image",
           status: "pending",
           characterId: data.characterId || null,
+          nsfw: contentMode !== "sfw",
           input: {
             prompt,
             originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
@@ -172,6 +176,7 @@ export class GenerationService {
             generationStyle: data.generationStyle,
             img2img: initImageUrl ? true : undefined,
             seed: data.seed,
+            contentMode,
           },
         },
       });
@@ -187,6 +192,7 @@ export class GenerationService {
         generationStyle: data.generationStyle,
         initImageUrl,
         seed: data.seed,
+        contentMode,
       };
 
       await this.queue.add(JOB_NAMES.IMAGE, jobData);
@@ -260,19 +266,24 @@ export class GenerationService {
     return resolveEnabledGenders(setting?.value);
   }
 
-  async getCharacterOptions(category?: string) {
+  async getCharacterOptions(category?: string, mode?: string) {
+    const sfw = mode === "sfw";
     const options = await this.prisma.characterOption.findMany({
-      where: category ? { category } : undefined,
+      where: {
+        ...(category ? { category } : {}),
+        ...(sfw ? { nsfw: false } : {}),
+      },
       orderBy: [{ category: "asc" }, { order: "asc" }, { createdAt: "asc" }],
     });
     return options.map((o) => this.withOptionImageUrls(o));
   }
 
-  async getAppearanceOptions() {
+  async getAppearanceOptions(mode?: string) {
+    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
     const categories = await this.prisma.appearanceCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
-        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+        options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
     const mapped = categories.map((cat) => ({
@@ -290,11 +301,12 @@ export class GenerationService {
     return result;
   }
 
-  async getPoseOptions() {
+  async getPoseOptions(mode?: string) {
+    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
     const categories = await this.prisma.poseCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
-        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+        options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
     const mapped = categories.map((cat) => ({
@@ -312,11 +324,12 @@ export class GenerationService {
     return result;
   }
 
-  async getSceneOptions() {
+  async getSceneOptions(mode?: string) {
+    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
     const categories = await this.prisma.sceneCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
-        options: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+        options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
     const mapped = categories.map((cat) => ({
@@ -330,8 +343,9 @@ export class GenerationService {
     return result;
   }
 
-  async getCameraOptions() {
+  async getCameraOptions(mode?: string) {
     const options = await this.prisma.cameraOption.findMany({
+      where: mode === "sfw" ? { nsfw: false } : undefined,
       orderBy: [{ section: "asc" }, { order: "asc" }, { createdAt: "asc" }],
     });
     const mapped = options.map((o) => this.withOptionImageUrls(o));
@@ -359,6 +373,7 @@ export class GenerationService {
       initVideoKey?: string;
       count?: number;
       seed?: number;
+      contentMode?: "nsfw" | "sfw";
     },
   ) {
     let prompt = data.prompt;
@@ -370,6 +385,8 @@ export class GenerationService {
     }
 
     const mode = data.mode || "scratch";
+    // Режим контента (nsfw|sfw) — независим от режима видео (scratch|img2vid).
+    const contentMode: "nsfw" | "sfw" = data.contentMode === "sfw" ? "sfw" : "nsfw";
     // Для режимов img2vid/continue модель определяется режимом, если не задана явно.
     const model = data.model || VIDEO_MODE_DEFAULT_MODEL[mode];
     // Auto-detect provider from model if not explicitly set
@@ -383,6 +400,7 @@ export class GenerationService {
           userId,
           type: "video",
           status: "pending",
+          nsfw: contentMode !== "sfw",
           input: {
             prompt,
             originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
@@ -394,6 +412,7 @@ export class GenerationService {
             initImageKey: data.initImageKey,
             initVideoKey: data.initVideoKey,
             seed: data.seed,
+            contentMode,
           },
         },
       });
@@ -410,6 +429,7 @@ export class GenerationService {
         initImageKey: data.initImageKey,
         initVideoKey: data.initVideoKey,
         seed: data.seed,
+        contentMode,
       };
 
       await this.queue.add(JOB_NAMES.VIDEO, jobData);
@@ -463,7 +483,7 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string, mode?: string) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
@@ -481,6 +501,10 @@ export class GenerationService {
     };
     if (userId) {
       where["userId"] = userId;
+    }
+    // В SFW-режиме показываем только безопасные генерации (nsfw=false).
+    if (mode === "sfw") {
+      where["nsfw"] = false;
     }
 
     const andConditions: Record<string, unknown>[] = [];

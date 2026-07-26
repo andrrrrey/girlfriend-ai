@@ -9,6 +9,43 @@ const env = loadEnv();
 export class LikesService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Возвращает надбавку лайков (boostLikes) из админки для одной цели.
+   * character → Character.boostLikes; short/gallery_item → AiJob.boostLikes.
+   */
+  private async getBoost(targetType: string, targetId: string): Promise<number> {
+    if (targetType === "character") {
+      const c = await this.prisma.character.findUnique({
+        where: { id: targetId }, select: { boostLikes: true },
+      });
+      return c?.boostLikes ?? 0;
+    }
+    if (targetType === "short" || targetType === "gallery_item") {
+      const j = await this.prisma.aiJob.findUnique({
+        where: { id: targetId }, select: { boostLikes: true },
+      });
+      return j?.boostLikes ?? 0;
+    }
+    return 0;
+  }
+
+  /** Пакетная версия getBoost: id → надбавка (0, если нет). */
+  private async getBoostMap(targetType: string, targetIds: string[]): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (targetType === "character") {
+      const rows = await this.prisma.character.findMany({
+        where: { id: { in: targetIds } }, select: { id: true, boostLikes: true },
+      });
+      for (const r of rows) map.set(r.id, r.boostLikes);
+    } else if (targetType === "short" || targetType === "gallery_item") {
+      const rows = await this.prisma.aiJob.findMany({
+        where: { id: { in: targetIds } }, select: { id: true, boostLikes: true },
+      });
+      for (const r of rows) map.set(r.id, r.boostLikes);
+    }
+    return map;
+  }
+
   async toggle(
     userId: string,
     targetType: string,
@@ -28,11 +65,12 @@ export class LikesService {
       });
     }
 
-    const count = await this.prisma.like.count({
-      where: { targetType, targetId },
-    });
+    const [realCount, boost] = await Promise.all([
+      this.prisma.like.count({ where: { targetType, targetId } }),
+      this.getBoost(targetType, targetId),
+    ]);
 
-    return { liked: !existing, count };
+    return { liked: !existing, count: realCount + boost };
   }
 
   async getStatus(
@@ -40,7 +78,7 @@ export class LikesService {
     targetType: string,
     targetId: string,
   ): Promise<{ liked: boolean; count: number }> {
-    const [count, liked] = await Promise.all([
+    const [count, liked, boost] = await Promise.all([
       this.prisma.like.count({ where: { targetType, targetId } }),
       userId
         ? this.prisma.like
@@ -51,19 +89,21 @@ export class LikesService {
             })
             .then((r) => !!r)
         : Promise.resolve(false),
+      this.getBoost(targetType, targetId),
     ]);
 
-    return { liked, count };
+    return { liked, count: count + boost };
   }
 
   async getCount(
     targetType: string,
     targetId: string,
   ): Promise<{ count: number }> {
-    const count = await this.prisma.like.count({
-      where: { targetType, targetId },
-    });
-    return { count };
+    const [count, boost] = await Promise.all([
+      this.prisma.like.count({ where: { targetType, targetId } }),
+      this.getBoost(targetType, targetId),
+    ]);
+    return { count: count + boost };
   }
 
   async batchStatus(
@@ -71,7 +111,7 @@ export class LikesService {
     targetType: string,
     targetIds: string[],
   ): Promise<Record<string, { liked: boolean; count: number }>> {
-    const [counts, userLikes] = await Promise.all([
+    const [counts, userLikes, boostMap] = await Promise.all([
       this.prisma.like.groupBy({
         by: ["targetId"],
         where: { targetType, targetId: { in: targetIds } },
@@ -81,6 +121,7 @@ export class LikesService {
         where: { userId, targetType, targetId: { in: targetIds } },
         select: { targetId: true },
       }),
+      this.getBoostMap(targetType, targetIds),
     ]);
 
     const countMap = new Map(counts.map((c) => [c.targetId, c._count]));
@@ -90,7 +131,7 @@ export class LikesService {
     for (const id of targetIds) {
       result[id] = {
         liked: likedSet.has(id),
-        count: countMap.get(id) ?? 0,
+        count: (countMap.get(id) ?? 0) + (boostMap.get(id) ?? 0),
       };
     }
     return result;

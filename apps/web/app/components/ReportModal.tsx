@@ -7,7 +7,12 @@ import { reports } from "../../lib/api";
 import type { TKey } from "../../lib/i18n";
 
 interface Props {
-  characterId: string;
+  /** Легаси: жалоба на персонажа. Игнорируется, если задан targetType="short". */
+  characterId?: string;
+  /** Полиморфная цель жалобы. По умолчанию "character". */
+  targetType?: "character" | "short";
+  /** ID цели для targetType="short" (jobId шорта). */
+  targetId?: string;
   onClose: () => void;
 }
 
@@ -24,7 +29,7 @@ const REASON_KEYS = [
 
 const MAX_DETAILS = 1000;
 
-export default function ReportModal({ characterId, onClose }: Props) {
+export default function ReportModal({ characterId, targetType = "character", targetId, onClose }: Props) {
   const { t } = useT();
   const { user } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
@@ -47,7 +52,9 @@ export default function ReportModal({ characterId, onClose }: Props) {
     setError("");
     try {
       await reports.create({
-        characterId,
+        ...(targetType === "short"
+          ? { targetType, targetId }
+          : { characterId, targetType: "character" }),
         reasons: selected,
         details: details.trim() || undefined,
       });

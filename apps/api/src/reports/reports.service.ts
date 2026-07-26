@@ -16,10 +16,19 @@ export class ReportsService {
       );
     }
 
+    const targetType = dto.targetType || "character";
+    const targetId = dto.targetId || dto.characterId || null;
+    if (!targetId) {
+      throw new BadRequestException("Report target is required");
+    }
+
     const report = await this.prisma.report.create({
       data: {
         userId,
-        characterId: dto.characterId,
+        // characterId заполняем только для жалоб на персонажей (FK к characters).
+        characterId: targetType === "character" ? (dto.characterId ?? dto.targetId ?? null) : null,
+        targetType,
+        targetId,
         reasons,
         details,
       },

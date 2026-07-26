@@ -20,6 +20,10 @@ model User {
   subscription                String    @default("free")
   isDemo                      Boolean   @default(false) @map("is_demo")
   lang                        String    @default("en")
+  // Предпочтительный режим контента: nsfw | sfw. Влияет на фиды и промпты.
+  contentMode                 String    @default("nsfw") @map("content_mode")
+  // Подтверждение 18+ при регистрации. Если false — режим форсится в sfw.
+  isAdult                     Boolean   @default(true) @map("is_adult")
   emailVerified               Boolean   @default(false) @map("email_verified")
   verificationToken           String?   @unique @map("verification_token")
   verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at")
@@ -127,13 +131,16 @@ model Character {
   voiceId      String?   @map("voice_id")
   tags         String[]  @default([])
   isPublic     Boolean   @default(true) @map("is_public")
+  // Рейтинг контента персонажа. true => скрыт в SFW-режиме. Существующие = NSFW.
+  nsfw         Boolean   @default(true)
+  // Накрутка лайков из админки: итоговый счёт = реальные лайки + boostLikes.
+  boostLikes   Int       @default(0) @map("boost_likes")
   createdBy    String?   @map("created_by")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
   chatSessions ChatSession[]
-  comments     Comment[]
   reports      Report[]
   aiJobs       AiJob[]
 
@@ -254,6 +261,10 @@ model AiJob {
   // персонажа на странице /generation). Позволяет показывать эти картинки в
   // сторис персонажа. Nullable: обычные генерации без персонажа и старые записи.
   characterId String?   @map("character_id") @db.Uuid
+  // Рейтинг контента генерации. true => скрыт в SFW-режиме. Существующие = NSFW.
+  nsfw        Boolean   @default(true)
+  // Накрутка лайков из админки для shorts (видео-джобы): итог = лайки + boostLikes.
+  boostLikes  Int       @default(0) @map("boost_likes")
   tokensUsed  Int?      @map("tokens_used")
   error       String?
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -297,6 +308,8 @@ model CharacterOption {
   imageFullKey    String?  @map("image_full_key")
   order           Int      @default(0)
   generationStyle String?  @map("generation_style")
+  // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
+  nsfw            Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@index([category])
@@ -328,6 +341,9 @@ model AppearanceOption {
   imageFullKey  String?  @map("image_full_key")
   order         Int      @default(0)
   createdAt     DateTime @default(now()) @map("created_at")
+
+  // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
+  nsfw          Boolean  @default(true)
 
   category AppearanceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -361,6 +377,9 @@ model PoseOption {
   order         Int      @default(0)
   createdAt     DateTime @default(now()) @map("created_at")
 
+  // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
+  nsfw          Boolean  @default(true)
+
   category PoseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
@@ -393,6 +412,9 @@ model SceneOption {
   order         Int      @default(0)
   createdAt     DateTime @default(now()) @map("created_at")
 
+  // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
+  nsfw          Boolean  @default(true)
+
   category SceneCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
@@ -410,6 +432,8 @@ model CameraOption {
   imageThumbKey String?  @map("image_thumb_key")
   imageFullKey  String?  @map("image_full_key")
   order         Int      @default(0)
+  // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
+  nsfw          Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([section])
@@ -466,17 +490,18 @@ model Follow {
 // ─── Comments ────────────────────────────────────────────────
 
 model Comment {
-  id          String    @id @default(uuid()) @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
-  characterId String    @map("character_id") @db.Uuid
-  content     String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  deletedAt   DateTime? @map("deleted_at")
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  // Полиморфная цель комментария (как у Like): character | short.
+  targetType String    @map("target_type")
+  targetId   String    @map("target_id") @db.Uuid
+  content    String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([characterId, deletedAt])
+  @@index([targetType, targetId, deletedAt])
   @@index([userId])
   @@map("comments")
 }
@@ -486,16 +511,21 @@ model Comment {
 model Report {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
-  characterId String   @map("character_id") @db.Uuid
+  // characterId сохранён для админ-фильтра/связи по персонажам (nullable для
+  // жалоб на shorts). Полиморфная цель — targetType/targetId (character | short).
+  characterId String?  @map("character_id") @db.Uuid
+  targetType  String   @default("character") @map("target_type")
+  targetId    String?  @map("target_id") @db.Uuid
   reasons     String[] @default([])
   details     String?
   status      String   @default("open") // open | resolved
   createdAt   DateTime @default(now()) @map("created_at")
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@index([characterId])
+  @@index([targetType, targetId])
   @@index([userId])
   @@index([createdAt])
   @@map("reports")

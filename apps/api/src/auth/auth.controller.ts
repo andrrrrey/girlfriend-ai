@@ -65,7 +65,7 @@ export class AuthController {
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip;
     const ok = await this.turnstile.verify(dto.turnstileToken, ip);
     if (!ok) throw new UnauthorizedException("Captcha verification failed");
-    return this.authService.register(dto.email, dto.password);
+    return this.authService.register(dto.email, dto.password, dto.isAdult);
   }
 
   /**

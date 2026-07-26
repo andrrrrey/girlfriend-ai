@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Подтверждение 18+: null = не отвечено, true/false = ответ пользователя.
+  const [isAdult, setIsAdult] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,12 +32,17 @@ export default function RegisterPage() {
   const handleTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(undefined), []);
 
-  const canSubmit = !turnstileSiteKey || !!turnstileToken;
+  const canSubmit = (!turnstileSiteKey || !!turnstileToken) && isAdult !== null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if (isAdult === null) {
+      setError(t("auth.ageRequired"));
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError(t("auth.passwordsNoMatch"));
@@ -49,7 +56,7 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
-      const result = await register(email, password, turnstileToken);
+      const result = await register(email, password, turnstileToken, isAdult);
       if (result && (result as any).message) {
         setSuccess(t("auth.confirmEmailSent", { email }));
       } else {
@@ -117,6 +124,33 @@ export default function RegisterPage() {
               style={inputStyle("confirmPassword")}
               placeholder={t("auth.repeatPassword")}
             />
+
+            <label style={styles.label}>{t("auth.ageQuestion")}</label>
+            <div style={styles.ageRow}>
+              <button
+                type="button"
+                onClick={() => setIsAdult(true)}
+                style={{
+                  ...styles.ageBtn,
+                  ...(isAdult === true ? styles.ageBtnActive : {}),
+                }}
+              >
+                {t("auth.ageYes")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAdult(false)}
+                style={{
+                  ...styles.ageBtn,
+                  ...(isAdult === false ? styles.ageBtnActive : {}),
+                }}
+              >
+                {t("auth.ageNo")}
+              </button>
+            </div>
+            {isAdult === false && (
+              <div style={styles.ageNote}>{t("auth.ageSfwNote")}</div>
+            )}
 
             {turnstileSiteKey && (
               <TurnstileWidget
@@ -235,4 +269,31 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center" as const,
   },
   link: { color: "#f95bad", textDecoration: "none" },
+  ageRow: {
+    display: "flex",
+    gap: 10,
+  },
+  ageBtn: {
+    flex: 1,
+    background: "#111",
+    border: "1px solid #313131",
+    borderRadius: 8,
+    padding: "12px 15px",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "border-color 0.15s ease, background 0.15s ease",
+  },
+  ageBtnActive: {
+    borderColor: "#f95bad",
+    background: "rgba(249,91,173,0.12)",
+    boxShadow: "0 0 0 2px rgba(249,91,173,0.15)",
+  },
+  ageNote: {
+    marginTop: 10,
+    color: "#f9a03f",
+    fontSize: 12,
+    lineHeight: 1.4,
+  },
 };

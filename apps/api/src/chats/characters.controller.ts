@@ -60,8 +60,14 @@ export class CharactersController {
     @Query("tags") tags?: string,
     @Query("page") page?: string,
     @Query("limit") limit?: string,
+    @Query("mode") mode?: string,
   ) {
     const where: Prisma.CharacterWhereInput = { deletedAt: null };
+
+    // В SFW-режиме показываем только безопасных персонажей (nsfw=false).
+    if (mode === "sfw") {
+      where.nsfw = false;
+    }
 
     if (search) {
       where.name = { contains: search, mode: "insensitive" };
@@ -190,8 +196,10 @@ export class CharactersController {
    * и уходит в конец списка автоматически (т.к. перестаёт попадать в окно).
    */
   @Get("stories")
-  async getStories(@Query("limit") limit?: string) {
+  async getStories(@Query("limit") limit?: string, @Query("mode") mode?: string) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // В SFW-режиме показываем только безопасных персонажей (nsfw=false).
+    const nsfwFilter: Prisma.CharacterWhereInput = mode === "sfw" ? { nsfw: false } : {};
 
     // Картинки за последние 24 часа с привязкой к персонажу — из двух источников:
     // 1) чаты (Message type="image"), 2) раздел «Генерация» (AiJob с characterId).
@@ -242,7 +250,7 @@ export class CharactersController {
     const [activeRaw, restRaw] = await Promise.all([
       activeIds.length
         ? this.prisma.character.findMany({
-            where: { id: { in: activeIds }, deletedAt: null, avatarUrl: { not: null } },
+            where: { id: { in: activeIds }, deletedAt: null, avatarUrl: { not: null }, ...nsfwFilter },
             select: { id: true, name: true, avatarUrl: true },
           })
         : Promise.resolve([]),
@@ -250,6 +258,7 @@ export class CharactersController {
         where: {
           deletedAt: null,
           avatarUrl: { not: null },
+          ...nsfwFilter,
           ...(activeIds.length ? { id: { notIn: activeIds } } : {}),
         },
         select: { id: true, name: true, avatarUrl: true },
@@ -491,6 +500,10 @@ export class CharactersController {
 
     // Создание делегируем общему сервису (тот же пайплайн использует автогенерация
     // в админке). Владелец — текущий пользователь.
-    return this.charactersService.createFromDto(rawDto, { createdBy: req.user.id });
+    return this.charactersService.createFromDto(rawDto, {
+      createdBy: req.user.id,
+      // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
+      contentMode: req.user.isAdult === false ? "sfw" : rawDto.contentMode,
+    });
   }
 }

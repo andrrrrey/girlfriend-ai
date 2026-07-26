@@ -69,6 +69,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: true,           // Нужен для RolesGuard (проверка admin-роли)
         subscription: true,   // Нужен для DemoService (проверка лимитов)
         lang: true,
+        contentMode: true,    // Режим контента для серверной фильтрации фидов
+        isAdult: true,
         // passwordHash и другие чувствительные поля — НЕ выбираем
       },
     });

@@ -129,9 +129,10 @@ interface OptForm {
   imageThumbKey: string;
   imageFullKey: string;
   previewUrl: string;
+  nsfw: boolean;
 }
 const emptyCatForm: CatForm = { name: "" };
-const emptyOptForm: OptForm = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "" };
+const emptyOptForm: OptForm = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", nsfw: true };
 
 export default function AdminSceneOptionsPage() {
   const { user, loading } = useAuth();
@@ -246,6 +247,7 @@ export default function AdminSceneOptionsPage() {
       imageThumbKey: opt.imageThumbKey ?? "",
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
+      nsfw: opt.nsfw ?? true,
     });
     setShowOptForm(opt.categoryId);
     setOptError("");
@@ -263,6 +265,7 @@ export default function AdminSceneOptionsPage() {
         prompt: optForm.prompt.trim() || undefined,
         imageThumbKey: optForm.imageThumbKey || undefined,
         imageFullKey: optForm.imageFullKey || undefined,
+        nsfw: optForm.nsfw,
       };
       if (editingOpt) {
         await admin.updateSceneOption(editingOpt.id, data);
@@ -401,6 +404,10 @@ export default function AdminSceneOptionsPage() {
                           value={optForm.prompt}
                           onChange={(e) => setOptForm({ ...optForm, prompt: e.target.value })}
                         />
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
+                          <input type="checkbox" checked={optForm.nsfw} onChange={(e) => setOptForm({ ...optForm, nsfw: e.target.checked })} />
+                          NSFW (скрывать в SFW-режиме)
+                        </label>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <input
                             type="file"

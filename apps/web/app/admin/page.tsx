@@ -55,6 +55,7 @@ const SETTING_GROUPS = [
     subtitle: "Глобальный шаблон системного промпта для всех AI-персонажей",
     keys: [
       { key: "GLOBAL_SYSTEM_PROMPT_TEMPLATE", label: "Глобальный шаблон промпта (добавляется перед промптом каждого персонажа)", type: "textarea" },
+      { key: "SFW_SYSTEM_PROMPT_TEMPLATE", label: "Шаблон системного промпта для SFW-режима (если пусто — используется глобальный)", type: "textarea" },
       { key: "DEFAULT_STT_LANGUAGE", label: "Язык STT по умолчанию (en, ru, etc.)", type: "text" },
     ],
   },
@@ -64,6 +65,8 @@ const SETTING_GROUPS = [
     keys: [
       { key: "NSFW_PROMPT_TAGS", label: "Глобальные NSFW / quality-теги (добавляются к позитивному промпту). По умолчанию: nsfw, explicit, masterpiece, best quality, highres", type: "textarea" },
       { key: "NEGATIVE_PROMPT", label: "Обязательный негативный промпт — защита от артефактов (лишние пальцы/руки, лишние люди, кривая анатомия и т.п.). Мерджится с пользовательским.", type: "textarea" },
+      { key: "SFW_PROMPT_TAGS", label: "SFW-теги (в режиме SFW добавляются вместо NSFW). По умолчанию: sfw, safe for work, wholesome, fully clothed, ...", type: "textarea" },
+      { key: "SFW_NEGATIVE_PROMPT", label: "SFW негативный промпт — исключает откровенный контент (в режиме SFW вместо обычного негатива).", type: "textarea" },
     ],
   },
 ];

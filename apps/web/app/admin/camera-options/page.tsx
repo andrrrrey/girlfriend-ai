@@ -112,9 +112,10 @@ interface FormState {
   imageFullKey: string;
   previewUrl: string;
   order: string;
+  nsfw: boolean;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", order: "0" };
+const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", order: "0", nsfw: true };
 
 export default function AdminCameraOptionsPage() {
   const { user, loading } = useAuth();
@@ -161,6 +162,7 @@ export default function AdminCameraOptionsPage() {
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
       order: String(opt.order),
+      nsfw: opt.nsfw ?? true,
     });
     setShowForm(true);
     setError("");
@@ -178,6 +180,7 @@ export default function AdminCameraOptionsPage() {
         imageThumbKey: form.imageThumbKey || undefined,
         imageFullKey: form.imageFullKey || undefined,
         order: parseInt(form.order) || 0,
+        nsfw: form.nsfw,
       };
       if (editing) {
         await admin.updateCameraOption(editing.id, data);
@@ -287,6 +290,10 @@ export default function AdminCameraOptionsPage() {
               value={form.prompt}
               onChange={(e) => setForm({ ...form, prompt: e.target.value })}
             />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.nsfw} onChange={(e) => setForm({ ...form, nsfw: e.target.checked })} />
+              NSFW (скрывать в SFW-режиме)
+            </label>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
                 type="file"

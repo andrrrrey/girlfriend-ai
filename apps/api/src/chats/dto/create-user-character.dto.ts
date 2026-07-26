@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -152,4 +153,10 @@ export class CreateUserCharacterDto {
   @IsOptional()
   @IsString()
   avatarModel?: string;
+
+  /** Режим контента при создании: "nsfw" | "sfw". Определяет флаг nsfw персонажа. */
+  @IsOptional()
+  @IsString()
+  @IsIn(["nsfw", "sfw"])
+  contentMode?: "nsfw" | "sfw";
 }

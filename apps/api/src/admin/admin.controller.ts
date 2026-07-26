@@ -608,4 +608,22 @@ export class AdminController {
       offset: offset ? parseInt(offset, 10) : 0,
     });
   }
+
+  // ─── Engagement (накрутка лайков + автокомментарии) ─────────
+
+  /** Устанавливает надбавку лайков для персонажа или шорта. */
+  @Post("engagement/boost-likes")
+  async setBoostLikes(
+    @Body() dto: { targetType: string; targetId: string; boostLikes: number },
+  ) {
+    return this.adminService.setBoostLikes(dto.targetType, dto.targetId, dto.boostLikes);
+  }
+
+  /** Генерирует N автокомментариев (бот-юзеры) к персонажу или шорту. */
+  @Post("engagement/comments")
+  async generateComments(
+    @Body() dto: { targetType: string; targetId: string; count: number },
+  ) {
+    return this.adminService.generateComments(dto.targetType, dto.targetId, dto.count);
+  }
 }

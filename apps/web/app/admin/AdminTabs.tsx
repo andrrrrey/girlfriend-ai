@@ -13,6 +13,7 @@ export type AdminTab =
   | "costs"
   | "blog"
   | "voices"
+  | "engagement"
   | "autogen";
 
 const TABS: { id: AdminTab; label: string; href: string }[] = [
@@ -26,6 +27,7 @@ const TABS: { id: AdminTab; label: string; href: string }[] = [
   { id: "costs", label: "Расходы", href: "/admin/costs" },
   { id: "blog", label: "Записи блога", href: "/admin/blog" },
   { id: "voices", label: "Голоса", href: "/admin/voices" },
+  { id: "engagement", label: "Вовлечённость", href: "/admin/engagement" },
 ];
 
 /**

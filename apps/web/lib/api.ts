@@ -225,10 +225,10 @@ export const auth = {
    * @param {string} password - Пароль (минимум 6 символов)
    * @returns {Promise<TokenPair>} Пара токенов доступа
    */
-  async register(email: string, password: string, turnstileToken?: string): Promise<{ message: string }> {
+  async register(email: string, password: string, turnstileToken?: string, isAdult?: boolean): Promise<{ message: string }> {
     return apiFetch<{ message: string }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, turnstileToken }),
+      body: JSON.stringify({ email, password, turnstileToken, isAdult }),
     });
   },
 
@@ -293,6 +293,20 @@ export const auth = {
   },
 };
 
+/**
+ * Текущий режим контента из localStorage ("nsfw" | "sfw"). Единый источник для
+ * клиентских запросов фидов и генерации, чтобы не прокидывать режим через все
+ * вызовы. По умолчанию "nsfw" (в т.ч. на сервере, где localStorage недоступен).
+ */
+export function getClientContentMode(): "nsfw" | "sfw" {
+  if (typeof window === "undefined") return "nsfw";
+  try {
+    return localStorage.getItem("contentMode") === "sfw" ? "sfw" : "nsfw";
+  } catch {
+    return "nsfw";
+  }
+}
+
 // ─── Users API ────────────────────────────────────────────────
 
 /**
@@ -307,6 +321,8 @@ export interface UserProfile {
   role: string;           // "user" | "admin"
   subscription: string;  // "free" | "premium" | ...
   lang: string;          // "en" | "ru"
+  contentMode: string;   // "nsfw" | "sfw"
+  isAdult: boolean;      // подтверждение 18+ при регистрации
   createdAt: string;     // ISO 8601
   socialLinks: { provider: string; url: string }[];
 }
@@ -338,7 +354,7 @@ export const users = {
    * @param data - Поля для обновления: nickname, avatarUrl, lang, aboutMe
    */
   async updateProfile(
-    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe">>,
+    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe" | "contentMode">>,
   ): Promise<UserProfile> {
     return apiFetch<UserProfile>("/users/me", {
       method: "PATCH",
@@ -427,6 +443,7 @@ export interface CharacterOption {
   imageFullUrl?: string | null;
   order: number;
   generationStyle?: string | null;
+  nsfw: boolean;
   createdAt: string;
 }
 
@@ -487,6 +504,7 @@ export interface AppearanceOption {
   imageThumbUrl?: string | null;
   imageFullUrl?: string | null;
   order: number;
+  nsfw: boolean;
   createdAt: string;
 }
 
@@ -521,6 +539,7 @@ export interface PoseOption {
   imageThumbUrl?: string | null;
   imageFullUrl?: string | null;
   order: number;
+  nsfw: boolean;
   createdAt: string;
 }
 
@@ -555,6 +574,7 @@ export interface SceneOption {
   imageThumbUrl?: string | null;
   imageFullUrl?: string | null;
   order: number;
+  nsfw: boolean;
   createdAt: string;
 }
 
@@ -588,6 +608,7 @@ export interface CameraOption {
   imageThumbUrl?: string | null;
   imageFullUrl?: string | null;
   order: number;
+  nsfw: boolean;
   createdAt: string;
 }
 
@@ -974,14 +995,14 @@ export const admin = {
     return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
   },
 
-  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
+  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>("/admin/character-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1020,14 +1041,14 @@ export const admin = {
     return apiFetch<AppearanceOption[]>(`/admin/appearance-options${q}`);
   },
 
-  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<AppearanceOption> {
+  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>("/admin/appearance-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<AppearanceOption> {
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1066,14 +1087,14 @@ export const admin = {
     return apiFetch<PoseOption[]>(`/admin/pose-options${q}`);
   },
 
-  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<PoseOption> {
+  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<PoseOption> {
     return apiFetch<PoseOption>("/admin/pose-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<PoseOption> {
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<PoseOption> {
     return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1112,14 +1133,14 @@ export const admin = {
     return apiFetch<SceneOption[]>(`/admin/scene-options${q}`);
   },
 
-  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<SceneOption> {
+  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<SceneOption> {
     return apiFetch<SceneOption>("/admin/scene-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<SceneOption> {
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<SceneOption> {
     return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1135,14 +1156,14 @@ export const admin = {
     return apiFetch<CameraOption[]>(`/admin/camera-options${q}`);
   },
 
-  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<CameraOption> {
+  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<CameraOption> {
     return apiFetch<CameraOption>("/admin/camera-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }): Promise<CameraOption> {
+  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<CameraOption> {
     return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1223,6 +1244,22 @@ export const admin = {
     if (params?.offset != null) qs.set("offset", String(params.offset));
     const q = qs.toString();
     return apiFetch<GenerationCosts>(`/admin/generation-costs${q ? `?${q}` : ""}`);
+  },
+
+  // ─── Engagement (накрутка лайков + автокомментарии) ─────────
+
+  async setBoostLikes(targetType: "character" | "short", targetId: string, boostLikes: number): Promise<{ targetType: string; targetId: string; boostLikes: number }> {
+    return apiFetch("/admin/engagement/boost-likes", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, boostLikes }),
+    });
+  },
+
+  async generateComments(targetType: "character" | "short", targetId: string, count: number): Promise<{ created: number; requested: number }> {
+    return apiFetch("/admin/engagement/comments", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, count }),
+    });
   },
 };
 
@@ -1488,6 +1525,8 @@ export interface CreateCharacterFormData {
   avatarSeed?: number;
   /** Чекпоинт показанного аватара (Civitai AIR) — чтобы генерация шла на той же модели. */
   avatarModel?: string;
+  /** Режим контента при создании: "nsfw" | "sfw". */
+  contentMode?: "nsfw" | "sfw";
 }
 
 export const characters = {
@@ -1512,6 +1551,7 @@ export const characters = {
     if (params?.tags?.length) query.set("tags", params.tags.join(","));
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
+    if (getClientContentMode() === "sfw") query.set("mode", "sfw");
     const qs = query.toString();
     return apiFetch<{ items: Character[]; total: number }>(`/characters${qs ? `?${qs}` : ""}`);
   },
@@ -1529,7 +1569,8 @@ export const characters = {
   },
 
   async getStories(): Promise<{ items: StoryCharacter[] }> {
-    return apiFetch<{ items: StoryCharacter[] }>("/characters/stories");
+    const qs = getClientContentMode() === "sfw" ? "?mode=sfw" : "";
+    return apiFetch<{ items: StoryCharacter[] }>(`/characters/stories${qs}`);
   },
 
   async getStory(id: string): Promise<{
@@ -1632,14 +1673,50 @@ export const comments = {
   async getCount(characterId: string): Promise<{ count: number }> {
     return apiFetch<{ count: number }>(`/comments/count?characterId=${characterId}`);
   },
+
+  // ─── Полиморфные варианты (targetType: "character" | "short") ───
+
+  async listFor(
+    targetType: "character" | "short",
+    targetId: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<{ items: CommentItem[]; nextCursor: string | null }> {
+    const query = new URLSearchParams({ targetType, targetId, limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    return apiFetch<{ items: CommentItem[]; nextCursor: string | null }>(
+      `/comments?${query.toString()}`,
+    );
+  },
+
+  async createFor(
+    targetType: "character" | "short",
+    targetId: string,
+    content: string,
+  ): Promise<CommentItem> {
+    return apiFetch<CommentItem>("/comments", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, content }),
+    });
+  },
+
+  async getCountFor(targetType: "character" | "short", targetId: string): Promise<{ count: number }> {
+    const query = new URLSearchParams({ targetType, targetId });
+    return apiFetch<{ count: number }>(`/comments/count?${query.toString()}`);
+  },
 };
 
 // ─── Reports (жалобы на персонажей) ──────────────────────────
 
 export const reports = {
-  /** Отправляет жалобу на персонажа (POST /reports). Требует авторизации. */
+  /**
+   * Отправляет жалобу (POST /reports). Требует авторизации.
+   * Цель: персонаж (characterId) либо полиморфная (targetType/targetId — short).
+   */
   async create(data: {
-    characterId: string;
+    characterId?: string;
+    targetType?: "character" | "short";
+    targetId?: string;
     reasons: string[];
     details?: string;
   }): Promise<{ id: string }> {
@@ -2010,6 +2087,7 @@ export async function createImageJob(data: {
   initImageUrl?: string;
   characterId?: string;
   seed?: number;
+  contentMode?: "nsfw" | "sfw";
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",
@@ -2084,6 +2162,7 @@ export async function createVideoJob(data: {
   initVideoKey?: string;
   count?: number;
   seed?: number;
+  contentMode?: "nsfw" | "sfw";
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/video", {
     method: "POST",
@@ -2142,6 +2221,7 @@ export async function getPublicGallery(params?: {
   if (params?.userId) query.set("userId", params.userId);
   if (params?.gender) query.set("gender", params.gender);
   if (params?.style) query.set("style", params.style);
+  if (getClientContentMode() === "sfw") query.set("mode", "sfw");
   const qs = query.toString();
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
 }
@@ -2155,6 +2235,7 @@ export async function getPublicShorts(params?: {
   if (params?.sortBy) query.set("sortBy", params.sortBy);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
+  if (getClientContentMode() === "sfw") query.set("mode", "sfw");
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery?${query.toString()}`);
 }
 

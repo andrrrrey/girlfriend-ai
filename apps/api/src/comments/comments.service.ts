@@ -6,13 +6,14 @@ export class CommentsService {
   constructor(private prisma: PrismaService) {}
 
   async list(
-    characterId: string,
+    targetType: string,
+    targetId: string,
     cursor?: string,
     limit: number = 20,
     userId?: string,
   ) {
     const comments = await this.prisma.comment.findMany({
-      where: { characterId, deletedAt: null },
+      where: { targetType, targetId, deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -62,9 +63,9 @@ export class CommentsService {
     return { items: enriched, nextCursor };
   }
 
-  async create(userId: string, characterId: string, content: string) {
+  async create(userId: string, targetType: string, targetId: string, content: string) {
     const comment = await this.prisma.comment.create({
-      data: { userId, characterId, content },
+      data: { userId, targetType, targetId, content },
       include: {
         user: {
           select: { id: true, nickname: true, avatarUrl: true },
@@ -97,9 +98,9 @@ export class CommentsService {
     });
   }
 
-  async getCount(characterId: string): Promise<{ count: number }> {
+  async getCount(targetType: string, targetId: string): Promise<{ count: number }> {
     const count = await this.prisma.comment.count({
-      where: { characterId, deletedAt: null },
+      where: { targetType, targetId, deletedAt: null },
     });
     return { count };
   }

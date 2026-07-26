@@ -54,6 +54,7 @@ export class AuthService {
   async register(
     email: string,
     password: string,
+    isAdult?: boolean,
   ): Promise<{ message: string }> {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -67,6 +68,8 @@ export class AuthService {
       verificationTokenExpiresAt.getHours() + VERIFICATION_TOKEN_TTL_HOURS,
     );
 
+    // Несовершеннолетним (isAdult === false) форсим SFW-режим по умолчанию.
+    const adult = isAdult !== false;
     await this.prisma.user.create({
       data: {
         email,
@@ -74,6 +77,8 @@ export class AuthService {
         verificationToken,
         verificationTokenExpiresAt,
         emailVerified: false,
+        isAdult: adult,
+        contentMode: adult ? "nsfw" : "sfw",
       },
     });
 

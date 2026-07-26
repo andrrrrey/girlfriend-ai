@@ -2,10 +2,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/auth";
-import { getPublicShorts, likes, resizedMediaUrl } from "../../lib/api";
+import { getPublicShorts, likes, comments as commentsApi, resizedMediaUrl } from "../../lib/api";
 import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import LikeButton from "../components/LikeButton";
+import ShareModal from "../components/ShareModal";
+import ReportModal from "../components/ReportModal";
+import ShortsCommentsModal from "../components/ShortsCommentsModal";
 import { useT } from "../../context/language";
 
 const PAGE_CSS = `
@@ -104,11 +107,30 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
   // Монтируем <video src> только когда карточка близко к вьюпорту. Иначе браузер
   // начинает качать сразу все видео ленты.
   const [shouldLoad, setShouldLoad] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
 
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
   const creatorName = item.user?.nickname || t("shorts.aiGenerated");
   const creatorAvatar = item.user?.avatarUrl;
+
+  // Ссылка для шеринга шорта (аналогично главной/галерее).
+  const shareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/shorts?job=${item.jobId}`
+    : "";
+
+  // Подгружаем количество комментариев для счётчика под иконкой.
+  useEffect(() => {
+    let alive = true;
+    commentsApi.getCountFor("short", item.jobId)
+      .then((r) => { if (alive) setCommentCount(r.count); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [item.jobId]);
 
   // Грузим/выгружаем видео в пределах ~2 экранов от вьюпорта. Выгрузка безопасна:
   // ответы /media/stream кешируются service worker'ом, поэтому скролл назад дешёвый.
@@ -171,27 +193,41 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
           </div>
 
           <div className="shorts-btn-group">
-            <button className="shorts-btn">
+            <button className="shorts-btn" onClick={() => setShowComments(true)} aria-label="Comments">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             </button>
-            <span className="shorts-btn-label">0</span>
+            <span className="shorts-btn-label">{commentCount ?? 0}</span>
           </div>
 
           <div className="shorts-btn-group">
-            <button className="shorts-btn" onClick={() => {
-              if (url && navigator.share) navigator.share({ url }).catch(() => {});
-            }}>
+            <button className="shorts-btn" onClick={() => setShowShare(true)} aria-label="Share">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
           </div>
 
-          <div className="shorts-btn-group">
-            <button className="shorts-btn">
+          <div className="shorts-btn-group" style={{ position: "relative" }}>
+            <button className="shorts-btn" onClick={() => setShowMenu((v) => !v)} aria-label="More">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
             </button>
+            {showMenu && (
+              <div style={{ position: "absolute", right: 44, bottom: 0, background: "#1e1e2e", border: "1px solid #313150", borderRadius: 8, padding: 4, zIndex: 50 }}>
+                <button
+                  style={{ background: "transparent", border: "none", color: "#e36466", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}
+                  onClick={() => { setShowMenu(false); setShowReport(true); }}
+                >
+                  {t("home.report")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {showComments && (
+        <ShortsCommentsModal jobId={item.jobId} onClose={() => setShowComments(false)} onCountChange={setCommentCount} />
+      )}
+      {showShare && <ShareModal url={shareUrl} onClose={() => setShowShare(false)} />}
+      {showReport && <ReportModal targetType="short" targetId={item.jobId} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

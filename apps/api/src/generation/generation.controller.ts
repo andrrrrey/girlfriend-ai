@@ -43,6 +43,8 @@ export class GenerationController {
       initImageUrl: dto.initImageUrl,
       characterId: dto.characterId,
       seed: dto.seed,
+      // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
+      contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
     });
   }
 
@@ -70,6 +72,8 @@ export class GenerationController {
       initVideoKey: dto.initVideoKey,
       count: dto.count,
       seed: dto.seed,
+      // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
+      contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
     });
   }
 
@@ -102,36 +106,46 @@ export class GenerationController {
   @Get("character-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async getCharacterOptions(@Query("category") category?: string) {
-    return this.generationService.getCharacterOptions(category);
+  async getCharacterOptions(@Req() req: any, @Query("category") category?: string, @Query("mode") mode?: string) {
+    return this.generationService.getCharacterOptions(category, this.effectiveMode(req, mode));
   }
 
   @Get("appearance-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async getAppearanceOptions() {
-    return this.generationService.getAppearanceOptions();
+  async getAppearanceOptions(@Req() req: any, @Query("mode") mode?: string) {
+    return this.generationService.getAppearanceOptions(this.effectiveMode(req, mode));
   }
 
   @Get("pose-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async getPoseOptions() {
-    return this.generationService.getPoseOptions();
+  async getPoseOptions(@Req() req: any, @Query("mode") mode?: string) {
+    return this.generationService.getPoseOptions(this.effectiveMode(req, mode));
   }
 
   @Get("scene-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async getSceneOptions() {
-    return this.generationService.getSceneOptions();
+  async getSceneOptions(@Req() req: any, @Query("mode") mode?: string) {
+    return this.generationService.getSceneOptions(this.effectiveMode(req, mode));
   }
 
   @Get("camera-options")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async getCameraOptions() {
-    return this.generationService.getCameraOptions();
+  async getCameraOptions(@Req() req: any, @Query("mode") mode?: string) {
+    return this.generationService.getCameraOptions(this.effectiveMode(req, mode));
+  }
+
+  /**
+   * Эффективный режим контента для пикеров: несовершеннолетним всегда "sfw",
+   * иначе — значение из query (?mode=sfw), иначе профильный режим пользователя.
+   */
+  private effectiveMode(req: any, mode?: string): string | undefined {
+    if (req?.user?.isAdult === false) return "sfw";
+    if (mode === "sfw" || mode === "nsfw") return mode;
+    return req?.user?.contentMode;
   }
 
   @Get("video/styles")
@@ -150,6 +164,7 @@ export class GenerationController {
     @Query("userId") userId?: string,
     @Query("gender") gender?: string,
     @Query("style") style?: string,
+    @Query("mode") mode?: string,
   ) {
     return this.generationService.getGallery(
       limit ? parseInt(limit, 10) : 50,
@@ -159,6 +174,7 @@ export class GenerationController {
       userId,
       gender,
       style,
+      mode,
     );
   }
 

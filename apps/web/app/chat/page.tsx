@@ -28,8 +28,10 @@ import ChatPoseModal from "../components/ChatPoseModal";
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
+import { showBrowserNotification } from "../../lib/browserNotify";
 import { formatTags } from "../../lib/tags";
-import { toEnglishTag } from "../../lib/optionLabel";
+import { toEnglishTag, localizeOption } from "../../lib/optionLabel";
 import { buildCharacterImagePrompt } from "../../lib/prompt";
 
 const DEMO_MESSAGE_LIMIT = 20;
@@ -37,6 +39,7 @@ const DEMO_MESSAGE_LIMIT = 20;
 function ChatPageInner() {
   const { user, loading } = useAuth();
   const { t, lang } = useT();
+  const { mode: activeContentMode } = useContentMode();
   const router = useRouter();
   const { startGeneration, notifications, activeJobs } = useGeneration();
   const isDemo = !user || user.subscription === "free";
@@ -319,6 +322,14 @@ function ChatPageInner() {
         loadChats();
         setStreamContent("");
         chatInputRef.current?.focus();
+        // Браузерное уведомление о новом сообщении — только если вкладка не в
+        // фокусе (иначе пользователь и так видит ответ).
+        if (typeof document !== "undefined" && document.hidden) {
+          showBrowserNotification(
+            activeChatData?.character?.name || t("chat.chatFallback"),
+            { body: t("notif.newMessage"), tag: `chat-${activeChat}`, url: `/chat?sessionId=${activeChat}` },
+          );
+        }
       },
       (err, code, body) => {
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
@@ -722,6 +733,7 @@ function ChatPageInner() {
         ...(charModel ? { model: charModel } : {}),
         provider: "civitai",
         generationStyle: charStyle,
+        contentMode: activeContentMode,
       };
       const { jobId } = await createImageJob(jobPayload);
 
@@ -1438,7 +1450,7 @@ function ChatPageInner() {
                 <div className="info-card-text">
                   <div className="info-card-label">{t("chat.relationship")}</div>
                   <div className="info-card-value">
-                    {String(activeCharPersonality["relationshipType"] || "—")}
+                    {localizeOption(String(activeCharPersonality["relationshipType"]), lang) || "—"}
                   </div>
                 </div>
               </div>
@@ -1451,7 +1463,9 @@ function ChatPageInner() {
                 <div className="info-card-text">
                   <div className="info-card-label">{t("chat.personality")}</div>
                   <div className="info-card-value">
-                    {String(activeCharPersonality["personality"] || "—")}
+                    {(Array.isArray(activeCharPersonality["personality"])
+                      ? (activeCharPersonality["personality"] as string[]).map((x) => localizeOption(String(x), lang)).join(", ")
+                      : localizeOption(String(activeCharPersonality["personality"]), lang)) || "—"}
                   </div>
                 </div>
               </div>

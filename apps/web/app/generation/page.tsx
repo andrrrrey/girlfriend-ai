@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
@@ -975,6 +976,7 @@ const GALLERY_TAG_STOP_WORDS = new Set([
 function GenerationPageInner() {
   const { user, loading } = useAuth();
   const { t: tr, lang } = useT();
+  const { mode: activeContentMode } = useContentMode();
   const { activeJobs, canGenerate, startGeneration } = useGeneration();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1476,6 +1478,7 @@ function GenerationPageInner() {
           initImageKey: mode === "img2vid" ? initMediaKey ?? undefined : undefined,
           initVideoKey: mode === "continue" ? initMediaKey ?? undefined : undefined,
           count,
+          contentMode: activeContentMode,
         });
         jobIds = result.jobIds;
       } else if (selectedCharacter) {
@@ -1503,6 +1506,7 @@ function GenerationPageInner() {
           aspectRatio,
           count,
           characterId: selectedCharacter.id,
+          contentMode: activeContentMode,
         });
         jobIds = result.jobIds;
       } else {
@@ -1518,6 +1522,7 @@ function GenerationPageInner() {
           generationStyle: imageProvider === "civitai" ? selectedStyleOption?.generationStyle || undefined : undefined,
           aspectRatio,
           count,
+          contentMode: activeContentMode,
         });
         jobIds = result.jobIds;
       }

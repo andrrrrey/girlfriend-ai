@@ -130,6 +130,8 @@ export interface ImageJobData {
   initImageUrl?: string;
   /** Seed генерации; если задан — прокидывается до провайдера для воспроизводимости. */
   seed?: number;
+  /** Режим контента: "nsfw" | "sfw". Определяет набор промпт-тегов и негатива. */
+  contentMode?: "nsfw" | "sfw";
 }
 
 /**
@@ -159,6 +161,8 @@ export interface VideoJobData {
   initVideoKey?: string;
   /** Seed генерации; если задан — прокидывается до провайдера для воспроизводимости. */
   seed?: number;
+  /** Режим контента: "nsfw" | "sfw". Определяет набор промпт-тегов и негатива. */
+  contentMode?: "nsfw" | "sfw";
 }
 
 /** Объединённый тип payload для всех заданий очереди */

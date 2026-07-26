@@ -348,6 +348,7 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
         userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
           ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
           : undefined,
@@ -465,6 +466,7 @@ export class ChatsController {
       body: JSON.stringify({
         messages: [{ role: "user", content: kickoff }],
         characterId: chat.characterId,
+        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
         userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
           ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
           : undefined,
@@ -634,6 +636,7 @@ export class ChatsController {
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           characterId: chat.characterId,
+          contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
           userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
             ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
             : undefined,
@@ -974,6 +977,7 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
         userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
           ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
           : undefined,
@@ -1104,6 +1108,7 @@ export class ChatsController {
       body: JSON.stringify({
         messages: history.map((m) => ({ role: m.role, content: m.content })),
         characterId: chat.characterId,
+        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
         userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
           ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
           : undefined,

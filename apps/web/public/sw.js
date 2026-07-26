@@ -46,6 +46,30 @@ async function trimCache(cache) {
   }
 }
 
+// Клик по браузерному уведомлению: фокусируем существующую вкладку приложения
+// (или открываем новую). URL можно положить в notification.data.url.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data && event.notification.data.url;
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of clientList) {
+        if ("focus" in client) {
+          await client.focus();
+          if (targetUrl && "navigate" in client) {
+            try { await client.navigate(targetUrl); } catch {}
+          }
+          return;
+        }
+      }
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(targetUrl || "/");
+      }
+    })(),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (!shouldCache(request)) return;

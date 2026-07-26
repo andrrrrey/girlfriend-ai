@@ -50,6 +50,8 @@ export class UsersService {
         role: true,
         subscription: true,
         lang: true,
+        contentMode: true,
+        isAdult: true,
         createdAt: true,
         socialLinks: {
           select: { provider: true, url: true },
@@ -168,7 +170,7 @@ export class UsersService {
    */
   async updateProfile(
     userId: string,
-    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string },
+    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string; contentMode?: string },
   ) {
     if (data.nickname) {
       const conflict = await this.prisma.user.findFirst({
@@ -176,6 +178,17 @@ export class UsersService {
         select: { id: true },
       });
       if (conflict) throw new ConflictException("Nickname is already taken");
+    }
+
+    // Несовершеннолетним запрещено переключаться в NSFW-режим.
+    if (data.contentMode === "nsfw") {
+      const u = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { isAdult: true },
+      });
+      if (!u.isAdult) {
+        throw new BadRequestException("NSFW mode is not available for underage accounts");
+      }
     }
 
     return this.prisma.user.update({
@@ -190,6 +203,8 @@ export class UsersService {
         role: true,
         subscription: true,
         lang: true,
+        contentMode: true,
+        isAdult: true,
       },
     });
   }

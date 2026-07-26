@@ -61,7 +61,7 @@ interface AuthContextValue {
    * Регистрирует нового пользователя: POST /auth/register,
    * сохраняет токены, загружает профиль.
    */
-  register: (email: string, password: string, turnstileToken?: string) => Promise<{ message: string }>;
+  register: (email: string, password: string, turnstileToken?: string, isAdult?: boolean) => Promise<{ message: string }>;
   /**
    * Выполняет выход: инвалидирует refresh token на сервере,
    * очищает localStorage, устанавливает user = null.
@@ -170,8 +170,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Регистрация нового пользователя.
    * Аналогична login — сохраняет токены и загружает профиль.
    */
-  const register = async (email: string, password: string, turnstileToken?: string): Promise<{ message: string }> => {
-    return authApi.register(email, password, turnstileToken);
+  const register = async (email: string, password: string, turnstileToken?: string, isAdult?: boolean): Promise<{ message: string }> => {
+    return authApi.register(email, password, turnstileToken, isAdult);
   };
 
   /**

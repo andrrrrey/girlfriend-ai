@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { getJobStatus } from "../lib/api";
 import { useT } from "./language";
+import { showBrowserNotification } from "../lib/browserNotify";
 
 interface ActiveJob {
   jobId: string;
@@ -130,8 +131,19 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     // Also add to persistent history (only completed and failed)
     if (n.status === "completed" || n.status === "failed") {
       setNotificationHistory((prev) => (prev.some((x) => x.id === notif.id) ? prev : [...prev, notif]));
+      // Браузерное уведомление о завершении генерации (если выдано разрешение).
+      const label = n.source === "character-creation" ? t("notif.character")
+        : n.source === "chat" ? t("notif.chatImage")
+        : n.type === "video" ? t("notif.video") : t("notif.image");
+      const url = n.source === "character-creation" ? "/create"
+        : n.source === "chat" && n.metadata?.chatId ? `/chat?sessionId=${n.metadata.chatId}`
+        : "/gallery";
+      showBrowserNotification(
+        n.status === "completed" ? t("notif.ready", { label }) : t("notif.failed", { label }),
+        { tag: `gen-${notif.jobId}`, url },
+      );
     }
-  }, []);
+  }, [t]);
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));

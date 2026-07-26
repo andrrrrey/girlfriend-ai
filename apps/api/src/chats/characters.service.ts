@@ -35,7 +35,7 @@ export class CharactersService {
    */
   async createFromDto(
     rawDto: CreateUserCharacterDto,
-    opts: { createdBy: string | null },
+    opts: { createdBy: string | null; contentMode?: "nsfw" | "sfw" },
   ) {
     // Гендеры, отключённые админом (ENABLED_GENDERS), нельзя протолкнуть даже
     // прямым API-запросом — приводим к Female (базовый гендер).
@@ -105,6 +105,8 @@ export class CharactersService {
         avatarUrl: dto.avatarUrl,
         voiceId: dto.voiceId ?? null,
         isPublic: true,
+        // Рейтинг персонажа по режиму создания: SFW => nsfw=false (виден в SFW-фидах).
+        nsfw: opts.contentMode !== "sfw",
         createdBy: opts.createdBy,
       },
     });

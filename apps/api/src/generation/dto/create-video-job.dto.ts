@@ -67,4 +67,10 @@ export class CreateVideoJobDto {
   @IsOptional()
   @IsInt()
   seed?: number;
+
+  /** Режим контента: "nsfw" | "sfw". Определяет промпт-теги, негатив и флаг nsfw. */
+  @IsOptional()
+  @IsString()
+  @IsIn(["nsfw", "sfw"])
+  contentMode?: "nsfw" | "sfw";
 }

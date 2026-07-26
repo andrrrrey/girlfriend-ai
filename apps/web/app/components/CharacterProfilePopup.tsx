@@ -8,6 +8,7 @@ import { likes, comments as commentsApi, users, characters as charactersApi, res
 import type { Character, CommentItem, StoryImage } from "../../lib/api";
 import LikeButton from "./LikeButton";
 import { formatTag } from "../../lib/tags";
+import { localizeOption } from "../../lib/optionLabel";
 
 interface Props {
   character: Character | null;
@@ -21,7 +22,16 @@ type Tab = "about" | "gallery" | "comments";
 export default function CharacterProfilePopup({ character, onClose, onLikeChange }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const { t: tr } = useT();
+  const { t: tr, lang } = useT();
+  // Локализует значение personality (строка/массив ключей) в человекочитаемый
+  // вид без подчёркиваний (submissive_partner → Submissive Partner), как на
+  // SEO-странице персонажа. Числа (возраст) остаются как есть.
+  const localizeVal = (v: unknown): string => {
+    if (v == null) return "";
+    if (Array.isArray(v)) return v.map((x) => localizeOption(String(x), lang)).filter(Boolean).join(", ");
+    const s = String(v).trim();
+    return /^\d+$/.test(s) ? s : localizeOption(s, lang);
+  };
   const [tab, setTab] = useState<Tab>("about");
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -98,19 +108,13 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
   const description = (p.description as string) || (p.bio as string) || "";
   const rawTags = (p.tags as string[]) || (p.traits as string[]) || character.tags || [];
 
-  const personalityVal = Array.isArray(p.personality)
-    ? (p.personality as string[]).join(", ")
-    : (p.personalityType as string) || (p.personality as string) || "";
-  const lifestyleVal = Array.isArray(p.lifestyle)
-    ? (p.lifestyle as string[]).join(", ")
-    : (p.lifestyle as string) || "";
-  const relationshipsVal = (p.relationshipType as string) || (p.familyStatus as string) || "";
-  const kinksVal = Array.isArray(p.kinks)
-    ? (p.kinks as string[]).join(", ")
-    : (p.kinks as string) || "";
-  const hobbiesVal = Array.isArray(p.hobbies)
-    ? (p.hobbies as string[]).join(", ")
-    : (p.hobbies as string) || "";
+  const personalityVal = localizeVal(
+    Array.isArray(p.personality) ? p.personality : (p.personalityType ?? p.personality),
+  );
+  const lifestyleVal = localizeVal(p.lifestyle);
+  const relationshipsVal = localizeVal(p.relationshipType ?? p.familyStatus);
+  const kinksVal = localizeVal(p.kinks);
+  const hobbiesVal = localizeVal(p.hobbies);
 
   const handleStartChat = () => {
     if (!user) {

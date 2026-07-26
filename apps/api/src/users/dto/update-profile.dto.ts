@@ -23,4 +23,9 @@ export class UpdateProfileDto {
   @IsString()
   @IsIn(["en", "ru"])
   lang?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(["nsfw", "sfw"])
+  contentMode?: string;
 }

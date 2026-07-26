@@ -6,7 +6,7 @@
  * Неизвестные поля в теле запроса вызовут HTTP 400.
  */
 
-import { IsEmail, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsOptional, IsString, MinLength } from "class-validator";
 
 /**
  * Тело запроса POST /auth/register
@@ -28,4 +28,13 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   turnstileToken?: string;
+
+  /**
+   * Подтверждение возраста 18+ на форме регистрации.
+   * Если false (пользователь указал <18) — режим контента форсится в SFW.
+   * Опционально для обратной совместимости; отсутствие трактуется как 18+.
+   */
+  @IsBoolean()
+  @IsOptional()
+  isAdult?: boolean;
 }

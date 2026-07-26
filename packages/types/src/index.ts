@@ -47,3 +47,21 @@ export const DEFAULT_NEGATIVE_PROMPT = [
   "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
   "(child, kid, toddler, infant, underage, loli, shota:1.5)",
 ].join(", ");
+
+// ─── SFW-режим (безопасный контент) ─────────────────────────────────────────
+// Применяются вместо NSFW-дефолтов, когда пользователь выбрал режим SFW в
+// хедере (или несовершеннолетний). Редактируются в админке через настройки
+// SFW_PROMPT_TAGS / SFW_NEGATIVE_PROMPT.
+
+/** Дефолтные позитивные теги для SFW: безопасный контент + базовое качество. */
+export const DEFAULT_SFW_PROMPT_TAGS =
+  "sfw, safe for work, wholesome, fully clothed, tasteful, masterpiece, best quality, highres";
+
+/**
+ * Дефолтный negative_prompt для SFW: сильное исключение NSFW/сексуального
+ * контента + базовые артефактные негативы и возрастной safety-guard.
+ */
+export const DEFAULT_SFW_NEGATIVE_PROMPT = [
+  "(nsfw, explicit, nude, nudity, naked, topless, bottomless, sexual, sex, porn, hentai, erotic, suggestive, lingerie, underwear, cleavage, exposed breasts, nipples, genitalia:1.5)",
+  DEFAULT_NEGATIVE_PROMPT,
+].join(", ");

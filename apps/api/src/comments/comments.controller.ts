@@ -21,14 +21,20 @@ export class CommentsController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   async list(
-    @Query("characterId") characterId: string,
+    @Query("characterId") characterId?: string,
+    @Query("targetType") targetType?: string,
+    @Query("targetId") targetId?: string,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
     @Req() req?: any,
   ) {
     const userId = req?.user?.id ?? null;
+    // Обратная совместимость: characterId => target character.
+    const tType = targetType || "character";
+    const tId = targetId || characterId || "";
     return this.commentsService.list(
-      characterId,
+      tType,
+      tId,
       cursor,
       limit ? parseInt(limit, 10) : 20,
       userId,
@@ -38,9 +44,12 @@ export class CommentsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Req() req: any, @Body() dto: CreateCommentDto) {
+    const tType = dto.targetType || "character";
+    const tId = dto.targetId || dto.characterId || "";
     return this.commentsService.create(
       req.user.id,
-      dto.characterId,
+      tType,
+      tId,
       dto.content,
     );
   }
@@ -52,7 +61,13 @@ export class CommentsController {
   }
 
   @Get("count")
-  async getCount(@Query("characterId") characterId: string) {
-    return this.commentsService.getCount(characterId);
+  async getCount(
+    @Query("characterId") characterId?: string,
+    @Query("targetType") targetType?: string,
+    @Query("targetId") targetId?: string,
+  ) {
+    const tType = targetType || "character";
+    const tId = targetId || characterId || "";
+    return this.commentsService.getCount(tType, tId);
   }
 }

@@ -13,6 +13,7 @@ import {
 import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
@@ -50,6 +51,10 @@ let avatarGenerated = false;
 let lastAvatarJobId: string | null = null;
 
 let generationContextStartFn: ((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void) | null = null;
+
+// Текущий режим контента (nsfw|sfw) из контекста — мост к module-scope функциям
+// генерации аватара. В SFW аватар генерируется как безопасный контент.
+let activeContentMode: "nsfw" | "sfw" = "nsfw";
 
 let cachedAppearanceOptions: AppearanceOptionsResponse | null = null;
 let cachedPoseOptions: PoseOptionsResponse | null = null;
@@ -1131,7 +1136,7 @@ async function startAvatarGeneration() {
     // активная модель = первая включённая; её провайдер определяет бэкенд.
     await loadImageModels();
     const activeModel = enabledImageModels[0];
-    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt, seed };
+    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt, seed, contentMode: activeContentMode };
     if (activeModel) {
       jobPayload.model = activeModel.id;
       jobPayload.provider = activeModel.provider;
@@ -1392,6 +1397,9 @@ function registerGlobalListeners() {
 export default function CreateCharacterPage() {
   const { user, loading } = useAuth();
   const { t, lang } = useT();
+  const { mode: contentMode } = useContentMode();
+  // Мост режима контента к module-scope функции генерации аватара.
+  useEffect(() => { activeContentMode = contentMode; }, [contentMode]);
   tr = t; // keep the module-level translator in sync for the HTML builders
   currentLang = lang;
   const router = useRouter();
@@ -1646,6 +1654,7 @@ export default function CreateCharacterPage() {
           avatarPrompt: previewImagePrompt ?? undefined,
           avatarSeed: previewImageSeed ?? undefined,
           avatarModel: previewImageModel ?? undefined,
+          contentMode: activeContentMode,
         });
         localStorage.removeItem(DRAFT_LS_KEY);
         const newChat = await chats.create(newChar.id);

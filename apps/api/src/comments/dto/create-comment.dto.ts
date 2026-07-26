@@ -1,8 +1,20 @@
-import { IsString, IsUUID, MinLength, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUUID, MinLength, MaxLength } from "class-validator";
 
 export class CreateCommentDto {
+  /** Легаси-поле: цель-персонаж. Эквивалент targetType="character", targetId=characterId. */
+  @IsOptional()
   @IsUUID()
-  characterId!: string;
+  characterId?: string;
+
+  /** Полиморфная цель: "character" | "short". */
+  @IsOptional()
+  @IsString()
+  @IsIn(["character", "short"])
+  targetType?: string;
+
+  @IsOptional()
+  @IsUUID()
+  targetId?: string;
 
   @IsString()
   @MinLength(1)
