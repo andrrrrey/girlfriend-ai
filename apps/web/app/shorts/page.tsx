@@ -10,6 +10,7 @@ import ShareModal from "../components/ShareModal";
 import ReportModal from "../components/ReportModal";
 import ShortsCommentsModal from "../components/ShortsCommentsModal";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 
 const PAGE_CSS = `
   .shorts-feed-wrapper {
@@ -237,6 +238,7 @@ const SHORTS_PAGE_SIZE = 5;
 export default function ShortsPage() {
   const { user, loading } = useAuth();
   const { t } = useT();
+  const { mode: contentMode } = useContentMode();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -263,7 +265,8 @@ export default function ShortsPage() {
     setPage(1);
     setHasMore(true);
     fetchItems(1, false);
-  }, [loading, fetchItems]);
+    // contentMode: перезагрузка ленты shorts при переключении NSFW/SFW.
+  }, [loading, fetchItems, contentMode]);
 
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;

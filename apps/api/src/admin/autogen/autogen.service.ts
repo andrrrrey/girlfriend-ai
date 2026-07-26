@@ -69,9 +69,10 @@ export class AutogenService implements OnModuleInit {
 
   // ─── Публичный API (используется контроллером) ──────────────────────────────
 
-  async createTask(adminId: string, count: number) {
+  async createTask(adminId: string, count: number, contentMode?: "nsfw" | "sfw") {
+    const mode: "nsfw" | "sfw" = contentMode === "sfw" ? "sfw" : "nsfw";
     const task = await this.prisma.autoGenTask.create({
-      data: { total: count, status: "running", createdBy: adminId },
+      data: { total: count, status: "running", createdBy: adminId, params: { contentMode: mode } },
     });
     void this.runTask(task.id);
     return task;
@@ -149,8 +150,12 @@ export class AutogenService implements OnModuleInit {
           return;
         }
 
+        // Режим контента задачи (из params): SFW-персонажи генерируются без NSFW.
+        const contentMode: "nsfw" | "sfw" =
+          (task.params as { contentMode?: string } | null)?.contentMode === "sfw" ? "sfw" : "nsfw";
+
         try {
-          const characterId = await this.generateOneCharacter(task.createdBy, activeModel, allowedGenders);
+          const characterId = await this.generateOneCharacter(task.createdBy, activeModel, allowedGenders, contentMode);
           await this.prisma.autoGenTask.update({
             where: { id: taskId },
             data: { succeeded: { increment: 1 }, characterIds: { push: characterId } },
@@ -186,6 +191,7 @@ export class AutogenService implements OnModuleInit {
     adminId: string,
     activeModel: { id: string; provider?: string } | undefined,
     allowedGenders?: string[],
+    contentMode: "nsfw" | "sfw" = "nsfw",
   ): Promise<string> {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -195,7 +201,7 @@ export class AutogenService implements OnModuleInit {
         // 1. Аватар — ставим image-job и ждём результат. Сохраняем точный промпт
         // и seed показанного аватара, чтобы генерация картинок этого персонажа
         // (чат/страница генерации) совпадала с его аватаром.
-        const avatar = await this.generateAvatar(adminId, dto, activeModel);
+        const avatar = await this.generateAvatar(adminId, dto, activeModel, contentMode);
         dto.avatarUrl = avatar.url;
         dto.avatarPrompt = avatar.prompt;
         dto.avatarSeed = avatar.seed;
@@ -214,7 +220,7 @@ export class AutogenService implements OnModuleInit {
         }
 
         // 3. Создание персонажа (платформенный, сразу виден на сайте).
-        const character = await this.characters.createFromDto(dto, { createdBy: null });
+        const character = await this.characters.createFromDto(dto, { createdBy: null, contentMode });
         return character.id;
       } catch (err) {
         if (err instanceof BalanceError) throw err;
@@ -237,11 +243,12 @@ export class AutogenService implements OnModuleInit {
     adminId: string,
     dto: ReturnType<typeof buildRandomCharacterDto>,
     activeModel: { id: string; provider?: string } | undefined,
+    contentMode: "nsfw" | "sfw" = "nsfw",
   ): Promise<{ url: string; prompt: string; seed: number; model?: string }> {
     const prompt = buildAvatarPrompt(dto);
     // Фиксируем seed, чтобы аватар был воспроизводим и совпадал с картинками в чате.
     const seed = Math.floor(Math.random() * 2_147_483_647);
-    const payload: Parameters<GenerationService["createImageJob"]>[1] = { prompt, seed };
+    const payload: Parameters<GenerationService["createImageJob"]>[1] = { prompt, seed, contentMode };
     if (activeModel) {
       payload.model = activeModel.id;
       payload.provider = activeModel.provider;

@@ -89,6 +89,12 @@ function ChatPageInner() {
   const [showPoseSelector, setShowPoseSelector] = useState(false);
   const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse | null>(null);
 
+  // «Choose a pose» зависит от режима контента: в SFW скрываются NSFW-позы.
+  // Перезагружаем набор при смене режима (getPoseOptions шлёт mode=sfw в SFW).
+  useEffect(() => {
+    getPoseOptions().then(setPoseOptions).catch(() => {});
+  }, [activeContentMode]);
+
   // Profile gallery carousel state
   const [galleryIndex, setGalleryIndex] = useState(0);
 

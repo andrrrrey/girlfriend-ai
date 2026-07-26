@@ -11,6 +11,7 @@ import { formatTag } from "../../lib/tags";
 import LikeButton from "../components/LikeButton";
 import ShareModal from "../components/ShareModal";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 
 const PAGE_CSS = `
   .gallery-content {
@@ -360,6 +361,7 @@ const PAGE_SIZE = 20;
 export default function GalleryPage() {
   const { user, loading } = useAuth();
   const { t } = useT();
+  const { mode: contentMode } = useContentMode();
   const GENDER_OPTIONS = [
     { value: "", label: t("common.all") },
     { value: "Female", label: t("filter.female") },
@@ -418,7 +420,8 @@ export default function GalleryPage() {
     setPage(1);
     setHasMore(true);
     fetchItems(1, false);
-  }, [loading, activeTab, gender, style, sortBy]);
+    // contentMode: перезагрузка галереи при переключении NSFW/SFW.
+  }, [loading, activeTab, gender, style, sortBy, contentMode]);
 
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;

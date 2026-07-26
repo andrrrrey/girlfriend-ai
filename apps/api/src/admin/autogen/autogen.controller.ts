@@ -20,7 +20,7 @@ export class AutogenController {
   /** Запустить задачу автогенерации на N персонажей. */
   @Post()
   start(@Req() req: any, @Body() dto: StartAutogenDto) {
-    return this.autogen.createTask(req.user.id, dto.count);
+    return this.autogen.createTask(req.user.id, dto.count, dto.contentMode);
   }
 
   /** Список последних задач. */

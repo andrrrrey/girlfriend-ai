@@ -11,6 +11,7 @@ import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
 import { formatTag } from "../lib/tags";
 import { useT } from "../context/language";
+import { useContentMode } from "../context/contentMode";
 import type { TKey } from "../lib/i18n";
 
 type TFn = (key: TKey, vars?: Record<string, string | number>) => string;
@@ -209,6 +210,7 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
 
 export default function HomePage() {
   const { t } = useT();
+  const { mode: contentMode } = useContentMode();
   const GENDER_OPTIONS = [
     { value: "", label: t("home.filterAll") },
     { value: "Female", label: t("home.genderFemale") },
@@ -279,7 +281,9 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchChars({ search: searchQuery, gender, style, sortBy, tags: selectedTags });
-  }, [gender, style, sortBy, selectedTags, fetchChars]);
+    // contentMode в зависимостях: при переключении NSFW/SFW список перезагружается.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gender, style, sortBy, selectedTags, fetchChars, contentMode]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);

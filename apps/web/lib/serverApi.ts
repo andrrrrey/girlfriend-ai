@@ -42,14 +42,16 @@ export async function getCharacterForSeo(id: string): Promise<SeoCharacter | nul
  * Загружает список публичных персонажей для каталога (GET /characters).
  * Без фильтров — просто первые `limit` персонажей (новые первыми).
  */
-export async function listCharactersForSeo(opts?: { limit?: number }): Promise<Character[]> {
+export async function listCharactersForSeo(opts?: { limit?: number; mode?: string }): Promise<Character[]> {
   const limit = opts?.limit ?? 60;
+  // Режим контента (из cookie на сервере): sfw → только SFW, nsfw → только NSFW.
+  const modeQs = opts?.mode === "sfw" || opts?.mode === "nsfw" ? `&mode=${opts.mode}` : "";
   let res: Response;
   try {
     // no-store: каталог рендерится динамически и должен сразу отражать свежие
     // данные (новые персонажи, проставленные slug'и после бэкфилла), а не
     // отдавать закэшированный на час ответ.
-    res = await fetch(`${API_URL}/characters?limit=${limit}`, {
+    res = await fetch(`${API_URL}/characters?limit=${limit}${modeQs}`, {
       cache: "no-store",
     });
   } catch {

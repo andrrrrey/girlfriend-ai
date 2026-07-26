@@ -502,9 +502,12 @@ export class GenerationService {
     if (userId) {
       where["userId"] = userId;
     }
-    // В SFW-режиме показываем только безопасные генерации (nsfw=false).
+    // Режим контента задаёт класс: SFW → только nsfw=false, NSFW → только
+    // nsfw=true; без режима не фильтруем.
     if (mode === "sfw") {
       where["nsfw"] = false;
+    } else if (mode === "nsfw") {
+      where["nsfw"] = true;
     }
 
     const andConditions: Record<string, unknown>[] = [];

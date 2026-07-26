@@ -4,6 +4,7 @@ import {
   getPoseOptions,
   getSceneOptions,
   getCameraOptions,
+  getClientContentMode,
 } from "./api";
 import type {
   CharacterOption,
@@ -49,42 +50,42 @@ function setCache<T>(key: string, data: T): void {
 }
 
 export async function getCachedCharacterOptions(): Promise<CharacterOption[]> {
-  const cached = getCached<CharacterOption[]>("gen:characterOptions");
+  const cached = getCached<CharacterOption[]>(`gen:characterOptions:${getClientContentMode()}`);
   if (cached) return cached;
   const data = await getCharacterOptions();
-  setCache("gen:characterOptions", data);
+  setCache(`gen:characterOptions:${getClientContentMode()}`, data);
   return data;
 }
 
 export async function getCachedAppearanceOptions(): Promise<AppearanceOptionsResponse> {
-  const cached = getCached<AppearanceOptionsResponse>("gen:appearanceOptions");
+  const cached = getCached<AppearanceOptionsResponse>(`gen:appearanceOptions:${getClientContentMode()}`);
   if (cached) return cached;
   const data = await getAppearanceOptions();
-  setCache("gen:appearanceOptions", data);
+  setCache(`gen:appearanceOptions:${getClientContentMode()}`, data);
   return data;
 }
 
 export async function getCachedPoseOptions(): Promise<PoseOptionsResponse> {
-  const cached = getCached<PoseOptionsResponse>("gen:poseOptions");
+  const cached = getCached<PoseOptionsResponse>(`gen:poseOptions:${getClientContentMode()}`);
   if (cached) return cached;
   const data = await getPoseOptions();
-  setCache("gen:poseOptions", data);
+  setCache(`gen:poseOptions:${getClientContentMode()}`, data);
   return data;
 }
 
 export async function getCachedSceneOptions(): Promise<SceneOptionsResponse> {
-  const cached = getCached<SceneOptionsResponse>("gen:sceneOptions");
+  const cached = getCached<SceneOptionsResponse>(`gen:sceneOptions:${getClientContentMode()}`);
   if (cached) return cached;
   const data = await getSceneOptions();
-  setCache("gen:sceneOptions", data);
+  setCache(`gen:sceneOptions:${getClientContentMode()}`, data);
   return data;
 }
 
 export async function getCachedCameraOptions(): Promise<CameraOptionsResponse> {
-  const cached = getCached<CameraOptionsResponse>("gen:cameraOptions");
+  const cached = getCached<CameraOptionsResponse>(`gen:cameraOptions:${getClientContentMode()}`);
   if (cached) return cached;
   const data = await getCameraOptions();
-  setCache("gen:cameraOptions", data);
+  setCache(`gen:cameraOptions:${getClientContentMode()}`, data);
   return data;
 }
 

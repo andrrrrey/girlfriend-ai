@@ -5,6 +5,7 @@ import { characters as charactersApi, resizedMediaUrl } from "../../lib/api";
 import type { StoryCharacter } from "../../lib/api";
 import StoryViewer from "./StoryViewer";
 import { useT } from "../../context/language";
+import { useContentMode } from "../../context/contentMode";
 
 interface Props {
   /** Открыть профиль персонажа без активной истории (reuse CharacterProfilePopup) */
@@ -15,6 +16,7 @@ interface Props {
 
 export default function StoriesRail({ onOpenProfile, onActiveChange }: Props) {
   const { t } = useT();
+  const { mode: contentMode } = useContentMode();
   const [items, setItems] = useState<StoryCharacter[]>([]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -26,7 +28,8 @@ export default function StoriesRail({ onOpenProfile, onActiveChange }: Props) {
       .getStories()
       .then((res) => setItems(res.items || []))
       .catch(() => {});
-  }, []);
+    // Перезагрузка сторис при переключении NSFW/SFW-режима.
+  }, [contentMode]);
 
   const activeStories = items.filter((c) => c.hasActiveStory);
 

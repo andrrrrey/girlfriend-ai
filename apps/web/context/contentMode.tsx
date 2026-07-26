@@ -28,6 +28,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./auth";
 import { users } from "../lib/api";
 
@@ -49,8 +50,17 @@ function isMode(v: unknown): v is ContentMode {
   return v === "nsfw" || v === "sfw";
 }
 
+/** Дублируем режим в cookie, чтобы SSR-страницы (каталог /characters) его читали. */
+function writeModeCookie(mode: ContentMode) {
+  if (typeof document === "undefined") return;
+  try {
+    document.cookie = `contentMode=${mode}; path=/; max-age=31536000; samesite=lax`;
+  } catch {}
+}
+
 export function ContentModeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [mode, setModeState] = useState<ContentMode>("nsfw");
 
   const isAdult = user ? user.isAdult !== false : true;
@@ -59,7 +69,7 @@ export function ContentModeProvider({ children }: { children: React.ReactNode })
   // Отложенное чтение localStorage после гидрации.
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
-    if (isMode(stored)) setModeState(stored);
+    if (isMode(stored)) { setModeState(stored); writeModeCookie(stored); }
   }, []);
 
   // Адаптация под профиль: несовершеннолетним форсим SFW, иначе берём
@@ -69,11 +79,13 @@ export function ContentModeProvider({ children }: { children: React.ReactNode })
     if (user.isAdult === false) {
       setModeState("sfw");
       try { localStorage.setItem(LS_KEY, "sfw"); } catch {}
+      writeModeCookie("sfw");
       return;
     }
     if (isMode(user.contentMode)) {
       setModeState(user.contentMode);
       try { localStorage.setItem(LS_KEY, user.contentMode); } catch {}
+      writeModeCookie(user.contentMode);
     }
   }, [user]);
 
@@ -83,14 +95,18 @@ export function ContentModeProvider({ children }: { children: React.ReactNode })
       if (next === "nsfw" && !canToggle) return;
       setModeState(next);
       try { localStorage.setItem(LS_KEY, next); } catch {}
+      writeModeCookie(next);
       // Синхронизация с бэкендом (fire-and-forget) для залогиненных.
       try {
         if (localStorage.getItem("accessToken")) {
           users.updateProfile({ contentMode: next }).catch(() => {});
         }
       } catch {}
+      // Обновляем серверные компоненты (SSR-каталог /characters), чтобы контент
+      // на открытой странице сразу соответствовал выбранному режиму.
+      try { router.refresh(); } catch {}
     },
-    [canToggle],
+    [canToggle, router],
   );
 
   return (

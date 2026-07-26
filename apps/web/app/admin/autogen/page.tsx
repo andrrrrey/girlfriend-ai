@@ -83,6 +83,7 @@ export default function AdminAutogenPage() {
   const { user, loading } = useAuth();
   const [tasks, setTasks] = useState<AutogenTask[]>([]);
   const [count, setCount] = useState("10");
+  const [genMode, setGenMode] = useState<"nsfw" | "sfw">("nsfw");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -124,7 +125,7 @@ export default function AdminAutogenPage() {
     setBusy(true);
     setError("");
     try {
-      await admin.startAutogen(n);
+      await admin.startAutogen(n, genMode);
       load();
     } catch (err: any) {
       setError(err.message || "Не удалось запустить");
@@ -166,6 +167,17 @@ export default function AdminAutogenPage() {
             value={count}
             onChange={(e) => setCount(e.target.value)}
           />
+        </div>
+        <div>
+          <label style={adminStyles.label}>Режим контента</label>
+          <select
+            style={{ ...adminStyles.input, width: 160 }}
+            value={genMode}
+            onChange={(e) => setGenMode(e.target.value as "nsfw" | "sfw")}
+          >
+            <option value="nsfw">NSFW</option>
+            <option value="sfw">SFW</option>
+          </select>
         </div>
         <button style={adminStyles.button} onClick={start} disabled={busy}>
           {busy ? "Запуск..." : "Запустить"}

@@ -1088,12 +1088,18 @@ function GenerationPageInner() {
       }
     }).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
+  }, [user]);
+
+  // Опции генерации зависят от режима контента: в SFW скрываются NSFW-опции.
+  // Кеш опций разделён по режиму, поэтому перезагрузка при смене режима дешёвая.
+  useEffect(() => {
+    if (!user) return;
     getCachedCharacterOptions().then(setCharacterOptions).catch(() => {});
     getCachedAppearanceOptions().then(setAppearanceOptions).catch(() => {});
     getCachedPoseOptions().then(setPoseOptions).catch(() => {});
     getCachedSceneOptions().then(setSceneOptions).catch(() => {});
     getCachedCameraOptions().then(setCameraOptions).catch(() => {});
-  }, [user]);
+  }, [user, activeContentMode]);
 
   const prevActiveCountRef = useRef(activeJobs.length);
   useEffect(() => {
@@ -1103,13 +1109,14 @@ function GenerationPageInner() {
     prevActiveCountRef.current = activeJobs.length;
   }, [activeJobs.length]);
 
-  // Список публичных персонажей для таба «Choose Character».
+  // Список публичных персонажей для таба «Choose Character». Зависит от режима
+  // контента: в SFW показываются только SFW-персонажи, в NSFW — только NSFW.
   useEffect(() => {
     if (!user) return;
     charactersApi.listPublic({ limit: 100 })
       .then((res) => setAllCharacters(res.items))
       .catch(() => {});
-  }, [user]);
+  }, [user, activeContentMode]);
 
   // Автоподстановка персонажа при переходе с ?characterId= (кнопки Generate).
   useEffect(() => {

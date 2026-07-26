@@ -64,9 +64,12 @@ export class CharactersController {
   ) {
     const where: Prisma.CharacterWhereInput = { deletedAt: null };
 
-    // В SFW-режиме показываем только безопасных персонажей (nsfw=false).
+    // Режим контента задаёт класс контента: SFW → только nsfw=false,
+    // NSFW → только nsfw=true. Без режима (SSR/без параметра) не фильтруем.
     if (mode === "sfw") {
       where.nsfw = false;
+    } else if (mode === "nsfw") {
+      where.nsfw = true;
     }
 
     if (search) {
@@ -198,8 +201,10 @@ export class CharactersController {
   @Get("stories")
   async getStories(@Query("limit") limit?: string, @Query("mode") mode?: string) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    // В SFW-режиме показываем только безопасных персонажей (nsfw=false).
-    const nsfwFilter: Prisma.CharacterWhereInput = mode === "sfw" ? { nsfw: false } : {};
+    // Режим контента задаёт класс контента (см. listPublic): SFW → nsfw=false,
+    // NSFW → nsfw=true, без режима — без фильтра.
+    const nsfwFilter: Prisma.CharacterWhereInput =
+      mode === "sfw" ? { nsfw: false } : mode === "nsfw" ? { nsfw: true } : {};
 
     // Картинки за последние 24 часа с привязкой к персонажу — из двух источников:
     // 1) чаты (Message type="image"), 2) раздел «Генерация» (AiJob с characterId).

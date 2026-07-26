@@ -447,8 +447,13 @@ export interface CharacterOption {
   createdAt: string;
 }
 
+/** Суффикс ?mode=sfw для скрытия NSFW-опций в SFW-режиме (в NSFW показываем все). */
+function optionModeQuery(): string {
+  return getClientContentMode() === "sfw" ? "?mode=sfw" : "";
+}
+
 export async function getCharacterOptions(): Promise<CharacterOption[]> {
-  return apiFetch<CharacterOption[]>("/generation/character-options");
+  return apiFetch<CharacterOption[]>(`/generation/character-options${optionModeQuery()}`);
 }
 
 // ─── Voices (каталог голосов ElevenLabs) ─────────────────────
@@ -523,7 +528,7 @@ export interface AppearanceOptionsResponse {
 }
 
 export async function getAppearanceOptions(): Promise<AppearanceOptionsResponse> {
-  return apiFetch<AppearanceOptionsResponse>("/generation/appearance-options");
+  return apiFetch<AppearanceOptionsResponse>(`/generation/appearance-options${optionModeQuery()}`);
 }
 
 // ─── Pose Options ────────────────────────────────────────────
@@ -558,7 +563,7 @@ export interface PoseOptionsResponse {
 }
 
 export async function getPoseOptions(): Promise<PoseOptionsResponse> {
-  return apiFetch<PoseOptionsResponse>("/generation/pose-options");
+  return apiFetch<PoseOptionsResponse>(`/generation/pose-options${optionModeQuery()}`);
 }
 
 // ─── Scene Options ────────────────────────────────────────────
@@ -592,7 +597,7 @@ export interface SceneOptionsResponse {
 }
 
 export async function getSceneOptions(): Promise<SceneOptionsResponse> {
-  return apiFetch<SceneOptionsResponse>("/generation/scene-options");
+  return apiFetch<SceneOptionsResponse>(`/generation/scene-options${optionModeQuery()}`);
 }
 
 // ─── Camera Options ───────────────────────────────────────────
@@ -618,7 +623,7 @@ export interface CameraOptionsResponse {
 }
 
 export async function getCameraOptions(): Promise<CameraOptionsResponse> {
-  return apiFetch<CameraOptionsResponse>("/generation/camera-options");
+  return apiFetch<CameraOptionsResponse>(`/generation/camera-options${optionModeQuery()}`);
 }
 
 // ─── Admin API ───────────────────────────────────────────────
@@ -872,10 +877,10 @@ export const admin = {
   // ─── Автогенерация персонажей ───────────────────────────────
 
   /** Запускает фоновую автогенерацию N персонажей (POST /admin/autogen). */
-  async startAutogen(count: number): Promise<AutogenTask> {
+  async startAutogen(count: number, contentMode?: "nsfw" | "sfw"): Promise<AutogenTask> {
     return apiFetch<AutogenTask>("/admin/autogen", {
       method: "POST",
-      body: JSON.stringify({ count }),
+      body: JSON.stringify({ count, contentMode }),
     });
   },
 
@@ -1551,7 +1556,7 @@ export const characters = {
     if (params?.tags?.length) query.set("tags", params.tags.join(","));
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
-    if (getClientContentMode() === "sfw") query.set("mode", "sfw");
+    query.set("mode", getClientContentMode());
     const qs = query.toString();
     return apiFetch<{ items: Character[]; total: number }>(`/characters${qs ? `?${qs}` : ""}`);
   },
@@ -1569,8 +1574,7 @@ export const characters = {
   },
 
   async getStories(): Promise<{ items: StoryCharacter[] }> {
-    const qs = getClientContentMode() === "sfw" ? "?mode=sfw" : "";
-    return apiFetch<{ items: StoryCharacter[] }>(`/characters/stories${qs}`);
+    return apiFetch<{ items: StoryCharacter[] }>(`/characters/stories?mode=${getClientContentMode()}`);
   },
 
   async getStory(id: string): Promise<{
@@ -2221,7 +2225,7 @@ export async function getPublicGallery(params?: {
   if (params?.userId) query.set("userId", params.userId);
   if (params?.gender) query.set("gender", params.gender);
   if (params?.style) query.set("style", params.style);
-  if (getClientContentMode() === "sfw") query.set("mode", "sfw");
+  query.set("mode", getClientContentMode());
   const qs = query.toString();
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
 }
@@ -2235,7 +2239,7 @@ export async function getPublicShorts(params?: {
   if (params?.sortBy) query.set("sortBy", params.sortBy);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
-  if (getClientContentMode() === "sfw") query.set("mode", "sfw");
+  query.set("mode", getClientContentMode());
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery?${query.toString()}`);
 }
 

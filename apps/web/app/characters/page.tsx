@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { resizedMediaUrl } from "../../lib/api";
 import { localizeOption } from "../../lib/optionLabel";
@@ -22,7 +23,10 @@ function ageOf(personality: Record<string, unknown> | null): string {
 }
 
 export default async function CharactersCatalogPage() {
-  const characters = await listCharactersForSeo({ limit: 60 });
+  // Режим контента из cookie (ставится клиентским ContentModeProvider), чтобы
+  // SSR-каталог отдавал соответствующий класс контента.
+  const mode = cookies().get("contentMode")?.value;
+  const characters = await listCharactersForSeo({ limit: 60, mode });
 
   return (
     <div className="seo-catalog">
