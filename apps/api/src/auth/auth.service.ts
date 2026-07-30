@@ -27,6 +27,7 @@ import * as bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma.service";
 import { EmailService } from "./email.service";
+import { AnalyticsService } from "../analytics/analytics.service";
 
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TOKEN_TTL_DAYS = 30;
@@ -44,6 +45,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly email: EmailService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /**
@@ -70,7 +72,7 @@ export class AuthService {
 
     // Несовершеннолетним (isAdult === false) форсим SFW-режим по умолчанию.
     const adult = isAdult !== false;
-    await this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         passwordHash,
@@ -80,6 +82,12 @@ export class AuthService {
         isAdult: adult,
         contentMode: adult ? "nsfw" : "sfw",
       },
+    });
+
+    // distinct_id = User.id, чтобы событие склеилось с клиентским профилем PostHog.
+    this.analytics.capture(user.id, "user_registered", {
+      is_adult: adult,
+      content_mode: user.contentMode,
     });
 
     await this.email.sendVerificationEmail(email, verificationToken);
@@ -111,6 +119,11 @@ export class AuthService {
     if (!user.emailVerified) {
       throw new UnauthorizedException("Please verify your email first");
     }
+
+    this.analytics.capture(user.id, "user_logged_in", {
+      subscription: user.subscription,
+      content_mode: user.contentMode,
+    });
 
     return this.createTokenPair(user.id, userAgent, ip);
   }

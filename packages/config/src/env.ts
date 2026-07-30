@@ -93,6 +93,15 @@ const EnvSchema = z.object({
   /** Секретный ключ Turnstile для серверной верификации капчи */
   TURNSTILE_SECRET_KEY: z.string().optional(),
 
+  // ─── PostHog (product analytics) ────────────────────────────────────────────
+  /**
+   * Project API-ключ PostHog (server-side capture из NestJS).
+   * Если не задан — серверная аналитика превращается в no-op (ничего не ломается).
+   */
+  POSTHOG_KEY: z.string().optional(),
+  /** Хост инстанса PostHog. По умолчанию — облако EU-региона. */
+  POSTHOG_HOST: z.string().default("https://eu.i.posthog.com"),
+
   // ─── Request Tracing ────────────────────────────────────────────────────────
   /**
    * Имя HTTP-заголовка для сквозной трассировки запросов (X-Request-ID).

@@ -2,6 +2,7 @@ import { AuthProvider } from "../context/auth";
 import { GenerationProvider } from "../context/generation";
 import { LanguageProvider } from "../context/language";
 import { ContentModeProvider } from "../context/contentMode";
+import { PostHogProvider } from "../context/posthog";
 import LayoutShell from "./components/LayoutShell";
 import ServiceWorkerInit from "./components/ServiceWorkerInit";
 import MediaErrorHandler from "./components/MediaErrorHandler";
@@ -19,14 +20,16 @@ export default function RootLayout({ children }: { children: import("react").Rea
         <ServiceWorkerInit />
         <MediaErrorHandler />
         <AuthProvider>
-          <NotificationPermissionInit />
-          <LanguageProvider>
-            <ContentModeProvider>
-              <GenerationProvider>
-                <LayoutShell>{children}</LayoutShell>
-              </GenerationProvider>
-            </ContentModeProvider>
-          </LanguageProvider>
+          <PostHogProvider>
+            <NotificationPermissionInit />
+            <LanguageProvider>
+              <ContentModeProvider>
+                <GenerationProvider>
+                  <LayoutShell>{children}</LayoutShell>
+                </GenerationProvider>
+              </ContentModeProvider>
+            </LanguageProvider>
+          </PostHogProvider>
         </AuthProvider>
       </body>
     </html>
