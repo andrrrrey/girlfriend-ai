@@ -16,6 +16,7 @@ import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DemoService } from "../demo/demo.service";
 import { GenerationService } from "./generation.service";
+import { AnalyticsService } from "../analytics/analytics.service";
 import { CreateImageJobDto } from "./dto/create-image-job.dto";
 import { CreateVideoJobDto } from "./dto/create-video-job.dto";
 
@@ -25,6 +26,7 @@ export class GenerationController {
   constructor(
     private readonly generationService: GenerationService,
     private readonly demoService: DemoService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   @Post("image")
@@ -32,7 +34,8 @@ export class GenerationController {
   @ApiBearerAuth()
   async createImageJob(@Req() req: any, @Body() dto: CreateImageJobDto) {
     await this.demoService.checkImageGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
-    return this.generationService.createImageJob(req.user.id, {
+    const contentMode = req.user.isAdult === false ? "sfw" : dto.contentMode;
+    const job = await this.generationService.createImageJob(req.user.id, {
       prompt: dto.prompt,
       negativePrompt: dto.negativePrompt,
       model: dto.model,
@@ -44,8 +47,17 @@ export class GenerationController {
       characterId: dto.characterId,
       seed: dto.seed,
       // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
-      contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
+      contentMode,
     });
+    this.analytics.capture(req.user.id, "image_generation_started", {
+      count: dto.count ?? 1,
+      model: dto.model,
+      provider: dto.provider,
+      content_mode: contentMode,
+      character_id: dto.characterId,
+      job_id: job.jobId,
+    });
+    return job;
   }
 
   @Post("video")

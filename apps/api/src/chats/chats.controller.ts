@@ -71,6 +71,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DemoService } from "../demo/demo.service";
 import { S3Service } from "../s3/s3.service";
 import { ChatsService } from "./chats.service";
+import { AnalyticsService } from "../analytics/analytics.service";
 import { CreateChatDto } from "./dto/create-chat.dto";
 import { EditMessageDto } from "./dto/edit-message.dto";
 import { GreetingDto } from "./dto/greeting.dto";
@@ -137,6 +138,7 @@ export class ChatsController {
     private readonly chatsService: ChatsService,
     private readonly demoService: DemoService,
     private readonly s3Service: S3Service,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /**
@@ -155,7 +157,9 @@ export class ChatsController {
   @Post()
   async createChat(@Req() req: any, @Body() dto: CreateChatDto) {
     await this.demoService.checkChatSessionCreation(req.user.id, req.user.subscription);
-    return this.chatsService.createChat(req.user.id, dto.characterId, dto.title);
+    const chat = await this.chatsService.createChat(req.user.id, dto.characterId, dto.title);
+    this.analytics.capture(req.user.id, "chat_started", { character_id: dto.characterId });
+    return chat;
   }
 
   /**
@@ -337,6 +341,11 @@ export class ChatsController {
 
     // Save user message
     await this.chatsService.saveMessage(id, "user", dto.content);
+
+    this.analytics.capture(req.user.id, "message_sent", {
+      chat_id: id,
+      character_id: chat.characterId,
+    });
 
     // Get recent history for context
     const history = await this.chatsService.getMessageHistory(id);

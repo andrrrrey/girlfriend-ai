@@ -9,16 +9,28 @@ import {
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { LikesService } from "./likes.service";
+import { AnalyticsService } from "../analytics/analytics.service";
 import { ToggleLikeDto } from "./dto/toggle-like.dto";
 
 @Controller("likes")
 export class LikesController {
-  constructor(private likesService: LikesService) {}
+  constructor(
+    private likesService: LikesService,
+    private readonly analytics: AnalyticsService,
+  ) {}
 
   @Post("toggle")
   @UseGuards(JwtAuthGuard)
   async toggle(@Req() req: any, @Body() dto: ToggleLikeDto) {
-    return this.likesService.toggle(req.user.id, dto.targetType, dto.targetId);
+    const result = await this.likesService.toggle(req.user.id, dto.targetType, dto.targetId);
+    // Считаем только добавление лайка, не снятие.
+    if (result.liked) {
+      this.analytics.capture(req.user.id, "content_liked", {
+        target_type: dto.targetType,
+        target_id: dto.targetId,
+      });
+    }
+    return result;
   }
 
   @Get("status")
