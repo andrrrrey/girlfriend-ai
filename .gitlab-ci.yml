@@ -204,14 +204,11 @@ migrator_logs_staging:
   script:
     - |
       set +e
-      echo "=== connection-related env var NAMES (значения не печатаем) ==="
-      env | cut -d= -f1 | grep -iE 'host|user|remote|ssh|deploy|stage|dir|target|server' | grep -viE 'known_hosts|private_key|password|secret|token' | sort
-      HOST="${DEPLOY_HOST:-${REMOTE_HOST:-${SSH_HOST:-${STAGE_HOST:-${DEPLOY_SERVER:-${REMOTE_SERVER:-}}}}}}"
-      SSHUSER="${DEPLOY_USER:-${REMOTE_USER:-${SSH_USER:-${STAGE_USER:-}}}}"
+      HOST="${DEPLOY_HOST:-${STAGING_HOST:-}}"
+      SSHUSER="${DEPLOY_USER:-${STAGING_USER:-deploy}}"
       DIR="${REMOTE_APP_DIR:-.}"
-      echo "detected HOST='${HOST}' USER='${SSHUSER}' DIR='${DIR}'"
-      if [ -z "$HOST" ]; then echo "!! не удалось определить хост деплоя — посмотри имена переменных выше и скинь мне"; exit 0; fi
-      TARGET="${SSHUSER:+${SSHUSER}@}${HOST}"
-      echo "=== ssh ${TARGET} : migrator status + logs ==="
-      ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "$TARGET" "cd '$DIR' 2>/dev/null; echo '--- migrator container(s) ---'; (docker compose ps -a migrator 2>/dev/null || docker ps -a --filter name=migrator); echo '--- migrator logs (tail 400) ---'; (docker compose logs --no-color --tail=400 migrator 2>/dev/null || docker logs \$(docker ps -a --filter name=migrator --format '{{.Names}}' | head -1) 2>&1 | tail -400)"
+      echo "target: ${SSHUSER}@${HOST}  dir: ${DIR}"
+      if [ -z "$HOST" ]; then echo "!! DEPLOY_HOST не задан"; exit 0; fi
+      echo "=== ssh ${SSHUSER}@${HOST} : migrator status + logs (через sudo docker) ==="
+      ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "${SSHUSER}@${HOST}" "cd '$DIR' 2>/dev/null; echo '--- migrator container(s) ---'; (sudo docker compose ps -a migrator 2>/dev/null || sudo docker ps -a --filter name=migrator); echo '--- migrator logs (tail 400) ---'; NAME=\$(sudo docker ps -a --filter name=migrator --format '{{.Names}}' | head -1); if [ -n \"\$NAME\" ]; then sudo docker logs \"\$NAME\" 2>&1 | tail -400; else echo 'no migrator container'; fi"
       echo "=== ssh exit: $? ==="
