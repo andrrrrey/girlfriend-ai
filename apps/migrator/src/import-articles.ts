@@ -3,9 +3,12 @@
  * @description Одноразовый (идемпотентный) импорт статей блога из дампа
  * `articles.sql` (MySQL-экспорт таблицы `en_blogs`) в таблицу `blog_posts`.
  *
- * Дамп большой (~89 МБ) и в git не хранится — мигратор тянет его из объектного
- * хранилища (S3/MinIO, те же креды, что и для картинок опций) по ключу
- * `ARTICLES_SQL_KEY` (по умолчанию `imports/articles.sql`).
+ * Источник дампа (в порядке приоритета):
+ *   1. Локальный файл `localFile` — запечён в образ мигратора как
+ *      `apps/migrator/data/articles.sql.gz` (~23 МБ gzip). Основной путь.
+ *   2. Объектное хранилище (S3/MinIO) по ключу `ARTICLES_SQL_KEY`
+ *      (по умолчанию `imports/articles.sql`) — фолбэк, если файла в образе нет.
+ * Файлы `.gz` распаковываются на лету.
  *
  * Идемпотентность:
  * - Если `blog_posts` уже содержит записи — шаг полностью пропускается (guard),
@@ -18,6 +21,8 @@
 
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import type { Client } from "pg";
+import { existsSync, readFileSync } from "fs";
+import { gunzipSync } from "zlib";
 
 /** Порядок колонок в `INSERT INTO en_blogs (...)` — фиксирован в дампе. */
 const COLS = [
@@ -174,6 +179,8 @@ function preparePosts(sql: string): PreparedPost[] {
 }
 
 export interface ImportArticlesOptions {
+  /** Путь к дампу, запечённому в образ (поддерживается `.gz`). Приоритетнее S3. */
+  localFile?: string;
   s3?: {
     endpoint: string;
     region: string;
@@ -183,6 +190,53 @@ export interface ImportArticlesOptions {
     key: string;
   };
   logger: { info: (o: object, m: string) => void; warn: (o: object, m: string) => void };
+}
+
+/** Читает дамп: сначала локальный файл (с gunzip для `.gz`), иначе — из S3. */
+async function loadDump(opts: ImportArticlesOptions): Promise<string | undefined> {
+  const { logger } = opts;
+
+  if (opts.localFile && existsSync(opts.localFile)) {
+    try {
+      const buf = readFileSync(opts.localFile);
+      const sql = opts.localFile.endsWith(".gz")
+        ? gunzipSync(buf).toString("utf-8")
+        : buf.toString("utf-8");
+      logger.info({ file: opts.localFile, bytes: buf.length }, "import_articles_source_local");
+      return sql;
+    } catch (err) {
+      logger.warn({ file: opts.localFile, err }, "import_articles_local_read_failed");
+      // падать не будем — попробуем S3-фолбэк ниже
+    }
+  }
+
+  if (!opts.s3) {
+    logger.warn({}, "import_articles_skipped_no_source");
+    return undefined;
+  }
+
+  const { endpoint, region, accessKeyId, secretKey, bucket, key } = opts.s3;
+  const s3 = new S3Client({
+    endpoint,
+    region,
+    credentials: { accessKeyId, secretAccessKey: secretKey },
+    forcePathStyle: true,
+  });
+  try {
+    const res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    if (!res.Body) {
+      logger.warn({ bucket, key }, "import_articles_dump_empty_body");
+      return undefined;
+    }
+    const bytes = await (res.Body as { transformToByteArray: () => Promise<Uint8Array> }).transformToByteArray();
+    const buf = Buffer.from(bytes);
+    const sql = key.endsWith(".gz") ? gunzipSync(buf).toString("utf-8") : buf.toString("utf-8");
+    logger.info({ bucket, key, bytes: buf.length }, "import_articles_source_s3");
+    return sql;
+  } catch (err) {
+    logger.warn({ bucket, key, err }, "import_articles_dump_fetch_failed");
+    return undefined;
+  }
 }
 
 /**
@@ -214,33 +268,9 @@ export async function importArticles(
     return;
   }
 
-  // Guard 3: нужен доступ к S3, чтобы забрать дамп.
-  if (!opts.s3) {
-    logger.warn({}, "import_articles_skipped_s3_not_configured");
-    return;
-  }
-
-  const { endpoint, region, accessKeyId, secretKey, bucket, key } = opts.s3;
-  const s3 = new S3Client({
-    endpoint,
-    region,
-    credentials: { accessKeyId, secretAccessKey: secretKey },
-    forcePathStyle: true,
-  });
-
-  let sql: string;
-  try {
-    const res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-    if (!res.Body) {
-      logger.warn({ bucket, key }, "import_articles_dump_empty_body");
-      return;
-    }
-    // aws-sdk v3 Node stream helper: собирает тело в строку.
-    sql = await (res.Body as { transformToString: (enc: string) => Promise<string> }).transformToString("utf-8");
-  } catch (err) {
-    logger.warn({ bucket, key, err }, "import_articles_dump_fetch_failed");
-    return;
-  }
+  // Guard 3: нужен источник дампа (локальный файл в образе или S3).
+  const sql = await loadDump(opts);
+  if (!sql) return;
 
   const posts = preparePosts(sql);
   logger.info({ parsed: posts.length }, "import_articles_parsed");

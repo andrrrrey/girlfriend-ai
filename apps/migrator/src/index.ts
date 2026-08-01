@@ -576,10 +576,13 @@ async function main() {
     await migrateBase64OptionImagesToS3(client);
     logger.info({}, "migrate_option_images_done");
 
-    // Одноразовый импорт статей блога из дампа в S3 (идемпотентно, best-effort).
+    // Одноразовый импорт статей блога из дампа (идемпотентно, best-effort).
+    // Источник: articles.sql.gz, запечённый в образ (apps/migrator/data/),
+    // с фолбэком на S3. __dirname = apps/migrator/dist → data рядом.
     logger.info({}, "import_articles_start");
     await importArticles(client, {
       logger,
+      localFile: path.join(__dirname, "..", "data", "articles.sql.gz"),
       s3:
         env.S3_ENDPOINT && env.S3_ACCESS_KEY && env.S3_SECRET_KEY
           ? {
