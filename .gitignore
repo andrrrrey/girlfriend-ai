@@ -123,3 +123,6 @@ clickhouse-data/
 *.sqlite3
 *.bak
 *.backup
+
+# Large data dump imported via scripts/import-articles.js (~89 MB) — keep out of git
+/articles.sql
