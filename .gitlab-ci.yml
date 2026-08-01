@@ -190,19 +190,22 @@ rollback_prod_worker:
 # Диагностика: вывести логи контейнера migrator прямо в GitLab.
 # deploy_staging_migrator делает `docker compose up -d migrator` и не показывает
 # stdout контейнера, поэтому вывод `prisma migrate deploy` и `import_articles_*`
-# не виден. Этот manual-job крутится на том же deploy-хосте (tag: deploy) и
-# печатает `docker logs` последнего migrator-контейнера + его статус выхода.
-# Запускать после deploy_staging_migrator. Ничего не меняет, только читает логи.
+# не виден. Наследуем .deploy_staging (та же docker-связь, что у рабочего
+# деплоя — иначе docker:cli ломится в несуществующий tcp://docker:2375) и лишь
+# подменяем script: печатаем статус и `docker logs` последнего migrator-контейнера.
+# Запускать после deploy_staging_migrator. Ничего не деплоит, только читает логи.
 migrator_logs_staging:
-  stage: deploy
-  tags: ["deploy"]
-  image: docker:cli
+  extends: .deploy_staging
+  variables:
+    SERVICE_NAME: "migrator"
   when: manual
   needs: []
   allow_failure: true
   script:
+    - echo "=== docker context / host ==="
+    - 'echo "DOCKER_HOST=${DOCKER_HOST:-<unset>}"'
     - echo "=== migrator containers (state / exit code) ==="
-    - docker ps -a --filter "name=migrator" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+    - docker ps -a --filter "name=migrator" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
     - NAME=$(docker ps -a --filter "name=migrator" --format '{{.Names}}' | head -1)
     - echo "=== docker logs for '$NAME' (tail 400) ==="
-    - test -n "$NAME" && docker logs "$NAME" 2>&1 | tail -400 || echo "no migrator container found"
+    - if [ -n "$NAME" ]; then docker logs "$NAME" 2>&1 | tail -400; else echo "no migrator container found"; fi
