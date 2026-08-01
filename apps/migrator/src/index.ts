@@ -33,6 +33,7 @@ import { randomUUID } from "crypto";
 import * as bcrypt from "bcrypt";
 import sharp from "sharp";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { importArticles } from "./import-articles";
 
 const env = loadEnv();
 const logger = createLogger({ service: "migrator", env: env.ENV, level: env.LOG_LEVEL });
@@ -574,6 +575,24 @@ async function main() {
     logger.info({}, "migrate_option_images_start");
     await migrateBase64OptionImagesToS3(client);
     logger.info({}, "migrate_option_images_done");
+
+    // Одноразовый импорт статей блога из дампа в S3 (идемпотентно, best-effort).
+    logger.info({}, "import_articles_start");
+    await importArticles(client, {
+      logger,
+      s3:
+        env.S3_ENDPOINT && env.S3_ACCESS_KEY && env.S3_SECRET_KEY
+          ? {
+              endpoint: env.S3_ENDPOINT,
+              region: env.S3_REGION ?? "auto",
+              accessKeyId: env.S3_ACCESS_KEY,
+              secretKey: env.S3_SECRET_KEY,
+              bucket: env.S3_BUCKET ?? "media",
+              key: process.env.ARTICLES_SQL_KEY ?? "imports/articles.sql",
+            }
+          : undefined,
+    });
+    logger.info({}, "import_articles_done");
   } finally {
     // Снимаем lock в любом случае (успех или ошибка) — чтобы не блокировать другие запуски
     await client.query("SELECT pg_advisory_unlock(987654321);");
