@@ -10,10 +10,14 @@
  *      (по умолчанию `imports/articles.sql`) — фолбэк, если файла в образе нет.
  * Файлы `.gz` распаковываются на лету.
  *
+ * Память: контейнер мигратора ограничен (~256 МБ heap), а распакованный дамп —
+ * ~89 МБ. Поэтому разбираем дамп ПО БАЙТАМ (Buffer), не превращая его в одну
+ * гигантскую JS-строку (которая при первом же не-ASCII символе стала бы 2-байтной,
+ * ~178 МБ), и вставляем потоково батчами, не накапливая все статьи в памяти.
+ *
  * Идемпотентность:
- * - Если `blog_posts` уже содержит записи — шаг полностью пропускается (guard),
- *   поэтому повторные деплои не перечитывают 89 МБ и ничего не дублируют.
- * - Сама вставка идёт с `ON CONFLICT (slug) DO NOTHING`.
+ * - Пропуск, если статьи уже импортированы (метка `created_by = 'articles.sql'`).
+ * - Вставка идёт с `ON CONFLICT (slug) DO NOTHING`.
  *
  * Маппинг и санитизация HTML повторяют бэкенд (apps/api/src/blog/blog-seo.ts),
  * чтобы импортированные записи были неотличимы от созданных через админку.
@@ -53,48 +57,62 @@ const CLUSTER_CATEGORY: Record<number, string> = {
 /** Стартовая точка «раскладки» дат публикации: по 1 часу между статьями. */
 const BASE_TS = Date.UTC(2025, 0, 1, 0, 0, 0);
 
-function unescapeChar(c: string): string {
-  switch (c) {
-    case "n": return "\n";
-    case "r": return "\r";
-    case "t": return "\t";
-    case "0": return "\0";
-    case "b": return "\b";
-    case "Z": return "\x1a";
-    default: return c; // \'  \"  \\  и т.п.
-  }
+// ASCII-коды разделителей — сканируем по байтам (UTF-8-safe: continuation-байты ≥0x80
+// никогда не совпадают с ASCII-разделителями).
+const CH_TAB = 9, CH_LF = 10, CH_CR = 13, CH_SPACE = 32;
+const CH_QUOTE = 39, CH_LPAREN = 40, CH_RPAREN = 41, CH_COMMA = 44, CH_BACKSLASH = 92;
+const isWs = (c: number) => c === CH_SPACE || c === CH_TAB || c === CH_LF || c === CH_CR;
+
+/** Разэкранирование MySQL-строки: обратные слэши и удвоенные кавычки. */
+function unescapeSql(raw: string): string {
+  if (raw.indexOf("\\") === -1 && raw.indexOf("''") === -1) return raw; // быстрый путь
+  return raw
+    .replace(/''/g, "'")
+    .replace(/\\([\s\S])/g, (_m, c: string) =>
+      c === "n" ? "\n" :
+      c === "r" ? "\r" :
+      c === "t" ? "\t" :
+      c === "0" ? "\0" :
+      c === "b" ? "\b" :
+      c === "Z" ? "\x1a" : c,
+    );
 }
 
-/** Разбирает один VALUES-кортеж, начиная с индекса сразу после '('. */
-function parseTuple(s: string, start: number): { fields: (string | null)[]; end: number } {
+/**
+ * Экономный разбор одного VALUES-кортежа ПО БАЙТАМ буфера, начиная сразу после '('.
+ * Строковые поля декодируются из UTF-8 срезом (buf.toString) и разэкранируются;
+ * числа/NULL — тоже срезом. Никакой посимвольной сборки — минимум мусора для GC.
+ */
+function parseTupleBuf(buf: Buffer, start: number): { fields: (string | null)[]; end: number } {
   const fields: (string | null)[] = [];
   let i = start;
-  const n = s.length;
+  const n = buf.length;
   while (i < n) {
-    while (i < n && /\s/.test(s[i])) i++;
-    if (s[i] === ")") return { fields, end: i + 1 };
-    if (s[i] === "'") {
-      i++;
-      let buf = "";
+    while (i < n && isWs(buf[i])) i++;
+    if (buf[i] === CH_RPAREN) return { fields, end: i + 1 };
+    if (buf[i] === CH_QUOTE) {
+      const startStr = ++i;
       while (i < n) {
-        const c = s[i];
-        if (c === "\\") { buf += unescapeChar(s[i + 1]); i += 2; continue; }
-        if (c === "'") {
-          if (s[i + 1] === "'") { buf += "'"; i += 2; continue; }
-          i++; break;
+        const c = buf[i];
+        if (c === CH_BACKSLASH) { i += 2; continue; }
+        if (c === CH_QUOTE) {
+          if (buf[i + 1] === CH_QUOTE) { i += 2; continue; } // '' — экранированная кавычка
+          break;
         }
-        buf += c; i++;
+        i++;
       }
-      fields.push(buf);
+      fields.push(unescapeSql(buf.toString("utf8", startStr, i)));
+      i++; // пропускаем закрывающую кавычку
     } else {
-      let buf = "";
-      while (i < n && s[i] !== "," && s[i] !== ")") { buf += s[i]; i++; }
-      buf = buf.trim();
-      fields.push(buf.toUpperCase() === "NULL" ? null : buf);
+      let j = i;
+      while (j < n && buf[j] !== CH_COMMA && buf[j] !== CH_RPAREN) j++;
+      const raw = buf.toString("utf8", i, j).trim();
+      fields.push(raw.toUpperCase() === "NULL" ? null : raw);
+      i = j;
     }
-    while (i < n && /\s/.test(s[i])) i++;
-    if (s[i] === ",") { i++; continue; }
-    if (s[i] === ")") return { fields, end: i + 1 };
+    while (i < n && isWs(buf[i])) i++;
+    if (buf[i] === CH_COMMA) { i++; continue; }
+    if (buf[i] === CH_RPAREN) return { fields, end: i + 1 };
   }
   return { fields, end: i };
 }
@@ -142,40 +160,49 @@ interface PreparedPost {
   ts: Date;
 }
 
-/** Извлекает и маппит все строки en_blogs из текста дампа. */
-function preparePosts(sql: string): PreparedPost[] {
-  const posts: PreparedPost[] = [];
-  const marker = "INSERT INTO en_blogs (";
-  let from = 0;
-  while (true) {
-    const at = sql.indexOf(marker, from);
-    if (at === -1) break;
-    const vAt = sql.indexOf(" VALUES (", at);
-    if (vAt === -1) break;
-    const { fields, end } = parseTuple(sql, vAt + " VALUES (".length);
-    from = end;
-    if (fields.length < COLS.length) continue;
+/** Маппит один разобранный кортеж en_blogs в запись blog_posts (или null, если мусор). */
+function mapFields(fields: (string | null)[]): PreparedPost | null {
+  if (fields.length < COLS.length) return null;
+  const id = parseInt(String(fields[IDX.id] ?? ""), 10) || 0;
+  const clusterId = parseInt(String(fields[IDX.cluster_id] ?? ""), 10) || 0;
+  const title = (fields[IDX.title] || "").toString().trim();
+  const slug = (fields[IDX.slug] || "").toString().trim();
+  const content = sanitizeBlogHtml((fields[IDX.content_html] || "").toString());
+  const rawExcerpt = (fields[IDX.excerpt] || "").toString().trim();
+  const excerpt = rawExcerpt || excerptFromHtml(content);
+  if (!slug || !title || !content) return null;
+  return {
+    title, slug, content, excerpt,
+    category: CLUSTER_CATEGORY[clusterId] || "News",
+    tags: parseTags(fields[IDX.secondary_keywords]),
+    ts: new Date(BASE_TS + id * 3600 * 1000),
+  };
+}
 
-    const id = parseInt(String(fields[IDX.id] ?? ""), 10) || 0;
-    const clusterId = parseInt(String(fields[IDX.cluster_id] ?? ""), 10) || 0;
-    const title = (fields[IDX.title] || "").toString().trim();
-    const slug = (fields[IDX.slug] || "").toString().trim();
-    const content = sanitizeBlogHtml((fields[IDX.content_html] || "").toString());
-    const rawExcerpt = (fields[IDX.excerpt] || "").toString().trim();
-    const excerpt = rawExcerpt || excerptFromHtml(content);
-    if (!slug || !title || !content) continue;
-
-    posts.push({
-      title,
-      slug,
-      content,
-      excerpt,
-      category: CLUSTER_CATEGORY[clusterId] || "News",
-      tags: parseTags(fields[IDX.secondary_keywords]),
-      ts: new Date(BASE_TS + id * 3600 * 1000),
-    });
+/** Вставляет батч одним INSERT ... ON CONFLICT (slug) DO NOTHING. Возвращает число вставленных. */
+async function insertBatch(client: Client, batch: PreparedPost[]): Promise<number> {
+  if (batch.length === 0) return 0;
+  const values: string[] = [];
+  const params: unknown[] = [];
+  let pi = 1;
+  for (const p of batch) {
+    values.push(
+      `($${pi++},$${pi++},$${pi++},$${pi++},$${pi++},$${pi++},$${pi++}::text[],true,$${pi++},$${pi++},$${pi++})`,
+    );
+    params.push(
+      p.title, p.slug, p.content, p.excerpt, p.category,
+      "articles.sql", p.tags, p.ts, p.ts, p.ts,
+    );
   }
-  return posts;
+  const res = await client.query(
+    `INSERT INTO blog_posts
+       (title, slug, content, excerpt, category, created_by, tags,
+        is_published, published_at, created_at, updated_at)
+     VALUES ${values.join(",")}
+     ON CONFLICT (slug) DO NOTHING`,
+    params,
+  );
+  return res.rowCount ?? 0;
 }
 
 export interface ImportArticlesOptions {
@@ -192,21 +219,22 @@ export interface ImportArticlesOptions {
   logger: { info: (o: object, m: string) => void; warn: (o: object, m: string) => void };
 }
 
-/** Читает дамп: сначала локальный файл (с gunzip для `.gz`), иначе — из S3. */
-async function loadDump(opts: ImportArticlesOptions): Promise<string | undefined> {
+/** Читает дамп как Buffer байтов: локальный файл (gunzip для `.gz`), иначе — S3. */
+async function loadDump(opts: ImportArticlesOptions): Promise<Buffer | undefined> {
   const { logger } = opts;
 
   if (opts.localFile && existsSync(opts.localFile)) {
     try {
-      const buf = readFileSync(opts.localFile);
-      const sql = opts.localFile.endsWith(".gz")
-        ? gunzipSync(buf).toString("utf-8")
-        : buf.toString("utf-8");
-      logger.info({ file: opts.localFile, bytes: buf.length }, "import_articles_source_local");
-      return sql;
+      const raw = readFileSync(opts.localFile);
+      const buf = opts.localFile.endsWith(".gz") ? gunzipSync(raw) : raw;
+      logger.info(
+        { file: opts.localFile, gzBytes: raw.length, bytes: buf.length },
+        "import_articles_source_local",
+      );
+      return buf;
     } catch (err) {
       logger.warn({ file: opts.localFile, err }, "import_articles_local_read_failed");
-      // падать не будем — попробуем S3-фолбэк ниже
+      // не падаем — пробуем S3-фолбэк ниже
     }
   }
 
@@ -229,10 +257,10 @@ async function loadDump(opts: ImportArticlesOptions): Promise<string | undefined
       return undefined;
     }
     const bytes = await (res.Body as { transformToByteArray: () => Promise<Uint8Array> }).transformToByteArray();
-    const buf = Buffer.from(bytes);
-    const sql = key.endsWith(".gz") ? gunzipSync(buf).toString("utf-8") : buf.toString("utf-8");
+    const raw = Buffer.from(bytes);
+    const buf = key.endsWith(".gz") ? gunzipSync(raw) : raw;
     logger.info({ bucket, key, bytes: buf.length }, "import_articles_source_s3");
-    return sql;
+    return buf;
   } catch (err) {
     logger.warn({ bucket, key, err }, "import_articles_dump_fetch_failed");
     return undefined;
@@ -241,7 +269,7 @@ async function loadDump(opts: ImportArticlesOptions): Promise<string | undefined
 
 /**
  * Импортирует статьи в blog_posts (best-effort, идемпотентно).
- * Ничего не бросает: любые проблемы логируются как warn, чтобы не валить деплой.
+ * Ничего не бросает наружу за пределы своих guard'ов; сам разбор/вставка — потоковые.
  */
 export async function importArticles(
   client: Client,
@@ -262,8 +290,8 @@ export async function importArticles(
   }
 
   // Guard 2: если статьи из дампа уже импортированы — выходим. Смотрим именно на
-  // метку `created_by = 'articles.sql'`, а НЕ на любые записи, чтобы вручную
-  // созданные посты (через админку) не блокировали первый импорт.
+  // метку `created_by = 'articles.sql'`, чтобы вручную созданные посты (через
+  // админку) не блокировали первый импорт.
   const cnt = await client.query<{ n: string }>(
     `SELECT count(*)::int AS n FROM blog_posts WHERE created_by = 'articles.sql'`,
   );
@@ -273,39 +301,36 @@ export async function importArticles(
   }
 
   // Guard 3: нужен источник дампа (локальный файл в образе или S3).
-  const sql = await loadDump(opts);
-  if (!sql) return;
+  const buf = await loadDump(opts);
+  if (!buf) return;
 
-  const posts = preparePosts(sql);
-  logger.info({ parsed: posts.length }, "import_articles_parsed");
-  if (posts.length === 0) return;
-
+  // Потоковый разбор по байтам + вставка батчами по 200 (память ≈ размер дампа,
+  // без 2-байтной строки и без хранения всех статей сразу).
+  const MARKER = Buffer.from("INSERT INTO en_blogs (");
+  const VALUES = Buffer.from(" VALUES (");
   const BATCH = 200;
+  let from = 0;
+  let parsed = 0;
   let inserted = 0;
-  for (let b = 0; b < posts.length; b += BATCH) {
-    const chunk = posts.slice(b, b + BATCH);
-    const values: string[] = [];
-    const params: unknown[] = [];
-    let pi = 1;
-    for (const p of chunk) {
-      values.push(
-        `($${pi++},$${pi++},$${pi++},$${pi++},$${pi++},$${pi++},$${pi++}::text[],true,$${pi++},$${pi++},$${pi++})`,
-      );
-      params.push(
-        p.title, p.slug, p.content, p.excerpt, p.category,
-        "articles.sql", p.tags, p.ts, p.ts, p.ts,
-      );
-    }
-    const res = await client.query(
-      `INSERT INTO blog_posts
-         (title, slug, content, excerpt, category, created_by, tags,
-          is_published, published_at, created_at, updated_at)
-       VALUES ${values.join(",")}
-       ON CONFLICT (slug) DO NOTHING`,
-      params,
-    );
-    inserted += res.rowCount ?? 0;
-  }
+  let batch: PreparedPost[] = [];
 
-  logger.info({ inserted, total: posts.length }, "import_articles_done");
+  while (true) {
+    const at = buf.indexOf(MARKER, from);
+    if (at === -1) break;
+    const vAt = buf.indexOf(VALUES, at);
+    if (vAt === -1) break;
+    const { fields, end } = parseTupleBuf(buf, vAt + VALUES.length);
+    from = end;
+    const post = mapFields(fields);
+    if (!post) continue;
+    batch.push(post);
+    parsed++;
+    if (batch.length >= BATCH) {
+      inserted += await insertBatch(client, batch);
+      batch = [];
+    }
+  }
+  inserted += await insertBatch(client, batch);
+
+  logger.info({ parsed, inserted }, "import_articles_done");
 }
