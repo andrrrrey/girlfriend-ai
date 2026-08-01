@@ -261,10 +261,14 @@ export async function importArticles(
     return;
   }
 
-  // Guard 2: если уже есть записи — считаем импорт выполненным, выходим.
-  const cnt = await client.query<{ n: string }>(`SELECT count(*)::int AS n FROM blog_posts`);
+  // Guard 2: если статьи из дампа уже импортированы — выходим. Смотрим именно на
+  // метку `created_by = 'articles.sql'`, а НЕ на любые записи, чтобы вручную
+  // созданные посты (через админку) не блокировали первый импорт.
+  const cnt = await client.query<{ n: string }>(
+    `SELECT count(*)::int AS n FROM blog_posts WHERE created_by = 'articles.sql'`,
+  );
   if (Number(cnt.rows[0].n) > 0) {
-    logger.info({ existing: Number(cnt.rows[0].n) }, "import_articles_skipped_already_populated");
+    logger.info({ imported: Number(cnt.rows[0].n) }, "import_articles_skipped_already_imported");
     return;
   }
 
