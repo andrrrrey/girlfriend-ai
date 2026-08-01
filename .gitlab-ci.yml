@@ -185,3 +185,24 @@ rollback_prod_worker:
   needs: ["deploy_prod_worker"]
   when: manual
   allow_failure: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Диагностика: вывести логи контейнера migrator прямо в GitLab.
+# deploy_staging_migrator делает `docker compose up -d migrator` и не показывает
+# stdout контейнера, поэтому вывод `prisma migrate deploy` и `import_articles_*`
+# не виден. Этот manual-job крутится на том же deploy-хосте (tag: deploy) и
+# печатает `docker logs` последнего migrator-контейнера + его статус выхода.
+# Запускать после deploy_staging_migrator. Ничего не меняет, только читает логи.
+migrator_logs_staging:
+  stage: deploy
+  tags: ["deploy"]
+  image: docker:cli
+  when: manual
+  needs: []
+  allow_failure: true
+  script:
+    - echo "=== migrator containers (state / exit code) ==="
+    - docker ps -a --filter "name=migrator" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+    - NAME=$(docker ps -a --filter "name=migrator" --format '{{.Names}}' | head -1)
+    - echo "=== docker logs for '$NAME' (tail 400) ==="
+    - test -n "$NAME" && docker logs "$NAME" 2>&1 | tail -400 || echo "no migrator container found"
