@@ -662,6 +662,11 @@ img.media-broken {
     transition: transform 0.28s ease;
     z-index: 200;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+    /* Нижнее плавающее меню (.bottom-bar-mobile) висит поверх сайдбара
+       (z-index 300) и перекрывает последние пункты — смену языка, справку и
+       правовой текст. Отодвигаем их отступом, чтобы они прокручивались выше
+       бара и оставались кликабельными. */
+    padding-bottom: 96px;
   }
   .sidebar.mobile-open {
     transform: translateX(0);
