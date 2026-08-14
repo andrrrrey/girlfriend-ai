@@ -164,7 +164,8 @@ export default function Sidebar({
         </a>
       </nav>
 
-      {/* Bottom links */}
+      {/* Bottom links — на мобиле закреплены у низа над плавающим баром */}
+      <div className="sidebar-mobile-bottom">
       <nav className="nav-section">
         <div className="lang-switch-wrap" style={{position:'relative'}}>
           <a className="nav-link" onClick={() => setLangOpen((o) => !o)} style={{cursor:'pointer'}}>
@@ -186,6 +187,7 @@ export default function Sidebar({
       </nav>
 
       <div className="sidebar-bottom-text">{t("nav.legal")}</div>
+      </div>
     </aside>
   );
 }

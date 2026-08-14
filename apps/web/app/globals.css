@@ -183,6 +183,15 @@ img.media-broken {
   line-height: 1.2;
 }
 
+/* Обёртка нижнего блока сайдбара. На десктопе — прозрачный контейнер,
+   сохраняющий прежние отступы между пунктами; на мобиле закрепляется у низа
+   (см. медиазапрос ниже). */
+.sidebar-mobile-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* ─── Main area ──────────────────────────────── */
 .main {
   margin-left: 196px;
@@ -662,11 +671,15 @@ img.media-broken {
     transition: transform 0.28s ease;
     z-index: 200;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-    /* Нижнее плавающее меню (.bottom-bar-mobile) висит поверх сайдбара
-       (z-index 300) и перекрывает последние пункты — смену языка, справку и
-       правовой текст. Отодвигаем их отступом, чтобы они прокручивались выше
-       бара и оставались кликабельными. */
-    padding-bottom: 96px;
+  }
+  /* Нижний блок сайдбара (смена языка, справка, правовой текст) закрепляем у
+     низа: он "прилипает" над плавающим баром (.bottom-bar-mobile, ~78px) и
+     всегда виден, а прокручивается только основной список пунктов выше. */
+  .sidebar-mobile-bottom {
+    position: sticky;
+    bottom: 0;
+    background: #090909;
+    padding-bottom: 90px;
   }
   .sidebar.mobile-open {
     transform: translateX(0);
