@@ -219,32 +219,6 @@ export default function AdminCameraOptionsPage() {
         <GenerationSettingsTabs active="camera" />
         <h1 style={{ ...adminStyles.title, marginBottom: 20 }}>Camera Options</h1>
 
-        {/* Nav tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, borderBottom: "1px solid #222", paddingBottom: 0 }}>
-          {([
-            { href: "/admin", label: "Dashboard" },
-            { href: "/admin/characters", label: "Characters" },
-            { href: "/admin/users", label: "Users" },
-            { href: "/admin/character-options", label: "Character Options" },
-            { href: "/admin/appearance-options", label: "Appearance" },
-            { href: "/admin/pose-options", label: "Pose" },
-            { href: "/admin/scene-options", label: "Scene" },
-            { href: "/admin/camera-options", label: "Camera" },
-            { href: "/admin/generations", label: "Генерации" },
-          ] as { href: string; label: string }[]).map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              style={{
-                ...adminStyles.tab,
-                ...(item.href === "/admin/camera-options" ? adminStyles.tabActive : {}),
-              }}
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-
         {/* Section tabs */}
         <div style={s.catTabs}>
           {SECTIONS.map((sec) => (

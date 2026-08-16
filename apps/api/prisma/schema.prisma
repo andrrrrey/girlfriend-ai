@@ -168,6 +168,51 @@ model AutoGenTask {
   @@map("autogen_tasks")
 }
 
+// ─── Gen Test (тестовый перебор промптов/опций/AIR в админке) ─
+
+model GenTestTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  characterId String    @map("character_id") @db.Uuid
+  // running | completed | cancelled | failed
+  status      String    @default("running")
+  mode        String    @default("img2img") // img2img | txt2img
+  total       Int
+  done        Int       @default(0)
+  failed      Int       @default(0)
+  concurrency Int       @default(3)
+  seed        Int?
+  params      Json      @default("{}") // выбранные опции по подгруппам
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  finishedAt  DateTime? @map("finished_at")
+
+  items GenTestItem[]
+
+  @@index([status])
+  @@map("gen_test_tasks")
+}
+
+model GenTestItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  order      Int      @default(0)
+  label      String // человекочитаемая подпись комбинации
+  selections Json     @default("{}") // выбранные опции {subgroup: {id,name}}
+  prompt     String
+  jobId      String?  @map("job_id") @db.Uuid
+  // pending | processing | completed | failed
+  status     String   @default("pending")
+  imageUrl   String?  @map("image_url")
+  error      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task GenTestTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("gen_test_items")
+}
+
 // ─── Blog ────────────────────────────────────────────────────
 
 model BlogPost {

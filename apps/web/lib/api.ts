@@ -496,6 +496,35 @@ export interface AutogenTask {
   finishedAt: string | null;
 }
 
+// ─── Gen Test (тестовый перебор генераций, админка) ──────────
+
+export type GenTestStatus = "running" | "completed" | "cancelled" | "failed";
+
+export interface GenTestTask {
+  id: string;
+  characterId: string;
+  status: GenTestStatus;
+  mode: "img2img" | "txt2img";
+  total: number;
+  done: number;
+  failed: number;
+  concurrency: number;
+  seed: number | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface GenTestItem {
+  id: string;
+  order: number;
+  label: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  prompt: string;
+  jobId: string | null;
+  imageUrl: string | null;
+  error: string | null;
+}
+
 // ─── Appearance Options ──────────────────────────────────────
 
 export interface AppearanceOption {
@@ -1253,18 +1282,42 @@ export const admin = {
 
   // ─── Engagement (накрутка лайков + автокомментарии) ─────────
 
-  async setBoostLikes(targetType: "character" | "short", targetId: string, boostLikes: number): Promise<{ targetType: string; targetId: string; boostLikes: number }> {
+  async setBoostLikes(targetType: "character" | "short", targetIds: string[], boostLikes: number): Promise<{ targetType: string; count: number; boostLikes: number }> {
     return apiFetch("/admin/engagement/boost-likes", {
       method: "POST",
-      body: JSON.stringify({ targetType, targetId, boostLikes }),
+      body: JSON.stringify({ targetType, targetIds, boostLikes }),
     });
   },
 
-  async generateComments(targetType: "character" | "short", targetId: string, count: number): Promise<{ created: number; requested: number }> {
+  async generateComments(targetType: "character" | "short", targetIds: string[], count: number): Promise<{ created: number; requested: number; targets: number }> {
     return apiFetch("/admin/engagement/comments", {
       method: "POST",
-      body: JSON.stringify({ targetType, targetId, count }),
+      body: JSON.stringify({ targetType, targetIds, count }),
     });
+  },
+
+  // ─── Gen Test (тестовый перебор генераций) ─────────────────
+
+  async startGenTest(body: {
+    characterId: string;
+    mode: "img2img" | "txt2img";
+    concurrency: number;
+    seed?: number;
+    selections: Record<string, string[]>;
+  }): Promise<GenTestTask> {
+    return apiFetch("/admin/gentest", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  async getGenTests(): Promise<GenTestTask[]> {
+    return apiFetch("/admin/gentest");
+  },
+
+  async getGenTest(id: string): Promise<{ task: GenTestTask; items: GenTestItem[] }> {
+    return apiFetch(`/admin/gentest/${id}`);
+  },
+
+  async cancelGenTest(id: string): Promise<GenTestTask> {
+    return apiFetch(`/admin/gentest/${id}/cancel`, { method: "POST" });
   },
 };
 

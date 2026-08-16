@@ -971,7 +971,11 @@ interface CivitaiModelConfig {
   clipSkip: number;
 }
 
-const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
+/**
+ * Дефолтные пулы чекпоинтов Civitai по стилям. Используются, если админ не
+ * переопределил их через AppSetting `CIVITAI_MODELS` (см. resolveCivitaiModels).
+ */
+const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   realism: [
     { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
     { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
@@ -1000,14 +1004,37 @@ const CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
 };
 
 /**
+ * Разрешает актуальные пулы чекпоинтов Civitai: берёт дефолты и переопределяет
+ * их по стилям из AppSetting `CIVITAI_MODELS` (JSON `Record<style, CivitaiModelConfig[]>`).
+ * Переопределение идёт на уровне стиля: если стиль присутствует в настройке — его пул
+ * заменяется целиком; отсутствующие стили остаются дефолтными. Некорректный JSON или
+ * пустое значение → используются только дефолты (генерация не падает).
+ */
+function resolveCivitaiModels(settings: Record<string, string>): Record<string, CivitaiModelConfig[]> {
+  const raw = settings.CIVITAI_MODELS;
+  if (!raw || !raw.trim()) return DEFAULT_CIVITAI_MODELS;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, CivitaiModelConfig[]>;
+    const merged: Record<string, CivitaiModelConfig[]> = { ...DEFAULT_CIVITAI_MODELS };
+    for (const [style, pool] of Object.entries(parsed)) {
+      if (Array.isArray(pool) && pool.length > 0) merged[style] = pool;
+    }
+    return merged;
+  } catch (err) {
+    logger.warn({ err: String(err) }, "civitai_models_setting_parse_failed");
+    return DEFAULT_CIVITAI_MODELS;
+  }
+}
+
+/**
  * Возвращает конфиг чекпоинта Civitai по его AIR. Сначала ищет во всех пулах
  * (чтобы взять корректные base/dims/steps). Если AIR в пулах нет (пул изменился
  * с момента генерации аватара) — синтезирует конфиг, определяя базу по самому AIR
  * (`:sd1:` → SD1 512×768, иначе SDXL 1024×1536). Так переиспользование чекпоинта
  * персонажа не ломается даже после правок пулов.
  */
-function civitaiConfigForAir(air: string): CivitaiModelConfig {
-  for (const pool of Object.values(CIVITAI_MODELS)) {
+function civitaiConfigForAir(air: string, models: Record<string, CivitaiModelConfig[]>): CivitaiModelConfig {
+  for (const pool of Object.values(models)) {
     const found = pool.find((m) => m.air === air);
     if (found) return found;
   }
@@ -1072,15 +1099,17 @@ async function generateImageCivitai(params: {
    * того же чекпоинта).
    */
   modelAir?: string;
+  /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
+  models: Record<string, CivitaiModelConfig[]>;
 }): Promise<{ url: string; model: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed, modelAir } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed, modelAir, models } = params;
 
   // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
   // иначе случайный чекпоинт из пула стиля (как при первичной генерации аватара).
   const model = modelAir
-    ? civitaiConfigForAir(modelAir)
+    ? civitaiConfigForAir(modelAir, models)
     : (() => {
-        const pool = CIVITAI_MODELS[generationStyle];
+        const pool = models[generationStyle];
         if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
         return pool[Math.floor(Math.random() * pool.length)];
       })();
@@ -1480,6 +1509,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             denoise,
             seed,
             modelAir: civitaiModelAir,
+            models: resolveCivitaiModels(settings),
           });
 
           const imageResponse = await fetch(result.url);
@@ -1613,6 +1643,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         aspectRatio: req.body.aspectRatio,
         seed,
         modelAir: civitaiModelAir,
+        models: resolveCivitaiModels(settings),
       });
 
       const imageResponse = await fetch(result.url);

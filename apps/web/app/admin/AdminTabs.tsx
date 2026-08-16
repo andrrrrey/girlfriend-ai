@@ -14,7 +14,8 @@ export type AdminTab =
   | "blog"
   | "voices"
   | "engagement"
-  | "autogen";
+  | "autogen"
+  | "gentest";
 
 const TABS: { id: AdminTab; label: string; href: string }[] = [
   { id: "settings", label: "Настройки", href: "/admin" },
@@ -28,6 +29,7 @@ const TABS: { id: AdminTab; label: string; href: string }[] = [
   { id: "blog", label: "Записи блога", href: "/admin/blog" },
   { id: "voices", label: "Голоса", href: "/admin/voices" },
   { id: "engagement", label: "Вовлечённость", href: "/admin/engagement" },
+  { id: "gentest", label: "Тест генераций", href: "/admin/gentest" },
 ];
 
 /**
