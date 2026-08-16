@@ -45,8 +45,12 @@ const AXIS_TABLE: Record<Axis, "appearance" | "pose" | "scene" | "camera"> = {
 
 /** Жёсткий верхний лимит числа комбинаций на задачу (защита очереди). */
 const MAX_COMBOS = 300;
-const POLL_INTERVAL_MS = 2500;
-const POLL_MAX_ATTEMPTS = 80; // ~200с
+const POLL_INTERVAL_MS = 3000;
+// Окно поллинга ДОЛЖНО покрывать ожидание в очереди: worker обрабатывает
+// image-джобы ПОСЛЕДОВАТЕЛЬНО (concurrency 1), а одна Civitai-генерация в apps/ai
+// может занимать до ~210с (wait=60 + поллинг 30×5с). Поэтому окно щедрое (~25 мин),
+// иначе элементы, ждущие своей очереди, ложно помечаются timeout, хотя генерятся.
+const POLL_MAX_ATTEMPTS = 500; // 500 * 3с = ~25 мин
 
 interface OptionRow {
   id: string;
