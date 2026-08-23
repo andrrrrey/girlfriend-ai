@@ -119,6 +119,18 @@ const TEMPLATE_DEFAULT_ENGINE = `{
   ]
 }`;
 
+// Проба доступности comfy-workflow: минимальный шаг $type:"comfy". Ждём 400
+// с описанием требуемых полей (значит comfy доступен и покажет схему) ЛИБО
+// ошибку «неизвестный тип шага» (значит путь недоступен на нашем плане).
+const TEMPLATE_COMFY = `{
+  "steps": [
+    {
+      "$type": "comfy",
+      "input": {}
+    }
+  ]
+}`;
+
 const codeBox: React.CSSProperties = {
   width: "100%", minHeight: 260, background: "#0b0b0b", border: "1px solid #262626", borderRadius: 8,
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
@@ -163,6 +175,7 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_LORA)}>Проба A: LoRA</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_CONTROLNET)}>Проба B: ControlNet (sdcpp)</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_DEFAULT_ENGINE)}>Проба C: движок по умолчанию</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY)}>Проба D: comfy (доступность)</button>
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
