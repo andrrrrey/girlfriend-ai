@@ -33,17 +33,44 @@ const TEMPLATE_BASE = `{
   ]
 }`;
 
-// Проба ControlNet: engine убран (пробуем дефолтный Comfy-движок), добавлен controlNets.
-// imageUrl замените на реальный URL позы/референса.
+// Проба LoRA на sdcpp: движок вернул поле "loras" в эхо — проверяем, что AIR
+// LoRA принимается. Замените AIR на реальный SDXL-LoRA с civitai.com.
+const TEMPLATE_LORA = `{
+  "steps": [
+    {
+      "$type": "imageGen",
+      "input": {
+        "engine": "sdcpp",
+        "ecosystem": "sdxl",
+        "operation": "createImage",
+        "model": "urn:air:sdxl:checkpoint:civitai:827184@1612720",
+        "prompt": "beautiful woman, masterpiece, best quality",
+        "negativePrompt": "worst quality, low quality",
+        "width": 1024,
+        "height": 1536,
+        "cfgScale": 7,
+        "steps": 25,
+        "clipSkip": 2,
+        "quantity": 1,
+        "loras": { "urn:air:sdxl:lora:civitai:REPLACE@REPLACE": 0.8 }
+      }
+    }
+  ]
+}`;
+
+// Проба ControlNet на sdcpp: смотрим, попадёт ли controlNets в эхо input
+// (в базовом прогоне его не было → движок, вероятно, игнорирует поле).
+// imageUrl замените на реальный URL картинки-позы.
 const TEMPLATE_CONTROLNET = `{
   "steps": [
     {
       "$type": "imageGen",
       "input": {
+        "engine": "sdcpp",
         "ecosystem": "sdxl",
         "operation": "createImage",
         "model": "urn:air:sdxl:checkpoint:civitai:827184@1612720",
-        "prompt": "beautiful woman, standing in a bedroom, masterpiece, best quality",
+        "prompt": "beautiful woman, sitting on a chair, masterpiece, best quality",
         "negativePrompt": "worst quality, low quality, deformed",
         "width": 1024,
         "height": 1536,
@@ -65,9 +92,10 @@ const TEMPLATE_CONTROLNET = `{
   ]
 }`;
 
-// Проба additionalNetworks (IP-Adapter / LoRA). Ключ — AIR ресурса. Тип/поля
-// IP-Adapter недокументированы — это и проверяем.
-const TEMPLATE_NETWORKS = `{
+// Проба «движок по умолчанию»: engine убран — Civitai подставит движок сам.
+// Смотрим, какой engine вернётся в эхо и появятся ли controlNets (т.е. есть ли
+// вообще движок с поддержкой ControlNet через простой imageGen).
+const TEMPLATE_DEFAULT_ENGINE = `{
   "steps": [
     {
       "$type": "imageGen",
@@ -83,9 +111,9 @@ const TEMPLATE_NETWORKS = `{
         "steps": 25,
         "clipSkip": 2,
         "quantity": 1,
-        "additionalNetworks": {
-          "urn:air:sdxl:lora:civitai:REPLACE@REPLACE": { "type": "Lora", "strength": 0.8 }
-        }
+        "controlNets": [
+          { "preprocessor": "OpenPose", "imageUrl": "https://REPLACE-with-pose-image.png", "weight": 0.7 }
+        ]
       }
     }
   ]
@@ -130,10 +158,11 @@ export function CivitaiLab() {
         Смотрите на HTTP-статус и тело ответа (ошибки валидации подскажут допустимые поля).
       </p>
 
-      <div style={{ marginBottom: 8 }}>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_BASE)}>Шаблон: база</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_CONTROLNET)}>Шаблон: + ControlNet</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_NETWORKS)}>Шаблон: + additionalNetworks</button>
+      <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_BASE)}>Проба: база (sdcpp)</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_LORA)}>Проба A: LoRA</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CONTROLNET)}>Проба B: ControlNet (sdcpp)</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_DEFAULT_ENGINE)}>Проба C: движок по умолчанию</button>
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
@@ -154,6 +183,34 @@ export function CivitaiLab() {
           <div style={{ fontSize: 13, marginBottom: 6, color: resp.ok ? "#4ade80" : "#e36466" }}>
             HTTP {resp.httpStatus} {resp.ok ? "OK" : "— ошибка (см. тело)"}
           </div>
+
+          {/* Анализ: какие поля движок реально принял (эхо input в ответе). */}
+          {(() => {
+            const echo = (resp.body as any)?.steps?.[0]?.input;
+            if (!echo || typeof echo !== "object") return null;
+            const has = (k: string) => Object.prototype.hasOwnProperty.call(echo, k);
+            const rows: { label: string; ok: boolean; note?: string }[] = [
+              { label: `engine = ${echo.engine ?? "?"}`, ok: true },
+              { label: "loras (LoRA)", ok: has("loras") },
+              { label: "embeddings", ok: has("embeddings") },
+              { label: "controlNets (ControlNet)", ok: has("controlNets") },
+              { label: "ipAdapters / ipAdapter (IP-Adapter)", ok: has("ipAdapters") || has("ipAdapter") },
+            ];
+            return (
+              <div style={{ marginBottom: 8, padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
+                <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Принятые поля (эхо input):</div>
+                {rows.map((r) => (
+                  <div key={r.label} style={{ fontSize: 12, color: r.ok ? "#4ade80" : "#e36466" }}>
+                    {r.ok ? "✓" : "✗"} {r.label}
+                  </div>
+                ))}
+                <div style={{ color: "#6f7496", fontSize: 11, marginTop: 6 }}>
+                  ✗ = поле выброшено движком (не поддерживается на этом engine).
+                </div>
+              </div>
+            );
+          })()}
+
           <pre style={{ ...codeBox, minHeight: 120, whiteSpace: "pre-wrap", overflowX: "auto" }}>
             {typeof resp.body === "string" ? resp.body : JSON.stringify(resp.body, null, 2)}
           </pre>
