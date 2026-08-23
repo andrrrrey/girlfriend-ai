@@ -54,13 +54,10 @@ const SETTING_GROUPS = [
   },
   {
     title: "Comfy / IP-Adapter (эксперимент, Фаза 1)",
-    subtitle: "Продвинутая генерация через comfy-workflow: IP-Adapter (identity с аватара персонажа). Работает, когда COMFY_ENABLED=true и в запросе передан ipAdapterImageUrl. AIR моделей базозависимы (отдельные для SDXL и SD1). Граф на стадии итерации — проверяйте в Civitai Lab.",
+    subtitle: "Продвинутая генерация через comfy-workflow: IP-Adapter (identity с аватара персонажа) на IPAdapterUnifiedLoader. Работает, когда COMFY_ENABLED=true и в запросе передан ipAdapterImageUrl. Требует generation-enabled чекпоинт (кнопка Create на Civitai). CLIP-Vision/IP-Adapter модель подтягиваются пресетом автоматически.",
     keys: [
       { key: "COMFY_ENABLED", label: "Включить comfy-режим", type: "select", options: ["false", "true"] },
-      { key: "IPADAPTER_AIR_SDXL", label: "IP-Adapter AIR (SDXL) — urn:air:sdxl:...", type: "text" },
-      { key: "IPADAPTER_AIR_SD1", label: "IP-Adapter AIR (SD1) — urn:air:sd1:...", type: "text" },
-      { key: "CLIPVISION_AIR_SDXL", label: "CLIP-Vision AIR (SDXL)", type: "text" },
-      { key: "CLIPVISION_AIR_SD1", label: "CLIP-Vision AIR (SD1)", type: "text" },
+      { key: "IPADAPTER_PRESET", label: "IP-Adapter preset", type: "select", options: ["PLUS (high strength)", "STANDARD (medium strength)", "PLUS FACE (portraits)", "LIGHT - SD1.5 only (low strength)", "VIT-G (medium strength)"] },
       { key: "IPADAPTER_WEIGHT", label: "IP-Adapter weight (0..1, по умолчанию 0.7)", type: "text" },
     ],
   },

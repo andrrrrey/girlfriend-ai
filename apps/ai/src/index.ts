@@ -1234,13 +1234,17 @@ async function generateImageCivitai(params: {
 // и наличием ipAdapterImageUrl в запросе; обычный путь остаётся на imageGen.
 
 interface ComfyIpAdapter {
-  modelAir: string;
-  clipVisionAir: string;
   imageUrl: string;
+  preset: string;
   weight: number;
 }
 
-/** Строит ComfyUI-граф (API-format) txt2img, опц. с IP-Adapter identity-веткой. */
+/**
+ * Строит ComfyUI-граф (API-format) txt2img, опц. с IP-Adapter identity-веткой.
+ * IP-Adapter — через IPAdapterUnifiedLoader (сам подтягивает IP-Adapter + CLIP-Vision
+ * по пресету, база определяется по чекпоинту) + ноду IPAdapter. Подтверждено рабочим
+ * в Civitai comfy (Фаза 1). Чекпоинт должен быть generation-enabled на Civitai.
+ */
 function buildComfyWorkflow(p: {
   checkpointAir: string;
   prompt: string;
@@ -1271,12 +1275,11 @@ function buildComfyWorkflow(p: {
     "9": { class_type: "SaveImage", inputs: { images: ["8", 0] } },
   };
   if (p.ipAdapter) {
-    g["10"] = { class_type: "IPAdapterModelLoader", inputs: { ipadapter_file: p.ipAdapter.modelAir } };
-    g["11"] = { class_type: "CLIPVisionLoader", inputs: { clip_name: p.ipAdapter.clipVisionAir } };
+    g["10"] = { class_type: "IPAdapterUnifiedLoader", inputs: { model: ["4", 0], preset: p.ipAdapter.preset } };
     g["12"] = { class_type: "LoadImageFromUrl", inputs: { url: p.ipAdapter.imageUrl } };
     g["13"] = {
-      class_type: "IPAdapterApply",
-      inputs: { ipadapter: ["10", 0], clip_vision: ["11", 0], image: ["12", 0], model: ["4", 0], weight: p.ipAdapter.weight, noise: 0 },
+      class_type: "IPAdapter",
+      inputs: { model: ["10", 0], ipadapter: ["10", 1], image: ["12", 0], weight: p.ipAdapter.weight, weight_type: "standard", start_at: 0, end_at: 1 },
     };
     (g["3"].inputs as Record<string, unknown>).model = ["13", 0];
   }
@@ -1742,9 +1745,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           : models[generationStyle]?.[Math.floor(Math.random() * (models[generationStyle]?.length || 1))];
         if (!cfg) throw new Error(`No Civitai model for style ${generationStyle}`);
         const { width: cw, height: ch } = sdDimsForAspect(cfg.base, req.body.aspectRatio, { width: cfg.width, height: cfg.height });
-        const ipAir = cfg.base === "sd1" ? settings.IPADAPTER_AIR_SD1 : settings.IPADAPTER_AIR_SDXL;
-        const cvAir = cfg.base === "sd1" ? settings.CLIPVISION_AIR_SD1 : settings.CLIPVISION_AIR_SDXL;
-        if (!ipAir || !cvAir) throw new Error("IP-Adapter/CLIP-Vision AIR not configured (settings)");
+        const preset = settings.IPADAPTER_PRESET || "PLUS (high strength)";
         const workflow = buildComfyWorkflow({
           checkpointAir: cfg.air,
           prompt,
@@ -1752,7 +1753,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           width: cw, height: ch, steps: cfg.steps, cfgScale: cfg.cfgScale,
           seed: typeof seed === "number" ? seed : Math.floor(Math.random() * 2_147_483_647),
           scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
-          ipAdapter: { modelAir: ipAir, clipVisionAir: cvAir, imageUrl: ipAdapterImageUrl, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
+          ipAdapter: { imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
         });
         const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow });
         const imgResp = await fetch(comfy.url);
