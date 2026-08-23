@@ -640,4 +640,10 @@ export class AdminController {
   async civitaiRawTest(@Body() dto: { payload: unknown }) {
     return this.adminService.civitaiRawTest(dto?.payload);
   }
+
+  /** СПАЙК: статус воркфлоу Civitai по id (асинхронный опрос из Lab). */
+  @Get("civitai/workflow/:id")
+  async civitaiWorkflowStatus(@Param("id") id: string) {
+    return this.adminService.civitaiWorkflowStatus(id);
+  }
 }

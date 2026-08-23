@@ -1336,6 +1336,10 @@ export const admin = {
   async civitaiRawTest(payload: unknown): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
     return apiFetch(`/admin/civitai/raw-test`, { method: "POST", body: JSON.stringify({ payload }) });
   },
+
+  async civitaiWorkflowStatus(id: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    return apiFetch(`/admin/civitai/workflow/${encodeURIComponent(id)}`);
+  },
 };
 
 // ─── Chat API ────────────────────────────────────────────────

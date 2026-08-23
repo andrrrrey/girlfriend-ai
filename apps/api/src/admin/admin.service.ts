@@ -1261,12 +1261,13 @@ export class AdminService {
     const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
     if (!token) throw new BadRequestException("CIVITAI_API_TOKEN не задан в настройках");
 
-    // Ошибки fetch/таймаут возвращаем В ТЕЛЕ (а не бросаем), чтобы в UI была видна
-    // реальная причина, а не общее «Запрос не удался». Таймаут 110с (тяжёлый comfy).
+    // Асинхронно: submit с wait=0 возвращается сразу (id + status "scheduled"),
+    // без долгого коннекта → прокси не обрывает. Результат/ошибки исполнения графа
+    // тянутся отдельно через civitaiWorkflowStatus. Ошибки fetch — в тело.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 110_000);
+    const timer = setTimeout(() => ctrl.abort(), 30_000);
     try {
-      const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+      const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=0&allowMatureContent=true", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -1279,7 +1280,31 @@ export class AdminService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const aborted = (err as { name?: string })?.name === "AbortError";
-      return { httpStatus: 0, ok: false, body: { fetchError: aborted ? "timeout (110s) — Civitai не ответил вовремя" : msg } };
+      return { httpStatus: 0, ok: false, body: { fetchError: aborted ? "timeout (30s) на submit" : msg } };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** Статус воркфлоу Civitai по id (для асинхронного опроса из Civitai Lab). */
+  async civitaiWorkflowStatus(id: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    if (!id) throw new BadRequestException("id обязателен");
+    const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
+    if (!token) throw new BadRequestException("CIVITAI_API_TOKEN не задан в настройках");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30_000);
+    try {
+      const res = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${encodeURIComponent(id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: ctrl.signal,
+      });
+      const text = await res.text();
+      let body: unknown;
+      try { body = JSON.parse(text); } catch { body = text; }
+      return { httpStatus: res.status, ok: res.ok, body };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { httpStatus: 0, ok: false, body: { fetchError: msg } };
     } finally {
       clearTimeout(timer);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { admin } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
 
@@ -185,20 +185,57 @@ const codeBox: React.CSSProperties = {
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
 };
 
+const TERMINAL = new Set(["succeeded", "completed", "failed", "cancelled", "expired"]);
+
 export function CivitaiLab() {
   const [payload, setPayload] = useState(TEMPLATE_BASE);
   const [busy, setBusy] = useState(false);
   const [resp, setResp] = useState<{ httpStatus: number; ok: boolean; body: unknown } | null>(null);
   const [err, setErr] = useState("");
+  const [polling, setPolling] = useState(false);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPoll = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    setPolling(false);
+  };
+  useEffect(() => () => stopPoll(), []);
+
+  const pollOnce = async (id: string) => {
+    try {
+      const r = await admin.civitaiWorkflowStatus(id);
+      setResp(r);
+      const status = (r.body as any)?.status;
+      if (status && TERMINAL.has(status)) stopPoll();
+    } catch (e: any) {
+      setErr(e?.message || "Опрос статуса не удался");
+      stopPoll();
+    }
+  };
 
   const send = async () => {
-    setErr(""); setResp(null);
+    setErr(""); setResp(null); stopPoll(); setWorkflowId(null);
     let parsed: unknown;
     try { parsed = JSON.parse(payload); } catch (e: any) { setErr("Некорректный JSON: " + (e?.message || "")); return; }
     setBusy(true);
     try {
       const r = await admin.civitaiRawTest(parsed);
       setResp(r);
+      const body = r.body as any;
+      const id = body?.id;
+      const status = body?.status;
+      // Submit прошёл (есть id) и генерация ещё не завершена → авто-опрос статуса.
+      if (id && (!status || !TERMINAL.has(status))) {
+        setWorkflowId(id);
+        setPolling(true);
+        let ticks = 0;
+        pollRef.current = setInterval(() => {
+          ticks += 1;
+          if (ticks > 40) { stopPoll(); return; } // ~2 мин
+          void pollOnce(id);
+        }, 3000);
+      }
     } catch (e: any) {
       setErr(e?.message || "Запрос не удался");
     } finally {
@@ -246,7 +283,20 @@ export function CivitaiLab() {
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13, marginBottom: 6, color: resp.ok ? "#4ade80" : "#e36466" }}>
             HTTP {resp.httpStatus} {resp.ok ? "OK" : "— ошибка (см. тело)"}
+            {(() => {
+              const status = (resp.body as any)?.status;
+              return status ? <span style={{ color: "#cfcfcf", marginLeft: 8 }}>· workflow: {status}</span> : null;
+            })()}
           </div>
+          {(polling || workflowId) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              {polling && <span style={{ color: "#6f7496", fontSize: 12 }}>опрос статуса каждые 3с…</span>}
+              {workflowId && (
+                <button style={btn} onClick={() => void pollOnce(workflowId)}>Обновить статус</button>
+              )}
+              {polling && <button style={btn} onClick={stopPoll}>Стоп</button>}
+            </div>
+          )}
 
           {/* Анализ: какие поля движок реально принял (эхо input в ответе). */}
           {(() => {
