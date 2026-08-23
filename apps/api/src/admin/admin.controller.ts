@@ -634,4 +634,10 @@ export class AdminController {
   async resolveCivitaiAir(@Query("url") url: string) {
     return this.adminService.resolveCivitaiAir(url);
   }
+
+  /** СПАЙК: отправляет произвольный payload на Civitai Orchestration и возвращает сырой ответ. */
+  @Post("civitai/raw-test")
+  async civitaiRawTest(@Body() dto: { payload: unknown }) {
+    return this.adminService.civitaiRawTest(dto?.payload);
+  }
 }

@@ -1248,4 +1248,27 @@ export class AdminService {
 
     return { air, base, ...dims, modelName: vData.model?.name, baseModel };
   }
+
+  /**
+   * СПАЙК-инструмент: отправляет произвольный payload на Civitai Orchestration
+   * (workflows) с сохранённым CIVITAI_API_TOKEN и возвращает сырой ответ. Нужен,
+   * чтобы эмпирически проверить, какой engine и какие поля (controlNets/
+   * additionalNetworks/IP-Adapter) принимает API, перед внедрением фичи.
+   * Только для админа; endpoint зафиксирован (внешних адресов из payload не берём).
+   */
+  async civitaiRawTest(payload: unknown): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    if (!payload || typeof payload !== "object") throw new BadRequestException("payload должен быть JSON-объектом");
+    const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
+    if (!token) throw new BadRequestException("CIVITAI_API_TOKEN не задан в настройках");
+
+    const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    return { httpStatus: res.status, ok: res.ok, body };
+  }
 }

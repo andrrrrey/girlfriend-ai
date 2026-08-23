@@ -7,6 +7,7 @@ import { admin, type AppSetting } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
 import { AdminTabs } from "./AdminTabs";
 import { CivitaiModelsEditor } from "./CivitaiModelsEditor";
+import { CivitaiLab } from "./CivitaiLab";
 
 const SETTING_GROUPS = [
   {
@@ -186,6 +187,8 @@ export default function AdminSettingsPage() {
         ))}
 
         <CivitaiModelsEditor settings={settings} setSettings={setSettings} />
+
+        <CivitaiLab />
 
         <div style={{ ...adminStyles.card, marginBottom: 20 }}>
           <h2 style={adminStyles.title}>Generation Models</h2>

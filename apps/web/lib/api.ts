@@ -1332,6 +1332,10 @@ export const admin = {
   }> {
     return apiFetch(`/admin/civitai/resolve-air?url=${encodeURIComponent(url)}`);
   },
+
+  async civitaiRawTest(payload: unknown): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    return apiFetch(`/admin/civitai/raw-test`, { method: "POST", body: JSON.stringify({ payload }) });
+  },
 };
 
 // ─── Chat API ────────────────────────────────────────────────
