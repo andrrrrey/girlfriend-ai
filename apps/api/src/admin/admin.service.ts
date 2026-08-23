@@ -1261,14 +1261,27 @@ export class AdminService {
     const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
     if (!token) throw new BadRequestException("CIVITAI_API_TOKEN не задан в настройках");
 
-    const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { body = text; }
-    return { httpStatus: res.status, ok: res.ok, body };
+    // Ошибки fetch/таймаут возвращаем В ТЕЛЕ (а не бросаем), чтобы в UI была видна
+    // реальная причина, а не общее «Запрос не удался». Таймаут 110с (тяжёлый comfy).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 110_000);
+    try {
+      const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+      const text = await res.text();
+      let body: unknown;
+      try { body = JSON.parse(text); } catch { body = text; }
+      return { httpStatus: res.status, ok: res.ok, body };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const aborted = (err as { name?: string })?.name === "AbortError";
+      return { httpStatus: 0, ok: false, body: { fetchError: aborted ? "timeout (110s) — Civitai не ответил вовремя" : msg } };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
