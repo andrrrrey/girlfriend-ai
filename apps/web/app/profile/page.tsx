@@ -7,6 +7,7 @@ import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import type { TKey } from "../../lib/i18n";
 import { users, chatProfiles, resizedMediaUrl, type ChatProfile } from "../../lib/api";
+import SubscriptionBlock from "../components/SubscriptionBlock";
 
 type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
 
@@ -427,17 +428,6 @@ const CSS = `
 /* ═══════════════════════════════════════
    Data
 ═══════════════════════════════════════ */
-const FEATURES: { icon: string; labelKey: TKey; free: string; pro: string }[] = [
-  { icon: "💬", labelKey: "profile.featMessages",      free: "10",  pro: "∞" },
-  { icon: "🖼️", labelKey: "profile.featImages",        free: "10",  pro: "∞" },
-  { icon: "🎬", labelKey: "profile.featVideo",         free: "✗",   pro: "✓" },
-  { icon: "❤️", labelKey: "profile.featRelationships", free: "1",   pro: "∞" },
-  { icon: "⭐", labelKey: "profile.featPremiumChars",  free: "✗",   pro: "✓" },
-  { icon: "🎭", labelKey: "profile.featPersonas",      free: "✗",   pro: "✓" },
-  { icon: "📷", labelKey: "profile.featNsfw",          free: "✗",   pro: "✓" },
-  { icon: "⚡", labelKey: "profile.featPriority",      free: "✗",   pro: "✓" },
-];
-
 const STYLES = [
   { label: "Realistic", bg: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=240&fit=crop&crop=face" },
   { label: "Semi-real", bg: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=240&fit=crop&crop=face" },
@@ -483,16 +473,6 @@ function IcoLogout() {
   );
 }
 
-function IcoDiamond() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <path d="M6 3h12l4 6-10 13L2 9z" fill="none" stroke="#F95BAD" strokeWidth="1.5" strokeLinejoin="round"/>
-      <path d="M2 9h20" stroke="#F95BAD" strokeWidth="1.5"/>
-      <path d="M12 3 8 9m4-6 4 6" stroke="#FF99CE" strokeWidth="1" opacity="0.7"/>
-    </svg>
-  );
-}
-
 function IcoChevron() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -519,63 +499,11 @@ function IcoPlus() {
   );
 }
 
-function IcoCheckCircle() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9.5" stroke="#C1F0AA" strokeWidth="1.4"/>
-      <path d="M8 12l3 3 5-5" stroke="#C1F0AA" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function IcoXCircle() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9.5" stroke="#848484" strokeWidth="1.4"/>
-      <path d="M15 9l-6 6M9 9l6 6" stroke="#848484" strokeWidth="1.4" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
 /* ═══════════════════════════════════════
    Tabs
 ═══════════════════════════════════════ */
 function SubscriptionTab() {
-  const { t } = useT();
-  return (
-    <div className="pp-sub">
-      <div className="pp-sub-card">
-        <div className="pp-sub-icon"><IcoDiamond /></div>
-        <div className="pp-sub-title">{t("profile.proPlan")}</div>
-        <div className="pp-sub-price">
-          <span className="pp-sub-amount">$ 25</span>
-          <span className="pp-sub-period">{t("profile.perMonths")}</span>
-        </div>
-        <div className="pp-sub-charge">{t("profile.chargeOn", { date: "07/23/2026" })}</div>
-        <div className="pp-sub-spacer" />
-        <div className="pp-sub-btns">
-          <button className="pp-btn-grad">{t("profile.upgrade")}</button>
-          <button className="pp-btn-dark">{t("profile.manageSubscription")}</button>
-        </div>
-      </div>
-
-      <div className="pp-sub-right">
-        <div className="pp-feat-table">
-          {FEATURES.map((f) => (
-            <React.Fragment key={f.labelKey}>
-              <div className="pp-feat-card" key={`${f.labelKey}-card`}>
-                <div className="pp-feat-ico">{f.icon}</div>
-                {t(f.labelKey)}
-              </div>
-              <div className="pp-cmp-cell" key={`${f.labelKey}-cmp`}>
-                {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return <SubscriptionBlock />;
 }
 
 function AccountTab() {
