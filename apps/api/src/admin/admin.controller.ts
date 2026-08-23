@@ -626,4 +626,12 @@ export class AdminController {
   ) {
     return this.adminService.generateComments(dto.targetType, dto.targetIds, dto.count);
   }
+
+  // ─── Civitai AIR ────────────────────────────────────────────
+
+  /** Резолвит ссылку Civitai (или AIR/versionId) в готовый чекпоинт для редактора AIR. */
+  @Get("civitai/resolve-air")
+  async resolveCivitaiAir(@Query("url") url: string) {
+    return this.adminService.resolveCivitaiAir(url);
+  }
 }

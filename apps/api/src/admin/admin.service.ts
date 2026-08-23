@@ -19,7 +19,7 @@
  * {@link NotFoundException} при отсутствии запрошенной записи.
  */
 
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
@@ -1169,5 +1169,83 @@ export class AdminService {
       }
     }
     return { created, requested, targets: ids.length };
+  }
+
+  // ─── Civitai AIR: резолв ссылки/идентификатора в готовый чекпоинт ────────────
+
+  /**
+   * По ссылке Civitai (или готовому AIR / versionId) достаёт данные модели через
+   * публичный Civitai API и собирает конфиг чекпоинта: air, base (sd1|sdxl),
+   * размеры по базе. Используется в админ-редакторе «Civitai AIR модели».
+   *
+   * Принимает:
+   *  - URL модели: https://civitai.com/models/{modelId}?modelVersionId={versionId}
+   *    (или без версии — тогда берётся последняя версия модели);
+   *  - готовый AIR: urn:air:sdxl:checkpoint:civitai:{modelId}@{versionId};
+   *  - просто число versionId.
+   */
+  async resolveCivitaiAir(input: string): Promise<{
+    air: string;
+    base: "sd1" | "sdxl";
+    width: number;
+    height: number;
+    modelName?: string;
+    baseModel?: string;
+  }> {
+    const raw = (input || "").trim();
+    if (!raw) throw new BadRequestException("Пустая ссылка");
+
+    let versionId: string | undefined;
+    let modelId: string | undefined;
+
+    // 1) Готовый AIR.
+    const airMatch = raw.match(/urn:air:(sd1|sdxl):checkpoint:civitai:(\d+)@(\d+)/i);
+    if (airMatch) {
+      modelId = airMatch[2];
+      versionId = airMatch[3];
+    } else {
+      // 2) URL — вытаскиваем modelVersionId и/или /models/{id}.
+      versionId = raw.match(/[?&]modelVersionId=(\d+)/i)?.[1];
+      modelId = raw.match(/\/models\/(\d+)/i)?.[1];
+      // 3) Просто число — трактуем как versionId.
+      if (!versionId && !modelId && /^\d+$/.test(raw)) versionId = raw;
+    }
+
+    const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    // Если версии нет, но есть модель — берём последнюю версию модели.
+    if (!versionId && modelId) {
+      const mRes = await fetch(`https://civitai.com/api/v1/models/${modelId}`, { headers });
+      if (!mRes.ok) throw new BadRequestException(`Civitai API ${mRes.status} (модель ${modelId})`);
+      const mData = (await mRes.json()) as { modelVersions?: { id: number }[] };
+      versionId = mData.modelVersions?.[0]?.id ? String(mData.modelVersions[0].id) : undefined;
+    }
+
+    if (!versionId) throw new BadRequestException("Не удалось определить versionId из ссылки");
+
+    const vRes = await fetch(`https://civitai.com/api/v1/model-versions/${versionId}`, { headers });
+    if (!vRes.ok) throw new BadRequestException(`Civitai API ${vRes.status} (версия ${versionId})`);
+    const vData = (await vRes.json()) as {
+      modelId?: number;
+      baseModel?: string;
+      model?: { name?: string; type?: string };
+    };
+
+    modelId = vData.modelId ? String(vData.modelId) : modelId;
+    if (!modelId) throw new BadRequestException("Не удалось определить modelId");
+
+    if (vData.model?.type && vData.model.type.toLowerCase() !== "checkpoint") {
+      throw new BadRequestException(`Тип «${vData.model.type}» не поддерживается — нужен Checkpoint`);
+    }
+
+    const baseModel = vData.baseModel || "";
+    // SD 1.x → sd1; всё остальное (SDXL/Pony/Illustrious/…) → sdxl.
+    const isSd1 = /sd\s*1(\.\d)?\b|\bsd1\b/i.test(baseModel);
+    const base: "sd1" | "sdxl" = isSd1 ? "sd1" : "sdxl";
+    const dims = base === "sd1" ? { width: 512, height: 768 } : { width: 1024, height: 1536 };
+    const air = `urn:air:${base}:checkpoint:civitai:${modelId}@${versionId}`;
+
+    return { air, base, ...dims, modelName: vData.model?.name, baseModel };
   }
 }

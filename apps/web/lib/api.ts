@@ -1319,6 +1319,19 @@ export const admin = {
   async cancelGenTest(id: string): Promise<GenTestTask> {
     return apiFetch(`/admin/gentest/${id}/cancel`, { method: "POST" });
   },
+
+  // ─── Civitai AIR ───────────────────────────────────────────
+
+  async resolveCivitaiAir(url: string): Promise<{
+    air: string;
+    base: "sd1" | "sdxl";
+    width: number;
+    height: number;
+    modelName?: string;
+    baseModel?: string;
+  }> {
+    return apiFetch(`/admin/civitai/resolve-air?url=${encodeURIComponent(url)}`);
+  },
 };
 
 // ─── Chat API ────────────────────────────────────────────────

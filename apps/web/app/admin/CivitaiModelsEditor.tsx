@@ -90,6 +90,10 @@ interface Props {
 export function CivitaiModelsEditor({ settings, setSettings }: Props) {
   const models = useMemo(() => parseModels(settings["CIVITAI_MODELS"]), [settings]);
   const [styleOptions, setStyleOptions] = useState<CharacterOption[]>([]);
+  // Поле «вставить ссылку Civitai» и его состояние — по каждому стилю.
+  const [linkBy, setLinkBy] = useState<Record<string, string>>({});
+  const [busyBy, setBusyBy] = useState<Record<string, boolean>>({});
+  const [errBy, setErrBy] = useState<Record<string, string>>({});
 
   // Справка: какие STYLE-опции привязаны к каждому пулу (по generationStyle).
   useEffect(() => {
@@ -120,11 +124,32 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
     next[style].splice(idx, 1);
     commit(next);
   };
-  const addItem = (style: string) => {
+  const addItem = (style: string, preset?: Partial<CivitaiModelConfig>) => {
     const next = JSON.parse(JSON.stringify(models)) as Record<string, CivitaiModelConfig[]>;
-    const dims = dimsForBase("sdxl");
-    next[style] = [...(next[style] || []), { air: "", base: "sdxl", ...dims, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 }];
+    const base = preset?.base || "sdxl";
+    const dims = dimsForBase(base);
+    next[style] = [
+      ...(next[style] || []),
+      { air: "", base, ...dims, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2, ...preset },
+    ];
     commit(next);
+  };
+
+  /** Резолвит вставленную ссылку Civitai через backend и добавляет чекпоинт в пул. */
+  const addFromLink = async (style: string) => {
+    const url = (linkBy[style] || "").trim();
+    if (!url) return;
+    setBusyBy((b) => ({ ...b, [style]: true }));
+    setErrBy((e) => ({ ...e, [style]: "" }));
+    try {
+      const r = await admin.resolveCivitaiAir(url);
+      addItem(style, { air: r.air, base: r.base, width: r.width, height: r.height });
+      setLinkBy((l) => ({ ...l, [style]: "" }));
+    } catch (e: any) {
+      setErrBy((er) => ({ ...er, [style]: e?.message || "Не удалось разобрать ссылку" }));
+    } finally {
+      setBusyBy((b) => ({ ...b, [style]: false }));
+    }
   };
   const resetToDefaults = () => {
     setSettings((prev) => {
@@ -167,6 +192,21 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
             ) : null}
           </div>
 
+          {/* Заголовки колонок */}
+          {models[style].length > 0 && (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4, color: "#6f7496", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }}>
+              <span style={{ flex: 1, minWidth: 320 }}>AIR (идентификатор чекпоинта)</span>
+              <span style={{ width: 72 }} title="Базовая архитектура SD">база</span>
+              <span style={{ width: 60 }} title="Ширина изображения, px">ширина</span>
+              <span style={{ width: 60 }} title="Высота изображения, px">высота</span>
+              <span style={{ width: 56 }} title="Число шагов диффузии">шаги</span>
+              <span style={{ width: 52 }} title="CFG scale — сила следования промпту">cfg</span>
+              <span style={{ width: 84 }} title="Сэмплер / планировщик">сэмплер</span>
+              <span style={{ width: 52 }} title="Clip skip">clip</span>
+              <span style={{ width: 34 }} />
+            </div>
+          )}
+
           {models[style].map((m, idx) => {
             const invalid = !!m.air && !AIR_RE.test(m.air);
             return (
@@ -201,12 +241,30 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
             );
           })}
 
-          <button
-            onClick={() => addItem(style)}
-            style={{ marginTop: 6, background: "transparent", border: "1px solid #313131", color: "#cfcfcf", borderRadius: 6, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}
-          >
-            + Добавить чекпоинт
-          </button>
+          {/* Быстрое добавление: вставка ссылки Civitai → авто-заполнение */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+            <input
+              style={{ ...cellInput, flex: 1, minWidth: 320 }}
+              placeholder="Вставьте ссылку Civitai (civitai.com/models/…?modelVersionId=…) или AIR"
+              value={linkBy[style] || ""}
+              onChange={(e) => setLinkBy((l) => ({ ...l, [style]: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") void addFromLink(style); }}
+            />
+            <button
+              onClick={() => void addFromLink(style)}
+              disabled={!!busyBy[style]}
+              style={{ background: "#f95bad", border: "none", color: "#fff", borderRadius: 6, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, opacity: busyBy[style] ? 0.6 : 1 }}
+            >
+              {busyBy[style] ? "Загрузка…" : "Добавить по ссылке"}
+            </button>
+            <button
+              onClick={() => addItem(style)}
+              style={{ background: "transparent", border: "1px solid #313131", color: "#cfcfcf", borderRadius: 6, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}
+            >
+              + Пустой чекпоинт
+            </button>
+          </div>
+          {errBy[style] && <p style={{ color: "#e36466", fontSize: 12, margin: "6px 0 0" }}>{errBy[style]}</p>}
         </div>
       ))}
 
