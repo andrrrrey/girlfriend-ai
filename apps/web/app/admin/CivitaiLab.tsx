@@ -131,6 +131,55 @@ const TEMPLATE_COMFY = `{
   ]
 }`;
 
+// Проба E: comfy txt2img — минимальный ComfyUI-граф (API-format). Сначала нужно
+// добиться, чтобы этот граф вернул картинку (подтвердить приём AIR в ckpt_name).
+const TEMPLATE_COMFY_TXT2IMG = `{
+  "steps": [
+    {
+      "$type": "comfy",
+      "input": {
+        "quantity": 1,
+        "comfyWorkflow": {
+          "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "urn:air:sdxl:checkpoint:civitai:827184@1612720" } },
+          "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 1024, "height": 1536, "batch_size": 1 } },
+          "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "beautiful woman, masterpiece, best quality", "clip": ["4", 1] } },
+          "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
+          "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
+          "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0] } }
+        }
+      }
+    }
+  ]
+}`;
+
+// Проба F: comfy + IP-Adapter. Замените REPLACE на AIR IP-Adapter и CLIP-Vision
+// (SDXL) и imageUrl — на аватар персонажа. Имена нод могут отличаться в comfy
+// Civitai — по ошибке подберём корректные.
+const TEMPLATE_COMFY_IPADAPTER = `{
+  "steps": [
+    {
+      "$type": "comfy",
+      "input": {
+        "quantity": 1,
+        "comfyWorkflow": {
+          "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "urn:air:sdxl:checkpoint:civitai:827184@1612720" } },
+          "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 1024, "height": 1536, "batch_size": 1 } },
+          "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "sitting on a chair in a cafe, masterpiece, best quality", "clip": ["4", 1] } },
+          "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
+          "10": { "class_type": "IPAdapterModelLoader", "inputs": { "ipadapter_file": "urn:air:sdxl:REPLACE-ipadapter" } },
+          "11": { "class_type": "CLIPVisionLoader", "inputs": { "clip_name": "urn:air:sdxl:REPLACE-clipvision" } },
+          "12": { "class_type": "LoadImageFromUrl", "inputs": { "url": "https://REPLACE-avatar.png" } },
+          "13": { "class_type": "IPAdapterApply", "inputs": { "ipadapter": ["10", 0], "clip_vision": ["11", 0], "image": ["12", 0], "model": ["4", 0], "weight": 0.7, "noise": 0 } },
+          "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["13", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
+          "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0] } }
+        }
+      }
+    }
+  ]
+}`;
+
 const codeBox: React.CSSProperties = {
   width: "100%", minHeight: 260, background: "#0b0b0b", border: "1px solid #262626", borderRadius: 8,
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
@@ -176,6 +225,8 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_CONTROLNET)}>Проба B: ControlNet (sdcpp)</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_DEFAULT_ENGINE)}>Проба C: движок по умолчанию</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY)}>Проба D: comfy (доступность)</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_TXT2IMG)}>Проба E: comfy txt2img</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_IPADAPTER)}>Проба F: comfy + IP-Adapter</button>
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />

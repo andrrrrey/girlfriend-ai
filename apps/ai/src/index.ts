@@ -1226,6 +1226,102 @@ async function generateImageCivitai(params: {
   throw new Error("Civitai image generation: no image URL in response");
 }
 
+// ─── Civitai comfy-workflow (Фаза 1: IP-Adapter identity) ──────────────────────
+// ЭКСПЕРИМЕНТ. Генерация через шаг $type:"comfy" с ComfyUI-графом (API-format) —
+// единственный путь к IP-Adapter/ControlNet (imageGen их не поддерживает).
+// Граф — первый драфт; имена нод и приём AIR в comfy Civitai требуют проверки
+// живыми запросами (admin → Civitai Lab). Включается настройкой COMFY_ENABLED
+// и наличием ipAdapterImageUrl в запросе; обычный путь остаётся на imageGen.
+
+interface ComfyIpAdapter {
+  modelAir: string;
+  clipVisionAir: string;
+  imageUrl: string;
+  weight: number;
+}
+
+/** Строит ComfyUI-граф (API-format) txt2img, опц. с IP-Adapter identity-веткой. */
+function buildComfyWorkflow(p: {
+  checkpointAir: string;
+  prompt: string;
+  negativePrompt: string;
+  width: number;
+  height: number;
+  steps: number;
+  cfgScale: number;
+  seed: number;
+  sampler?: string;
+  scheduler?: string;
+  ipAdapter?: ComfyIpAdapter;
+}): Record<string, unknown> {
+  const g: Record<string, { class_type: string; inputs: Record<string, unknown> }> = {
+    "4": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: p.checkpointAir } },
+    "5": { class_type: "EmptyLatentImage", inputs: { width: p.width, height: p.height, batch_size: 1 } },
+    "6": { class_type: "CLIPTextEncode", inputs: { text: p.prompt, clip: ["4", 1] } },
+    "7": { class_type: "CLIPTextEncode", inputs: { text: p.negativePrompt, clip: ["4", 1] } },
+    "3": {
+      class_type: "KSampler",
+      inputs: {
+        seed: p.seed, steps: p.steps, cfg: p.cfgScale,
+        sampler_name: p.sampler || "euler", scheduler: p.scheduler || "normal", denoise: 1,
+        model: ["4", 0], positive: ["6", 0], negative: ["7", 0], latent_image: ["5", 0],
+      },
+    },
+    "8": { class_type: "VAEDecode", inputs: { samples: ["3", 0], vae: ["4", 2] } },
+    "9": { class_type: "SaveImage", inputs: { images: ["8", 0] } },
+  };
+  if (p.ipAdapter) {
+    g["10"] = { class_type: "IPAdapterModelLoader", inputs: { ipadapter_file: p.ipAdapter.modelAir } };
+    g["11"] = { class_type: "CLIPVisionLoader", inputs: { clip_name: p.ipAdapter.clipVisionAir } };
+    g["12"] = { class_type: "LoadImageFromUrl", inputs: { url: p.ipAdapter.imageUrl } };
+    g["13"] = {
+      class_type: "IPAdapterApply",
+      inputs: { ipadapter: ["10", 0], clip_vision: ["11", 0], image: ["12", 0], model: ["4", 0], weight: p.ipAdapter.weight, noise: 0 },
+    };
+    (g["3"].inputs as Record<string, unknown>).model = ["13", 0];
+  }
+  return g;
+}
+
+/** Отправляет comfy-граф на Civitai Orchestration и поллит результат. */
+async function generateImageComfy(params: { apiToken: string; workflow: Record<string, unknown> }): Promise<{ url: string }> {
+  const extractUrl = (r: any): string | undefined => {
+    const imgs = r?.steps?.[0]?.output?.images as Array<{ url?: string; available?: boolean }> | undefined;
+    const img = imgs?.find((x) => x?.available !== false && x?.url) || imgs?.[0];
+    return img?.url;
+  };
+  const body = { steps: [{ $type: "comfy", input: { comfyWorkflow: params.workflow, quantity: 1 } }] };
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${params.apiToken}` },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    logger.error({ status: response.status, body: t.slice(0, 500) }, "civitai_comfy_api_error");
+    throw new Error(`Civitai comfy HTTP ${response.status}`);
+  }
+  let result: any = await response.json();
+  const first = extractUrl(result);
+  if (first) return { url: first };
+  if ((result?.status === "scheduled" || result?.status === "processing") && result?.id) {
+    for (let i = 0; i < 30; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${result.id}`, {
+        headers: { Authorization: `Bearer ${params.apiToken}` },
+      });
+      if (!pollRes.ok) continue;
+      result = await pollRes.json();
+      logger.info({ status: result?.status, attempt: i }, "civitai_comfy_poll");
+      const u = extractUrl(result);
+      if (u) return { url: u };
+      if (result?.status === "failed") throw new Error("Civitai comfy generation failed");
+    }
+    throw new Error("Civitai comfy generation timed out");
+  }
+  throw new Error("Civitai comfy: no image URL in response");
+}
+
 async function generateImageAtlasCloud(params: {
   apiKey: string;
   modelId: string;
@@ -1634,6 +1730,56 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       return reply.status(503).send({ error: "Civitai API token not configured" });
     }
     const generationStyle = req.body.generationStyle || "realism";
+
+    // ── Продвинутый режим: IP-Adapter identity через comfy-workflow (Фаза 1). ──
+    // Включается настройкой COMFY_ENABLED и наличием ipAdapterImageUrl в запросе.
+    const ipAdapterImageUrl = (req.body as { ipAdapterImageUrl?: string }).ipAdapterImageUrl;
+    if (ipAdapterImageUrl && settings.COMFY_ENABLED === "true") {
+      try {
+        const models = resolveCivitaiModels(settings);
+        const cfg = civitaiModelAir
+          ? civitaiConfigForAir(civitaiModelAir, models)
+          : models[generationStyle]?.[Math.floor(Math.random() * (models[generationStyle]?.length || 1))];
+        if (!cfg) throw new Error(`No Civitai model for style ${generationStyle}`);
+        const { width: cw, height: ch } = sdDimsForAspect(cfg.base, req.body.aspectRatio, { width: cfg.width, height: cfg.height });
+        const ipAir = cfg.base === "sd1" ? settings.IPADAPTER_AIR_SD1 : settings.IPADAPTER_AIR_SDXL;
+        const cvAir = cfg.base === "sd1" ? settings.CLIPVISION_AIR_SD1 : settings.CLIPVISION_AIR_SDXL;
+        if (!ipAir || !cvAir) throw new Error("IP-Adapter/CLIP-Vision AIR not configured (settings)");
+        const workflow = buildComfyWorkflow({
+          checkpointAir: cfg.air,
+          prompt,
+          negativePrompt: negativePrompt || "worst quality, low quality",
+          width: cw, height: ch, steps: cfg.steps, cfgScale: cfg.cfgScale,
+          seed: typeof seed === "number" ? seed : Math.floor(Math.random() * 2_147_483_647),
+          scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
+          ipAdapter: { modelAir: ipAir, clipVisionAir: cvAir, imageUrl: ipAdapterImageUrl, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
+        });
+        const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow });
+        const imgResp = await fetch(comfy.url);
+        if (imgResp.ok) {
+          const buf = Buffer.from(await imgResp.arrayBuffer());
+          const s3c = createS3Client();
+          if (s3c) {
+            try {
+              const key = `images/${randomUUID()}.png`;
+              const url = await uploadToS3(s3c, env.S3_BUCKET || "media", key, buf, "image/png");
+              logger.info({ key, generationStyle, mode: "comfy-ipadapter" }, "civitai_comfy_uploaded_to_s3");
+              return sendResult(url, { model: cfg.air, generationStyle });
+            } catch (s3Err: any) {
+              logger.warn({ err: s3Err }, "civitai_comfy_s3_upload_failed");
+            }
+          }
+        }
+        return sendResult(comfy.url, { model: cfg.air, generationStyle });
+      } catch (err: any) {
+        logger.error({ err }, "civitai_comfy_generation_error");
+        if (isInsufficientBalance(0, String(err?.message ?? ""))) {
+          return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "civitai" });
+        }
+        return reply.status(502).send({ error: "Civitai comfy generation failed", details: err.message });
+      }
+    }
+
     try {
       const result = await generateImageCivitai({
         apiToken: civitaiToken,

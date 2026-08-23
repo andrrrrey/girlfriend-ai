@@ -53,6 +53,18 @@ const SETTING_GROUPS = [
     ],
   },
   {
+    title: "Comfy / IP-Adapter (эксперимент, Фаза 1)",
+    subtitle: "Продвинутая генерация через comfy-workflow: IP-Adapter (identity с аватара персонажа). Работает, когда COMFY_ENABLED=true и в запросе передан ipAdapterImageUrl. AIR моделей базозависимы (отдельные для SDXL и SD1). Граф на стадии итерации — проверяйте в Civitai Lab.",
+    keys: [
+      { key: "COMFY_ENABLED", label: "Включить comfy-режим", type: "select", options: ["false", "true"] },
+      { key: "IPADAPTER_AIR_SDXL", label: "IP-Adapter AIR (SDXL) — urn:air:sdxl:...", type: "text" },
+      { key: "IPADAPTER_AIR_SD1", label: "IP-Adapter AIR (SD1) — urn:air:sd1:...", type: "text" },
+      { key: "CLIPVISION_AIR_SDXL", label: "CLIP-Vision AIR (SDXL)", type: "text" },
+      { key: "CLIPVISION_AIR_SD1", label: "CLIP-Vision AIR (SD1)", type: "text" },
+      { key: "IPADAPTER_WEIGHT", label: "IP-Adapter weight (0..1, по умолчанию 0.7)", type: "text" },
+    ],
+  },
+  {
     title: "System Prompt",
     subtitle: "Глобальный шаблон системного промпта для всех AI-персонажей",
     keys: [
