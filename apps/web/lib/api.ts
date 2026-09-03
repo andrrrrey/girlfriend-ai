@@ -1303,6 +1303,7 @@ export const admin = {
     mode: "img2img" | "txt2img";
     concurrency: number;
     seed?: number;
+    denoise?: number;
     selections: Record<string, string[]>;
   }): Promise<GenTestTask> {
     return apiFetch("/admin/gentest", { method: "POST", body: JSON.stringify(body) });
@@ -2166,6 +2167,7 @@ export async function createImageJob(data: {
   characterId?: string;
   seed?: number;
   contentMode?: "nsfw" | "sfw";
+  denoise?: number;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",

@@ -1597,7 +1597,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       if (civitaiToken) {
         try {
           const generationStyle = req.body.generationStyle || "realism";
-          const denoise = Number(settings.CIVITAI_IMG2IMG_DENOISE) || 0.65;
+          // Сила изменения img2img: приоритет — значение из запроса (ползунок),
+          // иначе глобальная настройка, иначе дефолт 0.65.
+          const reqDenoise = (req.body as { denoise?: number }).denoise;
+          const denoise = (typeof reqDenoise === "number" && reqDenoise > 0 && reqDenoise <= 1)
+            ? reqDenoise
+            : (Number(settings.CIVITAI_IMG2IMG_DENOISE) || 0.65);
           const result = await generateImageCivitai({
             apiToken: civitaiToken,
             generationStyle,

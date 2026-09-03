@@ -59,6 +59,7 @@ export default function AdminGenTestPage() {
   const [characterId, setCharacterId] = useState("");
   const [mode, setMode] = useState<"img2img" | "txt2img">("img2img");
   const [concurrency, setConcurrency] = useState("3");
+  const [denoise, setDenoise] = useState("0.65");
   const [optionsBySub, setOptionsBySub] = useState<Record<string, Opt[]>>({});
   const [selected, setSelected] = useState<Record<string, Set<string>>>({});
   const [starting, setStarting] = useState(false);
@@ -152,6 +153,7 @@ export default function AdminGenTestPage() {
         characterId,
         mode,
         concurrency: parseInt(concurrency, 10) || 3,
+        ...(mode === "img2img" ? { denoise: parseFloat(denoise) || 0.65 } : {}),
         selections,
       });
       setTask(t);
@@ -198,6 +200,14 @@ export default function AdminGenTestPage() {
           </select>
           <label style={{ color: "#848484", fontSize: 12 }}>Потоки</label>
           <input style={st.num} type="number" min={1} max={8} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} />
+          {mode === "img2img" && (
+            <>
+              <label style={{ color: "#848484", fontSize: 12 }} title="Сила изменения: ниже — ближе к аватару, выше — свободнее поза/сцена">
+                Сила изменения {denoise}
+              </label>
+              <input type="range" min={0.3} max={0.9} step={0.05} value={denoise} onChange={(e) => setDenoise(e.target.value)} style={{ width: 160 }} />
+            </>
+          )}
         </div>
 
         {/* Оси опций */}

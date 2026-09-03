@@ -1,4 +1,4 @@
-import { IsString, MinLength, IsOptional, IsIn, IsInt } from "class-validator";
+import { IsString, MinLength, IsOptional, IsIn, IsInt, IsNumber, Min, Max } from "class-validator";
 
 const ALLOWED_MODELS = [
   "realistic-vision-v51",
@@ -78,4 +78,14 @@ export class CreateImageJobDto {
   @IsString()
   @IsIn(["nsfw", "sfw"])
   contentMode?: "nsfw" | "sfw";
+
+  /**
+   * Сила изменения для img2img (0..1). Ниже — ближе к аватару персонажа,
+   * выше — свободнее поза/сцена (но образ сильнее «уплывает»). По умолчанию — 0.65.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(0.1)
+  @Max(1)
+  denoise?: number;
 }

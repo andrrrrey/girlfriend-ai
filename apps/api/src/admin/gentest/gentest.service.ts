@@ -154,7 +154,7 @@ export class GentestService implements OnModuleInit {
         concurrency,
         seed,
         createdBy: adminId,
-        params: { selections } as object,
+        params: { selections, denoise: dto.denoise } as object,
       },
     });
 
@@ -248,6 +248,7 @@ export class GentestService implements OnModuleInit {
       const generationStyle = (personality.generationStyle as string) || "realism";
       const avatarModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
       const contentMode: "nsfw" | "sfw" = character.nsfw === false ? "sfw" : "nsfw";
+      const denoise = (task.params as { denoise?: number } | null)?.denoise;
 
       // Прерванные рестартом элементы возвращаем в очередь.
       await this.prisma.genTestItem.updateMany({ where: { taskId, status: "processing" }, data: { status: "pending" } });
@@ -275,6 +276,7 @@ export class GentestService implements OnModuleInit {
             avatarModel,
             avatarUrl: character.avatarUrl,
             contentMode,
+            denoise,
           });
         }
       };
@@ -306,6 +308,7 @@ export class GentestService implements OnModuleInit {
       avatarModel?: string;
       avatarUrl: string | null;
       contentMode: "nsfw" | "sfw";
+      denoise?: number;
     },
   ): Promise<void> {
     const item = await this.prisma.genTestItem.findUnique({ where: { id: itemId } });
@@ -321,7 +324,10 @@ export class GentestService implements OnModuleInit {
         seed: ctx.seed,
       };
       if (ctx.avatarModel) payload.model = ctx.avatarModel;
-      if (ctx.mode === "img2img" && ctx.avatarUrl) payload.initImageUrl = ctx.avatarUrl;
+      if (ctx.mode === "img2img" && ctx.avatarUrl) {
+        payload.initImageUrl = ctx.avatarUrl;
+        if (typeof ctx.denoise === "number") payload.denoise = ctx.denoise;
+      }
 
       const { jobId } = await this.generation.createImageJob(ctx.adminId, payload);
       await this.prisma.genTestItem.update({ where: { id: itemId }, data: { jobId } });

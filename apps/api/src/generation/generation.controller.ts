@@ -48,6 +48,7 @@ export class GenerationController {
       seed: dto.seed,
       // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
       contentMode,
+      denoise: dto.denoise,
     });
     this.analytics.capture(req.user.id, "image_generation_started", {
       count: dto.count ?? 1,

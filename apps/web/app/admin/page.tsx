@@ -50,6 +50,7 @@ const SETTING_GROUPS = [
     subtitle: "Генерация изображений через Civitai Orchestration API",
     keys: [
       { key: "CIVITAI_API_TOKEN", label: "Civitai API Token", type: "password" },
+      { key: "CIVITAI_IMG2IMG_DENOISE", label: "Сила изменения img2img по умолчанию (0.1–1, деф. 0.65). Ниже — ближе к аватару, выше — свободнее поза/сцена. Применяется к чату/генерации, если не задано в запросе.", type: "text" },
     ],
   },
   {

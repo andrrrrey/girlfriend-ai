@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsObject, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString, Max, Min } from "class-validator";
 
 /**
  * Тело запроса на запуск тестового перебора генераций.
@@ -22,6 +22,13 @@ export class StartGenTestDto {
   @IsOptional()
   @IsInt()
   seed?: number;
+
+  /** Сила изменения img2img (0.1..1). Только для режима img2img. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0.1)
+  @Max(1)
+  denoise?: number;
 
   /** Карта подгруппа → id выбранных опций (валидируется/санитайзится в сервисе). */
   @IsObject()

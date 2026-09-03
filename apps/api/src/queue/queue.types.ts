@@ -132,6 +132,8 @@ export interface ImageJobData {
   seed?: number;
   /** Режим контента: "nsfw" | "sfw". Определяет набор промпт-тегов и негатива. */
   contentMode?: "nsfw" | "sfw";
+  /** Сила изменения img2img (0..1). Ниже — ближе к аватару, выше — свободнее поза/сцена. */
+  denoise?: number;
 }
 
 /**
