@@ -60,7 +60,8 @@ const SETTING_GROUPS = [
       { key: "COMFY_ENABLED", label: "Включить comfy-режим", type: "select", options: ["false", "true"] },
       { key: "IPADAPTER_PRESET", label: "IP-Adapter preset", type: "select", options: ["PLUS (high strength)", "STANDARD (medium strength)", "PLUS FACE (portraits)", "LIGHT - SD1.5 only (low strength)", "VIT-G (medium strength)"] },
       { key: "IPADAPTER_WEIGHT", label: "IP-Adapter weight (0..1, по умолчанию 0.7)", type: "text" },
-      { key: "IPADAPTER_NODEPACKS", label: "Nodepacks (CSV AIR-ов comfy:nodepack). Пусто = дефолт: matteo/comfyui_ipadapter_plus@2.0.0, protogaia/comfyui-art-venture@1.1.7", type: "text" },
+      { key: "IPADAPTER_NODEPACKS", label: "Nodepacks (CSV bare-AIR comfy:nodepack для авто-снапшота). Пусто = дефолт: matteo/comfyui_ipadapter_plus@2.0.0, protogaia/comfyui-art-venture@1.1.7", type: "text" },
+      { key: "IPADAPTER_NODEPACK_LAYERS", label: "Layer-AIR (CSV urn:air:comfy:nodepacklayer:… из Civitai Lab «Проба G1»). Задан → используется напрямую без снапшота. Пусто → снапшот делается автоматически.", type: "text" },
     ],
   },
   {

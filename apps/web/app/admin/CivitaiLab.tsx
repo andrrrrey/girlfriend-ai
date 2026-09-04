@@ -179,15 +179,33 @@ const TEMPLATE_COMFY_IPADAPTER = `{
   ]
 }`;
 
-// Проба G: customComfy + IP-Adapter (ПРАВИЛЬНЫЙ путь). В отличие от пробы F
+// Проба G1: snapshot node-паков — ОБЯЗАТЕЛЬНЫЙ первый шаг. Civitai требует
+// объявлять в customComfy.resources НЕ bare-nodepack URN, а install-layer AIR
+// (urn:air:comfy:nodepacklayer:…), который выдаёт этот шаг. Запустите, дождитесь
+// succeeded и скопируйте results[].layerAir → вставьте в «Пробу G2» и/или в
+// настройку IPADAPTER_NODEPACK_LAYERS. Снапшот кэшируем (делается один раз на пак).
+const TEMPLATE_NODEPACK_SNAPSHOT = `{
+  "steps": [
+    {
+      "$type": "comfyNodepackSnapshot",
+      "input": {
+        "nodepacks": [
+          "urn:air:comfy:nodepack:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0",
+          "urn:air:comfy:nodepack:comfyregistry:protogaia/comfyui-art-venture@1.1.7"
+        ]
+      }
+    }
+  ]
+}`;
+
+// Проба G2: customComfy + IP-Adapter (ПРАВИЛЬНЫЙ путь). В отличие от пробы F
 // ($type:"comfy" — кастомные ноды НЕ устанавливаются, граф принимается, но
-// IPAdapter*/LoadImageFromUrl падают при загрузке), здесь $type:"customComfy":
-//  • resources — обязателен: перечисляем чекпоинт И comfy:nodepack-и, иначе
-//    кастомные ноды не установятся (это и была причина, почему не заводилось):
-//      matteo/comfyui_ipadapter_plus     → IPAdapterUnifiedLoader, IPAdapter
-//      protogaia/comfyui-art-venture     → LoadImageFromUrl
-//  • workflow (не comfyWorkflow) — сырой граф, передаётся воркеру как есть;
-//  • trace:"logs" — стрим логов ComfyUI (видно, какая нода/модель не нашлась).
+// IPAdapter*/LoadImageFromUrl падают при загрузке), здесь $type:"customComfy".
+// ВАЖНО: в resources — layer-AIR из «Пробы G1» (urn:air:comfy:nodepacklayer:…),
+// а НЕ bare-nodepack URN. Замените плейсхолдеры ниже на реальные layerAir из G1:
+//   ..._ipadapter_plus_LAYER → IPAdapterUnifiedLoader, IPAdapter
+//   ..._art_venture_LAYER    → LoadImageFromUrl
+// workflow (не comfyWorkflow) — сырой граф; trace:"logs" — стрим логов ComfyUI.
 // Замените url на публичный URL лица-референса.
 const TEMPLATE_CUSTOMCOMFY_IPADAPTER = `{
   "steps": [
@@ -197,8 +215,8 @@ const TEMPLATE_CUSTOMCOMFY_IPADAPTER = `{
         "trace": "logs",
         "resources": [
           "urn:air:sdxl:checkpoint:civitai:133005@1759168",
-          "urn:air:comfy:nodepack:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0",
-          "urn:air:comfy:nodepack:comfyregistry:protogaia/comfyui-art-venture@1.1.7"
+          "PASTE_ipadapter_plus_LAYER_from_G1",
+          "PASTE_art_venture_LAYER_from_G1"
         ],
         "workflow": {
           "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "urn:air:sdxl:checkpoint:civitai:133005@1759168" } },
@@ -301,7 +319,8 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY)}>Проба D: comfy (доступность)</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_TXT2IMG)}>Проба E: comfy txt2img</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_IPADAPTER)}>Проба F: comfy + IP-Adapter</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G: customComfy + IP-Adapter ✓</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_NODEPACK_SNAPSHOT)}>Проба G1: snapshot node-паков</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G2: customComfy + IP-Adapter ✓</button>
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
@@ -341,6 +360,21 @@ export function CivitaiLab() {
             const step0 = (resp.body as any)?.steps?.[0];
             const echo = step0?.input;
             if (!echo || typeof echo !== "object") return null;
+            // Снапшот node-паков: показываем layerAir для копирования в G2 / настройку.
+            if (step0?.$type === "comfyNodepackSnapshot") {
+              const results = (step0?.output?.results || []) as Array<{ nodepack?: string; layerAir?: string }>;
+              return (
+                <div style={{ marginBottom: 8, padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
+                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>snapshot принят ✓ {results.length ? "· готово" : "· дождитесь succeeded и «Обновить статус»"}</div>
+                  {results.map((r) => (
+                    <div key={r.nodepack} style={{ fontSize: 11, color: "#cfcfcf", marginTop: 4, wordBreak: "break-all" }}>
+                      <span style={{ color: "#6f7496" }}>{r.nodepack}</span><br />→ layerAir: <b style={{ color: "#4ade80" }}>{r.layerAir}</b>
+                    </div>
+                  ))}
+                  <div style={{ color: "#6f7496", fontSize: 11, marginTop: 6 }}>Скопируйте layerAir в «Пробу G2» (resources) и/или в настройку IPADAPTER_NODEPACK_LAYERS.</div>
+                </div>
+              );
+            }
             // comfy/customComfy-шаг: анализ полей imageGen неприменим — граф принят, если статус не failed.
             const graph = (echo.comfyWorkflow || echo.workflow) as Record<string, { class_type?: string }> | undefined;
             if (step0?.$type === "comfy" || step0?.$type === "customComfy" || graph) {

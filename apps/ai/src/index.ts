@@ -1287,6 +1287,64 @@ function buildComfyWorkflow(p: {
 }
 
 /**
+ * Кэш install-layer AIR-ов node-паков (в пределах процесса). Ключ — набор
+ * bare-AIR-ов node-паков через запятую. Civitai требует объявлять в
+ * customComfy.resources именно layer-AIR (`urn:air:comfy:nodepacklayer:…`),
+ * который выдаёт шаг comfyNodepackSnapshot; он кэшируем (capture once, reuse).
+ */
+const nodepackLayerCache = new Map<string, string[]>();
+
+/**
+ * Резолвит layer-AIR-ы для набора node-паков: сначала шлёт шаг
+ * `comfyNodepackSnapshot` (ставит паки на воркере и захватывает install-layer),
+ * затем возвращает `results[].layerAir`. Результат кэшируется на процесс.
+ */
+async function snapshotNodepackLayers(params: { apiToken: string; nodepacks: string[] }): Promise<string[]> {
+  const key = params.nodepacks.join(",");
+  const cached = nodepackLayerCache.get(key);
+  if (cached) return cached;
+
+  const body = { steps: [{ $type: "comfyNodepackSnapshot", input: { nodepacks: params.nodepacks } }] };
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=0&allowMatureContent=true", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${params.apiToken}` },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    logger.error({ status: response.status, body: t.slice(0, 700) }, "civitai_snapshot_api_error");
+    throw new Error(`Civitai nodepack snapshot HTTP ${response.status}`);
+  }
+  const extractLayers = (r: any): string[] | undefined => {
+    const results = r?.steps?.[0]?.output?.results as Array<{ layerAir?: string }> | undefined;
+    const layers = results?.map((x) => x?.layerAir).filter((x): x is string => !!x);
+    return layers && layers.length === params.nodepacks.length ? layers : undefined;
+  };
+  let result: any = await response.json();
+  let layers = extractLayers(result);
+  if (!layers && result?.id) {
+    for (let i = 0; i < 90 && !layers; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${result.id}`, {
+        headers: { Authorization: `Bearer ${params.apiToken}` },
+      });
+      if (!pollRes.ok) continue;
+      result = await pollRes.json();
+      logger.info({ status: result?.status, attempt: i }, "civitai_snapshot_poll");
+      layers = extractLayers(result);
+      if (!layers && (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired")) {
+        logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_snapshot_failed");
+        throw new Error(`Civitai nodepack snapshot ${result?.status}`);
+      }
+    }
+  }
+  if (!layers) throw new Error("Civitai nodepack snapshot: no layerAir in response");
+  nodepackLayerCache.set(key, layers);
+  logger.info({ nodepacks: params.nodepacks, layers }, "civitai_snapshot_layers");
+  return layers;
+}
+
+/**
  * Отправляет ПРОИЗВОЛЬНЫЙ ComfyUI-граф на Civitai Orchestration через шаг
  * `$type:"customComfy"` и поллит результат.
  *
@@ -1788,17 +1846,26 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
           ipAdapter: { imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
         });
-        // resources ОБЯЗАТЕЛЕН для customComfy: чекпоинт + comfy:nodepack-и кастомных
-        // нод. Пакеты настраиваются через IPADAPTER_NODEPACKS (CSV AIR-ов), дефолт —
-        // подтверждённые в Comfy Registry: IPAdapter plus (Matteo) + art-venture
-        // (LoadImageFromUrl). Всё, что не в resources, не установится в ComfyUI.
+        // resources ОБЯЗАТЕЛЕН для customComfy: чекпоинт + install-layer AIR-ы
+        // кастомных нод. Civitai требует НЕ bare-nodepack URN, а layer-AIR
+        // (urn:air:comfy:nodepacklayer:…) из шага comfyNodepackSnapshot.
+        // Порядок резолва:
+        //  1) IPADAPTER_NODEPACK_LAYERS (CSV layer-AIR) — ручной оверрайд (без снапшота);
+        //  2) иначе снапшотим IPADAPTER_NODEPACKS (CSV bare-AIR, дефолт — подтверждённые
+        //     в Comfy Registry: IPAdapter plus (Matteo) + art-venture (LoadImageFromUrl)),
+        //     результат кэшируется на процесс.
         const defaultNodepacks = [
           "urn:air:comfy:nodepack:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0",
           "urn:air:comfy:nodepack:comfyregistry:protogaia/comfyui-art-venture@1.1.7",
         ];
-        const nodepacks = (settings.IPADAPTER_NODEPACKS || "")
+        const manualLayers = (settings.IPADAPTER_NODEPACK_LAYERS || "")
           .split(",").map((s) => s.trim()).filter(Boolean);
-        const resources = [cfg.air, ...(nodepacks.length ? nodepacks : defaultNodepacks)];
+        const bareNodepacks = (settings.IPADAPTER_NODEPACKS || "")
+          .split(",").map((s) => s.trim()).filter(Boolean);
+        const layers = manualLayers.length
+          ? manualLayers
+          : await snapshotNodepackLayers({ apiToken: civitaiToken, nodepacks: bareNodepacks.length ? bareNodepacks : defaultNodepacks });
+        const resources = [cfg.air, ...layers];
         const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow, resources, trace: "logs" });
         const imgResp = await fetch(comfy.url);
         if (imgResp.ok) {
