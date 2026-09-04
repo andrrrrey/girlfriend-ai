@@ -1237,6 +1237,11 @@ interface ComfyIpAdapter {
   imageUrl: string;
   preset: string;
   weight: number;
+  /** Явные модели (split-loader). Если заданы обе — грузим IPAdapterModelLoader +
+   *  CLIPVisionLoader (модели приходят из resources как AIR), иначе — auto
+   *  IPAdapterUnifiedLoader (который в песочнице Civitai НЕ находит clip_vision). */
+  modelAir?: string;
+  clipVisionAir?: string;
 }
 
 /**
@@ -1276,13 +1281,29 @@ function buildComfyWorkflow(p: {
     "9": { class_type: "SaveImage", inputs: { images: ["8", 0], filename_prefix: "ipadapter" } },
   };
   if (p.ipAdapter) {
-    g["10"] = { class_type: "IPAdapterUnifiedLoader", inputs: { model: ["4", 0], preset: p.ipAdapter.preset } };
     // art-venture LoadImageFromUrl: вход называется image (STRING с URL), НЕ url.
     g["12"] = { class_type: "LoadImageFromUrl", inputs: { image: p.ipAdapter.imageUrl } };
-    g["13"] = {
-      class_type: "IPAdapter",
-      inputs: { model: ["10", 0], ipadapter: ["10", 1], image: ["12", 0], weight: p.ipAdapter.weight, weight_type: "standard", start_at: 0, end_at: 1 },
-    };
+    if (p.ipAdapter.modelAir && p.ipAdapter.clipVisionAir) {
+      // Split-loader: модели приходят из resources как AIR (в песочнице Civitai
+      // UnifiedLoader НЕ может докачать clip_vision — "ClipVision model not found").
+      g["10"] = { class_type: "IPAdapterModelLoader", inputs: { ipadapter_file: p.ipAdapter.modelAir } };
+      g["11"] = { class_type: "CLIPVisionLoader", inputs: { clip_name: p.ipAdapter.clipVisionAir } };
+      g["13"] = {
+        class_type: "IPAdapterAdvanced",
+        inputs: {
+          model: ["4", 0], ipadapter: ["10", 0], clip_vision: ["11", 0], image: ["12", 0],
+          weight: p.ipAdapter.weight, weight_type: "standard", combine_embeds: "concat",
+          start_at: 0, end_at: 1, embeds_scaling: "V only",
+        },
+      };
+    } else {
+      // Auto-режим (fallback): работает, только если clip_vision есть в образе.
+      g["10"] = { class_type: "IPAdapterUnifiedLoader", inputs: { model: ["4", 0], preset: p.ipAdapter.preset } };
+      g["13"] = {
+        class_type: "IPAdapter",
+        inputs: { model: ["10", 0], ipadapter: ["10", 1], image: ["12", 0], weight: p.ipAdapter.weight, weight_type: "standard", start_at: 0, end_at: 1 },
+      };
+    }
     (g["3"].inputs as Record<string, unknown>).model = ["13", 0];
   }
   return g;
@@ -1839,6 +1860,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         if (!cfg) throw new Error(`No Civitai model for style ${generationStyle}`);
         const { width: cw, height: ch } = sdDimsForAspect(cfg.base, req.body.aspectRatio, { width: cfg.width, height: cfg.height });
         const preset = settings.IPADAPTER_PRESET || "PLUS (high strength)";
+        // Явные модели IP-Adapter/CLIP-Vision (split-loader). Если обе заданы —
+        // грузим их из resources как AIR (UnifiedLoader в песочнице Civitai не
+        // находит clip_vision). Дефолт модели IP-Adapter — SDXL PLUS ViT-H на Civitai.
+        const ipModelAir = settings.IPADAPTER_MODEL_AIR || "urn:air:sdxl:controlnet:civitai:277315@338834";
+        const clipVisionAir = settings.CLIPVISION_MODEL_AIR || "";
+        const useSplit = !!clipVisionAir;
         const workflow = buildComfyWorkflow({
           checkpointAir: cfg.air,
           prompt,
@@ -1846,7 +1873,10 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           width: cw, height: ch, steps: cfg.steps, cfgScale: cfg.cfgScale,
           seed: typeof seed === "number" ? seed : Math.floor(Math.random() * 2_147_483_647),
           scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
-          ipAdapter: { imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
+          ipAdapter: {
+            imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7,
+            ...(useSplit ? { modelAir: ipModelAir, clipVisionAir } : {}),
+          },
         });
         // resources ОБЯЗАТЕЛЕН для customComfy: чекпоинт + install-layer AIR-ы
         // кастомных нод. Civitai требует НЕ bare-nodepack URN, а layer-AIR
@@ -1867,7 +1897,8 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         const layers = manualLayers.length
           ? manualLayers
           : await snapshotNodepackLayers({ apiToken: civitaiToken, nodepacks: bareNodepacks.length ? bareNodepacks : defaultNodepacks });
-        const resources = [cfg.air, ...layers];
+        // В split-режиме модели IP-Adapter + CLIP-Vision объявляем как resources.
+        const resources = [cfg.air, ...layers, ...(useSplit ? [ipModelAir, clipVisionAir] : [])];
         const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow, resources, trace: "logs" });
         const imgResp = await fetch(comfy.url);
         if (imgResp.ok) {

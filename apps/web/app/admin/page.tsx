@@ -62,6 +62,8 @@ const SETTING_GROUPS = [
       { key: "IPADAPTER_WEIGHT", label: "IP-Adapter weight (0..1, по умолчанию 0.7)", type: "text" },
       { key: "IPADAPTER_NODEPACKS", label: "Nodepacks (CSV bare-AIR comfy:nodepack для авто-снапшота). Пусто = дефолт: matteo/comfyui_ipadapter_plus@2.0.0, protogaia/comfyui-art-venture@1.1.7", type: "text" },
       { key: "IPADAPTER_NODEPACK_LAYERS", label: "Layer-AIR (CSV urn:air:comfy:nodepacklayer:… из Civitai Lab «Проба G1»). Задан → используется напрямую без снапшота. Пусто → снапшот делается автоматически.", type: "text" },
+      { key: "IPADAPTER_MODEL_AIR", label: "IP-Adapter model AIR (split-loader). Дефолт: urn:air:sdxl:controlnet:civitai:277315@338834 (SDXL PLUS ViT-H).", type: "text" },
+      { key: "CLIPVISION_MODEL_AIR", label: "CLIP-Vision model AIR (split-loader). ЗАДАЙ, чтобы IP-Adapter заработал — иначе UnifiedLoader падает 'ClipVision model not found'. Подбери через Civitai Lab «Проба G3».", type: "text" },
     ],
   },
   {

@@ -235,6 +235,46 @@ const TEMPLATE_CUSTOMCOMFY_IPADAPTER = `{
   ]
 }`;
 
+// Проба G3: customComfy + IP-Adapter через SPLIT-LOADER. Нужна, потому что в
+// песочнице Civitai IPAdapterUnifiedLoader падает "ClipVision model not found"
+// (авто-докачка моделей недоступна). Здесь модели объявляем в resources как AIR
+// и грузим явно: IPAdapterModelLoader (ipadapter_file) + CLIPVisionLoader
+// (clip_name), затем IPAdapterAdvanced. Значения AIR передаются как имена файлов —
+// так же, как AIR-чекпоинт работает в ckpt_name.
+//   IP-Adapter модель (Civitai, SDXL PLUS ViT-H): urn:air:sdxl:controlnet:civitai:277315@338834
+//   CLIP-Vision: подставьте AIR (пока не подтверждён; кандидат — HF h94/IP-Adapter
+//   image_encoder). Если падает — смотрите trace и меняйте CLIP_VISION_AIR.
+const TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT = `{
+  "steps": [
+    {
+      "$type": "customComfy",
+      "input": {
+        "trace": "logs",
+        "resources": [
+          "urn:air:sdxl:checkpoint:civitai:133005@1759168",
+          "urn:air:comfy:nodepacklayer:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0+75726e3a6169723a6f63693a696d6167653a676863723a636976697461692f636976697461692d7370696e652d636f6d66792d636c6f75644076322e372e35",
+          "urn:air:comfy:nodepacklayer:comfyregistry:protogaia/comfyui-art-venture@1.1.7+75726e3a6169723a6f63693a696d6167653a676863723a636976697461692f636976697461692d7370696e652d636f6d66792d636c6f75644076322e372e35",
+          "urn:air:sdxl:controlnet:civitai:277315@338834",
+          "PASTE_CLIP_VISION_AIR"
+        ],
+        "workflow": {
+          "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "urn:air:sdxl:checkpoint:civitai:133005@1759168" } },
+          "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 1024, "height": 1536, "batch_size": 1 } },
+          "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "sitting on a chair in a cafe, full body, masterpiece, best quality", "clip": ["4", 1] } },
+          "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
+          "10": { "class_type": "IPAdapterModelLoader", "inputs": { "ipadapter_file": "urn:air:sdxl:controlnet:civitai:277315@338834" } },
+          "11": { "class_type": "CLIPVisionLoader", "inputs": { "clip_name": "PASTE_CLIP_VISION_AIR" } },
+          "12": { "class_type": "LoadImageFromUrl", "inputs": { "image": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
+          "13": { "class_type": "IPAdapterAdvanced", "inputs": { "model": ["4", 0], "ipadapter": ["10", 0], "clip_vision": ["11", 0], "image": ["12", 0], "weight": 0.7, "weight_type": "standard", "combine_embeds": "concat", "start_at": 0, "end_at": 1, "embeds_scaling": "V only" } },
+          "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["13", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
+          "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0], "filename_prefix": "ipadapter" } }
+        }
+      }
+    }
+  ]
+}`;
+
 const codeBox: React.CSSProperties = {
   width: "100%", minHeight: 260, background: "#0b0b0b", border: "1px solid #262626", borderRadius: 8,
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
@@ -250,6 +290,18 @@ export function CivitaiLab() {
   const [polling, setPolling] = useState(false);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Бесплатная проверка AIR (подбор моделей без трат buzz).
+  const [airToCheck, setAirToCheck] = useState("");
+  const [airCheck, setAirCheck] = useState<{ httpStatus: number; ok: boolean; body: unknown } | null>(null);
+  const [airBusy, setAirBusy] = useState(false);
+  const checkAir = async () => {
+    if (!airToCheck.trim()) return;
+    setAirBusy(true); setAirCheck(null);
+    try { setAirCheck(await admin.civitaiResourceInfo(airToCheck.trim())); }
+    catch (e: any) { setAirCheck({ httpStatus: 0, ok: false, body: { error: e?.message || "ошибка" } }); }
+    finally { setAirBusy(false); }
+  };
 
   const stopPoll = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -320,7 +372,34 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_TXT2IMG)}>Проба E: comfy txt2img</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_IPADAPTER)}>Проба F: comfy + IP-Adapter</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_NODEPACK_SNAPSHOT)}>Проба G1: snapshot node-паков</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G2: customComfy + IP-Adapter ✓</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G2: customComfy + IP-Adapter (auto)</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT)}>Проба G3: split-loader (clip_vision из resources) ✓</button>
+      </div>
+
+      {/* Бесплатная проверка AIR (не тратит buzz) — подбор моделей (напр. clip_vision). */}
+      <div style={{ margin: "0 0 10px", padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
+        <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Проверить AIR (бесплатно, без генерации)</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            style={{ flex: 1, minWidth: 320, background: "#0b0b0b", border: "1px solid #313131", borderRadius: 6, padding: "7px 10px", color: "#fff", fontFamily: "monospace", fontSize: 12, outline: "none" }}
+            placeholder="urn:air:sdxl:controlnet:civitai:277315@338834"
+            value={airToCheck}
+            onChange={(e) => setAirToCheck(e.target.value)}
+          />
+          <button style={btn} onClick={checkAir} disabled={airBusy}>{airBusy ? "Проверка…" : "Проверить"}</button>
+        </div>
+        {airCheck && (() => {
+          const b = airCheck.body as any;
+          const cg = b?.canGenerate;
+          return (
+            <div style={{ marginTop: 8, fontSize: 12 }}>
+              <span style={{ color: airCheck.ok ? "#4ade80" : "#e36466" }}>HTTP {airCheck.httpStatus} {airCheck.ok ? "OK" : "— не резолвится"}</span>
+              {airCheck.ok && <span style={{ color: cg ? "#4ade80" : "#e36466", marginLeft: 10 }}>canGenerate: {String(cg)}</span>}
+              {b?.size ? <span style={{ color: "#6f7496", marginLeft: 10 }}>{Math.round(b.size / 1048576)}MB</span> : null}
+              <pre style={{ ...codeBox, minHeight: 60, marginTop: 6, whiteSpace: "pre-wrap" }}>{JSON.stringify(airCheck.body, null, 2).slice(0, 1500)}</pre>
+            </div>
+          );
+        })()}
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />

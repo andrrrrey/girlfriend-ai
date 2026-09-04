@@ -646,4 +646,10 @@ export class AdminController {
   async civitaiWorkflowStatus(@Param("id") id: string) {
     return this.adminService.civitaiWorkflowStatus(id);
   }
+
+  /** Бесплатная проверка AIR через /v2/resources/{air} (подбор моделей без трат buzz). */
+  @Get("civitai/resource-info")
+  async civitaiResourceInfo(@Query("air") air: string) {
+    return this.adminService.civitaiResourceInfo(air);
+  }
 }

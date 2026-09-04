@@ -1286,6 +1286,35 @@ export class AdminService {
     }
   }
 
+  /**
+   * Резолвит один AIR через GET /v2/resources/{air} — БЕСПЛАТНАЯ проверка, что
+   * ресурс существует и доступен для генерации (canGenerate). Нужна, чтобы
+   * подобрать рабочий AIR модели (напр. clip_vision для IP-Adapter) без запуска
+   * генерации и трат buzz. Только для админа; адрес зафиксирован.
+   */
+  async civitaiResourceInfo(air: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    if (!air) throw new BadRequestException("air обязателен");
+    const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
+    if (!token) throw new BadRequestException("CIVITAI_API_TOKEN не задан в настройках");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30_000);
+    try {
+      const res = await fetch(`https://orchestration.civitai.com/v2/resources/${encodeURIComponent(air)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: ctrl.signal,
+      });
+      const text = await res.text();
+      let body: unknown;
+      try { body = JSON.parse(text); } catch { body = text; }
+      return { httpStatus: res.status, ok: res.ok, body };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { httpStatus: 0, ok: false, body: { fetchError: msg } };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /** Статус воркфлоу Civitai по id (для асинхронного опроса из Civitai Lab). */
   async civitaiWorkflowStatus(id: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
     if (!id) throw new BadRequestException("id обязателен");
