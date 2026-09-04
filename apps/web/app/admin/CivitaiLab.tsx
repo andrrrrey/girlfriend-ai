@@ -291,16 +291,26 @@ export function CivitaiLab() {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Бесплатная проверка AIR (подбор моделей без трат buzz).
+  // Бесплатная проверка AIR (подбор моделей без трат buzz). Пакетно: по строке на AIR.
   const [airToCheck, setAirToCheck] = useState("");
-  const [airCheck, setAirCheck] = useState<{ httpStatus: number; ok: boolean; body: unknown } | null>(null);
+  const [airChecks, setAirChecks] = useState<{ air: string; httpStatus: number; ok: boolean; canGenerate?: boolean; note?: string }[]>([]);
   const [airBusy, setAirBusy] = useState(false);
   const checkAir = async () => {
-    if (!airToCheck.trim()) return;
-    setAirBusy(true); setAirCheck(null);
-    try { setAirCheck(await admin.civitaiResourceInfo(airToCheck.trim())); }
-    catch (e: any) { setAirCheck({ httpStatus: 0, ok: false, body: { error: e?.message || "ошибка" } }); }
-    finally { setAirBusy(false); }
+    const airs = airToCheck.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (!airs.length) return;
+    setAirBusy(true); setAirChecks([]);
+    const out: { air: string; httpStatus: number; ok: boolean; canGenerate?: boolean; note?: string }[] = [];
+    for (const air of airs) {
+      try {
+        const r = await admin.civitaiResourceInfo(air);
+        const b = r.body as any;
+        out.push({ air, httpStatus: r.httpStatus, ok: r.ok, canGenerate: b?.canGenerate, note: b?.availability?.status || b?.error || b?.title });
+      } catch (e: any) {
+        out.push({ air, httpStatus: 0, ok: false, note: e?.message || "ошибка" });
+      }
+      setAirChecks([...out]);
+    }
+    setAirBusy(false);
   };
 
   const stopPoll = () => {
@@ -378,28 +388,30 @@ export function CivitaiLab() {
 
       {/* Бесплатная проверка AIR (не тратит buzz) — подбор моделей (напр. clip_vision). */}
       <div style={{ margin: "0 0 10px", padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
-        <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Проверить AIR (бесплатно, без генерации)</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input
-            style={{ flex: 1, minWidth: 320, background: "#0b0b0b", border: "1px solid #313131", borderRadius: 6, padding: "7px 10px", color: "#fff", fontFamily: "monospace", fontSize: 12, outline: "none" }}
-            placeholder="urn:air:sdxl:controlnet:civitai:277315@338834"
-            value={airToCheck}
-            onChange={(e) => setAirToCheck(e.target.value)}
-          />
-          <button style={btn} onClick={checkAir} disabled={airBusy}>{airBusy ? "Проверка…" : "Проверить"}</button>
+        <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Проверить AIR (бесплатно, без генерации) — по одному AIR в строке</div>
+        <textarea
+          style={{ width: "100%", minHeight: 70, background: "#0b0b0b", border: "1px solid #313131", borderRadius: 6, padding: "7px 10px", color: "#fff", fontFamily: "monospace", fontSize: 12, outline: "none", resize: "vertical" }}
+          placeholder={"urn:air:sdxl:controlnet:huggingface:h94/IP-Adapter@sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors\nurn:air:sdxl:other:huggingface:h94/IP-Adapter@models/image_encoder/model.safetensors"}
+          value={airToCheck}
+          onChange={(e) => setAirToCheck(e.target.value)}
+        />
+        <div style={{ marginTop: 6 }}>
+          <button style={btn} onClick={checkAir} disabled={airBusy}>{airBusy ? "Проверка…" : "Проверить все"}</button>
+          <span style={{ color: "#6f7496", fontSize: 11, marginLeft: 8 }}>ищем строки с canGenerate: true</span>
         </div>
-        {airCheck && (() => {
-          const b = airCheck.body as any;
-          const cg = b?.canGenerate;
-          return (
-            <div style={{ marginTop: 8, fontSize: 12 }}>
-              <span style={{ color: airCheck.ok ? "#4ade80" : "#e36466" }}>HTTP {airCheck.httpStatus} {airCheck.ok ? "OK" : "— не резолвится"}</span>
-              {airCheck.ok && <span style={{ color: cg ? "#4ade80" : "#e36466", marginLeft: 10 }}>canGenerate: {String(cg)}</span>}
-              {b?.size ? <span style={{ color: "#6f7496", marginLeft: 10 }}>{Math.round(b.size / 1048576)}MB</span> : null}
-              <pre style={{ ...codeBox, minHeight: 60, marginTop: 6, whiteSpace: "pre-wrap" }}>{JSON.stringify(airCheck.body, null, 2).slice(0, 1500)}</pre>
-            </div>
-          );
-        })()}
+        {airChecks.length > 0 && (
+          <div style={{ marginTop: 8, fontSize: 11, fontFamily: "monospace" }}>
+            {airChecks.map((r) => (
+              <div key={r.air} style={{ padding: "3px 0", borderTop: "1px solid #1b1b1b", wordBreak: "break-all" }}>
+                <span style={{ color: r.ok && r.canGenerate ? "#4ade80" : r.ok ? "#e0a83b" : "#e36466" }}>
+                  {r.ok && r.canGenerate ? "✓ canGenerate" : r.ok ? "△ ok, canGenerate:false" : "✗ HTTP " + r.httpStatus}
+                </span>
+                {r.note ? <span style={{ color: "#6f7496" }}> · {r.note}</span> : null}
+                <br /><span style={{ color: "#9aa0b5" }}>{r.air}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
