@@ -101,6 +101,8 @@ export default function AdminGenTestPage() {
   const [mode, setMode] = useState<"img2img" | "txt2img">("img2img");
   const [concurrency, setConcurrency] = useState("3");
   const [denoise, setDenoise] = useState("0.65");
+  const [maxCombos, setMaxCombos] = useState("300");
+  const [resultsCollapsed, setResultsCollapsed] = useState(false);
   const [optionsBySub, setOptionsBySub] = useState<Record<string, Opt[]>>({});
   const [selected, setSelected] = useState<Record<string, Set<string>>>({});
   const [promptStatus, setPromptStatus] = useState<Record<string, "saving" | "saved" | "error">>({});
@@ -192,6 +194,23 @@ export default function AdminGenTestPage() {
     });
   };
 
+  // Глобальный выбор всех опций во всех осях.
+  const allGlobalSelected = useMemo(
+    () => AXES.every((a) => {
+      const opts = optionsBySub[a.key] || [];
+      return opts.length > 0 && opts.every((o) => selected[a.key]?.has(o.id));
+    }) && AXES.some((a) => (optionsBySub[a.key] || []).length > 0),
+    [optionsBySub, selected],
+  );
+  const toggleAllGlobal = () => {
+    setSelected(() => {
+      if (allGlobalSelected) return {};
+      const next: Record<string, Set<string>> = {};
+      for (const a of AXES) next[a.key] = new Set((optionsBySub[a.key] || []).map((o) => o.id));
+      return next;
+    });
+  };
+
   // Правка промпта опции (глобально, в реальную опцию).
   const editPrompt = (axis: AxisKey, id: string, value: string) => {
     setOptionsBySub((prev) => ({
@@ -237,6 +256,7 @@ export default function AdminGenTestPage() {
         mode,
         concurrency: parseInt(concurrency, 10) || 3,
         ...(mode === "img2img" ? { denoise: parseFloat(denoise) || 0.65 } : {}),
+        maxCombos: Math.min(Math.max(1, parseInt(maxCombos, 10) || 300), 1000),
         selections,
       });
       setTask(t);
@@ -313,6 +333,8 @@ export default function AdminGenTestPage() {
           </select>
           <label style={{ color: "#848484", fontSize: 12 }}>Потоки</label>
           <input style={st.num} type="number" min={1} max={8} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} />
+          <label style={{ color: "#848484", fontSize: 12 }} title="Максимум комбинаций на прогон. Если выбранных больше — берётся случайная выборка. Потолок 1000.">Лимит комбинаций</label>
+          <input style={st.num} type="number" min={1} max={1000} value={maxCombos} onChange={(e) => setMaxCombos(e.target.value)} />
           {mode === "img2img" && (
             <>
               <label style={{ color: "#848484", fontSize: 12 }} title="Сила изменения: ниже — ближе к аватару, выше — свободнее поза/сцена">
@@ -330,7 +352,12 @@ export default function AdminGenTestPage() {
         )}
 
         {/* Оси опций */}
-        <h2 style={st.h2}>Опции</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h2 style={st.h2}>Опции</h2>
+          <label style={{ color: "#cfcfcf", fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <input type="checkbox" checked={allGlobalSelected} onChange={toggleAllGlobal} /> Выбрать все опции (во всех осях)
+          </label>
+        </div>
         {AXES.map((a) => (
           <OptionAxisTable
             key={a.key}
@@ -348,9 +375,13 @@ export default function AdminGenTestPage() {
         {/* Запуск */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
           <button style={{ ...st.btn, opacity: starting ? 0.6 : 1 }} onClick={handleStart} disabled={starting}>
-            {starting ? "Запуск..." : `Старт (${comboCount} комбинаций)`}
+            {starting ? "Запуск..." : `Старт (${Math.min(comboCount, parseInt(maxCombos, 10) || 300)} комбинаций)`}
           </button>
-          {comboCount > 300 && <span style={{ color: "#e36466", fontSize: 12 }}>Лимит 300 комбинаций — сократите выбор</span>}
+          {comboCount > (parseInt(maxCombos, 10) || 300) && (
+            <span style={{ color: "#8a6d3b", fontSize: 12 }}>
+              выбрано {comboCount} — будет сгенерирована случайная выборка {parseInt(maxCombos, 10) || 300}
+            </span>
+          )}
           {err && <span style={{ color: "#e36466", fontSize: 13 }}>{err}</span>}
         </div>
 
@@ -358,6 +389,7 @@ export default function AdminGenTestPage() {
         {task && (
           <div style={{ marginTop: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <button style={st.btnMini} onClick={() => setResultsCollapsed((c) => !c)}>{resultsCollapsed ? "▸" : "▾"}</button>
               <h2 style={{ ...st.h2, margin: 0 }}>Результаты</h2>
               <span style={{ color: "#cfcfcf", fontSize: 13 }}>
                 {task.status} · {task.done}/{task.total} готово · {task.failed} ошибок · режим {task.mode}
@@ -365,10 +397,13 @@ export default function AdminGenTestPage() {
               {task.status === "running" && <button style={st.btnGhost} onClick={handleCancel}>Отменить</button>}
               {canResume && <button style={st.btnGhost} onClick={handleResume}>Продолжить</button>}
               {items.length > 0 && <button style={st.btnGhost} onClick={exportRun}>Экспорт прогона</button>}
+              <button style={st.btnGhost} onClick={() => { stopPolling(); setTask(null); setItems([]); }}>Скрыть</button>
             </div>
+            {!resultsCollapsed && (
             <div style={st.resultGrid}>
               {items.map((it) => <ResultCard key={it.id} item={it} />)}
             </div>
+            )}
           </div>
         )}
 

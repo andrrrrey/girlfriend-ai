@@ -43,8 +43,10 @@ const AXIS_TABLE: Record<Axis, "appearance" | "pose" | "scene" | "camera"> = {
   CAMERA_ANGLE: "camera",
 };
 
-/** Жёсткий верхний лимит числа комбинаций на задачу (защита очереди). */
-const MAX_COMBOS = 300;
+/** Лимит комбинаций по умолчанию, если админ не задал свой. */
+const DEFAULT_MAX_COMBOS = 300;
+/** Жёсткий верхний потолок числа комбинаций на задачу (защита очереди). */
+const HARD_CAP_COMBOS = 1000;
 const POLL_INTERVAL_MS = 3000;
 // Окно поллинга ДОЛЖНО покрывать ожидание в очереди: worker обрабатывает
 // image-джобы ПОСЛЕДОВАТЕЛЬНО (concurrency 1), а одна Civitai-генерация в apps/ai
@@ -150,17 +152,33 @@ export class GentestService implements OnModuleInit {
     const axes = AXIS_ORDER.filter((a) => selections[a]?.length);
     if (axes.length === 0) throw new BadRequestException("Не выбрано ни одной опции");
 
-    // Кросс-произведение с ранним контролем размера.
-    let combos: { axis: Axis; opt: OptionRow }[][] = [[]];
-    for (const axis of axes) {
-      const opts = (selections[axis] || []).map((id) => optionMap[id]).filter(Boolean) as OptionRow[];
-      const next: { axis: Axis; opt: OptionRow }[][] = [];
-      for (const base of combos) {
-        for (const opt of opts) next.push([...base, { axis, opt }]);
+    // Эффективный лимит: заданный админом, зажатый в [1, HARD_CAP].
+    const limit = Math.min(Math.max(1, dto.maxCombos || DEFAULT_MAX_COMBOS), HARD_CAP_COMBOS);
+
+    // Опции по осям + размер полного кросс-продукта.
+    const axisOpts = axes.map((axis) => (selections[axis] || []).map((id) => optionMap[id]).filter(Boolean) as OptionRow[]);
+    const total = axisOpts.reduce((n, opts) => n * opts.length, 1);
+
+    let combos: { axis: Axis; opt: OptionRow }[][];
+    if (total <= limit) {
+      // Полный перебор.
+      combos = [[]];
+      for (let ax = 0; ax < axes.length; ax++) {
+        const next: { axis: Axis; opt: OptionRow }[][] = [];
+        for (const base of combos) for (const opt of axisOpts[ax]) next.push([...base, { axis: axes[ax], opt }]);
+        combos = next;
       }
-      combos = next;
-      if (combos.length > MAX_COMBOS) {
-        throw new BadRequestException(`Слишком много комбинаций (>${MAX_COMBOS}). Сократите выбор опций.`);
+    } else {
+      // Комбинаций больше лимита — случайная выборка `limit` уникальных.
+      const sizes = axisOpts.map((o) => o.length);
+      const seen = new Set<string>();
+      combos = [];
+      while (combos.length < limit && seen.size < total) {
+        const idx = sizes.map((s) => Math.floor(Math.random() * s));
+        const key = idx.join(",");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        combos.push(idx.map((i, ax) => ({ axis: axes[ax], opt: axisOpts[ax][i] })));
       }
     }
 

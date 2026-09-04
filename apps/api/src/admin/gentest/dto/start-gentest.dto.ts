@@ -30,6 +30,13 @@ export class StartGenTestDto {
   @Max(1)
   denoise?: number;
 
+  /** Лимит числа комбинаций на задачу. Если полный кросс-продукт больше — берётся случайная выборка. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  maxCombos?: number;
+
   /** Карта подгруппа → id выбранных опций (валидируется/санитайзится в сервисе). */
   @IsObject()
   selections!: Record<string, string[]>;

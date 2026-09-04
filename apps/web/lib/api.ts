@@ -1304,6 +1304,7 @@ export const admin = {
     concurrency: number;
     seed?: number;
     denoise?: number;
+    maxCombos?: number;
     selections: Record<string, string[]>;
   }): Promise<GenTestTask> {
     return apiFetch("/admin/gentest", { method: "POST", body: JSON.stringify(body) });
