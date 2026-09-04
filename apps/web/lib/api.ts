@@ -1321,6 +1321,10 @@ export const admin = {
     return apiFetch(`/admin/gentest/${id}/cancel`, { method: "POST" });
   },
 
+  async resumeGenTest(id: string): Promise<GenTestTask> {
+    return apiFetch(`/admin/gentest/${id}/resume`, { method: "POST" });
+  },
+
   // ─── Civitai AIR ───────────────────────────────────────────
 
   async resolveCivitaiAir(url: string): Promise<{

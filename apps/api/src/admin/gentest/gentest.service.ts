@@ -98,6 +98,38 @@ export class GentestService implements OnModuleInit {
     return task;
   }
 
+  /**
+   * Продолжить прерванный/ошибочный прогон: повторяет failed-элементы и
+   * дорезолвивает недогенерированные, не пересоздавая уже completed.
+   * Переиспользует runTask (сам берёт pending и возвращает processing→pending).
+   */
+  async resume(id: string) {
+    const task = await this.prisma.genTestTask.findUnique({ where: { id } });
+    if (!task) throw new NotFoundException("Task not found");
+
+    // Уже идёт — идемпотентно убеждаемся, что пул воркеров крутится.
+    if (task.status === "running") {
+      void this.runTask(id);
+      return task;
+    }
+
+    // Незавершённые/неудачные элементы возвращаем в очередь, чистим ошибку.
+    await this.prisma.genTestItem.updateMany({
+      where: { taskId: id, status: { in: ["failed", "processing"] } },
+      data: { status: "pending", error: null },
+    });
+
+    // Счётчики приводим к факту (done = реально готовые, failed обнуляем).
+    const done = await this.prisma.genTestItem.count({ where: { taskId: id, status: "completed" } });
+    const updated = await this.prisma.genTestTask.update({
+      where: { id },
+      data: { status: "running", finishedAt: null, done, failed: 0 },
+    });
+
+    void this.runTask(id);
+    return updated;
+  }
+
   /** Создаёт задачу: строит комбинации, сохраняет items, запускает пул воркеров. */
   async createTask(adminId: string, dto: StartGenTestDto) {
     const character = await this.prisma.character.findFirst({ where: { id: dto.characterId, deletedAt: null } });

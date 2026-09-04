@@ -39,4 +39,10 @@ export class GentestController {
   cancel(@Param("id") id: string) {
     return this.gentest.cancel(id);
   }
+
+  /** Продолжить прерванный/ошибочный прогон (повторить failed/недогенерированные). */
+  @Post(":id/resume")
+  resume(@Param("id") id: string) {
+    return this.gentest.resume(id);
+  }
 }
