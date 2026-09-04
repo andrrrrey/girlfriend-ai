@@ -1272,11 +1272,13 @@ function buildComfyWorkflow(p: {
       },
     },
     "8": { class_type: "VAEDecode", inputs: { samples: ["3", 0], vae: ["4", 2] } },
-    "9": { class_type: "SaveImage", inputs: { images: ["8", 0] } },
+    // SaveImage требует filename_prefix (иначе prompt validation fails).
+    "9": { class_type: "SaveImage", inputs: { images: ["8", 0], filename_prefix: "ipadapter" } },
   };
   if (p.ipAdapter) {
     g["10"] = { class_type: "IPAdapterUnifiedLoader", inputs: { model: ["4", 0], preset: p.ipAdapter.preset } };
-    g["12"] = { class_type: "LoadImageFromUrl", inputs: { url: p.ipAdapter.imageUrl } };
+    // art-venture LoadImageFromUrl: вход называется image (STRING с URL), НЕ url.
+    g["12"] = { class_type: "LoadImageFromUrl", inputs: { image: p.ipAdapter.imageUrl } };
     g["13"] = {
       class_type: "IPAdapter",
       inputs: { model: ["10", 0], ipadapter: ["10", 1], image: ["12", 0], weight: p.ipAdapter.weight, weight_type: "standard", start_at: 0, end_at: 1 },

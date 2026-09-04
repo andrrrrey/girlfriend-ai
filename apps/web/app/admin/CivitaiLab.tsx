@@ -168,11 +168,11 @@ const TEMPLATE_COMFY_IPADAPTER = `{
           "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "sitting on a chair in a cafe, full body, masterpiece, best quality", "clip": ["4", 1] } },
           "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
           "10": { "class_type": "IPAdapterUnifiedLoader", "inputs": { "model": ["4", 0], "preset": "PLUS (high strength)" } },
-          "12": { "class_type": "LoadImageFromUrl", "inputs": { "url": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
+          "12": { "class_type": "LoadImageFromUrl", "inputs": { "image": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
           "13": { "class_type": "IPAdapter", "inputs": { "model": ["10", 0], "ipadapter": ["10", 1], "image": ["12", 0], "weight": 0.7, "start_at": 0, "end_at": 1, "weight_type": "standard" } },
           "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["13", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
           "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
-          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0] } }
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0], "filename_prefix": "ipadapter" } }
         }
       }
     }
@@ -224,11 +224,11 @@ const TEMPLATE_CUSTOMCOMFY_IPADAPTER = `{
           "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "sitting on a chair in a cafe, full body, masterpiece, best quality", "clip": ["4", 1] } },
           "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
           "10": { "class_type": "IPAdapterUnifiedLoader", "inputs": { "model": ["4", 0], "preset": "PLUS (high strength)" } },
-          "12": { "class_type": "LoadImageFromUrl", "inputs": { "url": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
+          "12": { "class_type": "LoadImageFromUrl", "inputs": { "image": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
           "13": { "class_type": "IPAdapter", "inputs": { "model": ["10", 0], "ipadapter": ["10", 1], "image": ["12", 0], "weight": 0.7, "start_at": 0, "end_at": 1, "weight_type": "standard" } },
           "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["13", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
           "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
-          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0] } }
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0], "filename_prefix": "ipadapter" } }
         }
       }
     }
