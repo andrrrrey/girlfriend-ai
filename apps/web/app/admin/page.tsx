@@ -54,12 +54,13 @@ const SETTING_GROUPS = [
     ],
   },
   {
-    title: "Comfy / IP-Adapter (эксперимент, Фаза 1)",
-    subtitle: "Продвинутая генерация через comfy-workflow: IP-Adapter (identity с аватара персонажа) на IPAdapterUnifiedLoader. Работает, когда COMFY_ENABLED=true и в запросе передан ipAdapterImageUrl. Требует generation-enabled чекпоинт (кнопка Create на Civitai). CLIP-Vision/IP-Adapter модель подтягиваются пресетом автоматически.",
+    title: "Comfy / IP-Adapter (identity с аватара)",
+    subtitle: "Сохранение лица персонажа через customComfy-workflow: IP-Adapter на IPAdapterUnifiedLoader. Работает, когда COMFY_ENABLED=true и в запросе передан ipAdapterImageUrl (URL аватара). Путь customComfy устанавливает кастомные ноды из resources/nodepacks — БЕЗ этого IPAdapter/LoadImageFromUrl не загружаются (это и была причина, почему раньше не заводилось). Проверять и подбирать граф удобно в Civitai Lab → «Проба G». Требует generation-enabled чекпоинт (кнопка Create на Civitai).",
     keys: [
       { key: "COMFY_ENABLED", label: "Включить comfy-режим", type: "select", options: ["false", "true"] },
       { key: "IPADAPTER_PRESET", label: "IP-Adapter preset", type: "select", options: ["PLUS (high strength)", "STANDARD (medium strength)", "PLUS FACE (portraits)", "LIGHT - SD1.5 only (low strength)", "VIT-G (medium strength)"] },
       { key: "IPADAPTER_WEIGHT", label: "IP-Adapter weight (0..1, по умолчанию 0.7)", type: "text" },
+      { key: "IPADAPTER_NODEPACKS", label: "Nodepacks (CSV AIR-ов comfy:nodepack). Пусто = дефолт: matteo/comfyui_ipadapter_plus@2.0.0, protogaia/comfyui-art-venture@1.1.7", type: "text" },
     ],
   },
   {

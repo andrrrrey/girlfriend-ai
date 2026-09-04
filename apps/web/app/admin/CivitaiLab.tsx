@@ -179,6 +179,44 @@ const TEMPLATE_COMFY_IPADAPTER = `{
   ]
 }`;
 
+// Проба G: customComfy + IP-Adapter (ПРАВИЛЬНЫЙ путь). В отличие от пробы F
+// ($type:"comfy" — кастомные ноды НЕ устанавливаются, граф принимается, но
+// IPAdapter*/LoadImageFromUrl падают при загрузке), здесь $type:"customComfy":
+//  • resources — обязателен: перечисляем чекпоинт И comfy:nodepack-и, иначе
+//    кастомные ноды не установятся (это и была причина, почему не заводилось):
+//      matteo/comfyui_ipadapter_plus     → IPAdapterUnifiedLoader, IPAdapter
+//      protogaia/comfyui-art-venture     → LoadImageFromUrl
+//  • workflow (не comfyWorkflow) — сырой граф, передаётся воркеру как есть;
+//  • trace:"logs" — стрим логов ComfyUI (видно, какая нода/модель не нашлась).
+// Замените url на публичный URL лица-референса.
+const TEMPLATE_CUSTOMCOMFY_IPADAPTER = `{
+  "steps": [
+    {
+      "$type": "customComfy",
+      "input": {
+        "trace": "logs",
+        "resources": [
+          "urn:air:sdxl:checkpoint:civitai:133005@1759168",
+          "urn:air:comfy:nodepack:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0",
+          "urn:air:comfy:nodepack:comfyregistry:protogaia/comfyui-art-venture@1.1.7"
+        ],
+        "workflow": {
+          "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "urn:air:sdxl:checkpoint:civitai:133005@1759168" } },
+          "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 1024, "height": 1536, "batch_size": 1 } },
+          "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "sitting on a chair in a cafe, full body, masterpiece, best quality", "clip": ["4", 1] } },
+          "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "worst quality, low quality", "clip": ["4", 1] } },
+          "10": { "class_type": "IPAdapterUnifiedLoader", "inputs": { "model": ["4", 0], "preset": "PLUS (high strength)" } },
+          "12": { "class_type": "LoadImageFromUrl", "inputs": { "url": "https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original" } },
+          "13": { "class_type": "IPAdapter", "inputs": { "model": ["10", 0], "ipadapter": ["10", 1], "image": ["12", 0], "weight": 0.7, "start_at": 0, "end_at": 1, "weight_type": "standard" } },
+          "3": { "class_type": "KSampler", "inputs": { "seed": 12345, "steps": 25, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1, "model": ["13", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0] } },
+          "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8", 0] } }
+        }
+      }
+    }
+  ]
+}`;
+
 const codeBox: React.CSSProperties = {
   width: "100%", minHeight: 260, background: "#0b0b0b", border: "1px solid #262626", borderRadius: 8,
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
@@ -263,6 +301,7 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY)}>Проба D: comfy (доступность)</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_TXT2IMG)}>Проба E: comfy txt2img</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_IPADAPTER)}>Проба F: comfy + IP-Adapter</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G: customComfy + IP-Adapter ✓</button>
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
@@ -302,14 +341,17 @@ export function CivitaiLab() {
             const step0 = (resp.body as any)?.steps?.[0];
             const echo = step0?.input;
             if (!echo || typeof echo !== "object") return null;
-            // comfy-шаг: анализ полей imageGen неприменим — граф принят, если статус не failed.
-            if (step0?.$type === "comfy" || echo.comfyWorkflow) {
-              const nodes = echo.comfyWorkflow ? Object.values(echo.comfyWorkflow as Record<string, { class_type?: string }>).map((n) => n.class_type).filter(Boolean) : [];
+            // comfy/customComfy-шаг: анализ полей imageGen неприменим — граф принят, если статус не failed.
+            const graph = (echo.comfyWorkflow || echo.workflow) as Record<string, { class_type?: string }> | undefined;
+            if (step0?.$type === "comfy" || step0?.$type === "customComfy" || graph) {
+              const nodes = graph ? Object.values(graph).map((n) => n.class_type).filter(Boolean) : [];
+              const resources = Array.isArray(echo.resources) ? (echo.resources as string[]) : [];
               return (
                 <div style={{ marginBottom: 8, padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
-                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>comfy-граф принят Civitai ✓</div>
+                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{step0?.$type}-граф принят Civitai ✓</div>
                   {nodes.length > 0 && <div style={{ color: "#cfcfcf", fontSize: 11 }}>ноды: {nodes.join(", ")}</div>}
-                  <div style={{ color: "#6f7496", fontSize: 11, marginTop: 4 }}>Дождитесь workflow: succeeded — картинка в output.images/blobs.</div>
+                  {resources.length > 0 && <div style={{ color: "#cfcfcf", fontSize: 11, marginTop: 2 }}>resources: {resources.join(", ")}</div>}
+                  <div style={{ color: "#6f7496", fontSize: 11, marginTop: 4 }}>Дождитесь workflow: succeeded — картинка в output.images/blobs. При failed смотрите trace-логи (какая нода/модель не нашлась).</div>
                 </div>
               );
             }

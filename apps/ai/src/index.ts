@@ -1286,31 +1286,56 @@ function buildComfyWorkflow(p: {
   return g;
 }
 
-/** Отправляет comfy-граф на Civitai Orchestration и поллит результат. */
-async function generateImageComfy(params: { apiToken: string; workflow: Record<string, unknown> }): Promise<{ url: string }> {
+/**
+ * Отправляет ПРОИЗВОЛЬНЫЙ ComfyUI-граф на Civitai Orchestration через шаг
+ * `$type:"customComfy"` и поллит результат.
+ *
+ * ВАЖНО (почему раньше не работало): единственный путь запустить граф с кастомными
+ * нодами (IPAdapter*, LoadImageFromUrl) — это `customComfy`, а НЕ `comfy`. В `comfy`
+ * нельзя объявить nodepack-и, поэтому кастомные ноды не устанавливаются и граф
+ * падает при загрузке. У `customComfy` обязателен `resources`: перечисляем чекпоинт
+ * И все `comfy:nodepack` URN-ы; всё, что не указано, не установится (см. OpenAPI
+ * CustomComfyInput). Поле графа — `workflow` (не `comfyWorkflow`). `trace:"logs"`
+ * даёт стрим логов ComfyUI для диагностики.
+ */
+async function generateImageComfy(params: {
+  apiToken: string;
+  workflow: Record<string, unknown>;
+  resources: string[];
+  trace?: "none" | "logs" | "binary";
+}): Promise<{ url: string }> {
   const extractUrl = (r: any): string | undefined => {
-    const imgs = r?.steps?.[0]?.output?.images as Array<{ url?: string; available?: boolean }> | undefined;
+    const step = r?.steps?.[0];
+    const imgs = (step?.output?.images || step?.output?.blobs) as Array<{ url?: string; available?: boolean }> | undefined;
     const img = imgs?.find((x) => x?.available !== false && x?.url) || imgs?.[0];
     return img?.url;
   };
-  const body = { steps: [{ $type: "comfy", input: { comfyWorkflow: params.workflow, quantity: 1 } }] };
-  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+  const body = {
+    steps: [{
+      $type: "customComfy",
+      input: { workflow: params.workflow, resources: params.resources, trace: params.trace ?? "logs" },
+    }],
+  };
+  // wait=0: submit возвращается сразу; первый прогон ставит nodepack-и (может быть
+  // долгим), поэтому результат тянем поллингом. Окно щедрое — до ~7.5 мин.
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=0&allowMatureContent=true", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${params.apiToken}` },
     body: JSON.stringify(body),
   });
   if (!response.ok) {
     const t = await response.text();
-    logger.error({ status: response.status, body: t.slice(0, 500) }, "civitai_comfy_api_error");
-    throw new Error(`Civitai comfy HTTP ${response.status}`);
+    logger.error({ status: response.status, body: t.slice(0, 700) }, "civitai_comfy_api_error");
+    throw new Error(`Civitai customComfy HTTP ${response.status}`);
   }
   let result: any = await response.json();
   const first = extractUrl(result);
   if (first) return { url: first };
-  if ((result?.status === "scheduled" || result?.status === "processing") && result?.id) {
-    for (let i = 0; i < 30; i++) {
+  const workflowId = result?.id;
+  if (workflowId) {
+    for (let i = 0; i < 90; i++) {
       await new Promise((r) => setTimeout(r, 5000));
-      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${result.id}`, {
+      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${workflowId}`, {
         headers: { Authorization: `Bearer ${params.apiToken}` },
       });
       if (!pollRes.ok) continue;
@@ -1318,11 +1343,14 @@ async function generateImageComfy(params: { apiToken: string; workflow: Record<s
       logger.info({ status: result?.status, attempt: i }, "civitai_comfy_poll");
       const u = extractUrl(result);
       if (u) return { url: u };
-      if (result?.status === "failed") throw new Error("Civitai comfy generation failed");
+      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired") {
+        logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_comfy_failed");
+        throw new Error(`Civitai customComfy ${result?.status}`);
+      }
     }
-    throw new Error("Civitai comfy generation timed out");
+    throw new Error("Civitai customComfy timed out");
   }
-  throw new Error("Civitai comfy: no image URL in response");
+  throw new Error("Civitai customComfy: no image URL in response");
 }
 
 async function generateImageAtlasCloud(params: {
@@ -1760,7 +1788,18 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
           ipAdapter: { imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7 },
         });
-        const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow });
+        // resources ОБЯЗАТЕЛЕН для customComfy: чекпоинт + comfy:nodepack-и кастомных
+        // нод. Пакеты настраиваются через IPADAPTER_NODEPACKS (CSV AIR-ов), дефолт —
+        // подтверждённые в Comfy Registry: IPAdapter plus (Matteo) + art-venture
+        // (LoadImageFromUrl). Всё, что не в resources, не установится в ComfyUI.
+        const defaultNodepacks = [
+          "urn:air:comfy:nodepack:comfyregistry:matteo/comfyui_ipadapter_plus@2.0.0",
+          "urn:air:comfy:nodepack:comfyregistry:protogaia/comfyui-art-venture@1.1.7",
+        ];
+        const nodepacks = (settings.IPADAPTER_NODEPACKS || "")
+          .split(",").map((s) => s.trim()).filter(Boolean);
+        const resources = [cfg.air, ...(nodepacks.length ? nodepacks : defaultNodepacks)];
+        const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow, resources, trace: "logs" });
         const imgResp = await fetch(comfy.url);
         if (imgResp.ok) {
           const buf = Buffer.from(await imgResp.arrayBuffer());
