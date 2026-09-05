@@ -1315,6 +1315,45 @@ export class AdminService {
     }
   }
 
+  /**
+   * Скачивает Civitai-blob object_info (URL из вывода comfyNodepackSnapshot) и
+   * достаёт списки доступных файлов моделей для ключевых лоадеров. Нужно, чтобы
+   * увидеть, какие clip_vision / ipadapter файлы уже есть в образе Civitai (тогда
+   * их можно указать по имени без объявления resource). Только для админа.
+   */
+  async civitaiObjectInfo(url: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
+    if (!url || !/^https:\/\/[^/]*\.civitai\.com\//.test(url)) throw new BadRequestException("Ожидается https URL Civitai blob");
+    const token = (await this.prisma.appSetting.findUnique({ where: { key: "CIVITAI_API_TOKEN" } }))?.value;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 60_000);
+    try {
+      const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: ctrl.signal });
+      const text = await res.text();
+      if (!res.ok) return { httpStatus: res.status, ok: false, body: text.slice(0, 500) };
+      let json: Record<string, any>;
+      try { json = JSON.parse(text); } catch { return { httpStatus: res.status, ok: false, body: "не JSON: " + text.slice(0, 300) }; }
+      // Для интересующих нод достаём option-массивы (списки файлов моделей).
+      const wanted = /IPAdapter|CLIPVision|CheckpointLoader|UnifiedLoader|InsightFace|ClipVision|IPAdapterModelLoader/i;
+      const out: Record<string, Record<string, string[]>> = {};
+      for (const [cls, def] of Object.entries(json)) {
+        if (!wanted.test(cls)) continue;
+        const req = (def as any)?.input?.required || {};
+        const fields: Record<string, string[]> = {};
+        for (const [f, spec] of Object.entries(req)) {
+          const opts = Array.isArray(spec) && Array.isArray((spec as any)[0]) ? (spec as any)[0] : null;
+          if (opts && opts.every((x: unknown) => typeof x === "string")) fields[f] = opts as string[];
+        }
+        if (Object.keys(fields).length) out[cls] = fields;
+      }
+      return { httpStatus: res.status, ok: true, body: { nodes: out } };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { httpStatus: 0, ok: false, body: { fetchError: msg } };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /** Статус воркфлоу Civitai по id (для асинхронного опроса из Civitai Lab). */
   async civitaiWorkflowStatus(id: string): Promise<{ httpStatus: number; ok: boolean; body: unknown }> {
     if (!id) throw new BadRequestException("id обязателен");

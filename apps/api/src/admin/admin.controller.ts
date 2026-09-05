@@ -652,4 +652,10 @@ export class AdminController {
   async civitaiResourceInfo(@Query("air") air: string) {
     return this.adminService.civitaiResourceInfo(air);
   }
+
+  /** Читает object_info-blob (URL из snapshot) → списки файлов моделей по лоадерам. */
+  @Get("civitai/object-info")
+  async civitaiObjectInfo(@Query("url") url: string) {
+    return this.adminService.civitaiObjectInfo(url);
+  }
 }

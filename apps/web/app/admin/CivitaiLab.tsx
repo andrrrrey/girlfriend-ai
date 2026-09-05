@@ -314,6 +314,18 @@ export function CivitaiLab() {
     setAirBusy(false);
   };
 
+  // Инспектор object_info: показать доступные файлы моделей в образе Civitai.
+  const [objUrl, setObjUrl] = useState("");
+  const [objInfo, setObjInfo] = useState<{ ok: boolean; body: unknown } | null>(null);
+  const [objBusy, setObjBusy] = useState(false);
+  const inspectObjInfo = async () => {
+    if (!objUrl.trim()) return;
+    setObjBusy(true); setObjInfo(null);
+    try { setObjInfo(await admin.civitaiObjectInfo(objUrl.trim())); }
+    catch (e: any) { setObjInfo({ ok: false, body: { error: e?.message || "ошибка" } }); }
+    finally { setObjBusy(false); }
+  };
+
   const stopPoll = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setPolling(false);
@@ -413,6 +425,36 @@ export function CivitaiLab() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Инспектор object_info: какие файлы моделей уже есть в образе Civitai. */}
+      <div style={{ margin: "0 0 10px", padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
+        <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Инспектор object_info (доступные модели в образе) — вставь objectInfo URL из «Пробы G1»</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            style={{ flex: 1, minWidth: 320, background: "#0b0b0b", border: "1px solid #313131", borderRadius: 6, padding: "7px 10px", color: "#fff", fontFamily: "monospace", fontSize: 11, outline: "none" }}
+            placeholder="https://orchestration-new.civitai.com/v2/consumer/blobs/..._object_info.v2.json?sig=..."
+            value={objUrl}
+            onChange={(e) => setObjUrl(e.target.value)}
+          />
+          <button style={btn} onClick={inspectObjInfo} disabled={objBusy}>{objBusy ? "…" : "Показать модели"}</button>
+        </div>
+        {objInfo && (() => {
+          const nodes = (objInfo.body as any)?.nodes as Record<string, Record<string, string[]>> | undefined;
+          if (!objInfo.ok || !nodes) return <pre style={{ ...codeBox, minHeight: 60, marginTop: 6, whiteSpace: "pre-wrap" }}>{JSON.stringify(objInfo.body, null, 2).slice(0, 800)}</pre>;
+          return (
+            <div style={{ marginTop: 8, fontSize: 11, fontFamily: "monospace" }}>
+              {Object.entries(nodes).map(([cls, fields]) => (
+                <div key={cls} style={{ padding: "4px 0", borderTop: "1px solid #1b1b1b" }}>
+                  <div style={{ color: "#4ade80", fontWeight: 700 }}>{cls}</div>
+                  {Object.entries(fields).map(([f, opts]) => (
+                    <div key={f} style={{ color: "#cfcfcf", wordBreak: "break-all" }}>{f}: <span style={{ color: opts.length ? "#e0e0e0" : "#e36466" }}>{opts.length ? opts.join(", ") : "(пусто — нет файлов)"}</span></div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       <textarea style={codeBox} value={payload} onChange={(e) => setPayload(e.target.value)} spellCheck={false} />
