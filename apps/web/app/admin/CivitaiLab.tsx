@@ -275,6 +275,27 @@ const TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT = `{
   ]
 }`;
 
+// Проба K: Flux Kontext — нативный edit-движок Civitai (identity с референса).
+// БЕЗ ComfyUI. Шаг imageGen, engine "flux1-kontext", референс лица в images[],
+// текст — описание сцены. model: dev|pro|max. Замените images[0] на публичный
+// URL аватара/лица.
+const TEMPLATE_KONTEXT = `{
+  "steps": [
+    {
+      "$type": "imageGen",
+      "input": {
+        "engine": "flux1-kontext",
+        "model": "dev",
+        "prompt": "same woman, sitting in a cozy cafe by the window, soft daylight, full body, photorealistic",
+        "images": ["https://image-b2.civitai.com/file/civitai-media-cache/5034e109-665d-4947-a998-5fa4804e1185/original"],
+        "aspectRatio": "3:4",
+        "guidanceScale": 3.5,
+        "quantity": 1
+      }
+    }
+  ]
+}`;
+
 const codeBox: React.CSSProperties = {
   width: "100%", minHeight: 260, background: "#0b0b0b", border: "1px solid #262626", borderRadius: 8,
   color: "#d8d8d8", fontFamily: "monospace", fontSize: 12, lineHeight: 1.5, padding: 12, outline: "none", resize: "vertical",
@@ -397,6 +418,7 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_NODEPACK_SNAPSHOT)}>Проба G1: snapshot node-паков</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G2: customComfy + IP-Adapter (auto)</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT)}>Проба G3: split-loader (clip_vision из resources) ✓</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_KONTEXT)}>Проба K: Flux Kontext (identity) ✓</button>
       </div>
 
       {/* Бесплатная проверка AIR (не тратит buzz) — подбор моделей (напр. clip_vision). */}

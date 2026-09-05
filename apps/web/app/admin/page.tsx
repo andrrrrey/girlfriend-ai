@@ -67,6 +67,16 @@ const SETTING_GROUPS = [
     ],
   },
   {
+    title: "Flux Kontext (identity с референса, нативно)",
+    subtitle: "Сохранение лица персонажа нативным edit-движком Civitai Flux Kontext — БЕЗ ComfyUI/IP-Adapter. Когда KONTEXT_ENABLED=true, запросы img2img (референс = аватар персонажа, приходит как initImageUrl) идут через flux1-kontext: лицо держится референсом независимо от denoise. Важно: это Flux, а не SDXL-чекпоинт персонажа — «лук» будет флуксовый. Имеет приоритет над comfy-режимом. Проверить вживую: Civitai Lab → «Проба K».",
+    keys: [
+      { key: "KONTEXT_ENABLED", label: "Включить Flux Kontext (приоритетнее comfy)", type: "select", options: ["false", "true"] },
+      { key: "KONTEXT_MODEL", label: "Модель Kontext", type: "select", options: ["dev", "pro", "max"] },
+      { key: "KONTEXT_GUIDANCE", label: "Guidance scale (деф. 3.5)", type: "text" },
+      { key: "KONTEXT_ASPECT", label: "Соотношение сторон по умолчанию (21:9,16:9,4:3,3:2,1:1,2:3,3:4,9:16,9:21; деф. 3:4)", type: "text" },
+    ],
+  },
+  {
     title: "System Prompt",
     subtitle: "Глобальный шаблон системного промпта для всех AI-персонажей",
     keys: [

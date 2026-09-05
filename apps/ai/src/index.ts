@@ -1434,6 +1434,79 @@ async function generateImageComfy(params: {
   throw new Error("Civitai customComfy: no image URL in response");
 }
 
+/** Допустимые aspectRatio для Flux Kontext (enum из Civitai OpenAPI). */
+const KONTEXT_ASPECTS = new Set(["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"]);
+
+/**
+ * Flux Kontext (нативный edit-движок Civitai): identity с референс-изображения без
+ * ComfyUI. Шаг imageGen с engine "flux1-kontext"; референс(ы) — в `images`, текст —
+ * инструкция/описание сцены. Модель dev|pro|max. Асинхронно: submit(wait=0) + поллинг.
+ */
+async function generateImageFluxKontext(params: {
+  apiToken: string;
+  model: string; // dev | pro | max
+  prompt: string;
+  images: string[];
+  aspectRatio: string;
+  guidanceScale: number;
+  seed?: number;
+}): Promise<{ url: string }> {
+  const extractUrl = (r: any): string | undefined => {
+    const step = r?.steps?.[0];
+    const imgs = (step?.output?.images || step?.output?.blobs) as Array<{ url?: string; available?: boolean }> | undefined;
+    const img = imgs?.find((x) => x?.available !== false && x?.url) || imgs?.[0];
+    return img?.url;
+  };
+  const body = {
+    steps: [{
+      $type: "imageGen",
+      input: {
+        engine: "flux1-kontext",
+        model: params.model,
+        prompt: params.prompt,
+        images: params.images,
+        aspectRatio: params.aspectRatio,
+        guidanceScale: params.guidanceScale,
+        quantity: 1,
+        ...(typeof params.seed === "number" ? { seed: params.seed } : {}),
+      },
+    }],
+  };
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=0&allowMatureContent=true", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${params.apiToken}` },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    logger.error({ status: response.status, body: t.slice(0, 700) }, "civitai_kontext_api_error");
+    throw new Error(`Civitai Kontext HTTP ${response.status}`);
+  }
+  let result: any = await response.json();
+  const first = extractUrl(result);
+  if (first) return { url: first };
+  const workflowId = result?.id;
+  if (workflowId) {
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${workflowId}`, {
+        headers: { Authorization: `Bearer ${params.apiToken}` },
+      });
+      if (!pollRes.ok) continue;
+      result = await pollRes.json();
+      logger.info({ status: result?.status, attempt: i }, "civitai_kontext_poll");
+      const u = extractUrl(result);
+      if (u) return { url: u };
+      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired") {
+        logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_kontext_failed");
+        throw new Error(`Civitai Kontext ${result?.status}`);
+      }
+    }
+    throw new Error("Civitai Kontext timed out");
+  }
+  throw new Error("Civitai Kontext: no image URL in response");
+}
+
 async function generateImageAtlasCloud(params: {
   apiKey: string;
   modelId: string;
@@ -1847,6 +1920,52 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       return reply.status(503).send({ error: "Civitai API token not configured" });
     }
     const generationStyle = req.body.generationStyle || "realism";
+
+    // ── Flux Kontext: сохранение лица с референса (нативный edit-движок Civitai). ──
+    // Включается KONTEXT_ENABLED. Референс — аватар персонажа: приходит как
+    // initImageUrl (img2img «как в чате»); если его нет — пробуем ipAdapterImageUrl.
+    // Это отдельный движок (Flux), а не SDXL-чекпоинт персонажа: identity держится
+    // референсом независимо от denoise. Модель dev|pro|max (KONTEXT_MODEL).
+    const kontextRef = initImageUrl || (req.body as { ipAdapterImageUrl?: string }).ipAdapterImageUrl;
+    if (settings.KONTEXT_ENABLED === "true" && kontextRef) {
+      try {
+        const kmodel = settings.KONTEXT_MODEL || "dev";
+        const guidance = Number(settings.KONTEXT_GUIDANCE) || 3.5;
+        const reqAspect = typeof req.body.aspectRatio === "string" ? req.body.aspectRatio : "";
+        const aspectRatio = KONTEXT_ASPECTS.has(reqAspect) ? reqAspect : (settings.KONTEXT_ASPECT && KONTEXT_ASPECTS.has(settings.KONTEXT_ASPECT) ? settings.KONTEXT_ASPECT : "3:4");
+        const kontext = await generateImageFluxKontext({
+          apiToken: civitaiToken,
+          model: kmodel,
+          prompt,
+          images: [kontextRef],
+          aspectRatio,
+          guidanceScale: guidance,
+          seed: typeof seed === "number" ? seed : undefined,
+        });
+        const imgResp = await fetch(kontext.url);
+        if (imgResp.ok) {
+          const buf = Buffer.from(await imgResp.arrayBuffer());
+          const s3c = createS3Client();
+          if (s3c) {
+            try {
+              const key = `images/${randomUUID()}.png`;
+              const url = await uploadToS3(s3c, env.S3_BUCKET || "media", key, buf, "image/png");
+              logger.info({ key, generationStyle, mode: "flux-kontext", model: kmodel }, "civitai_kontext_uploaded_to_s3");
+              return sendResult(url, { model: `flux1-kontext-${kmodel}`, generationStyle });
+            } catch (s3Err: any) {
+              logger.warn({ err: s3Err }, "civitai_kontext_s3_upload_failed");
+            }
+          }
+        }
+        return sendResult(kontext.url, { model: `flux1-kontext-${kmodel}`, generationStyle });
+      } catch (err: any) {
+        logger.error({ err }, "civitai_kontext_generation_error");
+        if (isInsufficientBalance(0, String(err?.message ?? ""))) {
+          return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "civitai" });
+        }
+        return reply.status(502).send({ error: "Civitai Kontext generation failed", details: err.message });
+      }
+    }
 
     // ── Продвинутый режим: IP-Adapter identity через comfy-workflow (Фаза 1). ──
     // Включается настройкой COMFY_ENABLED и наличием ipAdapterImageUrl в запросе.
