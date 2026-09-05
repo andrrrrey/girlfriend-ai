@@ -204,7 +204,7 @@ export class GentestService implements OnModuleInit {
         concurrency,
         seed,
         createdBy: adminId,
-        params: { selections, denoise: dto.denoise } as object,
+        params: { selections, denoise: dto.denoise, engine: dto.engine } as object,
       },
     });
 
@@ -299,6 +299,7 @@ export class GentestService implements OnModuleInit {
       const avatarModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
       const contentMode: "nsfw" | "sfw" = character.nsfw === false ? "sfw" : "nsfw";
       const denoise = (task.params as { denoise?: number } | null)?.denoise;
+      const engine = (task.params as { engine?: "sdxl" | "kontext" } | null)?.engine;
 
       // Прерванные рестартом элементы возвращаем в очередь.
       await this.prisma.genTestItem.updateMany({ where: { taskId, status: "processing" }, data: { status: "pending" } });
@@ -327,6 +328,7 @@ export class GentestService implements OnModuleInit {
             avatarUrl: character.avatarUrl,
             contentMode,
             denoise,
+            engine,
           });
         }
       };
@@ -359,6 +361,7 @@ export class GentestService implements OnModuleInit {
       avatarUrl: string | null;
       contentMode: "nsfw" | "sfw";
       denoise?: number;
+      engine?: "sdxl" | "kontext";
     },
   ): Promise<void> {
     const item = await this.prisma.genTestItem.findUnique({ where: { id: itemId } });
@@ -377,6 +380,9 @@ export class GentestService implements OnModuleInit {
       if (ctx.mode === "img2img" && ctx.avatarUrl) {
         payload.initImageUrl = ctx.avatarUrl;
         if (typeof ctx.denoise === "number") payload.denoise = ctx.denoise;
+        // Явный выбор движка: kontext → Flux Kontext, sdxl → обычный путь (запрещает
+        // Kontext даже при KONTEXT_ENABLED=true). Актуально только для img2img.
+        if (ctx.engine) payload.engine = ctx.engine;
       }
 
       const { jobId } = await this.generation.createImageJob(ctx.adminId, payload);

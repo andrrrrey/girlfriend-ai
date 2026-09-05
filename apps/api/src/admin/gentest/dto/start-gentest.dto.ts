@@ -37,6 +37,12 @@ export class StartGenTestDto {
   @Max(1000)
   maxCombos?: number;
 
+  /** Движок identity: "sdxl" (чекпоинт персонажа) | "kontext" (Flux Kontext).
+   *  Только для img2img; перекрывает глобальный KONTEXT_ENABLED в AI-сервисе. */
+  @IsOptional()
+  @IsIn(["sdxl", "kontext"])
+  engine?: "sdxl" | "kontext";
+
   /** Карта подгруппа → id выбранных опций (валидируется/санитайзится в сервисе). */
   @IsObject()
   selections!: Record<string, string[]>;

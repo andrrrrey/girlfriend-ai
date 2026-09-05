@@ -956,6 +956,12 @@ interface ImageGenerateBody {
   seed?: number;
   /** Режим контента: "nsfw" | "sfw". Определяет набор промпт-тегов и негатива. */
   contentMode?: "nsfw" | "sfw";
+  /** Сила изменения img2img (0..1). */
+  denoise?: number;
+  /** Соотношение сторон уже есть выше; движок identity: "sdxl" (обычный путь) |
+   *  "kontext" (Flux Kontext). Per-request перекрывает глобальный KONTEXT_ENABLED:
+   *  явный "sdxl" запрещает Kontext даже при включённой настройке. */
+  engine?: "sdxl" | "kontext";
 }
 
 // ─── Civitai RED Orchestration API ─────────────────────────────────────────
@@ -1927,7 +1933,11 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     // Это отдельный движок (Flux), а не SDXL-чекпоинт персонажа: identity держится
     // референсом независимо от denoise. Модель dev|pro|max (KONTEXT_MODEL).
     const kontextRef = initImageUrl || (req.body as { ipAdapterImageUrl?: string }).ipAdapterImageUrl;
-    if (settings.KONTEXT_ENABLED === "true" && kontextRef) {
+    // Per-request движок перекрывает глобальную настройку: engine="kontext" форсит
+    // Kontext даже при KONTEXT_ENABLED=false; engine="sdxl" запрещает даже при true.
+    const reqEngine = req.body.engine;
+    const kontextOn = reqEngine === "kontext" || (reqEngine !== "sdxl" && settings.KONTEXT_ENABLED === "true");
+    if (kontextOn && kontextRef) {
       try {
         const kmodel = settings.KONTEXT_MODEL || "dev";
         const guidance = Number(settings.KONTEXT_GUIDANCE) || 3.5;

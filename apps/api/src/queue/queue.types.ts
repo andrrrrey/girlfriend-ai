@@ -134,6 +134,9 @@ export interface ImageJobData {
   contentMode?: "nsfw" | "sfw";
   /** Сила изменения img2img (0..1). Ниже — ближе к аватару, выше — свободнее поза/сцена. */
   denoise?: number;
+  /** Движок identity: "sdxl" (обычный путь) | "kontext" (Flux Kontext). Per-request
+   *  перекрывает глобальный KONTEXT_ENABLED в AI-сервисе. */
+  engine?: "sdxl" | "kontext";
 }
 
 /**

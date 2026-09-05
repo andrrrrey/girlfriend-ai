@@ -102,6 +102,7 @@ export default function AdminGenTestPage() {
   const [concurrency, setConcurrency] = useState("3");
   const [denoise, setDenoise] = useState("0.65");
   const [maxCombos, setMaxCombos] = useState("300");
+  const [engine, setEngine] = useState<"sdxl" | "kontext">("sdxl");
   const [resultsCollapsed, setResultsCollapsed] = useState(false);
   const [optionsBySub, setOptionsBySub] = useState<Record<string, Opt[]>>({});
   const [selected, setSelected] = useState<Record<string, Set<string>>>({});
@@ -255,7 +256,7 @@ export default function AdminGenTestPage() {
         characterId,
         mode,
         concurrency: parseInt(concurrency, 10) || 3,
-        ...(mode === "img2img" ? { denoise: parseFloat(denoise) || 0.65 } : {}),
+        ...(mode === "img2img" ? { denoise: parseFloat(denoise) || 0.65, engine } : {}),
         maxCombos: Math.min(Math.max(1, parseInt(maxCombos, 10) || 300), 1000),
         selections,
       });
@@ -337,17 +338,32 @@ export default function AdminGenTestPage() {
           <input style={st.num} type="number" min={1} max={1000} value={maxCombos} onChange={(e) => setMaxCombos(e.target.value)} />
           {mode === "img2img" && (
             <>
-              <label style={{ color: "#848484", fontSize: 12 }} title="Сила изменения: ниже — ближе к аватару, выше — свободнее поза/сцена">
-                Сила изменения {denoise}
-              </label>
-              <input type="range" min={0.3} max={0.9} step={0.05} value={denoise} onChange={(e) => setDenoise(e.target.value)} style={{ width: 160 }} />
+              <label style={{ color: "#848484", fontSize: 12 }}>Движок</label>
+              <select style={st.select} value={engine} onChange={(e) => setEngine(e.target.value as "sdxl" | "kontext")} title="SDXL — чекпоинт/AIR персонажа (стиль персонажа). Kontext — Flux Kontext: держит лицо с аватара, но флукс-лук и игнорирует «силу изменения».">
+                <option value="sdxl">SDXL (модель персонажа)</option>
+                <option value="kontext">Flux Kontext (лицо с аватара)</option>
+              </select>
+              {engine === "sdxl" && (
+                <>
+                  <label style={{ color: "#848484", fontSize: 12 }} title="Сила изменения: ниже — ближе к аватару, выше — свободнее поза/сцена">
+                    Сила изменения {denoise}
+                  </label>
+                  <input type="range" min={0.3} max={0.9} step={0.05} value={denoise} onChange={(e) => setDenoise(e.target.value)} style={{ width: 160 }} />
+                </>
+              )}
             </>
           )}
         </div>
-        {mode === "img2img" && (
+        {mode === "img2img" && engine === "sdxl" && (
           <p style={{ ...st.hint, margin: "6px 0 0", color: "#8a6d3b" }}>
             ⚠ Аксессуары на голове (шляпа/ободок) в img2img часто не появляются при низком denoise — поднимите к 0.85–0.9
             или используйте txt2img. Можно также усилить токен кнопкой «×1.3» рядом с промптом опции.
+          </p>
+        )}
+        {mode === "img2img" && engine === "kontext" && (
+          <p style={{ ...st.hint, margin: "6px 0 0", color: "#8a6d3b" }}>
+            ⚠ Flux Kontext держит лицо с аватара независимо от «силы изменения» (слайдер скрыт), но «лук» будет
+            флуксовый, а НЕ модель/AIR персонажа. Каждая комбинация ≈ 35 buzz (модель dev). Требует KONTEXT-настроек в админке.
           </p>
         )}
 

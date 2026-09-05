@@ -1305,6 +1305,7 @@ export const admin = {
     seed?: number;
     denoise?: number;
     maxCombos?: number;
+    engine?: "sdxl" | "kontext";
     selections: Record<string, string[]>;
   }): Promise<GenTestTask> {
     return apiFetch("/admin/gentest", { method: "POST", body: JSON.stringify(body) });
