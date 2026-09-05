@@ -304,7 +304,8 @@ export function CivitaiLab() {
       try {
         const r = await admin.civitaiResourceInfo(air);
         const b = r.body as any;
-        out.push({ air, httpStatus: r.httpStatus, ok: r.ok, canGenerate: b?.canGenerate, note: b?.availability?.status || b?.error || b?.title });
+        const msgs = b?.errors ? Object.values(b.errors).flat().join("; ") : "";
+        out.push({ air, httpStatus: r.httpStatus, ok: r.ok, canGenerate: b?.canGenerate, note: msgs || b?.availability?.status || b?.error || b?.title });
       } catch (e: any) {
         out.push({ air, httpStatus: 0, ok: false, note: e?.message || "ошибка" });
       }
