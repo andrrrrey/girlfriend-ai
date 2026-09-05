@@ -501,6 +501,29 @@ export function CivitaiLab() {
               return status ? <span style={{ color: "#cfcfcf", marginLeft: 8 }}>· workflow: {status}</span> : null;
             })()}
           </div>
+          {/* Инлайн-превью полученных картинок (imageGen/comfy/kontext). */}
+          {(() => {
+            const steps = (resp.body as any)?.steps;
+            const imgs: { url: string }[] = [];
+            if (Array.isArray(steps)) for (const st of steps) {
+              const o = st?.output || {};
+              for (const it of [...(o.images || []), ...(o.blobs || [])]) {
+                const u = it?.url || it?.previewUrl;
+                if (u && it?.available !== false) imgs.push({ url: u });
+              }
+            }
+            if (!imgs.length) return null;
+            return (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "4px 0 10px" }}>
+                {imgs.map((im, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <a key={i} href={im.url} target="_blank" rel="noreferrer" title="Открыть в новой вкладке">
+                    <img src={im.url} alt={`result ${i + 1}`} style={{ maxWidth: 260, maxHeight: 360, borderRadius: 8, border: "1px solid #262626", display: "block" }} />
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
           {(polling || workflowId) && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               {polling && <span style={{ color: "#6f7496", fontSize: 12 }}>опрос статуса каждые 3с…</span>}
