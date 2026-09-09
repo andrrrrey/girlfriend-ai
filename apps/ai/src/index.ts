@@ -973,8 +973,89 @@ interface CivitaiModelConfig {
   height: number;
   steps: number;
   cfgScale: number;
+  /**
+   * Сэмплер в нотации A1111/Civitai (например «Euler a», «DPM++ 2M SDE»).
+   * Пустая строка = не задавать, использовать дефолт Civitai.
+   */
+  sampler: string;
+  /**
+   * Тип расписания шумов Civitai: "" (авто), "karras", "exponential",
+   * "simple", "discrete", "ays". Пустая строка = дефолт Civitai.
+   */
   scheduler: string;
   clipSkip: number;
+}
+
+/** Допустимые сэмплеры Civitai (имена A1111). Пустая строка = дефолт Civitai. */
+const CIVITAI_SAMPLERS = [
+  "Euler a", "Euler", "LMS", "Heun", "DPM2", "DPM2 a", "DPM++ 2S a", "DPM++ 2M",
+  "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM fast", "DPM adaptive",
+  "LMS Karras", "DPM2 Karras", "DPM2 a Karras", "DPM++ 2S a Karras", "DPM++ 2M Karras",
+  "DPM++ SDE Karras", "DPM++ 2M SDE Karras", "DPM++ 3M SDE Karras",
+  "DPM++ 3M SDE Exponential", "DDIM", "PLMS", "UniPC", "LCM",
+] as const;
+
+/** Допустимые типы расписания Civitai (поле scheduler). */
+const CIVITAI_SCHEDULERS = ["", "karras", "exponential", "simple", "discrete", "ays"] as const;
+
+/**
+ * Нормализует сэмплер к допустимому значению Civitai (без учёта регистра).
+ * Легаси-значение «EulerA» (самодельный токен, который раньше никуда не
+ * отправлялся) трактуется как «не задано» → "", чтобы не менять поведение
+ * старых сохранённых пулов. Неизвестное значение → "".
+ */
+function normalizeCivitaiSampler(raw: string | undefined): string {
+  const v = (raw || "").trim();
+  if (!v || v.toLowerCase() === "eulera") return "";
+  return CIVITAI_SAMPLERS.find((s) => s.toLowerCase() === v.toLowerCase()) ?? "";
+}
+
+/** Нормализует тип расписания к допустимому значению Civitai. */
+function normalizeCivitaiScheduler(raw: string | undefined): string {
+  const v = (raw || "").trim().toLowerCase();
+  return (CIVITAI_SCHEDULERS as readonly string[]).includes(v) ? v : "";
+}
+
+/** Базовое имя сэмплера A1111 → comfy `sampler_name` (для customComfy KSampler). */
+const A1111_TO_COMFY_SAMPLER: Record<string, string> = {
+  "euler a": "euler_ancestral", euler: "euler", lms: "lms", heun: "heun",
+  dpm2: "dpm_2", "dpm2 a": "dpm_2_ancestral", "dpm++ 2s a": "dpmpp_2s_ancestral",
+  "dpm++ 2m": "dpmpp_2m", "dpm++ sde": "dpmpp_sde", "dpm++ 2m sde": "dpmpp_2m_sde",
+  "dpm++ 3m sde": "dpmpp_3m_sde", "dpm fast": "dpm_fast", "dpm adaptive": "dpm_adaptive",
+  ddim: "ddim", plms: "euler", unipc: "uni_pc", lcm: "lcm",
+};
+
+/**
+ * Переводит сэмплер+расписание A1111/Civitai в пару comfy `{sampler, scheduler}`
+ * для customComfy-пути (IP-Adapter/gentest). Суффиксы «Karras»/«Exponential» в
+ * имени сэмплера переносятся в comfy-scheduler. Пустой/неизвестный сэмплер →
+ * undefined (KSampler возьмёт свои дефолты euler/normal).
+ */
+function a1111ToComfy(sampler: string, scheduler: string): { sampler?: string; scheduler?: string } {
+  const s = (sampler || "").trim().toLowerCase();
+  if (!s) return { scheduler: scheduler || undefined };
+  let sched = normalizeCivitaiScheduler(scheduler);
+  let base = s;
+  for (const suf of ["karras", "exponential"]) {
+    if (base.endsWith(` ${suf}`)) { base = base.slice(0, -(suf.length + 1)).trim(); if (!sched) sched = suf; }
+  }
+  return { sampler: A1111_TO_COMFY_SAMPLER[base], scheduler: sched || undefined };
+}
+
+/**
+ * Приводит один элемент пула к актуальной форме, мигрируя легаси-данные.
+ * Старая форма хранила сэмплер-подобное значение в поле `scheduler`
+ * (обычно «EulerA») и не имела поля `sampler`. Новая форма: `sampler` —
+ * имя A1111, `scheduler` — тип расписания. Для легаси-элементов сэмплер и
+ * расписание считаются «не заданными» (поведение генерации не меняется).
+ */
+function migrateCivitaiConfig(m: CivitaiModelConfig): CivitaiModelConfig {
+  const isNewShape = typeof (m as { sampler?: unknown }).sampler === "string";
+  return {
+    ...m,
+    sampler: normalizeCivitaiSampler(isNewShape ? m.sampler : m.scheduler),
+    scheduler: isNewShape ? normalizeCivitaiScheduler(m.scheduler) : "",
+  };
 }
 
 /**
@@ -983,29 +1064,29 @@ interface CivitaiModelConfig {
  */
 const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   realism: [
-    { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:277058@2514955", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:15003@2681234", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:277058@2514955", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:15003@2681234", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   mistoon: [
-    { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:1518336@2750313", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:715287@2744564", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:1518336@2750313", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:715287@2744564", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   "wai-ill": [
-    { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:827184@1183765", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1183765", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   furry: [
-    { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
 };
 
@@ -1023,7 +1104,7 @@ function resolveCivitaiModels(settings: Record<string, string>): Record<string, 
     const parsed = JSON.parse(raw) as Record<string, CivitaiModelConfig[]>;
     const merged: Record<string, CivitaiModelConfig[]> = { ...DEFAULT_CIVITAI_MODELS };
     for (const [style, pool] of Object.entries(parsed)) {
-      if (Array.isArray(pool) && pool.length > 0) merged[style] = pool;
+      if (Array.isArray(pool) && pool.length > 0) merged[style] = pool.map(migrateCivitaiConfig);
     }
     return merged;
   } catch (err) {
@@ -1046,8 +1127,8 @@ function civitaiConfigForAir(air: string, models: Record<string, CivitaiModelCon
   }
   const isSd1 = air.includes(":sd1:");
   return isSd1
-    ? { air, base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 }
-    : { air, base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 };
+    ? { air, base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 }
+    : { air, base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 };
 }
 
 /**
@@ -1145,6 +1226,10 @@ async function generateImageCivitai(params: {
         cfgScale: model.cfgScale,
         steps: model.steps,
         clipSkip: model.clipSkip,
+        // Сэмплер/расписание отправляем только если заданы явно; иначе Civitai
+        // берёт свой дефолт (сохраняет поведение легаси-пулов без сэмплера).
+        ...(model.sampler ? { sampler: model.sampler } : {}),
+        ...(model.scheduler ? { scheduler: model.scheduler } : {}),
         quantity: 1,
         // Фиксируем seed, если пришёл сверху (сохранение внешности персонажа).
         ...(typeof seed === "number" ? { seed } : {}),
@@ -1152,7 +1237,7 @@ async function generateImageCivitai(params: {
     }],
   };
 
-  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
+  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampler: model.sampler || undefined, scheduler: model.scheduler || undefined, cfgScale: model.cfgScale, steps: model.steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
 
   const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
     method: "POST",
@@ -2001,7 +2086,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           negativePrompt: negativePrompt || "worst quality, low quality",
           width: cw, height: ch, steps: cfg.steps, cfgScale: cfg.cfgScale,
           seed: typeof seed === "number" ? seed : Math.floor(Math.random() * 2_147_483_647),
-          scheduler: cfg.scheduler === "EulerA" ? "normal" : undefined,
+          ...a1111ToComfy(cfg.sampler, cfg.scheduler),
           ipAdapter: {
             imageUrl: ipAdapterImageUrl, preset, weight: Number(settings.IPADAPTER_WEIGHT) || 0.7,
             ...(useSplit ? { modelAir: ipModelAir, clipVisionAir } : {}),

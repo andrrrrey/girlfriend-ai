@@ -12,8 +12,46 @@ export interface CivitaiModelConfig {
   height: number;
   steps: number;
   cfgScale: number;
+  /** Сэмплер A1111/Civitai («Euler a», «DPM++ 2M SDE»). "" = дефолт Civitai. */
+  sampler: string;
+  /** Тип расписания Civitai ("" авто | karras | exponential | simple | discrete | ays). */
   scheduler: string;
   clipSkip: number;
+}
+
+/** Допустимые сэмплеры Civitai — зеркало CIVITAI_SAMPLERS в apps/ai/apps/api. */
+const CIVITAI_SAMPLERS = [
+  "Euler a", "Euler", "LMS", "Heun", "DPM2", "DPM2 a", "DPM++ 2S a", "DPM++ 2M",
+  "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM fast", "DPM adaptive",
+  "LMS Karras", "DPM2 Karras", "DPM2 a Karras", "DPM++ 2S a Karras", "DPM++ 2M Karras",
+  "DPM++ SDE Karras", "DPM++ 2M SDE Karras", "DPM++ 3M SDE Karras",
+  "DPM++ 3M SDE Exponential", "DDIM", "PLMS", "UniPC", "LCM",
+];
+const CIVITAI_SCHEDULERS = ["", "karras", "exponential", "simple", "discrete", "ays"];
+
+/** Приводит сэмплер к валидному значению; легаси «EulerA» → "" (дефолт Civitai). */
+function normSampler(raw: string | undefined): string {
+  const v = (raw || "").trim();
+  if (!v || v.toLowerCase() === "eulera") return "";
+  return CIVITAI_SAMPLERS.find((s) => s.toLowerCase() === v.toLowerCase()) ?? "";
+}
+function normScheduler(raw: string | undefined): string {
+  const v = (raw || "").trim().toLowerCase();
+  return CIVITAI_SCHEDULERS.includes(v) ? v : "";
+}
+
+/**
+ * Мигрирует один элемент к актуальной форме. Легаси-форма хранила сэмплер-подобное
+ * значение в поле `scheduler` (обычно «EulerA») и не имела `sampler`; для таких
+ * элементов сэмплер/расписание считаем «не заданными» (генерация не меняется).
+ */
+function migrateItem(m: CivitaiModelConfig): CivitaiModelConfig {
+  const isNewShape = typeof (m as { sampler?: unknown }).sampler === "string";
+  return {
+    ...m,
+    sampler: normSampler(isNewShape ? m.sampler : m.scheduler),
+    scheduler: isNewShape ? normScheduler(m.scheduler) : "",
+  };
 }
 
 /**
@@ -22,29 +60,29 @@ export interface CivitaiModelConfig {
  */
 const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   realism: [
-    { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:277058@2514955", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:15003@2681234", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:133005@1759168", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:152525@293240", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:4201@245598", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:25694@143906", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:277058@2514955", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:15003@2681234", base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   mistoon: [
-    { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:1518336@2750313", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:715287@2744564", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:24149@348981", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:24149@1151831", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:1518336@2750313", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:715287@2744564", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   "wai-ill": [
-    { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:827184@1183765", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1612720", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:827184@1183765", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
   furry: [
-    { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
-    { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:3671@1876492", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
 };
 
@@ -68,7 +106,7 @@ function parseModels(raw: string | undefined): Record<string, CivitaiModelConfig
   try {
     const parsed = JSON.parse(raw) as Record<string, CivitaiModelConfig[]>;
     for (const [style, pool] of Object.entries(parsed)) {
-      if (Array.isArray(pool)) base[style] = pool;
+      if (Array.isArray(pool)) base[style] = pool.map(migrateItem);
     }
   } catch {
     /* некорректный JSON — показываем дефолты */
@@ -94,6 +132,8 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
   const [linkBy, setLinkBy] = useState<Record<string, string>>({});
   const [busyBy, setBusyBy] = useState<Record<string, boolean>>({});
   const [errBy, setErrBy] = useState<Record<string, string>>({});
+  // Состояние кнопки «подтянуть рекомендованные» по строке (ключ `${style}:${idx}`).
+  const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
 
   // Справка: какие STYLE-опции привязаны к каждому пулу (по generationStyle).
   useEffect(() => {
@@ -130,7 +170,7 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
     const dims = dimsForBase(base);
     next[style] = [
       ...(next[style] || []),
-      { air: "", base, ...dims, steps: 25, cfgScale: 7, scheduler: "EulerA", clipSkip: 2, ...preset },
+      { air: "", base, ...dims, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2, ...preset },
     ];
     commit(next);
   };
@@ -143,12 +183,51 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
     setErrBy((e) => ({ ...e, [style]: "" }));
     try {
       const r = await admin.resolveCivitaiAir(url);
-      addItem(style, { air: r.air, base: r.base, width: r.width, height: r.height });
+      addItem(style, {
+        air: r.air, base: r.base, width: r.width, height: r.height,
+        // Рекомендованные автором значения из примеров модели (если Civitai их отдал).
+        ...(r.cfgScale != null ? { cfgScale: r.cfgScale } : {}),
+        ...(r.steps != null ? { steps: r.steps } : {}),
+        ...(r.sampler ? { sampler: r.sampler } : {}),
+        ...(r.scheduler ? { scheduler: r.scheduler } : {}),
+        ...(r.clipSkip != null ? { clipSkip: r.clipSkip } : {}),
+      });
       setLinkBy((l) => ({ ...l, [style]: "" }));
     } catch (e: any) {
       setErrBy((er) => ({ ...er, [style]: e?.message || "Не удалось разобрать ссылку" }));
     } finally {
       setBusyBy((b) => ({ ...b, [style]: false }));
+    }
+  };
+
+  /**
+   * Перечитывает существующий AIR через backend и подставляет рекомендованные
+   * автором cfg/steps/sampler/scheduler/clipSkip в конкретную строку. AIR и
+   * размеры не трогаем (их админ мог настроить осознанно).
+   */
+  const refreshRecommended = async (style: string, idx: number) => {
+    const air = (models[style]?.[idx]?.air || "").trim();
+    if (!air) return;
+    const key = `${style}:${idx}`;
+    setRefreshing((r) => ({ ...r, [key]: true }));
+    setErrBy((e) => ({ ...e, [style]: "" }));
+    try {
+      const r = await admin.resolveCivitaiAir(air);
+      const patch: Partial<CivitaiModelConfig> = {};
+      if (r.cfgScale != null) patch.cfgScale = r.cfgScale;
+      if (r.steps != null) patch.steps = r.steps;
+      if (r.sampler) patch.sampler = r.sampler;
+      if (r.scheduler) patch.scheduler = r.scheduler;
+      if (r.clipSkip != null) patch.clipSkip = r.clipSkip;
+      if (Object.keys(patch).length === 0) {
+        setErrBy((er) => ({ ...er, [style]: "У модели нет примеров с параметрами генерации" }));
+      } else {
+        updateItem(style, idx, patch);
+      }
+    } catch (e: any) {
+      setErrBy((er) => ({ ...er, [style]: e?.message || "Не удалось подтянуть рекомендованные" }));
+    } finally {
+      setRefreshing((r) => ({ ...r, [key]: false }));
     }
   };
   const resetToDefaults = () => {
@@ -165,7 +244,9 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
       <h2 style={adminStyles.title}>Civitai AIR модели</h2>
       <p style={adminStyles.subtitle}>
         Пулы чекпоинтов (AIR) по стилям. При генерации берётся случайный чекпоинт из пула стиля персонажа
-        и затем пиннится к персонажу. Пустой редактор = используются дефолты.
+        и затем пиннится к персонажу. Пустой редактор = используются дефолты. Сэмплер/расписание пустые =
+        дефолт Civitai. Кнопка «↻» подтягивает рекомендованные автором cfg/steps/sampler из примеров модели;
+        добавление по ссылке подставляет их автоматически.
       </p>
 
       {/* Инструкция «Где взять Civitai AIR» */}
@@ -201,8 +282,10 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
               <span style={{ width: 60 }} title="Высота изображения, px">высота</span>
               <span style={{ width: 56 }} title="Число шагов диффузии">шаги</span>
               <span style={{ width: 52 }} title="CFG scale — сила следования промпту">cfg</span>
-              <span style={{ width: 84 }} title="Сэмплер / планировщик">сэмплер</span>
+              <span style={{ width: 140 }} title="Сэмплер (пусто = дефолт Civitai)">сэмплер</span>
+              <span style={{ width: 96 }} title="Тип расписания шумов (пусто = дефолт Civitai)">расписание</span>
               <span style={{ width: 52 }} title="Clip skip">clip</span>
+              <span style={{ width: 34 }} title="Подтянуть рекомендованные автором параметры">рек.</span>
               <span style={{ width: 34 }} />
             </div>
           )}
@@ -229,8 +312,23 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
                 <input style={{ ...cellInput, width: 60 }} type="number" title="height" value={m.height} onChange={(e) => updateItem(style, idx, { height: parseInt(e.target.value, 10) || 0 })} />
                 <input style={{ ...cellInput, width: 56 }} type="number" title="steps" value={m.steps} onChange={(e) => updateItem(style, idx, { steps: parseInt(e.target.value, 10) || 0 })} />
                 <input style={{ ...cellInput, width: 52 }} type="number" title="cfgScale" value={m.cfgScale} onChange={(e) => updateItem(style, idx, { cfgScale: parseFloat(e.target.value) || 0 })} />
-                <input style={{ ...cellInput, width: 84 }} title="scheduler" value={m.scheduler} onChange={(e) => updateItem(style, idx, { scheduler: e.target.value })} />
+                <select style={{ ...cellInput, width: 140 }} title="sampler" value={CIVITAI_SAMPLERS.includes(m.sampler) ? m.sampler : ""} onChange={(e) => updateItem(style, idx, { sampler: e.target.value })}>
+                  <option value="">дефолт Civitai</option>
+                  {CIVITAI_SAMPLERS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select style={{ ...cellInput, width: 96 }} title="scheduler (тип расписания)" value={normScheduler(m.scheduler)} onChange={(e) => updateItem(style, idx, { scheduler: e.target.value })}>
+                  <option value="">авто</option>
+                  {CIVITAI_SCHEDULERS.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
                 <input style={{ ...cellInput, width: 52 }} type="number" title="clipSkip" value={m.clipSkip} onChange={(e) => updateItem(style, idx, { clipSkip: parseInt(e.target.value, 10) || 0 })} />
+                <button
+                  onClick={() => void refreshRecommended(style, idx)}
+                  disabled={!m.air || AIR_RE.test(m.air) === false || !!refreshing[`${style}:${idx}`]}
+                  title="Подтянуть рекомендованные автором cfg/steps/sampler из примеров модели"
+                  style={{ background: "transparent", border: "1px solid #2f3a5a", color: "#8fa3d6", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 12, opacity: refreshing[`${style}:${idx}`] ? 0.5 : 1 }}
+                >
+                  {refreshing[`${style}:${idx}`] ? "…" : "↻"}
+                </button>
                 <button
                   onClick={() => removeItem(style, idx)}
                   style={{ background: "transparent", border: "1px solid #4a2222", color: "#e36466", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}

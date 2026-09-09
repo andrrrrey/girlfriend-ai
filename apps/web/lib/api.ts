@@ -1336,6 +1336,11 @@ export const admin = {
     height: number;
     modelName?: string;
     baseModel?: string;
+    cfgScale?: number;
+    steps?: number;
+    sampler?: string;
+    scheduler?: string;
+    clipSkip?: number;
   }> {
     return apiFetch(`/admin/civitai/resolve-air?url=${encodeURIComponent(url)}`);
   },

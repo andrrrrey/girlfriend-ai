@@ -50,6 +50,62 @@ const SETTING_DEFAULTS: Record<string, string> = {
 };
 
 /**
+ * Допустимые сэмплеры Civitai (имена A1111) — зеркало CIVITAI_SAMPLERS в apps/ai
+ * и apps/web. Нужны, чтобы нормализовать сырое имя из метаданных примера к
+ * значению, которое реально примет генератор и совпадёт с опцией в редакторе.
+ */
+const CIVITAI_SAMPLERS = [
+  "Euler a", "Euler", "LMS", "Heun", "DPM2", "DPM2 a", "DPM++ 2S a", "DPM++ 2M",
+  "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM fast", "DPM adaptive",
+  "LMS Karras", "DPM2 Karras", "DPM2 a Karras", "DPM++ 2S a Karras", "DPM++ 2M Karras",
+  "DPM++ SDE Karras", "DPM++ 2M SDE Karras", "DPM++ 3M SDE Karras",
+  "DPM++ 3M SDE Exponential", "DDIM", "PLMS", "UniPC", "LCM",
+];
+const CIVITAI_SCHEDULERS = ["karras", "exponential", "simple", "discrete", "ays"];
+
+/** Число из значения метаданных примера (Civitai кладёт и строки, и числа). */
+function metaNum(v: unknown): number | undefined {
+  const n = typeof v === "string" ? parseFloat(v) : typeof v === "number" ? v : NaN;
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Извлекает рекомендованные параметры генерации из примеров модели Civitai.
+ * Берёт первый пример, у которого в meta есть валидные cfgScale и steps, и
+ * нормализует сэмплер/расписание к значениям, которые понимает генератор.
+ * Если подходящего примера нет — возвращает пустой объект (админ оставит дефолты).
+ */
+function extractCivitaiRecommended(
+  images: Array<{ meta?: Record<string, unknown> | null }> | undefined,
+): { cfgScale?: number; steps?: number; sampler?: string; scheduler?: string; clipSkip?: number } {
+  for (const img of images || []) {
+    const meta = img?.meta;
+    if (!meta || typeof meta !== "object") continue;
+    const cfgScale = metaNum(meta.cfgScale);
+    const steps = metaNum(meta.steps);
+    if (cfgScale == null || steps == null) continue;
+
+    // Сэмплер: сырое имя из meta.sampler (например «DPM++ 2M SDE»). Тип
+    // расписания Civitai хранит отдельно в «Schedule type» («Karras»/«Automatic»…).
+    const rawSampler = String(meta.sampler ?? "").trim();
+    const sampler = CIVITAI_SAMPLERS.find((s) => s.toLowerCase() === rawSampler.toLowerCase()) ?? "";
+    const rawSchedule = String((meta["Schedule type"] ?? meta.scheduler) ?? "").trim().toLowerCase();
+    const scheduler = CIVITAI_SCHEDULERS.includes(rawSchedule) ? rawSchedule : "";
+
+    const clipSkip = metaNum(meta.clipSkip) ?? metaNum(meta["Clip skip"]);
+
+    return {
+      cfgScale: Math.min(30, Math.max(1, cfgScale)),
+      steps: Math.min(60, Math.max(1, Math.round(steps))),
+      ...(sampler ? { sampler } : {}),
+      ...(scheduler ? { scheduler } : {}),
+      ...(clipSkip != null ? { clipSkip: Math.min(12, Math.max(1, Math.round(clipSkip))) } : {}),
+    };
+  }
+  return {};
+}
+
+/**
  * Набор полей пользователя, возвращаемых администратору.
  * Намеренно исключает чувствительные данные (хэш пароля и т.п.).
  */
@@ -1176,7 +1232,11 @@ export class AdminService {
   /**
    * По ссылке Civitai (или готовому AIR / versionId) достаёт данные модели через
    * публичный Civitai API и собирает конфиг чекпоинта: air, base (sd1|sdxl),
-   * размеры по базе. Используется в админ-редакторе «Civitai AIR модели».
+   * размеры по базе, а также рекомендованные автором параметры генерации
+   * (cfgScale/steps/sampler/scheduler/clipSkip), извлечённые из метаданных
+   * примеров модели (images[].meta). Используется в админ-редакторе
+   * «Civitai AIR модели» — как для добавления по ссылке, так и для кнопки
+   * «подтянуть рекомендованные».
    *
    * Принимает:
    *  - URL модели: https://civitai.com/models/{modelId}?modelVersionId={versionId}
@@ -1191,6 +1251,12 @@ export class AdminService {
     height: number;
     modelName?: string;
     baseModel?: string;
+    /** Рекомендованные параметры из примеров модели (могут отсутствовать). */
+    cfgScale?: number;
+    steps?: number;
+    sampler?: string;
+    scheduler?: string;
+    clipSkip?: number;
   }> {
     const raw = (input || "").trim();
     if (!raw) throw new BadRequestException("Пустая ссылка");
@@ -1230,6 +1296,7 @@ export class AdminService {
       modelId?: number;
       baseModel?: string;
       model?: { name?: string; type?: string };
+      images?: Array<{ meta?: Record<string, unknown> | null }>;
     };
 
     modelId = vData.modelId ? String(vData.modelId) : modelId;
@@ -1246,7 +1313,8 @@ export class AdminService {
     const dims = base === "sd1" ? { width: 512, height: 768 } : { width: 1024, height: 1536 };
     const air = `urn:air:${base}:checkpoint:civitai:${modelId}@${versionId}`;
 
-    return { air, base, ...dims, modelName: vData.model?.name, baseModel };
+    const recommended = extractCivitaiRecommended(vData.images);
+    return { air, base, ...dims, modelName: vData.model?.name, baseModel, ...recommended };
   }
 
   /**
