@@ -491,6 +491,26 @@ export interface AutogenTask {
   failed: number;
   lastError: string | null;
   characterIds: string[];
+  /** Детали созданных персонажей для миниатюр (может отсутствовать у старых задач). */
+  characters?: { id: string; name: string; avatarUrl: string | null }[];
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+}
+
+/** Задача автогенерации контента для персонажей (админка, «Вовлечённость»). */
+export interface EngagementGenTask {
+  id: string;
+  status: AutogenStatus;
+  total: number;
+  succeeded: number;
+  failed: number;
+  imagesPerChar: number;
+  videosPerChar: number;
+  characterIds: string[];
+  /** id созданных image/video AiJob (попадают в галерею/шортсы). */
+  mediaJobIds: string[];
+  lastError: string | null;
   createdAt: string;
   updatedAt: string;
   finishedAt: string | null;
@@ -936,6 +956,46 @@ export const admin = {
   /** Отмена задачи (POST /admin/autogen/:id/cancel). */
   async cancelAutogen(id: string): Promise<AutogenTask> {
     return apiFetch<AutogenTask>(`/admin/autogen/${id}/cancel`, { method: "POST" });
+  },
+
+  // ─── Автогенерация контента для персонажей (Вовлечённость) ───
+
+  /** Запускает автогенерацию контента для выбранных персонажей (POST /admin/engagement-gen). */
+  async startEngagementGen(
+    characterIds: string[],
+    imagesPerChar: number,
+    videosPerChar: number,
+    contentMode?: "nsfw" | "sfw",
+  ): Promise<EngagementGenTask> {
+    return apiFetch<EngagementGenTask>("/admin/engagement-gen", {
+      method: "POST",
+      body: JSON.stringify({ characterIds, imagesPerChar, videosPerChar, contentMode }),
+    });
+  },
+
+  /** Последние задачи автогенерации контента (GET /admin/engagement-gen). */
+  async getEngagementGenTasks(): Promise<EngagementGenTask[]> {
+    return apiFetch<EngagementGenTask[]>("/admin/engagement-gen");
+  },
+
+  /** Одна задача — для поллинга прогресса (GET /admin/engagement-gen/:id). */
+  async getEngagementGenTask(id: string): Promise<EngagementGenTask> {
+    return apiFetch<EngagementGenTask>(`/admin/engagement-gen/${id}`);
+  },
+
+  /** Пауза задачи (POST /admin/engagement-gen/:id/pause). */
+  async pauseEngagementGen(id: string): Promise<EngagementGenTask> {
+    return apiFetch<EngagementGenTask>(`/admin/engagement-gen/${id}/pause`, { method: "POST" });
+  },
+
+  /** Возобновление задачи (POST /admin/engagement-gen/:id/resume). */
+  async resumeEngagementGen(id: string): Promise<EngagementGenTask> {
+    return apiFetch<EngagementGenTask>(`/admin/engagement-gen/${id}/resume`, { method: "POST" });
+  },
+
+  /** Отмена задачи (POST /admin/engagement-gen/:id/cancel). */
+  async cancelEngagementGen(id: string): Promise<EngagementGenTask> {
+    return apiFetch<EngagementGenTask>(`/admin/engagement-gen/${id}/cancel`, { method: "POST" });
   },
 
   /**

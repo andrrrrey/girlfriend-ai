@@ -55,14 +55,31 @@ const s: Record<string, React.CSSProperties> = {
   counts: { display: "flex", gap: 18, color: "#969696", fontSize: 12, marginBottom: 8 },
   chips: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 },
   chip: {
-    fontSize: 11,
-    color: "#cfcfcf",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 12,
+    color: "#e5e5e5",
     background: "#1a1a1a",
     border: "1px solid #313131",
-    borderRadius: 6,
-    padding: "3px 8px",
+    borderRadius: 8,
+    padding: "4px 10px 4px 4px",
     textDecoration: "none",
+    maxWidth: 200,
   },
+  chipImg: { width: 28, height: 28, borderRadius: 6, objectFit: "cover", flexShrink: 0, background: "#222" },
+  chipImgPh: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    flexShrink: 0,
+    background: "#222",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 14,
+  },
+  chipName: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 };
 
 const badge = (color: string): React.CSSProperties => ({
@@ -242,11 +259,24 @@ export default function AdminAutogenPage() {
 
             {t.characterIds.length > 0 && (
               <div style={s.chips}>
-                {t.characterIds.map((id, i) => (
-                  <Link key={id} href={`/characters/${id}`} target="_blank" style={s.chip}>
-                    Персонаж #{i + 1}
-                  </Link>
-                ))}
+                {t.characters && t.characters.length > 0
+                  ? t.characters.map((c) => (
+                      <Link key={c.id} href={`/characters/${c.id}`} target="_blank" style={s.chip} title={c.name}>
+                        {c.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.avatarUrl} alt={c.name} style={s.chipImg} loading="lazy" decoding="async" />
+                        ) : (
+                          <div style={s.chipImgPh}>👤</div>
+                        )}
+                        <span style={s.chipName}>{c.name}</span>
+                      </Link>
+                    ))
+                  : t.characterIds.map((id, i) => (
+                      <Link key={id} href={`/characters/${id}`} target="_blank" style={s.chip}>
+                        <div style={s.chipImgPh}>👤</div>
+                        <span style={s.chipName}>Персонаж #{i + 1}</span>
+                      </Link>
+                    ))}
               </div>
             )}
           </div>

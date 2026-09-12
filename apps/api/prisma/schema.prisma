@@ -168,6 +168,30 @@ model AutoGenTask {
   @@map("autogen_tasks")
 }
 
+// ─── Engagement Gen (фоновая автогенерация контента для персонажей) ─
+
+model EngagementGenTask {
+  id            String    @id @default(uuid()) @db.Uuid
+  // running | paused | completed | cancelled | stopped_no_balance | failed
+  status        String    @default("running")
+  total         Int // = characterIds.length * (imagesPerChar + videosPerChar)
+  succeeded     Int       @default(0)
+  failed        Int       @default(0)
+  imagesPerChar Int       @default(0) @map("images_per_char")
+  videosPerChar Int       @default(0) @map("videos_per_char")
+  characterIds  String[]  @default([]) @db.Uuid // выбранные персонажи (цели)
+  mediaJobIds   String[]  @default([]) @db.Uuid // созданные image/video AiJob (галерея/шортсы)
+  params        Json      @default("{}") // { contentMode }
+  lastError     String?   @map("last_error")
+  createdBy     String    @map("created_by") @db.Uuid // админ, запустивший задачу
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([status])
+  @@map("engagement_gen_tasks")
+}
+
 // ─── Gen Test (тестовый перебор промптов/опций/AIR в админке) ─
 
 model GenTestTask {

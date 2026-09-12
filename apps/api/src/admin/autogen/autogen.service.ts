@@ -78,15 +78,40 @@ export class AutogenService implements OnModuleInit {
     return task;
   }
 
-  list() {
-    return this.prisma.autoGenTask.findMany({
+  async list() {
+    const tasks = await this.prisma.autoGenTask.findMany({
       orderBy: { createdAt: "desc" },
       take: 20,
     });
+    return this.attachCharacters(tasks);
   }
 
-  get(id: string) {
-    return this.prisma.autoGenTask.findUnique({ where: { id } });
+  async get(id: string) {
+    const task = await this.prisma.autoGenTask.findUnique({ where: { id } });
+    if (!task) return task;
+    const [enriched] = await this.attachCharacters([task]);
+    return enriched;
+  }
+
+  /**
+   * Дополняет задачи данными созданных персонажей (id/name/avatarUrl) для показа
+   * миниатюр в админке. characterIds — только UUID; тянем детали одним запросом
+   * и раскладываем в исходном порядке (несуществующих отбрасываем).
+   */
+  private async attachCharacters<T extends { characterIds: string[] }>(tasks: T[]) {
+    const allIds = Array.from(new Set(tasks.flatMap((t) => t.characterIds)));
+    if (allIds.length === 0) return tasks.map((t) => ({ ...t, characters: [] }));
+    const chars = await this.prisma.character.findMany({
+      where: { id: { in: allIds } },
+      select: { id: true, name: true, avatarUrl: true },
+    });
+    const byId = new Map(chars.map((c) => [c.id, c]));
+    return tasks.map((t) => ({
+      ...t,
+      characters: t.characterIds
+        .map((id) => byId.get(id))
+        .filter((c): c is (typeof chars)[number] => c != null),
+    }));
   }
 
   /** Пауза: задача останавливается после текущего персонажа, остаётся возобновляемой. */

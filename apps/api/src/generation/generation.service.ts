@@ -377,6 +377,7 @@ export class GenerationService {
       count?: number;
       seed?: number;
       contentMode?: "nsfw" | "sfw";
+      characterId?: string;
     },
   ) {
     let prompt = data.prompt;
@@ -403,6 +404,7 @@ export class GenerationService {
           userId,
           type: "video",
           status: "pending",
+          characterId: data.characterId || null,
           nsfw: contentMode !== "sfw",
           input: {
             prompt,

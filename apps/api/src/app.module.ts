@@ -38,6 +38,7 @@ import { BlogModule } from "./blog/blog.module";
 import { VoicesModule } from "./voices/voices.module";
 import { AutogenModule } from "./admin/autogen/autogen.module";
 import { GentestModule } from "./admin/gentest/gentest.module";
+import { EngagementGenModule } from "./admin/engagement-gen/engagement-gen.module";
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { GentestModule } from "./admin/gentest/gentest.module";
     VoicesModule,     // Каталог голосов ElevenLabs: публичный список + админский CRUD
     AutogenModule,    // Фоновая автогенерация персонажей (админка)
     GentestModule,    // Тестовый перебор генераций (админка)
+    EngagementGenModule, // Фоновая автогенерация контента для персонажей (админка)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

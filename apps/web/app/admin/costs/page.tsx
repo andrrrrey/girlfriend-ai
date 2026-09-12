@@ -22,6 +22,8 @@ const DEFAULT_PRICING: Record<string, number> = {
   "alibaba/wan-2.6/text-to-image": 0.01,
   civitai: 0.005,
   "atlascloud/van-2.6/text-to-video": 0.35,
+  "atlascloud/wan-2.6-spicy/image-to-video": 0.35,
+  "alibaba/wan-2.7/image-to-video": 0.35,
 };
 
 const s: Record<string, React.CSSProperties> = {
@@ -100,6 +102,13 @@ const s: Record<string, React.CSSProperties> = {
 
 function fmt(n: number): string {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Цена за одну генерацию часто меньше цента (0.002–0.005). Для таких значений
+// показываем до 4 знаков, иначе fmt() округлил бы их до "$0.00".
+function fmtCost(n: number): string {
+  const digits = n > 0 && n < 0.01 ? 4 : 2;
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: digits });
 }
 
 export default function AdminCostsPage() {
@@ -337,7 +346,7 @@ export default function AdminCostsPage() {
                         </td>
                         <td style={{ ...s.td, fontSize: 12 }}>{row.model}</td>
                         <td style={{ ...s.td, color: "#848484", fontSize: 11, whiteSpace: "nowrap" }}>{date}</td>
-                        <td style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}>{fmt(priceOf(row.model))}</td>
+                        <td style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}>{fmtCost(priceOf(row.model))}</td>
                       </tr>
                     );
                   })}
