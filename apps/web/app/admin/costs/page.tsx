@@ -184,7 +184,19 @@ export default function AdminCostsPage() {
     );
   }
 
-  const priceOf = (model: string) => parseFloat(pricing[model] ?? "") || 0;
+  // Явно заданная цена модели имеет приоритет. Если её нет, но модель — это
+  // civitai-чекпоинт по URN (urn:air:...:civitai:...), берём базовую цену "civitai":
+  // иначе такие генерации показывали бы $0.00, хотя стоят как обычный civitai.
+  const priceOf = (model: string) => {
+    const direct = parseFloat(pricing[model] ?? "");
+    if (!isNaN(direct) && direct > 0) return direct;
+    if (/^urn:air:.*:civitai:/i.test(model)) {
+      const base = parseFloat(pricing["civitai"] ?? "");
+      if (!isNaN(base) && base > 0) return base;
+      return DEFAULT_PRICING["civitai"];
+    }
+    return isNaN(direct) ? 0 : direct;
+  };
 
   // Итоги по всем генерациям под фильтр (из breakdown × текущие цены).
   const breakdown = data?.breakdown ?? [];

@@ -273,12 +273,14 @@ export class EngagementGenService implements OnModuleInit {
       const payload: Parameters<GenerationService["createImageJob"]>[1] = {
         prompt,
         provider: "civitai",
+        // Модель проставляем всегда: URN чекпоинта персонажа (совпадение образа)
+        // либо базовый "civitai" — иначе в input.model пусто и в расходах "unknown".
+        model: avatarModel || "civitai",
         generationStyle,
         characterId: character.id,
         seed,
         contentMode,
       };
-      if (avatarModel) payload.model = avatarModel;
       ({ jobId } = await this.generation.createImageJob(adminId, payload));
     } else {
       ({ jobId } = await this.generation.createVideoJob(adminId, {
