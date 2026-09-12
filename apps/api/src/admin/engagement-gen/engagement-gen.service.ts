@@ -32,6 +32,12 @@ import { buildBasePrompt, buildRandomEngagementPrompt } from "./random-engagemen
 const POLL_INTERVAL_MS = 3000;
 /** Максимум попыток поллинга (~25 мин при 3с) — покрывает ожидание в очереди. */
 const POLL_MAX_ATTEMPTS = 500;
+/**
+ * Повторы на одну единицу при не-балансовой ошибке. Каждый повтор строит НОВЫЙ
+ * случайный промпт+seed, поэтому блокировки модерации Civitai (no image URL /
+ * available:false) и разовые сбои провайдера обычно «переигрываются».
+ */
+const MAX_UNIT_RETRIES = 3;
 
 /** Ошибка «нет баланса» — останавливает всю задачу. */
 class BalanceError extends Error {}
@@ -168,7 +174,7 @@ export class EngagementGenService implements OnModuleInit {
 
         const unit = plan[i];
         try {
-          const jobId = await this.generateOne(unit, task.createdBy, dtoMode, videoModel);
+          const jobId = await this.generateWithRetries(unit, task.createdBy, dtoMode, videoModel);
           await this.prisma.engagementGenTask.update({
             where: { id: taskId },
             data: { succeeded: { increment: 1 }, mediaJobIds: { push: jobId } },
@@ -183,7 +189,7 @@ export class EngagementGenService implements OnModuleInit {
             });
             return;
           }
-          this.logger.error(`engagement-gen task ${taskId}: unit failed — ${message}`);
+          this.logger.error(`engagement-gen task ${taskId}: unit failed after retries — ${message}`);
           await this.prisma.engagementGenTask.update({
             where: { id: taskId },
             data: { failed: { increment: 1 }, lastError: message },
@@ -209,6 +215,32 @@ export class EngagementGenService implements OnModuleInit {
     } finally {
       this.active.delete(taskId);
     }
+  }
+
+  /**
+   * Генерирует единицу с повторами. Балансовую ошибку пробрасывает сразу (её
+   * нельзя «переретраить»); прочие — до MAX_UNIT_RETRIES раз с новым случайным
+   * промптом/seed на каждой попытке.
+   */
+  private async generateWithRetries(
+    unit: Unit,
+    adminId: string,
+    dtoMode?: "nsfw" | "sfw",
+    videoModel?: string,
+  ): Promise<string> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= MAX_UNIT_RETRIES; attempt++) {
+      try {
+        return await this.generateOne(unit, adminId, dtoMode, videoModel);
+      } catch (err) {
+        if (err instanceof BalanceError) throw err;
+        lastErr = err;
+        this.logger.warn(
+          `engagement-gen unit attempt ${attempt}/${MAX_UNIT_RETRIES} failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
 
   /**
