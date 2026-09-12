@@ -111,14 +111,38 @@ function clearTokens() {
 }
 
 /**
+ * Промис текущего обновления токена (single-flight).
+ *
+ * Refresh Token Rotation на сервере одноразовый: каждый /auth/refresh
+ * инвалидирует старый refreshToken. Если несколько запросов одновременно
+ * получают 401 (например, /users/me из auth-контекста и /admin/blog-posts
+ * при загрузке страницы), они не должны дёргать /auth/refresh каждый со своим
+ * (уже одним и тем же) токеном: первый ротирует его, остальные получают 401 и
+ * вызывают clearTokens() → пользователя разлогинивает. Поэтому все параллельные
+ * обновления делят один и тот же запрос.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
  * Пытается обновить accessToken через POST /auth/refresh.
  *
  * Реализует Refresh Token Rotation — сервер возвращает новую пару токенов.
+ * Single-flight: параллельные вызовы возвращают один и тот же промис, чтобы
+ * одноразовый refreshToken не тратился дважды.
  * При любой ошибке (сеть, 401, истёкший refresh) — очищает токены.
  *
  * @returns {Promise<string | null>} Новый accessToken или null при неудаче
  */
-async function refreshAccessToken(): Promise<string | null> {
+function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefreshAccessToken().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+/** Собственно один сетевой запрос обновления токена. См. refreshAccessToken. */
+async function doRefreshAccessToken(): Promise<string | null> {
   const tokens = getTokens();
   if (!tokens?.refreshToken) return null;
 
