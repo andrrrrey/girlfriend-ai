@@ -78,9 +78,6 @@ export class EngagementGenService implements OnModuleInit {
     const total = characterIds.length * (imagesPerChar + videosPerChar);
     if (total === 0) throw new BadRequestException("Nothing to generate (both counts are 0)");
 
-    const params: Record<string, unknown> = {};
-    if (dto.contentMode) params.contentMode = dto.contentMode;
-
     const task = await this.prisma.engagementGenTask.create({
       data: {
         status: "running",
@@ -89,7 +86,7 @@ export class EngagementGenService implements OnModuleInit {
         videosPerChar,
         characterIds,
         createdBy: adminId,
-        params,
+        params: dto.contentMode ? { contentMode: dto.contentMode } : {},
       },
     });
     void this.runTask(task.id);
