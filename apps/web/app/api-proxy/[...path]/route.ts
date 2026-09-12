@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Всегда исполняем на Node-рантайме и без кэширования: это сквозной прокси.
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const API_URL = process.env.API_INTERNAL_URL || 'http://localhost:8080';
 
 // Headers that must not be forwarded between proxied connections
@@ -15,6 +19,17 @@ const HOP_BY_HOP = new Set([
   'host',
 ]);
 
+// Заголовки, которые описывают КОНКРЕТНУЮ кодировку/длину upstream-тела и
+// становятся невалидными, как только мы переотдаём тело потоком: Next заново
+// кадрирует ответ (chunked transfer-encoding), а протянутый от upstream
+// Content-Length при этом конфликтует с чанковым фреймингом — строгий
+// reverse-proxy на проде отвергает такой ответ как 502 Bad Gateway.
+// Поэтому эти заголовки НЕ форвардим — ни в запросе, ни в ответе.
+const CONTENT_FRAMING = new Set([
+  'content-length',
+  'content-encoding',
+]);
+
 async function handler(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> | { path: string[] } },
@@ -28,9 +43,12 @@ async function handler(
 
     const forwardHeaders = new Headers();
     request.headers.forEach((value, key) => {
-      if (!HOP_BY_HOP.has(key.toLowerCase())) {
-        forwardHeaders.set(key, value);
-      }
+      const lower = key.toLowerCase();
+      if (HOP_BY_HOP.has(lower) || CONTENT_FRAMING.has(lower)) return;
+      // Не просим upstream сжимать ответ: undici сам распакует тело, но оставит
+      // при этом рассинхронизированные content-encoding/content-length.
+      if (lower === 'accept-encoding') return;
+      forwardHeaders.set(key, value);
     });
 
     const hasBody = !['GET', 'HEAD'].includes(request.method);
@@ -55,9 +73,13 @@ async function handler(
 
     const responseHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
-      if (!HOP_BY_HOP.has(key.toLowerCase())) {
-        responseHeaders.set(key, value);
-      }
+      const lower = key.toLowerCase();
+      // Content-Length/Content-Encoding намеренно не переотдаём: тело идёт
+      // потоком и Next заново проставит корректный фрейминг. Иначе строгий
+      // reverse-proxy на проде вернёт 502 на любой достаточно большой ответ
+      // (например, полный список записей блога в админке).
+      if (HOP_BY_HOP.has(lower) || CONTENT_FRAMING.has(lower)) return;
+      responseHeaders.set(key, value);
     });
 
     return new NextResponse(upstream.body, {
