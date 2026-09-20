@@ -76,11 +76,32 @@ export class BlogService {
 
   // ─── Admin ─────────────────────────────────────────────────
 
-  /** Все записи (включая черновики), кроме удалённых — для админ-списка. */
+  /**
+   * Все записи (включая черновики), кроме удалённых — для админ-списка.
+   *
+   * `content` (санитизированный HTML тела, до сотен КБ на запись) намеренно НЕ
+   * выбираем: админ-список его не рендерит, а на нескольких тысячах записей
+   * сериализация всех тел в JSON приводила к OOM в Node (heap limit) и падению
+   * контейнера api → 502 в прокси веба. Полное тело отдаёт `getById`.
+   */
   async listAll() {
     return this.prisma.blogPost.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        category: true,
+        coverImageUrl: true,
+        tags: true,
+        isPublished: true,
+        publishedAt: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
