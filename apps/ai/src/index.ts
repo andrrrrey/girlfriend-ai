@@ -797,15 +797,27 @@ app.post("/ai/stt", async (req, reply) => {
       type: fileData.mimetype,
     });
 
-    const transcription = await openai.audio.transcriptions.create({
+    // Whisper тарифицируется по длительности аудио (за минуту), поэтому просим
+    // verbose_json — он возвращает поле `duration` (в секундах). Оно нужно API
+    // для учёта расходов на распознавание в админке. Модели gpt-4o-transcribe
+    // не поддерживают verbose_json, для них длительность остаётся неизвестной.
+    const isWhisper = model.toLowerCase().includes("whisper");
+
+    // any: при verbose_json ответ — TranscriptionVerbose (с полем duration),
+    // при обычном json — Transcription; читаем поля единообразно.
+    const transcription: any = await openai.audio.transcriptions.create({
       file: audioFile,
       model,
+      ...(isWhisper ? { response_format: "verbose_json" as const } : {}),
       ...(sttLanguage ? { language: sttLanguage } : {}),
       ...(prompt ? { prompt } : {}),
     });
 
-    logger.info({ model, length: fileData.buffer.length, language: sttLanguage }, "stt_done");
-    return { text: transcription.text };
+    const durationSec =
+      typeof transcription.duration === "number" ? transcription.duration : null;
+
+    logger.info({ model, length: fileData.buffer.length, durationSec, language: sttLanguage }, "stt_done");
+    return { text: transcription.text as string, model, durationSec };
   } catch (err: any) {
     logger.error({ err }, "stt_error");
     return reply.status(502).send({ error: "STT failed", details: err.message });
@@ -906,17 +918,23 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
       const key = `tts/${randomUUID()}.mp3`; // Уникальный путь для каждого аудио
       try {
         const url = await uploadToS3(s3, bucket, key, audioBuffer, "audio/mpeg");
-        logger.info({ key, voice }, "tts_uploaded_to_s3");
-        return reply.send({ url, key }); // Клиент получает URL для медиаплеера
+        logger.info({ key, voice, characters: text.length }, "tts_uploaded_to_s3");
+        // characters/model нужны API для учёта расходов на озвучку (ElevenLabs
+        // тарифицируется по числу символов синтезируемого текста).
+        return reply.send({ url, key, characters: text.length, model: modelId });
       } catch (s3Err: any) {
         // S3 недоступен — падаем на бинарный ответ
         logger.warn({ err: s3Err }, "tts_s3_upload_failed_falling_back_to_binary");
       }
     }
 
-    // Fallback: возвращаем бинарный аудио-поток если S3 не настроен или упал
+    // Fallback: возвращаем бинарный аудио-поток если S3 не настроен или упал.
+    // Число символов и модель прокидываем заголовками — по ним API учитывает
+    // расходы на озвучку (в JSON-ответе их передать нельзя, тело — это аудио).
     reply.header("Content-Type", "audio/mpeg");
     reply.header("Content-Length", audioBuffer.length);
+    reply.header("X-TTS-Characters", String(text.length));
+    reply.header("X-TTS-Model", modelId);
     return reply.send(audioBuffer);
   } catch (err: any) {
     logger.error({ err }, "tts_error");

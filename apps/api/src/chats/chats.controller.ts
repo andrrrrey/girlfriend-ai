@@ -620,7 +620,12 @@ export class ChatsController {
         return;
       }
 
-      const { text: transcribedText } = (await sttRes.json()) as { text: string };
+      const sttResult = (await sttRes.json()) as {
+        text: string;
+        model?: string;
+        durationSec?: number | null;
+      };
+      const transcribedText = sttResult.text;
 
       if (!transcribedText) {
         res.status(400).json({ error: "Could not transcribe audio" });
@@ -630,6 +635,14 @@ export class ChatsController {
       // 2. Save user voice message
       await this.chatsService.saveMessage(id, "user", transcribedText, { type: "audio" });
       await this.chatsService.logUsage(req.user.id, "stt");
+      // Учёт расходов на распознавание речи (Whisper тарифицируется по минутам).
+      await this.chatsService.recordVoiceJob(
+        req.user.id,
+        "stt",
+        sttResult.model || "whisper-1",
+        sttResult.durationSec ?? null,
+        { chatSessionId: id },
+      );
 
       // 3. Get history and stream AI response
       const history = await this.chatsService.getMessageHistory(id);
@@ -801,10 +814,15 @@ export class ChatsController {
       // was producing 502 Bad Gateway on TTS while images worked (images go
       // through /media/stream which already uses the SDK).
       if (contentType.includes("application/json")) {
-        const data = await ttsRes.json() as { url: string; key: string };
+        const data = await ttsRes.json() as { url: string; key: string; characters?: number; model?: string };
+        // Единицы тарификации озвучки: число символов из ответа AI-сервиса,
+        // либо длина текста сообщения как запасной вариант.
+        const ttsChars = data.characters ?? message.content.length;
+        const ttsModel = data.model || "eleven_multilingual_v2";
         try {
           const { body, contentType: s3ContentType } = await this.s3Service.getObject(data.key);
           await this.chatsService.logUsage(req.user.id, "tts");
+          await this.chatsService.recordVoiceJob(req.user.id, "tts", ttsModel, ttsChars, { chatId, msgId });
           res.setHeader("Content-Type", s3ContentType || "audio/mpeg");
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
           body.pipe(res);
@@ -831,6 +849,7 @@ export class ChatsController {
             }
             const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
             await this.chatsService.logUsage(req.user.id, "tts");
+            await this.chatsService.recordVoiceJob(req.user.id, "tts", ttsModel, ttsChars, { chatId, msgId });
             res.setHeader("Content-Type", "audio/mpeg");
             res.setHeader("Content-Length", audioBuffer.length);
             res.status(200).send(audioBuffer);
@@ -850,6 +869,10 @@ export class ChatsController {
       // Binary fallback (S3 not configured)
       const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
       await this.chatsService.logUsage(req.user.id, "tts");
+      // Символы/модель для учёта расходов приходят заголовками (тело — аудио).
+      const binChars = Number(ttsRes.headers.get("x-tts-characters")) || message.content.length;
+      const binModel = ttsRes.headers.get("x-tts-model") || "eleven_multilingual_v2";
+      await this.chatsService.recordVoiceJob(req.user.id, "tts", binModel, binChars, { chatId, msgId });
       res.setHeader("Content-Type", "audio/mpeg");
       res.setHeader("Content-Length", audioBuffer.length);
       res.send(audioBuffer);

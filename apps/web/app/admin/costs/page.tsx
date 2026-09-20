@@ -24,6 +24,33 @@ const DEFAULT_PRICING: Record<string, number> = {
   "atlascloud/van-2.6/text-to-video": 0.35,
   "atlascloud/wan-2.6-spicy/image-to-video": 0.35,
   "alibaba/wan-2.7/image-to-video": 0.35,
+  // Голос. Единица тарификации зависит от типа (см. UNIT_BY_TYPE):
+  // ElevenLabs (tts) — цена за 1000 символов (Creator-план ≈ $0.22/1k симв.);
+  // OpenAI Whisper (stt) — цена за минуту аудио ($0.006/мин).
+  eleven_multilingual_v2: 0.2,
+  "whisper-1": 0.006,
+};
+
+// Классификация моделей по типу операции — нужна, чтобы понимать единицу
+// тарификации у модели, для которой ещё нет ни одной генерации (в breakdown
+// её нет, тип брать неоткуда). Для моделей с историей тип приходит с бэкенда.
+const TTS_MODELS = new Set(["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5"]);
+const STT_MODELS = new Set(["whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"]);
+
+// Как считается стоимость для каждого типа и как подписывается поле цены.
+const UNIT_BY_TYPE: Record<string, { label: string; divisor: number }> = {
+  tts: { label: "$ / 1000 симв.", divisor: 1000 }, // цена за 1000 символов
+  stt: { label: "$ / мин", divisor: 60 },          // цена за минуту (units в секундах)
+  image: { label: "$ / ген.", divisor: 0 },        // divisor 0 → плоская цена за генерацию
+  video: { label: "$ / ген.", divisor: 0 },
+};
+
+// Человекочитаемая подпись типа операции для таблицы.
+const TYPE_META: Record<string, { label: string; color: string }> = {
+  image: { label: "Изображение", color: "#6cb2eb" },
+  video: { label: "Видео", color: "#f95bad" },
+  tts: { label: "Озвучка", color: "#7ed492" },
+  stt: { label: "Распознавание", color: "#f0b429" },
 };
 
 const s: Record<string, React.CSSProperties> = {
@@ -198,11 +225,40 @@ export default function AdminCostsPage() {
     return isNaN(direct) ? 0 : direct;
   };
 
-  // Итоги по всем генерациям под фильтр (из breakdown × текущие цены).
   const breakdown = data?.breakdown ?? [];
-  const totalImage = breakdown.filter((b) => b.type === "image").reduce((sum, b) => sum + b.count * priceOf(b.model), 0);
-  const totalVideo = breakdown.filter((b) => b.type === "video").reduce((sum, b) => sum + b.count * priceOf(b.model), 0);
-  const totalAll = totalImage + totalVideo;
+
+  // Карта «модель → тип операции» по данным с бэкенда (availableModels + breakdown).
+  const modelTypeMap: Record<string, string> = {};
+  for (const m of data?.availableModels ?? []) modelTypeMap[m.model] = m.type;
+  for (const b of breakdown) if (!modelTypeMap[b.model]) modelTypeMap[b.model] = b.type;
+
+  // Определяем тип операции для модели: сначала по истории, затем по статическим
+  // спискам голосовых моделей, иначе считаем это генерацией (плоская цена).
+  const typeOfModel = (model: string): string => {
+    if (modelTypeMap[model]) return modelTypeMap[model];
+    if (TTS_MODELS.has(model)) return "tts";
+    if (STT_MODELS.has(model)) return "stt";
+    return "image";
+  };
+
+  // Стоимость для (тип, модель) с учётом единиц тарификации.
+  // Для tts/stt: units × цена / делитель (1000 симв. или 60 сек = 1 мин).
+  // Для image/video: count × цена за генерацию.
+  const costOf = (type: string, model: string, count: number, units: number): number => {
+    const price = priceOf(model);
+    const unit = UNIT_BY_TYPE[type];
+    if (unit && unit.divisor > 0) return (units / unit.divisor) * price;
+    return count * price;
+  };
+
+  // Итоги по всем генерациям под фильтр (из breakdown × текущие цены).
+  const totalOf = (t: string) =>
+    breakdown.filter((b) => b.type === t).reduce((sum, b) => sum + costOf(b.type, b.model, b.count, b.units ?? 0), 0);
+  const totalImage = totalOf("image");
+  const totalVideo = totalOf("video");
+  const totalTTS = totalOf("tts");
+  const totalSTT = totalOf("stt");
+  const totalAll = totalImage + totalVideo + totalTTS + totalSTT;
 
   // Список моделей для блока настройки цен (объединяем известные, доступные и из breakdown).
   const priceModels = Array.from(
@@ -254,25 +310,31 @@ export default function AdminCostsPage() {
 
         {/* Настройка стоимости за генерацию по моделям */}
         <div style={{ ...adminStyles.card, marginBottom: 20 }}>
-          <h2 style={adminStyles.title}>Стоимость генерации по моделям</h2>
+          <h2 style={adminStyles.title}>Стоимость по моделям</h2>
           <p style={adminStyles.subtitle}>
-            Цена за одну генерацию для каждой модели нейросети ($). Значения по умолчанию подставлены по тарифам провайдеров — отредактируйте при необходимости и сохраните.
+            Цена для каждой модели ($). Единица тарификации зависит от типа: генерация картинок/видео — за одну генерацию,
+            озвучка (ElevenLabs) — за 1000 символов, распознавание речи (Whisper) — за минуту аудио.
+            Значения по умолчанию подставлены по тарифам провайдеров — отредактируйте при необходимости и сохраните.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            {priceModels.map((model) => (
-              <div key={model} style={s.priceCell}>
-                <span style={s.modelName}>{model}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={pricing[model] ?? ""}
-                  placeholder="0"
-                  onChange={(e) => setPricing({ ...pricing, [model]: e.target.value })}
-                  style={s.priceInput}
-                />
-              </div>
-            ))}
+            {priceModels.map((model) => {
+              const unit = UNIT_BY_TYPE[typeOfModel(model)];
+              return (
+                <div key={model} style={s.priceCell}>
+                  <span style={s.modelName}>{model}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={pricing[model] ?? ""}
+                    placeholder="0"
+                    onChange={(e) => setPricing({ ...pricing, [model]: e.target.value })}
+                    style={s.priceInput}
+                  />
+                  <span style={{ color: "#6b6b6b", fontSize: 11, whiteSpace: "nowrap" }}>{unit?.label ?? "$ / ген."}</span>
+                </div>
+              );
+            })}
           </div>
           <div style={{ marginTop: 16 }}>
             <button onClick={handleSave} disabled={saving} style={adminStyles.button}>
@@ -291,6 +353,8 @@ export default function AdminCostsPage() {
               { label: "Все", value: "" },
               { label: "Изображения", value: "image" },
               { label: "Видео", value: "video" },
+              { label: "Озвучка", value: "tts" },
+              { label: "Распознавание", value: "stt" },
             ].map((f) => (
               <button
                 key={f.value}
@@ -344,21 +408,26 @@ export default function AdminCostsPage() {
                 </thead>
                 <tbody>
                   {data!.rows.map((row) => {
-                    const video = row.type === "video";
-                    const prompt = row.prompt || "—";
-                    const truncated = prompt.length > 80 ? prompt.slice(0, 80) + "..." : prompt;
+                    const meta = TYPE_META[row.type] ?? { label: row.type, color: "#6cb2eb" };
+                    const units = row.units ?? 0;
+                    // Для голоса вместо промпта показываем объём: символы (tts) или минуты (stt).
+                    let name = row.prompt || "";
+                    if (!name) {
+                      if (row.type === "tts") name = `Озвучка · ${units} симв.`;
+                      else if (row.type === "stt") name = `Распознавание · ${(units / 60).toFixed(1)} мин`;
+                      else name = "—";
+                    }
+                    const truncated = name.length > 80 ? name.slice(0, 80) + "..." : name;
                     const date = row.createdAt ? new Date(row.createdAt).toLocaleString("ru-RU") : "";
                     return (
                       <tr key={row.jobId}>
-                        <td style={{ ...s.td, color: "#fff", maxWidth: 420 }} title={prompt}>{truncated}</td>
+                        <td style={{ ...s.td, color: "#fff", maxWidth: 420 }} title={name}>{truncated}</td>
                         <td style={s.td}>
-                          <span style={{ color: video ? "#f95bad" : "#6cb2eb", fontWeight: 600 }}>
-                            {video ? "Видео" : "Изображение"}
-                          </span>
+                          <span style={{ color: meta.color, fontWeight: 600 }}>{meta.label}</span>
                         </td>
                         <td style={{ ...s.td, fontSize: 12 }}>{row.model}</td>
                         <td style={{ ...s.td, color: "#848484", fontSize: 11, whiteSpace: "nowrap" }}>{date}</td>
-                        <td style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}>{fmtCost(priceOf(row.model))}</td>
+                        <td style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}>{fmtCost(costOf(row.type, row.model, 1, units))}</td>
                       </tr>
                     );
                   })}
@@ -383,6 +452,14 @@ export default function AdminCostsPage() {
             <div style={s.totalCard}>
               Видео
               <div style={s.totalValue}>{fmt(totalVideo)}</div>
+            </div>
+            <div style={s.totalCard}>
+              Озвучка
+              <div style={s.totalValue}>{fmt(totalTTS)}</div>
+            </div>
+            <div style={s.totalCard}>
+              Распознавание
+              <div style={s.totalValue}>{fmt(totalSTT)}</div>
             </div>
             <div style={s.totalCard}>
               Всего (под фильтр)

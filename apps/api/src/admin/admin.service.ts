@@ -998,7 +998,7 @@ export class AdminService {
    * (количество генераций по каждой модели) и текущих цен, поэтому здесь возвращаются
    * только агрегаты количеств, а не суммы.
    *
-   * @param opts.type   — фильтр по типу: "image" | "video" (необязательно).
+   * @param opts.type   — фильтр по типу: "image" | "video" | "tts" | "stt" (необязательно).
    * @param opts.model  — фильтр по модели нейросети (`input->>'model'`, необязательно).
    * @param opts.from   — нижняя граница диапазона дат (ISO, включительно, необязательно).
    * @param opts.to     — верхняя граница диапазона дат (ISO, включительно, необязательно).
@@ -1017,10 +1017,15 @@ export class AdminService {
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
 
+    // Типы операций, учитываемых в расходах: генерация картинок/видео плюс
+    // озвучка (tts) и распознавание речи (stt).
+    const COST_TYPES = ["image", "video", "tts", "stt"];
+    const typeIsKnown = !!type && COST_TYPES.includes(type);
+
     // Where для Prisma findMany (список генераций).
     const where: Prisma.AiJobWhereInput = {
       status: "completed",
-      type: type === "image" || type === "video" ? type : { in: ["image", "video"] },
+      type: typeIsKnown ? type : { in: COST_TYPES },
     };
     if (model) where.input = { path: ["model"], equals: model };
     if (fromDate || toDate) {
@@ -1033,9 +1038,9 @@ export class AdminService {
     // Те же фильтры в виде SQL для агрегатных запросов.
     const conds: Prisma.Sql[] = [
       Prisma.sql`status = 'completed'`,
-      type === "image" || type === "video"
+      typeIsKnown
         ? Prisma.sql`type = ${type}`
-        : Prisma.sql`type IN ('image', 'video')`,
+        : Prisma.sql`type IN ('image', 'video', 'tts', 'stt')`,
     ];
     if (model) conds.push(Prisma.sql`input->>'model' = ${model}`);
     if (fromDate) conds.push(Prisma.sql`created_at >= ${fromDate}`);
@@ -1051,12 +1056,14 @@ export class AdminService {
         skip: offset,
       }),
       this.prisma.aiJob.count({ where }),
-      this.prisma.$queryRaw<{ type: string; model: string | null; count: number }[]>(
-        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
+      this.prisma.$queryRaw<{ type: string; model: string | null; count: number; units: number }[]>(
+        // units = суммарные единицы тарификации (символы для tts, секунды для stt);
+        // для image/video поле input->>'units' отсутствует → SUM даёт 0.
+        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count, COALESCE(SUM((input->>'units')::numeric), 0)::float8 AS units FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
       ),
       // Список доступных моделей для фильтра — по всем завершённым генерациям, без учёта фильтров.
       this.prisma.$queryRaw<{ type: string; model: string | null }[]>(
-        Prisma.sql`SELECT DISTINCT type, input->>'model' AS model FROM ai_jobs WHERE status = 'completed' AND type IN ('image', 'video') AND input->>'model' IS NOT NULL ORDER BY type, model`,
+        Prisma.sql`SELECT DISTINCT type, input->>'model' AS model FROM ai_jobs WHERE status = 'completed' AND type IN ('image', 'video', 'tts', 'stt') AND input->>'model' IS NOT NULL ORDER BY type, model`,
       ),
       this.prisma.appSetting.findUnique({ where: { key: "MODEL_PRICING" } }),
     ]);
@@ -1077,6 +1084,9 @@ export class AdminService {
         type: it.type,
         model: (input["model"] as string) ?? "unknown",
         prompt: (input["prompt"] as string) ?? (input["originalPrompt"] as string) ?? "",
+        // Единицы тарификации: символы (tts) или секунды аудио (stt); для
+        // image/video отсутствуют.
+        units: input["units"] != null ? Number(input["units"]) : null,
         createdAt: it.createdAt,
       };
     });
@@ -1085,6 +1095,7 @@ export class AdminService {
       type: g.type,
       model: g.model ?? "unknown",
       count: Number(g.count),
+      units: Number(g.units) || 0,
     }));
 
     const availableModels = distinctModels

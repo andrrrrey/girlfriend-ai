@@ -476,6 +476,45 @@ export class ChatsService {
     });
   }
 
+  /**
+   * Записывает завершённую голосовую операцию (TTS/STT) как AiJob — по этим
+   * записям раздел «Расходы» в админке считает стоимость озвучки и распознавания
+   * (аналогично тому, как image/video считаются по AiJob).
+   *
+   * В `input` кладём:
+   *  - model — модель провайдера (ElevenLabs/Whisper), это ключ для тарифа;
+   *  - units — единицы тарификации: для "tts" число символов текста,
+   *            для "stt" длительность аудио в секундах (может быть null,
+   *            если провайдер не вернул длительность — тогда стоимость = 0).
+   *
+   * @param userId — кто инициировал операцию
+   * @param type   — "tts" | "stt"
+   * @param model  — идентификатор модели провайдера
+   * @param units  — символы (tts) или секунды аудио (stt); null если неизвестно
+   * @param meta   — доп. поля для аудита (chatId/msgId и т.п.)
+   */
+  async recordVoiceJob(
+    userId: string,
+    type: "tts" | "stt",
+    model: string,
+    units: number | null,
+    meta?: Record<string, unknown>,
+  ) {
+    await this.prisma.aiJob.create({
+      data: {
+        userId,
+        type,
+        status: "completed",
+        completedAt: new Date(),
+        input: {
+          model,
+          ...(units != null ? { units } : {}),
+          ...(meta ?? {}),
+        } as any,
+      },
+    });
+  }
+
   // ─── Message Copy Audit ──────────────────────────────────────────────────────
 
   /**

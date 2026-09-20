@@ -704,9 +704,10 @@ export async function getCameraOptions(): Promise<CameraOptionsResponse> {
 /** Одна созданная генерация в отчёте расходов. */
 export interface GenerationCostItem {
   jobId: string;
-  type: string;      // "image" | "video"
+  type: string;      // "image" | "video" | "tts" | "stt"
   model: string;
   prompt: string;
+  units?: number | null; // символы (tts) или секунды аудио (stt); null для image/video
   createdAt: string; // ISO 8601
 }
 
@@ -715,6 +716,7 @@ export interface GenerationCostBreakdown {
   type: string;
   model: string;
   count: number;
+  units?: number; // суммарные единицы тарификации (символы/секунды); 0 для image/video
 }
 
 /** Данные раздела «Расходы» (GET /admin/generation-costs). */
