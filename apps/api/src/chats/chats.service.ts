@@ -447,16 +447,30 @@ export class ChatsService {
   /**
    * Помечает AiJob как завершённый и записывает использование токенов.
    *
+   * Дополнительно проставляет в input.model модель чата из настроек
+   * (MODELSLAB_CHAT_MODEL) — по ней раздел «Расходы» считает стоимость чата
+   * (токены × цена за 1M токенов). Вызывается только для chat-джоб.
+   *
    * @param jobId — ID задания
    * @param tokensUsed — количество токенов (опционально, только для chat)
    */
   async completeAiJob(jobId: string, tokensUsed?: number) {
+    // Модель, которой отвечал чат (для учёта расходов). Настройка может
+    // отсутствовать — тогда берём дефолт, как в AI-сервисе.
+    const [setting, job] = await Promise.all([
+      this.prisma.appSetting.findUnique({ where: { key: "MODELSLAB_CHAT_MODEL" } }),
+      this.prisma.aiJob.findUnique({ where: { id: jobId }, select: { input: true } }),
+    ]);
+    const model = setting?.value || "llama-3-8b-instruct";
+    const input = { ...((job?.input as Record<string, unknown>) ?? {}), model };
+
     await this.prisma.aiJob.update({
       where: { id: jobId },
       data: {
         status: "completed",
         tokensUsed,
         completedAt: new Date(),
+        input: input as any,
       },
     });
   }

@@ -998,7 +998,7 @@ export class AdminService {
    * (количество генераций по каждой модели) и текущих цен, поэтому здесь возвращаются
    * только агрегаты количеств, а не суммы.
    *
-   * @param opts.type   — фильтр по типу: "image" | "video" | "tts" | "stt" (необязательно).
+   * @param opts.type   — фильтр по типу: "image" | "video" | "tts" | "stt" | "chat" (необязательно).
    * @param opts.model  — фильтр по модели нейросети (`input->>'model'`, необязательно).
    * @param opts.from   — нижняя граница диапазона дат (ISO, включительно, необязательно).
    * @param opts.to     — верхняя граница диапазона дат (ISO, включительно, необязательно).
@@ -1017,9 +1017,9 @@ export class AdminService {
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
 
-    // Типы операций, учитываемых в расходах: генерация картинок/видео плюс
-    // озвучка (tts) и распознавание речи (stt).
-    const COST_TYPES = ["image", "video", "tts", "stt"];
+    // Типы операций, учитываемых в расходах: генерация картинок/видео,
+    // озвучка (tts), распознавание речи (stt) и чат (chat).
+    const COST_TYPES = ["image", "video", "tts", "stt", "chat"];
     const typeIsKnown = !!type && COST_TYPES.includes(type);
 
     // Where для Prisma findMany (список генераций).
@@ -1040,7 +1040,7 @@ export class AdminService {
       Prisma.sql`status = 'completed'`,
       typeIsKnown
         ? Prisma.sql`type = ${type}`
-        : Prisma.sql`type IN ('image', 'video', 'tts', 'stt')`,
+        : Prisma.sql`type IN ('image', 'video', 'tts', 'stt', 'chat')`,
     ];
     if (model) conds.push(Prisma.sql`input->>'model' = ${model}`);
     if (fromDate) conds.push(Prisma.sql`created_at >= ${fromDate}`);
@@ -1050,20 +1050,21 @@ export class AdminService {
     const [items, total, grouped, distinctModels, pricingSetting] = await Promise.all([
       this.prisma.aiJob.findMany({
         where,
-        select: { id: true, type: true, input: true, createdAt: true },
+        select: { id: true, type: true, input: true, tokensUsed: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
       this.prisma.aiJob.count({ where }),
       this.prisma.$queryRaw<{ type: string; model: string | null; count: number; units: number }[]>(
-        // units = суммарные единицы тарификации (символы для tts, секунды для stt);
-        // для image/video поле input->>'units' отсутствует → SUM даёт 0.
-        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count, COALESCE(SUM((input->>'units')::numeric), 0)::float8 AS units FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
+        // units = суммарные единицы тарификации: символы (tts), секунды (stt),
+        // токены (chat берётся из колонки tokens_used). Для image/video единиц
+        // нет → 0. COALESCE перебирает input->>'units' → tokens_used → 0.
+        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count, COALESCE(SUM(COALESCE((input->>'units')::numeric, tokens_used, 0)), 0)::float8 AS units FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
       ),
       // Список доступных моделей для фильтра — по всем завершённым генерациям, без учёта фильтров.
       this.prisma.$queryRaw<{ type: string; model: string | null }[]>(
-        Prisma.sql`SELECT DISTINCT type, input->>'model' AS model FROM ai_jobs WHERE status = 'completed' AND type IN ('image', 'video', 'tts', 'stt') AND input->>'model' IS NOT NULL ORDER BY type, model`,
+        Prisma.sql`SELECT DISTINCT type, input->>'model' AS model FROM ai_jobs WHERE status = 'completed' AND type IN ('image', 'video', 'tts', 'stt', 'chat') AND input->>'model' IS NOT NULL ORDER BY type, model`,
       ),
       this.prisma.appSetting.findUnique({ where: { key: "MODEL_PRICING" } }),
     ]);
@@ -1084,9 +1085,9 @@ export class AdminService {
         type: it.type,
         model: (input["model"] as string) ?? "unknown",
         prompt: (input["prompt"] as string) ?? (input["originalPrompt"] as string) ?? "",
-        // Единицы тарификации: символы (tts) или секунды аудио (stt); для
-        // image/video отсутствуют.
-        units: input["units"] != null ? Number(input["units"]) : null,
+        // Единицы тарификации: символы (tts), секунды аудио (stt) или токены
+        // (chat — из колонки tokens_used); для image/video отсутствуют.
+        units: input["units"] != null ? Number(input["units"]) : it.tokensUsed ?? null,
         createdAt: it.createdAt,
       };
     });

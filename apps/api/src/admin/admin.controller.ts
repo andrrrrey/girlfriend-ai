@@ -583,7 +583,7 @@ export class AdminController {
    *
    * `GET /admin/generation-costs?type=&model=&from=&to=&limit=&offset=`
    *
-   * @param type   — фильтр по типу ("image" | "video" | "tts" | "stt", необязательно).
+   * @param type   — фильтр по типу ("image" | "video" | "tts" | "stt" | "chat", необязательно).
    * @param model  — фильтр по модели нейросети (необязательно).
    * @param from   — нижняя граница диапазона дат (ISO, необязательно).
    * @param to     — верхняя граница диапазона дат (ISO, необязательно).

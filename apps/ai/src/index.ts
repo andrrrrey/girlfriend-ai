@@ -583,10 +583,18 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       "X-Accel-Buffering": "no",
     });
 
-    reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
-    reply.raw.write(`data: ${JSON.stringify({ done: true, finishReason: "stop", usage: null })}\n\n`);
+    // ModelsLab uncensored_chat не возвращает usage по токенам, поэтому оцениваем
+    // их сами (~4 символа на токен по input+output) — этого достаточно для учёта
+    // расходов на чат в админке (ModelsLab тарифицирует LLM за токены).
+    const inputChars = chatMessages.reduce((n, m) => n + (m.content?.length ?? 0), 0);
+    const totalTokens = Math.ceil((inputChars + output.length) / 4);
 
-    logger.info({ model, outputLength: output.length }, "modelslab_chat_done");
+    reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
+    reply.raw.write(
+      `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens }, model })}\n\n`,
+    );
+
+    logger.info({ model, outputLength: output.length, totalTokens }, "modelslab_chat_done");
     reply.raw.write("data: [DONE]\n\n");
     reply.raw.end();
   } catch (err: any) {

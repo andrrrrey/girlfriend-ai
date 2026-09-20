@@ -29,6 +29,10 @@ const DEFAULT_PRICING: Record<string, number> = {
   // OpenAI Whisper (stt) — цена за минуту аудио ($0.006/мин).
   eleven_multilingual_v2: 0.2,
   "whisper-1": 0.006,
+  // Чат (ModelsLab uncensored_chat) — цена за 1M токенов. ModelsLab: LLM от
+  // $0.20/1M токенов (open-source модели входят в план $149/мес — тогда 0).
+  "llama-3-70b-instruct": 0.2,
+  "llama-3-8b-instruct": 0.2,
 };
 
 // Классификация моделей по типу операции — нужна, чтобы понимать единицу
@@ -36,11 +40,13 @@ const DEFAULT_PRICING: Record<string, number> = {
 // её нет, тип брать неоткуда). Для моделей с историей тип приходит с бэкенда.
 const TTS_MODELS = new Set(["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5"]);
 const STT_MODELS = new Set(["whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"]);
+const CHAT_MODELS = new Set(["llama-3-70b-instruct", "llama-3-8b-instruct"]);
 
 // Как считается стоимость для каждого типа и как подписывается поле цены.
 const UNIT_BY_TYPE: Record<string, { label: string; divisor: number }> = {
   tts: { label: "$ / 1000 симв.", divisor: 1000 }, // цена за 1000 символов
   stt: { label: "$ / мин", divisor: 60 },          // цена за минуту (units в секундах)
+  chat: { label: "$ / 1M токенов", divisor: 1_000_000 }, // цена за 1M токенов
   image: { label: "$ / ген.", divisor: 0 },        // divisor 0 → плоская цена за генерацию
   video: { label: "$ / ген.", divisor: 0 },
 };
@@ -51,6 +57,7 @@ const TYPE_META: Record<string, { label: string; color: string }> = {
   video: { label: "Видео", color: "#f95bad" },
   tts: { label: "Озвучка", color: "#7ed492" },
   stt: { label: "Распознавание", color: "#f0b429" },
+  chat: { label: "Чат", color: "#b39ddb" },
 };
 
 const s: Record<string, React.CSSProperties> = {
@@ -238,6 +245,7 @@ export default function AdminCostsPage() {
     if (modelTypeMap[model]) return modelTypeMap[model];
     if (TTS_MODELS.has(model)) return "tts";
     if (STT_MODELS.has(model)) return "stt";
+    if (CHAT_MODELS.has(model)) return "chat";
     return "image";
   };
 
@@ -258,7 +266,8 @@ export default function AdminCostsPage() {
   const totalVideo = totalOf("video");
   const totalTTS = totalOf("tts");
   const totalSTT = totalOf("stt");
-  const totalAll = totalImage + totalVideo + totalTTS + totalSTT;
+  const totalChat = totalOf("chat");
+  const totalAll = totalImage + totalVideo + totalTTS + totalSTT + totalChat;
 
   // Список моделей для блока настройки цен (объединяем известные, доступные и из breakdown).
   const priceModels = Array.from(
@@ -355,6 +364,7 @@ export default function AdminCostsPage() {
               { label: "Видео", value: "video" },
               { label: "Озвучка", value: "tts" },
               { label: "Распознавание", value: "stt" },
+              { label: "Чат", value: "chat" },
             ].map((f) => (
               <button
                 key={f.value}
@@ -415,6 +425,7 @@ export default function AdminCostsPage() {
                     if (!name) {
                       if (row.type === "tts") name = `Озвучка · ${units} симв.`;
                       else if (row.type === "stt") name = `Распознавание · ${(units / 60).toFixed(1)} мин`;
+                      else if (row.type === "chat") name = `Чат · ${units} токенов`;
                       else name = "—";
                     }
                     const truncated = name.length > 80 ? name.slice(0, 80) + "..." : name;
@@ -460,6 +471,10 @@ export default function AdminCostsPage() {
             <div style={s.totalCard}>
               Распознавание
               <div style={s.totalValue}>{fmt(totalSTT)}</div>
+            </div>
+            <div style={s.totalCard}>
+              Чат
+              <div style={s.totalValue}>{fmt(totalChat)}</div>
             </div>
             <div style={s.totalCard}>
               Всего (под фильтр)
