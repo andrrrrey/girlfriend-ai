@@ -40,6 +40,12 @@ const CATEGORIES = [
 
 /** Системный промпт аналитика для одного персонажа. */
 export function buildAnalysisSystem(characterName: string, characterSystemPrompt: string): string {
+  // Обрезаем промпт персонажа — вход ModelsLab считается в общий бюджет max_tokens,
+  // длинный промпт «съедает» место под ответ и модель возвращает пустой JSON.
+  const promptExcerpt =
+    characterSystemPrompt && characterSystemPrompt.length > 900
+      ? characterSystemPrompt.slice(0, 900) + " …"
+      : characterSystemPrompt;
   return [
     "You are a strict, detail-oriented QA analyst for an AI-companion chat product.",
     "You are given (1) the CHARACTER's system prompt and (2) a transcript of a conversation between a simulated human USER and the CHARACTER.",
@@ -50,9 +56,9 @@ export function buildAnalysisSystem(characterName: string, characterSystemPrompt
     ...CATEGORIES.map((c) => `- ${c}`),
     "",
     `CHARACTER NAME: ${characterName}`,
-    "CHARACTER SYSTEM PROMPT:",
+    "CHARACTER SYSTEM PROMPT (excerpt):",
     '"""',
-    characterSystemPrompt || "(empty)",
+    promptExcerpt || "(empty)",
     '"""',
     "",
     "Respond with ONLY a valid minified JSON object of the exact shape:",

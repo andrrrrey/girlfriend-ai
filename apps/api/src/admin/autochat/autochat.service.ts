@@ -52,8 +52,13 @@ const STUCK_LIMIT = 3;
 /** Максимум ретраев генерации реплики робота при дубле предыдущей. */
 const ROBOT_DEDUP_RETRIES = 2;
 /** Ограничение расшифровки для анализа — вход ModelsLab считается в max_tokens. */
-const ANALYSIS_MAX_MESSAGES = 60;
-const ANALYSIS_MAX_CHARS = 8000;
+const ANALYSIS_MAX_MESSAGES = 40;
+const ANALYSIS_MAX_CHARS = 4000;
+/**
+ * Общий бюджет токенов для анализа. ModelsLab считает max_tokens как вход+выход,
+ * поэтому ставим с большим запасом над входом (llama-3-8b: контекст 8k).
+ */
+const ANALYSIS_MAX_TOKENS = 7000;
 
 /** Нормализует текст для сравнения на повтор (регистр/пробелы/пунктуация). */
 function normalize(s: string): string {
@@ -570,14 +575,25 @@ export class AutochatService implements OnModuleInit {
       return { ...empty, messagesAnalyzed: 0 };
     }
 
-    const raw = await this.callText(
-      buildAnalysisSystem(character.name, character.systemPrompt),
-      buildAnalysisUserPrompt(transcript),
-      4096,
-    );
-    const result = parseAnalysisJson(raw);
-    // Если модель вернула пустой вывод — не показываем пустую рамку, а честно
-    // сообщаем об этом.
+    const system = buildAnalysisSystem(character.name, character.systemPrompt);
+    const prompt = buildAnalysisUserPrompt(transcript);
+
+    // Один ретрай: слабая модель иногда с первого раза отдаёт пустой/усечённый JSON.
+    let raw = await this.callText(system, prompt, ANALYSIS_MAX_TOKENS);
+    let result = parseAnalysisJson(raw);
+    if (!result.summary && result.findings.length === 0) {
+      raw = await this.callText(
+        system,
+        prompt + "\n\nReturn a NON-EMPTY JSON object. Fill 'summary' with at least 2 sentences.",
+        ANALYSIS_MAX_TOKENS,
+      );
+      result = parseAnalysisJson(raw);
+    }
+    // Модель ответила прозой (не JSON), а парсер выцепил пустой {} — используем текст.
+    if (!result.summary && result.findings.length === 0 && raw.trim().length > 20) {
+      result.summary = raw.trim().slice(0, 1500);
+    }
+    // Если и после этого пусто — честное сообщение вместо пустой рамки.
     if (!result.summary && result.findings.length === 0) {
       result.summary = "Модель вернула пустой результат анализа. Попробуйте повторить анализ.";
     }
@@ -607,12 +623,17 @@ export class AutochatService implements OnModuleInit {
 
     const reports = Array.from(latestByChar.entries()).map(([cid, a]) => {
       const name = nameById.get(cid) || cid;
-      return `### ${name}\nSummary: ${a.summary}\nFindings: ${JSON.stringify(a.findings)}`;
+      // Обрезаем каждый отчёт, чтобы совокупный вход не «съел» бюджет вывода.
+      const findings = JSON.stringify(a.findings).slice(0, 1500);
+      return `### ${name}\nSummary: ${a.summary.slice(0, 600)}\nFindings: ${findings}`;
     });
     const prompt = "Here are the per-character QA reports:\n\n" + reports.join("\n\n");
 
-    const raw = await this.callText(buildSummarySystem(), prompt, 3072);
+    const raw = await this.callText(buildSummarySystem(), prompt, ANALYSIS_MAX_TOKENS);
     const result = parseAnalysisJson(raw);
+    if (!result.summary && result.findings.length === 0) {
+      result.summary = "Модель вернула пустой результат. Попробуйте повторить сводный анализ.";
+    }
     await this.saveAnalysis(taskId, null, "summary", result, reports.length, adminId);
     return result;
   }
