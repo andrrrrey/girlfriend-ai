@@ -379,7 +379,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     return reply.status(503).send({ error: "ModelsLab API key not configured" });
   }
 
-  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3-8b-instruct";
+  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored";
 
   // Формируем системный промпт: прямой > из персонажа > пустой
   let finalSystemPrompt = systemPrompt || "";
@@ -621,10 +621,17 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
 interface TextCompletionBody {
   /** Системный промпт (роль/задача модели). */
   system?: string;
-  /** Пользовательский промпт с данными для генерации. */
-  prompt: string;
+  /** Пользовательский промпт с данными для генерации (если не задан messages). */
+  prompt?: string;
+  /**
+   * Полноценная многоходовая история для чат-режима (альтернатива prompt).
+   * Используется автоперепиской, чтобы модель вела диалог, а не писала «эссе».
+   */
+  messages?: { role: string; content: string }[];
   /** Лимит токенов (input + output для ModelsLab). По умолчанию 4096. */
   maxTokens?: number;
+  /** Температура сэмплинга. По умолчанию 0.7. */
+  temperature?: number;
 }
 
 /**
@@ -638,10 +645,11 @@ interface TextCompletionBody {
  * Возвращает обычный JSON `{ content: string }` (без SSE).
  */
 app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply) => {
-  const { system, prompt, maxTokens } = req.body;
+  const { system, prompt, maxTokens, temperature } = req.body;
+  const bodyMessages = Array.isArray(req.body.messages) ? req.body.messages : null;
 
-  if (!prompt || typeof prompt !== "string") {
-    return reply.status(400).send({ error: "prompt is required" });
+  if (!bodyMessages && (!prompt || typeof prompt !== "string")) {
+    return reply.status(400).send({ error: "prompt or messages is required" });
   }
 
   let settings: Record<string, string>;
@@ -657,7 +665,13 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
     return reply.status(503).send({ error: "ModelsLab API key not configured" });
   }
 
-  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3-8b-instruct";
+  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored";
+
+  // Многоходовый режим (messages) даёт модели настоящий диалог — иначе слабая
+  // модель, получив всю переписку одним user-промптом, пишет формальные «эссе».
+  const messages = bodyMessages
+    ? bodyMessages.filter((m) => m.role !== "system").map((m) => ({ role: m.role, content: m.content }))
+    : [{ role: "user", content: prompt as string }];
 
   const abortController = new AbortController();
   req.raw.on("close", () => {
@@ -672,10 +686,14 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
         key: apiKey,
         model_id: model,
         system_prompt: system || undefined,
-        messages: [{ role: "user", content: prompt }],
+        messages,
         max_tokens: maxTokens || 4096,
-        temperature: 0.7,
+        temperature: typeof temperature === "number" ? temperature : 0.7,
         top_p: 0.9,
+        // Гасим дословные повторы фраз только в чат-режиме (messages) — для
+        // автопереписки. В single-prompt режиме (например JSON-анализ) штрафы
+        // могут ломать структурный вывод, поэтому не применяем.
+        ...(bodyMessages ? { frequency_penalty: 0.7, presence_penalty: 0.5 } : {}),
       }),
       signal: abortController.signal,
     });

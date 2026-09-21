@@ -389,19 +389,41 @@ export class AutochatService implements OnModuleInit {
     topic: ReturnType<typeof pickRandomTopic>,
     contentMode: "nsfw" | "sfw",
   ): Promise<string> {
-    // 1. Робот генерирует человеческое user-сообщение.
+    // 1. Робот генерирует человеческое user-сообщение — в НАСТОЯЩЕМ многоходовом
+    // режиме (messages), чтобы модель вела диалог, а не писала формальные «эссе».
     const history = await this.chats.getMessageHistory(sessionId, HISTORY_LIMIT);
     // Последнее собственное сообщение робота — чтобы не сгенерить дубль/почти-дубль.
     const prevUser = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
     const system = buildSimulatedUserSystem(persona, topic, contentMode);
+    // С точки зрения робота: его реплики — assistant, реплики персонажа — user.
+    const robotMessages: { role: string; content: string }[] = history.map((m) => ({
+      role: m.role === "user" ? "assistant" : "user",
+      content: m.content,
+    }));
+    // Гарантируем, что последняя реплика — от «user» (персонажа), иначе робот не
+    // получит реплику-затравку. На первом ходу — сид-сообщение.
+    if (robotMessages.length === 0 || robotMessages[robotMessages.length - 1].role !== "user") {
+      robotMessages.push({
+        role: "user",
+        content: buildSimulatedUserTurnPrompt(history as TranscriptTurn[]),
+      });
+    }
+
     let userText = "";
     for (let attempt = 0; attempt <= ROBOT_DEDUP_RETRIES; attempt++) {
-      let prompt = buildSimulatedUserTurnPrompt(history as TranscriptTurn[]);
-      if (attempt > 0) {
-        prompt +=
-          "\n\nYour previous attempt repeated an earlier message or drilled the same subject. Switch to a COMPLETELY NEW subject now (a feeling, a memory, a plan, some teasing).";
-      }
-      userText = await this.callText(system, prompt, 512);
+      const msgs =
+        attempt === 0
+          ? robotMessages
+          : [
+              ...robotMessages,
+              {
+                role: "user",
+                content:
+                  "(Your last message repeated an earlier one or drilled the same subject. Reply with something on a COMPLETELY NEW subject — a feeling, a memory, a plan, some teasing.)",
+              },
+            ];
+      // maxTokens у ModelsLab = вход+выход; ставим запас над историей+системой.
+      userText = await this.callConversation(system, msgs, 2500, 0.9);
       if (userText && (!prevUser || similarity(userText, prevUser) < STUCK_SIMILARITY)) break;
     }
     if (!userText) throw new Error("simulated user produced empty message");
@@ -444,12 +466,33 @@ export class AutochatService implements OnModuleInit {
 
   // ─── Вызовы AI-сервиса ──────────────────────────────────────────────────────
 
-  /** Не-стрим текстовая генерация (робот/аналитик). Бросает BalanceError при 402. */
+  /** Не-стрим текстовая генерация (аналитик, single-shot). Бросает BalanceError при 402. */
   private async callText(system: string, prompt: string, maxTokens: number): Promise<string> {
+    return this.postText({ system, prompt, maxTokens });
+  }
+
+  /** Многоходовая генерация (робот): передаём реальный диалог messages. */
+  private async callConversation(
+    system: string,
+    messages: { role: string; content: string }[],
+    maxTokens: number,
+    temperature: number,
+  ): Promise<string> {
+    return this.postText({ system, messages, maxTokens, temperature });
+  }
+
+  /** Общий POST в /ai/text/completion. Бросает BalanceError при 402. */
+  private async postText(body: {
+    system: string;
+    prompt?: string;
+    messages?: { role: string; content: string }[];
+    maxTokens: number;
+    temperature?: number;
+  }): Promise<string> {
     const res = await fetch(`${AI_BASE}/ai/text/completion`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, prompt, maxTokens }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };

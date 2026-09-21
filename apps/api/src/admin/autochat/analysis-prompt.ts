@@ -68,6 +68,7 @@ export function buildAnalysisSystem(characterName: string, characterSystemPrompt
     '{"summary": string, "findings": [{"category": string, "severity": "low"|"medium"|"high", "quote": string, "explanation": string, "suggestion": string}]}',
     "The 'summary' is 2-4 sentences describing the character's overall behavior and the most important problems.",
     "Each finding must cite a short real 'quote' from the transcript. If there are no real defects, return an empty findings array and say so in the summary.",
+    "LANGUAGE: write 'summary', 'explanation' and 'suggestion' in RUSSIAN. Keep 'category' as the English slug and 'quote' as the original text.",
     "Do not include any text outside the JSON object.",
   ].join("\n");
 }
@@ -95,6 +96,7 @@ export function buildSummarySystem(): string {
     "Respond with ONLY a valid minified JSON object of the exact shape:",
     '{"summary": string, "findings": [{"category": string, "severity": "low"|"medium"|"high", "quote": string, "explanation": string, "suggestion": string}]}',
     "Here 'findings' are the top cross-cutting issues (use 'quote' to name the affected characters or an example). The 'summary' is 3-6 sentences.",
+    "LANGUAGE: write 'summary', 'explanation' and 'suggestion' in RUSSIAN. Keep 'category' as the English slug.",
     "Do not include any text outside the JSON object.",
   ].join("\n");
 }

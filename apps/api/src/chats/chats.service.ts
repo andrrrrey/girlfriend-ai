@@ -461,7 +461,7 @@ export class ChatsService {
       this.prisma.appSetting.findUnique({ where: { key: "MODELSLAB_CHAT_MODEL" } }),
       this.prisma.aiJob.findUnique({ where: { id: jobId }, select: { input: true } }),
     ]);
-    const model = setting?.value || "llama-3-8b-instruct";
+    const model = setting?.value || "llama-3.1-8b-uncensored";
     const input = { ...((job?.input as Record<string, unknown>) ?? {}), model };
 
     await this.prisma.aiJob.update({
