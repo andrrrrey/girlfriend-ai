@@ -290,6 +290,102 @@ function createOpenAIClient(apiKey: string): OpenAI {
   return new OpenAI({ apiKey });
 }
 
+// ─── Chat LLM provider (ModelsLab | OpenRouter) ──────────────────────────────
+
+/** Конфиг провайдера чат-LLM, выбранного в настройках. */
+interface ChatProviderCfg {
+  provider: "modelslab" | "openrouter";
+  apiKey: string | undefined;
+  model: string;
+}
+
+/**
+ * Выбирает провайдера чат-модели по настройкам админки.
+ *  - CHAT_PROVIDER = "openrouter" → OpenRouter (OPENROUTER_API_KEY,
+ *    OPENROUTER_CHAT_MODEL, по умолчанию minimax/minimax-m2-her — заточена
+ *    под ролеплей/компаньонов);
+ *  - иначе ModelsLab (как раньше).
+ * Позволяет менять модель/провайдера без передеплоя — правкой app_settings.
+ */
+function resolveChatProvider(settings: Record<string, string>): ChatProviderCfg {
+  const provider = (settings.CHAT_PROVIDER || "modelslab").toLowerCase();
+  if (provider === "openrouter") {
+    return {
+      provider: "openrouter",
+      apiKey: settings.OPENROUTER_API_KEY,
+      model: settings.OPENROUTER_CHAT_MODEL || "minimax/minimax-m2-her",
+    };
+  }
+  return {
+    provider: "modelslab",
+    apiKey: settings.MODELSLAB_API_KEY,
+    model: settings.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored",
+  };
+}
+
+/** Ошибка нехватки баланса провайдера (для единой обработки 402). */
+class ProviderBalanceError extends Error {}
+
+/**
+ * Вызов OpenRouter (OpenAI-совместимый). Возвращает полный текст и токены.
+ * Не-стрим (stream:false) — эндпоинты у нас всё равно эмитят один SSE-чанк.
+ */
+async function callOpenRouter(params: {
+  apiKey: string;
+  model: string;
+  system?: string;
+  messages: { role: string; content: string }[];
+  maxTokens: number;
+  temperature: number;
+  penalties: boolean;
+  signal: AbortSignal;
+}): Promise<{ output: string; totalTokens: number }> {
+  const { apiKey, model, system, messages, maxTokens, temperature, penalties, signal } = params;
+  // Если system передан отдельно — ставим его первым и убираем system-роль из
+  // messages. Если нет — messages уже содержат system-сообщение (как в чат-эндпоинте),
+  // передаём как есть, ничего не теряя.
+  const orMessages = system
+    ? [{ role: "system", content: system }, ...messages.filter((m) => m.role !== "system")]
+    : messages;
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://virtflirt.app",
+      "X-Title": "VirtFlirt",
+    },
+    body: JSON.stringify({
+      model,
+      messages: orMessages,
+      max_tokens: maxTokens,
+      temperature,
+      top_p: 0.9,
+      ...(penalties ? { frequency_penalty: 0.7, presence_penalty: 0.5 } : {}),
+    }),
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    logger.error({ status: res.status, text: text.slice(0, 400) }, "openrouter_http_error");
+    if (res.status === 402 || isInsufficientBalance(res.status, text)) {
+      throw new ProviderBalanceError("INSUFFICIENT_BALANCE");
+    }
+    throw new Error(`OpenRouter error ${res.status}`);
+  }
+  const data: any = await res.json();
+  if (data.error) {
+    const msg = String(data.error?.message ?? data.error);
+    if (isInsufficientBalance(0, msg)) throw new ProviderBalanceError("INSUFFICIENT_BALANCE");
+    throw new Error(`OpenRouter error: ${msg}`);
+  }
+  const output = (data.choices?.[0]?.message?.content ?? "").trim();
+  const totalTokens =
+    data.usage?.total_tokens ??
+    Math.ceil((orMessages.reduce((n: number, m: any) => n + (m.content?.length ?? 0), 0) + output.length) / 4);
+  return { output, totalTokens };
+}
+
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 /**
@@ -374,12 +470,13 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
-  const apiKey = settings.MODELSLAB_API_KEY;
+  const chatCfg = resolveChatProvider(settings);
+  const apiKey = chatCfg.apiKey;
   if (!apiKey) {
-    return reply.status(503).send({ error: "ModelsLab API key not configured" });
+    return reply.status(503).send({ error: `${chatCfg.provider} API key not configured` });
   }
 
-  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored";
+  const model = chatCfg.model;
 
   // Формируем системный промпт: прямой > из персонажа > пустой
   let finalSystemPrompt = systemPrompt || "";
@@ -470,6 +567,51 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       abortController.abort();
     }
   });
+
+  // ─── Ветка OpenRouter (OpenAI-совместимый) ─────────────────────────────────
+  // chatMessages уже содержит system-сообщение первым, поэтому передаём как есть.
+  if (chatCfg.provider === "openrouter") {
+    try {
+      const { output, totalTokens } = await callOpenRouter({
+        apiKey,
+        model,
+        messages: chatMessages,
+        maxTokens: 2048,
+        temperature: 0.8,
+        penalties: true,
+        signal: abortController.signal,
+      });
+      if (!output) {
+        logger.error({ model }, "openrouter_chat_empty_output");
+        return reply.status(502).send({ error: "Empty response from AI model" });
+      }
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
+      reply.raw.write(
+        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens }, model })}\n\n`,
+      );
+      reply.raw.write("data: [DONE]\n\n");
+      reply.raw.end();
+      logger.info({ model, outputLength: output.length, totalTokens }, "openrouter_chat_done");
+      return;
+    } catch (err: any) {
+      if (err.name === "AbortError" || abortController.signal.aborted) {
+        if (!reply.raw.headersSent) return reply.status(499).send({ error: "Request aborted by client" });
+        reply.raw.end();
+        return;
+      }
+      if (err instanceof ProviderBalanceError) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "openrouter" });
+      }
+      logger.error({ err }, "openrouter_chat_error");
+      return reply.status(502).send({ error: "AI service error", details: err.message });
+    }
+  }
 
   try {
     const mlRes = await fetch("https://modelslab.com/api/v6/llm/uncensored_chat", {
@@ -660,12 +802,13 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
-  const apiKey = settings.MODELSLAB_API_KEY;
+  const chatCfg = resolveChatProvider(settings);
+  const apiKey = chatCfg.apiKey;
   if (!apiKey) {
-    return reply.status(503).send({ error: "ModelsLab API key not configured" });
+    return reply.status(503).send({ error: `${chatCfg.provider} API key not configured` });
   }
 
-  const model = settings.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored";
+  const model = chatCfg.model;
 
   // Многоходовый режим (messages) даёт модели настоящий диалог — иначе слабая
   // модель, получив всю переписку одним user-промптом, пишет формальные «эссе».
@@ -677,6 +820,33 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
   req.raw.on("close", () => {
     if (!req.raw.complete) abortController.abort();
   });
+
+  // ─── Ветка OpenRouter ──────────────────────────────────────────────────────
+  if (chatCfg.provider === "openrouter") {
+    try {
+      const { output } = await callOpenRouter({
+        apiKey,
+        model,
+        system,
+        messages,
+        maxTokens: maxTokens || 4096,
+        temperature: typeof temperature === "number" ? temperature : 0.7,
+        penalties: !!bodyMessages, // штрафы только в чат-режиме, не для JSON-анализа
+        signal: abortController.signal,
+      });
+      if (!output) return reply.status(502).send({ error: "Empty response from AI model" });
+      return reply.send({ content: output });
+    } catch (err: any) {
+      if (err.name === "AbortError" || abortController.signal.aborted) {
+        return reply.status(499).send({ error: "Request aborted by client" });
+      }
+      if (err instanceof ProviderBalanceError) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "openrouter" });
+      }
+      logger.error({ err }, "openrouter_text_error");
+      return reply.status(502).send({ error: "AI service error", details: err.message });
+    }
+  }
 
   try {
     const mlRes = await fetch("https://modelslab.com/api/v6/llm/uncensored_chat", {

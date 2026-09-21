@@ -11,6 +11,20 @@ import { CivitaiLab } from "./CivitaiLab";
 
 const SETTING_GROUPS = [
   {
+    title: "Провайдер чата",
+    subtitle: "Какая нейросеть отвечает в чате персонажей. OpenRouter даёт сильные NSFW/ролеплей-модели (напр. MiniMax M2-her).",
+    keys: [
+      { key: "CHAT_PROVIDER", label: "Провайдер чата (modelslab | openrouter)", type: "select", options: ["modelslab", "openrouter"] },
+      { key: "OPENROUTER_API_KEY", label: "Ключ API OpenRouter (нужен при openrouter)", type: "password" },
+      {
+        key: "OPENROUTER_CHAT_MODEL",
+        label:
+          "Модель OpenRouter (slug). Рекомендации: minimax/minimax-m2-her (ролеплей-компаньон), deepseek/deepseek-v4-flash (дёшево, 1M контекст), anthracite-org/magnum-v4-72b, sao10k/l3.3-euryale-70b",
+        type: "text",
+      },
+    ],
+  },
+  {
     title: "OpenAI",
     subtitle: "Параметры интеграции с OpenAI",
     keys: [
@@ -33,7 +47,7 @@ const SETTING_GROUPS = [
     subtitle: "Параметры генерации изображений, видео и чата (ModelsLab)",
     keys: [
       { key: "MODELSLAB_API_KEY", label: "Ключ API ModelsLab", type: "password" },
-      { key: "MODELSLAB_CHAT_MODEL", label: "Модель чата (Uncensored Chat)", type: "select", options: ["llama-3-8b-instruct", "llama-3-70b-instruct", "mistral-7b-instruct", "mixtral-8x7b-instruct", "llama-2-70b-chat"] },
+      { key: "MODELSLAB_CHAT_MODEL", label: "Модель чата (Uncensored Chat)", type: "select", options: ["llama-3.1-8b-uncensored", "llama-3.1-70b-uncensored", "llama-3-8b-instruct", "llama-3-70b-instruct", "mixtral-8x7b-instruct"] },
       { key: "MODELSLAB_DEFAULT_MODEL", label: "Модель изображений", type: "select", options: ["realistic-vision-v51", "sdxl", "juggernaut-xl", "flux"] },
       { key: "MODELSLAB_DEFAULT_VIDEO_MODEL", label: "Модель видео", type: "select", options: ["wan2.1", "wan2.2", "cogvideox", "hunyuan-video", "animatediff", "ltx-video"] },
     ],

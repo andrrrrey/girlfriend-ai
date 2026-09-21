@@ -455,14 +455,22 @@ export class ChatsService {
    * @param tokensUsed — количество токенов (опционально, только для chat)
    */
   async completeAiJob(jobId: string, tokensUsed?: number) {
-    // Модель, которой отвечал чат (для учёта расходов). Настройка может
-    // отсутствовать — тогда берём дефолт, как в AI-сервисе.
-    const [setting, job] = await Promise.all([
+    // Модель, которой отвечал чат (для учёта расходов). Зависит от выбранного
+    // провайдера: OpenRouter (OPENROUTER_CHAT_MODEL) или ModelsLab
+    // (MODELSLAB_CHAT_MODEL). Настройки могут отсутствовать — берём дефолты,
+    // как в AI-сервисе.
+    const [providerSetting, mlSetting, orSetting, job] = await Promise.all([
+      this.prisma.appSetting.findUnique({ where: { key: "CHAT_PROVIDER" } }),
       this.prisma.appSetting.findUnique({ where: { key: "MODELSLAB_CHAT_MODEL" } }),
+      this.prisma.appSetting.findUnique({ where: { key: "OPENROUTER_CHAT_MODEL" } }),
       this.prisma.aiJob.findUnique({ where: { id: jobId }, select: { input: true } }),
     ]);
-    const model = setting?.value || "llama-3.1-8b-uncensored";
-    const input = { ...((job?.input as Record<string, unknown>) ?? {}), model };
+    const provider = (providerSetting?.value || "modelslab").toLowerCase();
+    const model =
+      provider === "openrouter"
+        ? orSetting?.value || "minimax/minimax-m2-her"
+        : mlSetting?.value || "llama-3.1-8b-uncensored";
+    const input = { ...((job?.input as Record<string, unknown>) ?? {}), model, provider };
 
     await this.prisma.aiJob.update({
       where: { id: jobId },
