@@ -522,6 +522,48 @@ export interface AutogenTask {
   finishedAt: string | null;
 }
 
+/** Статус фоновой задачи автопереписки (совпадает с AutogenStatus). */
+export type AutoChatStatus = AutogenStatus;
+
+/** Одна находка QA-анализа автопереписки. */
+export interface AutoChatFinding {
+  category: string;
+  severity: "low" | "medium" | "high";
+  quote: string;
+  explanation: string;
+  suggestion: string;
+}
+
+/** Сохранённый результат анализа (по персонажу или сводный). */
+export interface AutoChatAnalysis {
+  id: string;
+  taskId: string | null;
+  characterId: string | null;
+  scope: "character" | "summary";
+  summary: string;
+  findings: AutoChatFinding[];
+  messagesAnalyzed: number;
+  createdAt: string;
+}
+
+/** Задача автопереписки робота с персонажами (админка, QA). */
+export interface AutoChatTask {
+  id: string;
+  status: AutoChatStatus;
+  characterIds: string[];
+  turnsPerChar: number;
+  total: number;
+  succeeded: number;
+  failed: number;
+  sessionIds: string[];
+  lastError: string | null;
+  /** Цели с привязкой к созданной сессии (для ссылок на чат). */
+  characters?: { id: string; name: string; avatarUrl: string | null; sessionId: string | null }[];
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+}
+
 /** Задача автогенерации контента для персонажей (админка, «Вовлечённость»). */
 export interface EngagementGenTask {
   id: string;
@@ -982,6 +1024,69 @@ export const admin = {
   /** Отмена задачи (POST /admin/autogen/:id/cancel). */
   async cancelAutogen(id: string): Promise<AutogenTask> {
     return apiFetch<AutogenTask>(`/admin/autogen/${id}/cancel`, { method: "POST" });
+  },
+
+  // ─── Автопереписка робота с персонажами (QA) ───
+
+  /** Запускает автопереписку с выбранными персонажами (POST /admin/autochat). */
+  async startAutochat(
+    characterIds: string[],
+    turnsPerChar: number,
+    contentMode?: "nsfw" | "sfw",
+  ): Promise<AutoChatTask> {
+    return apiFetch<AutoChatTask>("/admin/autochat", {
+      method: "POST",
+      body: JSON.stringify({ characterIds, turnsPerChar, contentMode }),
+    });
+  },
+
+  /** Последние задачи автопереписки (GET /admin/autochat). */
+  async getAutochatTasks(): Promise<AutoChatTask[]> {
+    return apiFetch<AutoChatTask[]>("/admin/autochat");
+  },
+
+  /** Одна задача — для поллинга прогресса (GET /admin/autochat/:id). */
+  async getAutochatTask(id: string): Promise<AutoChatTask> {
+    return apiFetch<AutoChatTask>(`/admin/autochat/${id}`);
+  },
+
+  /** Пауза задачи (POST /admin/autochat/:id/pause). */
+  async pauseAutochat(id: string): Promise<AutoChatTask> {
+    return apiFetch<AutoChatTask>(`/admin/autochat/${id}/pause`, { method: "POST" });
+  },
+
+  /** Возобновление задачи (POST /admin/autochat/:id/resume). */
+  async resumeAutochat(id: string): Promise<AutoChatTask> {
+    return apiFetch<AutoChatTask>(`/admin/autochat/${id}/resume`, { method: "POST" });
+  },
+
+  /** Отмена задачи (POST /admin/autochat/:id/cancel). */
+  async cancelAutochat(id: string): Promise<AutoChatTask> {
+    return apiFetch<AutoChatTask>(`/admin/autochat/${id}/cancel`, { method: "POST" });
+  },
+
+  /** Анализ поведения одного персонажа (POST /admin/autochat/:id/analyze/:characterId). */
+  async analyzeAutochatCharacter(
+    id: string,
+    characterId: string,
+  ): Promise<{ summary: string; findings: AutoChatFinding[]; messagesAnalyzed: number }> {
+    return apiFetch<{ summary: string; findings: AutoChatFinding[]; messagesAnalyzed: number }>(
+      `/admin/autochat/${id}/analyze/${characterId}`,
+      { method: "POST" },
+    );
+  },
+
+  /** Сводный вывод по задаче (POST /admin/autochat/:id/analyze-summary). */
+  async analyzeAutochatSummary(id: string): Promise<{ summary: string; findings: AutoChatFinding[] }> {
+    return apiFetch<{ summary: string; findings: AutoChatFinding[] }>(
+      `/admin/autochat/${id}/analyze-summary`,
+      { method: "POST" },
+    );
+  },
+
+  /** Сохранённые анализы задачи (GET /admin/autochat/:id/analyses). */
+  async getAutochatAnalyses(id: string): Promise<AutoChatAnalysis[]> {
+    return apiFetch<AutoChatAnalysis[]>(`/admin/autochat/${id}/analyses`);
   },
 
   // ─── Автогенерация контента для персонажей (Вовлечённость) ───

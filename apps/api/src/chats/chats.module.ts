@@ -36,7 +36,8 @@ import { S3Module } from "../s3/s3.module";
   ],
   controllers: [ChatsController, CharactersController],
   providers: [ChatsService, CharactersService, PrismaService],
-  // CharactersService экспортируем — его переиспользует AutogenModule (админка).
-  exports: [CharactersService],
+  // CharactersService — его переиспользует AutogenModule; ChatsService —
+  // AutochatModule (автопереписка: сессии, сообщения, учёт AiJob/UsageLog).
+  exports: [CharactersService, ChatsService],
 })
 export class ChatsModule {}

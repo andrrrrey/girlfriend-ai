@@ -192,6 +192,51 @@ model EngagementGenTask {
   @@map("engagement_gen_tasks")
 }
 
+// ─── AutoChat (автопереписка робота с персонажами — QA-инструмент админки) ─
+//
+// Робот (LLM в роли живого пользователя) ведёт диалоги с выбранными персонажами
+// в реальных чатах аккаунта админа. Цель — выявить баги промптов персонажей
+// (игнор пола/имени, слом образа, бессмыслица, смешение языков и т.п.), которые
+// затем разбираются через AutoChatAnalysis.
+
+model AutoChatTask {
+  id           String    @id @default(uuid()) @db.Uuid
+  // running | paused | completed | cancelled | stopped_no_balance | failed
+  status       String    @default("running")
+  characterIds String[]  @default([]) @db.Uuid // выбранные персонажи (цели)
+  turnsPerChar Int        @map("turns_per_char") // сколько реплик персонажа на каждого
+  total        Int // = characterIds.length * turnsPerChar
+  succeeded    Int        @default(0) // всего сделано реплик персонажа
+  failed       Int        @default(0)
+  // связка «персонаж → созданная ChatSession» для ссылок в UI и выборки при анализе
+  sessionIds   String[]  @default([]) @db.Uuid
+  params       Json       @default("{}") // { contentMode }
+  lastError    String?    @map("last_error")
+  createdBy    String     @map("created_by") @db.Uuid // админ, запустивший задачу
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  finishedAt   DateTime?  @map("finished_at")
+
+  @@index([status])
+  @@map("autochat_tasks")
+}
+
+model AutoChatAnalysis {
+  id               String   @id @default(uuid()) @db.Uuid
+  taskId           String?  @map("task_id") @db.Uuid
+  characterId      String?  @map("character_id") @db.Uuid // null => сводный вывод по задаче
+  scope            String   @default("character") // character | summary
+  summary          String // краткий человекочитаемый вывод
+  findings         Json     @default("[]") // [{category,severity,quote,explanation,suggestion}]
+  messagesAnalyzed Int      @default(0) @map("messages_analyzed")
+  createdBy        String   @map("created_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([taskId])
+  @@index([characterId])
+  @@map("autochat_analyses")
+}
+
 // ─── Gen Test (тестовый перебор промптов/опций/AIR в админке) ─
 
 model GenTestTask {

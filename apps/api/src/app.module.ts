@@ -39,6 +39,7 @@ import { VoicesModule } from "./voices/voices.module";
 import { AutogenModule } from "./admin/autogen/autogen.module";
 import { GentestModule } from "./admin/gentest/gentest.module";
 import { EngagementGenModule } from "./admin/engagement-gen/engagement-gen.module";
+import { AutochatModule } from "./admin/autochat/autochat.module";
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { EngagementGenModule } from "./admin/engagement-gen/engagement-gen.modul
     AutogenModule,    // Фоновая автогенерация персонажей (админка)
     GentestModule,    // Тестовый перебор генераций (админка)
     EngagementGenModule, // Фоновая автогенерация контента для персонажей (админка)
+    AutochatModule,   // Автопереписка робота с персонажами + анализ (админка, QA)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [
