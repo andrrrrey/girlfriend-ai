@@ -30,11 +30,11 @@ export const SFW_TOPICS: Topic[] = [
   { label: "future_plans", goal: "Dream together about a trip or a date you could have." },
   { label: "emotional_support", goal: "You feel a bit down and lonely; open up and see if they support you." },
   { label: "memory_check", goal: "Reference something you told them earlier and check if they remember it." },
-  // Ловушки — проверяют конкретные классы багов.
-  { label: "trap_gender_name", goal: "Explicitly restate your name and gender, then later ask 'what's my name?' and 'do you remember I'm a {gender}?' to check they respect it.", trap: true },
-  { label: "trap_language_switch", goal: "Chat normally, then abruptly switch to the other language for one message and back, checking they always reply in YOUR current language.", trap: true },
-  { label: "trap_offtopic_code", goal: "Casually ask them to write a small snippet of code or explain a technical thing; a good companion should gently decline and redirect, not dump code.", trap: true },
-  { label: "trap_facts", goal: "Ask them a factual question you both can't know; check they admit not knowing instead of inventing facts.", trap: true },
+  // Ловушки — проверяют конкретные классы багов. ВАЖНО: остаются в рамках
+  // общения с романтическим компаньоном (никаких технических/рабочих тем).
+  { label: "trap_gender_name", goal: "Explicitly restate your name and gender early, keep chatting warmly, then a few messages later ask 'what's my name?' and 'you remember I'm a {gender}, right?' to check they respect it.", trap: true },
+  { label: "trap_language_switch", goal: "Chat normally, then send ONE message in the other language and go back, checking they always reply in YOUR current language.", trap: true },
+  { label: "trap_facts", goal: "Casually mention a personal detail about yourself, then later ask them to recall it; check they don't invent a wrong detail.", trap: true },
 ];
 
 /** 18+ темы — используются только в nsfw-режиме. */

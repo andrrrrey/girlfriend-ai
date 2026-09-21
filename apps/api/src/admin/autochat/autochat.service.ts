@@ -69,6 +69,22 @@ function normalize(s: string): string {
     .trim();
 }
 
+/**
+ * Похожесть двух реплик по множеству слов (Jaccard). Ловит «почти дубли» —
+ * когда модель меняет пару слов, но повторяет одну и ту же мысль/структуру.
+ */
+function similarity(a: string, b: string): number {
+  const wa = new Set(normalize(a).split(" ").filter(Boolean));
+  const wb = new Set(normalize(b).split(" ").filter(Boolean));
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let inter = 0;
+  for (const w of wa) if (wb.has(w)) inter++;
+  return inter / (wa.size + wb.size - inter);
+}
+
+/** Порог похожести реплик, выше которого считаем диалог зациклившимся. */
+const STUCK_SIMILARITY = 0.7;
+
 /** Ошибка «нет баланса» — останавливает всю задачу. */
 class BalanceError extends Error {}
 
@@ -246,8 +262,8 @@ export class AutochatService implements OnModuleInit {
             where: { chatSessionId: sessionId, role: "assistant", deletedAt: null },
           });
 
-          // Детектор застревания: если персонаж (или робот) начинает повторять одну и
-          // ту же реплику — диалог выродился, продолжать бессмысленно (жжём деньги на
+          // Детектор застревания: если персонаж повторяет одну и ту же реплику (дословно
+          // или по смыслу) — диалог выродился, продолжать бессмысленно (жжём деньги на
           // ответах персонажа). Останавливаем этого персонажа досрочно.
           let prevReply = "";
           let stuckStreak = 0;
@@ -271,12 +287,12 @@ export class AutochatService implements OnModuleInit {
               data: { succeeded: { increment: 1 } },
             });
 
-            if (reply && normalize(reply) === prevReply && prevReply.length > 0) {
+            if (reply && prevReply.length > 0 && similarity(reply, prevReply) >= STUCK_SIMILARITY) {
               stuckStreak++;
             } else {
               stuckStreak = 0;
             }
-            prevReply = normalize(reply);
+            prevReply = reply || "";
             if (stuckStreak >= STUCK_LIMIT) {
               this.logger.warn(
                 `autochat ${taskId}: character ${characterId} stuck in a loop, stopping early at ${repliesDone}`,
@@ -375,20 +391,18 @@ export class AutochatService implements OnModuleInit {
   ): Promise<string> {
     // 1. Робот генерирует человеческое user-сообщение.
     const history = await this.chats.getMessageHistory(sessionId, HISTORY_LIMIT);
-    // Последнее собственное сообщение робота — чтобы не сгенерить дубль.
-    const prevUser = normalize(
-      [...history].reverse().find((m) => m.role === "user")?.content ?? "",
-    );
+    // Последнее собственное сообщение робота — чтобы не сгенерить дубль/почти-дубль.
+    const prevUser = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
     const system = buildSimulatedUserSystem(persona, topic, contentMode);
     let userText = "";
     for (let attempt = 0; attempt <= ROBOT_DEDUP_RETRIES; attempt++) {
       let prompt = buildSimulatedUserTurnPrompt(history as TranscriptTurn[]);
       if (attempt > 0) {
         prompt +=
-          "\n\nYour previous attempt repeated an earlier message. Write something COMPLETELY different now — change the subtopic or make a fresh statement.";
+          "\n\nYour previous attempt repeated an earlier message or drilled the same subject. Switch to a COMPLETELY NEW subject now (a feeling, a memory, a plan, some teasing).";
       }
       userText = await this.callText(system, prompt, 512);
-      if (userText && (!prevUser || normalize(userText) !== prevUser)) break;
+      if (userText && (!prevUser || similarity(userText, prevUser) < STUCK_SIMILARITY)) break;
     }
     if (!userText) throw new Error("simulated user produced empty message");
     // Сообщение робота НЕ создаёт AiJob — по решению расходы на него не считаем.
