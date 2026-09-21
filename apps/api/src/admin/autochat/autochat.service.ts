@@ -44,9 +44,25 @@ const env = loadEnv();
 const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
 
 /** Максимум сообщений истории, передаваемых в контекст (как в обычном чате). */
-const HISTORY_LIMIT = 20;
+const HISTORY_LIMIT = 12;
 /** Небольшая пауза между ходами — не долбим провайдер вплотную. */
 const TURN_DELAY_MS = 400;
+/** Сколько раз подряд персонаж может повторить реплику до досрочной остановки диалога. */
+const STUCK_LIMIT = 3;
+/** Максимум ретраев генерации реплики робота при дубле предыдущей. */
+const ROBOT_DEDUP_RETRIES = 2;
+/** Ограничение расшифровки для анализа — вход ModelsLab считается в max_tokens. */
+const ANALYSIS_MAX_MESSAGES = 60;
+const ANALYSIS_MAX_CHARS = 8000;
+
+/** Нормализует текст для сравнения на повтор (регистр/пробелы/пунктуация). */
+function normalize(s: string): string {
+  return (s || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N} ]/gu, "")
+    .trim();
+}
 
 /** Ошибка «нет баланса» — останавливает всю задачу. */
 class BalanceError extends Error {}
@@ -225,16 +241,48 @@ export class AutochatService implements OnModuleInit {
             where: { chatSessionId: sessionId, role: "assistant", deletedAt: null },
           });
 
+          // Детектор застревания: если персонаж (или робот) начинает повторять одну и
+          // ту же реплику — диалог выродился, продолжать бессмысленно (жжём деньги на
+          // ответах персонажа). Останавливаем этого персонажа досрочно.
+          let prevReply = "";
+          let stuckStreak = 0;
+
           while (repliesDone < task.turnsPerChar) {
             if (!(await this.isRunning(taskId))) return;
 
-            await this.runOneTurn(task.id, task.createdBy, sessionId, characterId, persona, topic, contentMode);
+            const reply = await this.runOneTurn(
+              task.id,
+              task.createdBy,
+              sessionId,
+              characterId,
+              persona,
+              topic,
+              contentMode,
+            );
             repliesDone++;
 
             await this.prisma.autoChatTask.update({
               where: { id: taskId },
               data: { succeeded: { increment: 1 } },
             });
+
+            if (reply && normalize(reply) === prevReply && prevReply.length > 0) {
+              stuckStreak++;
+            } else {
+              stuckStreak = 0;
+            }
+            prevReply = normalize(reply);
+            if (stuckStreak >= STUCK_LIMIT) {
+              this.logger.warn(
+                `autochat ${taskId}: character ${characterId} stuck in a loop, stopping early at ${repliesDone}`,
+              );
+              await this.prisma.autoChatTask.update({
+                where: { id: taskId },
+                data: { lastError: `Персонаж ${character.name} зациклился — диалог остановлен досрочно` },
+              });
+              break;
+            }
+
             if (TURN_DELAY_MS) await new Promise((r) => setTimeout(r, TURN_DELAY_MS));
           }
         } catch (err) {
@@ -319,14 +367,24 @@ export class AutochatService implements OnModuleInit {
     persona: Persona,
     topic: ReturnType<typeof pickRandomTopic>,
     contentMode: "nsfw" | "sfw",
-  ): Promise<void> {
+  ): Promise<string> {
     // 1. Робот генерирует человеческое user-сообщение.
     const history = await this.chats.getMessageHistory(sessionId, HISTORY_LIMIT);
-    const userText = await this.callText(
-      buildSimulatedUserSystem(persona, topic, contentMode),
-      buildSimulatedUserTurnPrompt(history as TranscriptTurn[]),
-      512,
+    // Последнее собственное сообщение робота — чтобы не сгенерить дубль.
+    const prevUser = normalize(
+      [...history].reverse().find((m) => m.role === "user")?.content ?? "",
     );
+    const system = buildSimulatedUserSystem(persona, topic, contentMode);
+    let userText = "";
+    for (let attempt = 0; attempt <= ROBOT_DEDUP_RETRIES; attempt++) {
+      let prompt = buildSimulatedUserTurnPrompt(history as TranscriptTurn[]);
+      if (attempt > 0) {
+        prompt +=
+          "\n\nYour previous attempt repeated an earlier message. Write something COMPLETELY different now — change the subtopic or make a fresh statement.";
+      }
+      userText = await this.callText(system, prompt, 512);
+      if (userText && (!prevUser || normalize(userText) !== prevUser)) break;
+    }
     if (!userText) throw new Error("simulated user produced empty message");
     // Сообщение робота НЕ создаёт AiJob — по решению расходы на него не считаем.
     await this.chats.saveMessage(sessionId, "user", userText, {
@@ -362,6 +420,7 @@ export class AutochatService implements OnModuleInit {
     }
     await this.chats.completeAiJob(aiJob.id, reply.tokens || undefined);
     await this.chats.logUsage(adminId, "chat_message", reply.tokens || undefined);
+    return reply.content;
   }
 
   // ─── Вызовы AI-сервиса ──────────────────────────────────────────────────────
@@ -462,7 +521,38 @@ export class AutochatService implements OnModuleInit {
       orderBy: { createdAt: "asc" },
       select: { role: true, content: true },
     });
-    return messages;
+
+    // Схлопываем подряд идущие дубли (частый случай — петля): для анализа важен факт
+    // повтора, но не сотни одинаковых строк, которые раздувают вход и обнуляют ответ.
+    const deduped: TranscriptTurn[] = [];
+    let repeatNote = false;
+    for (const m of messages) {
+      const prev = deduped[deduped.length - 1];
+      if (prev && prev.role === m.role && normalize(prev.content) === normalize(m.content)) {
+        repeatNote = true; // тот же автор повторил тот же текст — пропускаем дубль
+        continue;
+      }
+      deduped.push(m);
+    }
+    if (repeatNote) {
+      deduped.push({
+        role: "system",
+        content:
+          "[NOTE FOR ANALYST: consecutive identical messages were collapsed — the conversation contained heavy verbatim repetition by the user and/or the character.]",
+      });
+    }
+
+    // Ограничиваем размер: берём последние N сообщений и режем по символам (вход
+    // ModelsLab считается в max_tokens, иначе ответ приходит пустым).
+    const capped = deduped.slice(-ANALYSIS_MAX_MESSAGES);
+    let total = 0;
+    const limited: TranscriptTurn[] = [];
+    for (let i = capped.length - 1; i >= 0; i--) {
+      total += capped[i].content.length;
+      if (total > ANALYSIS_MAX_CHARS && limited.length > 0) break;
+      limited.unshift(capped[i]);
+    }
+    return limited;
   }
 
   /** Анализирует поведение одного персонажа в рамках задачи. */
@@ -483,9 +573,14 @@ export class AutochatService implements OnModuleInit {
     const raw = await this.callText(
       buildAnalysisSystem(character.name, character.systemPrompt),
       buildAnalysisUserPrompt(transcript),
-      3072,
+      4096,
     );
     const result = parseAnalysisJson(raw);
+    // Если модель вернула пустой вывод — не показываем пустую рамку, а честно
+    // сообщаем об этом.
+    if (!result.summary && result.findings.length === 0) {
+      result.summary = "Модель вернула пустой результат анализа. Попробуйте повторить анализ.";
+    }
     await this.saveAnalysis(taskId, characterId, "character", result, transcript.length, adminId);
     return { ...result, messagesAnalyzed: transcript.length };
   }

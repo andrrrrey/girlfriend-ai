@@ -65,7 +65,11 @@ export function buildAnalysisSystem(characterName: string, characterSystemPrompt
 
 /** Пользовательский промпт аналитика: расшифровка диалога(ов). */
 export function buildAnalysisUserPrompt(transcript: TranscriptTurn[]): string {
-  const lines = transcript.map((t) => `${t.role === "user" ? "USER" : "CHARACTER"}: ${t.content}`);
+  const lines = transcript.map((t) =>
+    t.role === "system"
+      ? t.content
+      : `${t.role === "user" ? "USER" : "CHARACTER"}: ${t.content}`,
+  );
   return (
     "Analyze this transcript and return the JSON described in your instructions:\n\n" +
     lines.join("\n")

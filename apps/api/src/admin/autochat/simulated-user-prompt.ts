@@ -62,6 +62,12 @@ export function buildSimulatedUserSystem(
     "- Do NOT be a pushover: if the companion says something wrong about you (wrong gender, forgets your name, talks nonsense), call it out like a real person would.",
     `- ${contentRule}`,
     "",
+    "!!! ANTI-REPETITION (most important rule):",
+    "- NEVER send the same message twice. Every message you send must be clearly different in wording AND content from every message you have already sent.",
+    "- Do NOT keep asking the same kind of question. If you already asked something, move ON: share an opinion, tell a small story about yourself, react to what they just said, change the subtopic, or make a plan.",
+    "- If the companion is repeating itself or giving vague/empty answers, do NOT mirror it — call it out ('ты повторяешься', 'you keep saying the same thing') and steer somewhere new.",
+    "- Treat the conversation as actually progressing over time: bring new details each turn.",
+    "",
     "OUTPUT FORMAT: Output ONLY the text of your next single chat message. No quotes, no name prefix, no narration, no stage directions, no emoji spam.",
   ].join("\n");
 }
@@ -81,10 +87,21 @@ export function buildSimulatedUserTurnPrompt(transcript: TranscriptTurn[]): stri
   if (transcript.length === 0) {
     return "This is the very first message. Open the conversation with a natural, human first message that starts moving toward your goal. Output only the message text.";
   }
-  const lines = transcript.map((t) => `${t.role === "user" ? "ME" : "THEM"}: ${t.content}`);
+  // Держим короткое окно контекста (последние реплики) — длинная история заставляет
+  // слабую модель зацикливаться и раздувает вход.
+  const recent = transcript.slice(-8);
+  const lines = recent.map((t) => `${t.role === "user" ? "ME" : "THEM"}: ${t.content}`);
+  // Явно перечисляем СВОИ последние реплики как запрещённые к повтору.
+  const myLines = recent.filter((t) => t.role === "user").map((t) => `- ${t.content}`);
+  const avoid =
+    myLines.length > 0
+      ? "\n\nMessages YOU already sent (do NOT repeat or paraphrase any of these — say something new):\n" +
+        myLines.join("\n")
+      : "";
   return (
-    "Here is the conversation so far (ME = you, THEM = the AI companion):\n\n" +
+    "Here is the recent conversation (ME = you, THEM = the AI companion):\n\n" +
     lines.join("\n") +
-    "\n\nNow write your next single message as ME. Output only the message text."
+    avoid +
+    "\n\nNow write your next single message as ME — it MUST be different from everything above and push the conversation forward. Output only the message text."
   );
 }

@@ -136,9 +136,10 @@ function isLive(status: AutoChatStatus): boolean {
 
 /** Одна карточка результата анализа (per-character или сводного). */
 function AnalysisView({ summary, findings }: { summary: string; findings: AutoChatFinding[] }) {
+  const text = summary?.trim() || (findings.length === 0 ? "Анализ выполнен: проблем не выявлено." : "");
   return (
     <div style={s.analysisBox}>
-      <div style={{ color: "#e5e5e5", marginBottom: findings.length ? 8 : 0 }}>{summary}</div>
+      <div style={{ color: "#e5e5e5", marginBottom: findings.length ? 8 : 0 }}>{text}</div>
       {findings.map((f, i) => {
         const c = SEVERITY_COLORS[f.severity] || "#888";
         return (
