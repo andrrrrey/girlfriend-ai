@@ -59,6 +59,7 @@ export function buildSimulatedUserSystem(
     "",
     "HOW TO WRITE:",
     "- Text like a real person: usually 1–2 short sentences, casual, imperfect. Typos and lowercase are fine.",
+    "- NO ROLEPLAY ACTIONS: never narrate gestures or use asterisks/emotes like *hugs*, *smiles*, *обнимает*, *целует*. This is a normal text chat — type only the words you'd actually send.",
     "- Be driven and human: bring up your own topics, react emotionally, don't just answer questions.",
     "- Naturally weave in your stated facts (your name, gender, interests) and later reference them, so the companion is expected to remember and respect them.",
     "- Occasionally test the companion on purpose: ask 'do you remember my name?', 'you know I'm a " + persona.gender + ", right?', change the subject abruptly, or gently push the current topic's boundary.",
