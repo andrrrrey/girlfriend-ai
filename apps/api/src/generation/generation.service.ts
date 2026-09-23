@@ -155,6 +155,17 @@ export class GenerationService {
     const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
     // Для img2img конвертируем фото персонажа в публичный URL (один раз на запрос).
     const initImageUrl = await this.toPublicImageUrl(data.initImageUrl);
+    // Grok (xAI) не принимает seed — стабильность внешности персонажа держим,
+    // передавая его аватар референсом (Grok editImage). Только если нет явного
+    // img2img-фото и модель — Grok-чекпоинт (закреплённый за персонажем AIR).
+    let referenceImageUrl: string | undefined;
+    if (!initImageUrl && data.characterId && /^urn:air:grok:/i.test(data.model || "")) {
+      const character = await this.prisma.character.findUnique({
+        where: { id: data.characterId },
+        select: { avatarUrl: true },
+      });
+      referenceImageUrl = await this.toPublicImageUrl(character?.avatarUrl);
+    }
 
     // Создаём N отдельных заданий (1 job → 1 изображение).
     const jobIds: string[] = [];
@@ -175,6 +186,7 @@ export class GenerationService {
             provider: resolvedProvider,
             generationStyle: data.generationStyle,
             img2img: initImageUrl ? true : undefined,
+            avatarReference: referenceImageUrl ? true : undefined,
             seed: data.seed,
             contentMode,
             denoise: data.denoise,
@@ -192,6 +204,7 @@ export class GenerationService {
         provider: resolvedProvider,
         generationStyle: data.generationStyle,
         initImageUrl,
+        referenceImageUrl,
         seed: data.seed,
         contentMode,
         denoise: data.denoise,

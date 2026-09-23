@@ -4,10 +4,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { admin, type CharacterOption } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
 
+/**
+ * База чекпоинта (зеркало CivitaiBase в apps/ai): sd1/sdxl — Stable Diffusion
+ * (SDXL/Pony/Illustrious), flux1 — Flux.1 D/S/Krea, zimage — Z Image, grok — xAI Grok Imagine.
+ */
+export type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
+const CIVITAI_BASES: CivitaiBase[] = ["sdxl", "sd1", "flux1", "zimage", "grok"];
+
 /** Конфиг одного чекпоинта Civitai (зеркало CivitaiModelConfig в apps/ai). */
 export interface CivitaiModelConfig {
   air: string;
-  base: "sd1" | "sdxl";
+  base: CivitaiBase;
   width: number;
   height: number;
   steps: number;
@@ -86,14 +93,26 @@ const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   ],
 };
 
-const AIR_RE = /^urn:air:(sd1|sdxl):checkpoint:civitai:\d+@\d+$/;
+const AIR_RE = /^urn:air:[a-z0-9]+:(checkpoint|diffusionmodel|unet):civitai:\d+@\d+$/;
 
-/** Определяет базу по AIR (для авто-подстановки width/height при вставке). */
-function baseFromAir(air: string): "sd1" | "sdxl" {
-  return air.includes(":sd1:") ? "sd1" : "sdxl";
+/** Определяет базу по сегменту ecosystem AIR (зеркало baseFromAir в apps/ai). */
+function baseFromAir(air: string): CivitaiBase {
+  const eco = (air.match(/^urn:air:([^:]+):/i)?.[1] || "").toLowerCase();
+  if (eco === "sd1") return "sd1";
+  if (eco === "flux1" || eco === "fluxkrea") return "flux1";
+  if (eco === "zimageturbo" || eco === "zimagebase") return "zimage";
+  if (eco === "grok") return "grok";
+  return "sdxl";
 }
-function dimsForBase(base: "sd1" | "sdxl"): { width: number; height: number } {
-  return base === "sd1" ? { width: 512, height: 768 } : { width: 1024, height: 1536 };
+/** Дефолтные размеры/шаги/cfg под базу (Grok их не использует — только аспект). */
+function defaultsForBase(base: CivitaiBase): { width: number; height: number; steps: number; cfgScale: number } {
+  switch (base) {
+    case "sd1": return { width: 512, height: 768, steps: 25, cfgScale: 7 };
+    case "flux1": return { width: 832, height: 1216, steps: 28, cfgScale: 3.5 };
+    case "zimage": return { width: 832, height: 1216, steps: 9, cfgScale: 1 };
+    case "grok": return { width: 1024, height: 1536, steps: 0, cfgScale: 0 };
+    default: return { width: 1024, height: 1536, steps: 25, cfgScale: 7 };
+  }
 }
 
 /**
@@ -167,10 +186,9 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
   const addItem = (style: string, preset?: Partial<CivitaiModelConfig>) => {
     const next = JSON.parse(JSON.stringify(models)) as Record<string, CivitaiModelConfig[]>;
     const base = preset?.base || "sdxl";
-    const dims = dimsForBase(base);
     next[style] = [
       ...(next[style] || []),
-      { air: "", base, ...dims, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2, ...preset },
+      { air: "", base, ...defaultsForBase(base), sampler: "", scheduler: "", clipSkip: 2, ...preset },
     ];
     commit(next);
   };
@@ -253,11 +271,12 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
       <details style={{ marginBottom: 16, background: "#141414", border: "1px solid #262626", borderRadius: 8, padding: "10px 12px" }}>
         <summary style={{ cursor: "pointer", color: "#f95bad", fontSize: 13, fontWeight: 600 }}>Где взять Civitai AIR?</summary>
         <div style={{ color: "#b8b8b8", fontSize: 12, lineHeight: 1.6, marginTop: 8 }}>
+          <p style={{ margin: "0 0 6px" }}>Проще всего — вставить в поле «Добавить по ссылке» ссылку на модель (<code style={{ color: "#fff" }}>/models/&#123;modelId&#125;?modelVersionId=…</code>) или на картинку (<code style={{ color: "#fff" }}>/images/&#123;imageId&#125;</code>, civitai.com или civitai.red) — AIR, база и параметры определятся сами. Для картинки берётся чекпоинт из её блока Resources.</p>
           <p style={{ margin: "0 0 6px" }}>Формат: <code style={{ color: "#fff" }}>urn:air:&#123;ecosystem&#125;:checkpoint:civitai:&#123;modelId&#125;@&#123;versionId&#125;</code></p>
           <ol style={{ margin: "0 0 6px 18px", padding: 0 }}>
-            <li>Открой страницу модели-чекпоинта на civitai.com — URL вида <code style={{ color: "#fff" }}>civitai.com/models/&#123;modelId&#125;?modelVersionId=&#123;versionId&#125;</code>; оба числа в адресной строке.</li>
-            <li><b>ecosystem</b>: SD 1.5 → <code>sd1</code>; SDXL / Pony / Illustrious → <code>sdxl</code> (см. «Base Model» на странице).</li>
-            <li>Тип должен быть <b>Checkpoint</b> (LoRA/embedding не поддерживаются).</li>
+            <li><b>ecosystem</b> по «Base Model»: SD 1.5 → <code>sd1</code>; SDXL / Pony / Illustrious → <code>sdxl</code>; Flux.1 D/S → <code>flux1</code>; Flux.1 Krea → <code>fluxkrea</code>; Z Image Turbo → <code>zimageturbo</code> (тип <code>diffusionmodel</code>); Grok → <code>grok</code>.</li>
+            <li>Тип должен быть <b>Checkpoint</b> (LoRA/embedding не поддерживаются). Krea 2, OpenAI, Flux.2 и прочие API-базы пока не поддерживаются.</li>
+            <li><b>Grok</b>: игнорирует negative prompt, seed, шаги и cfg; модерация xAI может отклонять откровенный контент. Версии: v1.0 = 2738377, v2.0 = 3225510 (v1.5 — только видео).</li>
           </ol>
           <p style={{ margin: 0 }}>Пример: <code style={{ color: "#fff" }}>urn:air:sdxl:checkpoint:civitai:827184@1612720</code>. Описание: developer.civitai.com/site/guide/air</p>
         </div>
@@ -304,9 +323,8 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
                     updateItem(style, idx, { air, base });
                   }}
                 />
-                <select style={{ ...cellInput, width: 72 }} value={m.base} onChange={(e) => updateItem(style, idx, { base: e.target.value as "sd1" | "sdxl" })}>
-                  <option value="sdxl">sdxl</option>
-                  <option value="sd1">sd1</option>
+                <select style={{ ...cellInput, width: 72 }} value={m.base} onChange={(e) => updateItem(style, idx, { base: e.target.value as CivitaiBase })}>
+                  {CIVITAI_BASES.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
                 <input style={{ ...cellInput, width: 60 }} type="number" title="width" value={m.width} onChange={(e) => updateItem(style, idx, { width: parseInt(e.target.value, 10) || 0 })} />
                 <input style={{ ...cellInput, width: 60 }} type="number" title="height" value={m.height} onChange={(e) => updateItem(style, idx, { height: parseInt(e.target.value, 10) || 0 })} />
@@ -343,7 +361,7 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
           <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
             <input
               style={{ ...cellInput, flex: 1, minWidth: 320 }}
-              placeholder="Вставьте ссылку Civitai (civitai.com/models/…?modelVersionId=…) или AIR"
+              placeholder="Ссылка Civitai на модель (/models/…) или картинку (/images/…), либо AIR"
               value={linkBy[style] || ""}
               onChange={(e) => setLinkBy((l) => ({ ...l, [style]: e.target.value }))}
               onKeyDown={(e) => { if (e.key === "Enter") void addFromLink(style); }}

@@ -1522,7 +1522,7 @@ export const admin = {
 
   async resolveCivitaiAir(url: string): Promise<{
     air: string;
-    base: "sd1" | "sdxl";
+    base: "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
     width: number;
     height: number;
     modelName?: string;

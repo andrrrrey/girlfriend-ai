@@ -1201,6 +1201,11 @@ interface ImageGenerateBody {
    * (используется при генерации поз в чате).
    */
   initImageUrl?: string;
+  /**
+   * Публичный URL аватара персонажа как референса внешности. Используется только
+   * Grok-чекпоинтами (editImage), остальные базы его игнорируют.
+   */
+  referenceImageUrl?: string;
   /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
   seed?: number;
   /** Режим контента: "nsfw" | "sfw". Определяет набор промпт-тегов и негатива. */
@@ -1215,9 +1220,48 @@ interface ImageGenerateBody {
 
 // ─── Civitai RED Orchestration API ─────────────────────────────────────────
 
+/**
+ * База чекпоинта — определяет формат запроса к Orchestration API:
+ *  - sd1/sdxl (SDXL/Pony/Illustrious) → imageGen engine "sdcpp";
+ *  - flux1  → шаг textToImage с AIR чекпоинта (как делает сам сайт Civitai);
+ *  - zimage → imageGen engine "comfy", ecosystem "zImage", AIR в diffuserModel;
+ *  - grok   → imageGen engine "grok" (xAI Grok Imagine; без negative/seed/steps).
+ */
+type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
+
+/** Базы Stable Diffusion — только они работают в comfy/IP-Adapter пути. */
+function isSdBase(base: CivitaiBase): boolean {
+  return base === "sd1" || base === "sdxl";
+}
+
+/**
+ * Определяет базу по сегменту ecosystem в AIR (`urn:air:{ecosystem}:…`).
+ * Pony/Illustrious/NoobAI — наследники SDXL. Неизвестное → sdxl (легаси-поведение).
+ */
+function baseFromAir(air: string): CivitaiBase {
+  const eco = (air.match(/^urn:air:([^:]+):/i)?.[1] || "").toLowerCase();
+  if (eco === "sd1") return "sd1";
+  if (eco === "flux1" || eco === "fluxkrea") return "flux1";
+  if (eco === "zimageturbo" || eco === "zimagebase") return "zimage";
+  if (eco === "grok") return "grok";
+  return "sdxl";
+}
+
+/** Дефолтный конфиг под базу (для синтеза, когда AIR нет в пулах). */
+function defaultCivitaiConfig(air: string, base: CivitaiBase): CivitaiModelConfig {
+  const common = { air, base, sampler: "", scheduler: "", clipSkip: 2 };
+  switch (base) {
+    case "sd1": return { ...common, width: 512, height: 768, steps: 30, cfgScale: 7 };
+    case "flux1": return { ...common, width: 832, height: 1216, steps: 28, cfgScale: 3.5 };
+    case "zimage": return { ...common, width: 832, height: 1216, steps: 9, cfgScale: 1 };
+    case "grok": return { ...common, width: 1024, height: 1536, steps: 0, cfgScale: 0 };
+    default: return { ...common, width: 1024, height: 1536, steps: 30, cfgScale: 7 };
+  }
+}
+
 interface CivitaiModelConfig {
   air: string;
-  base: "sd1" | "sdxl";
+  base: CivitaiBase;
   width: number;
   height: number;
   steps: number;
@@ -1289,6 +1333,31 @@ function a1111ToComfy(sampler: string, scheduler: string): { sampler?: string; s
     if (base.endsWith(` ${suf}`)) { base = base.slice(0, -(suf.length + 1)).trim(); if (!sched) sched = suf; }
   }
   return { sampler: A1111_TO_COMFY_SAMPLER[base], scheduler: sched || undefined };
+}
+
+/**
+ * Базовое имя сэмплера A1111 → `sampleMethod` движка sdcpp (enum SdCppSampleMethod).
+ * У sdcpp нет SDE-сэмплеров — берём ближайший многошаговый dpm++2m. Для LMS,
+ * DPM fast/adaptive, PLMS, UniPC аналога нет → не задаём (дефолт Civitai).
+ */
+const A1111_TO_SDCPP_SAMPLER: Record<string, string> = {
+  "euler a": "euler_a", euler: "euler", heun: "heun", dpm2: "dpm2", "dpm2 a": "dpm2",
+  "dpm++ 2s a": "dpm++2s_a", "dpm++ 2m": "dpm++2m", "dpm++ sde": "dpm++2m",
+  "dpm++ 2m sde": "dpm++2m", "dpm++ 3m sde": "dpm++2m", ddim: "ddim_trailing", lcm: "lcm",
+};
+
+/**
+ * Переводит сэмплер+расписание A1111/Civitai в пару sdcpp `{sampleMethod, schedule}`.
+ * Суффиксы «Karras»/«Exponential» в имени сэмплера переносятся в schedule.
+ * Наши значения расписания (karras/exponential/simple/discrete/ays) входят в SdCppSchedule.
+ */
+function a1111ToSdCpp(sampler: string, scheduler: string): { sampleMethod?: string; schedule?: string } {
+  let sched = normalizeCivitaiScheduler(scheduler);
+  let base = (sampler || "").trim().toLowerCase();
+  for (const suf of ["karras", "exponential"]) {
+    if (base.endsWith(` ${suf}`)) { base = base.slice(0, -(suf.length + 1)).trim(); if (!sched) sched = suf; }
+  }
+  return { sampleMethod: base ? A1111_TO_SDCPP_SAMPLER[base] : undefined, schedule: sched || undefined };
 }
 
 /**
@@ -1365,8 +1434,8 @@ function resolveCivitaiModels(settings: Record<string, string>): Record<string, 
 /**
  * Возвращает конфиг чекпоинта Civitai по его AIR. Сначала ищет во всех пулах
  * (чтобы взять корректные base/dims/steps). Если AIR в пулах нет (пул изменился
- * с момента генерации аватара) — синтезирует конфиг, определяя базу по самому AIR
- * (`:sd1:` → SD1 512×768, иначе SDXL 1024×1536). Так переиспользование чекпоинта
+ * с момента генерации аватара) — синтезирует конфиг, определяя базу по сегменту
+ * ecosystem самого AIR (sd1/flux1/zimage*/grok, иначе SDXL). Так переиспользование чекпоинта
  * персонажа не ломается даже после правок пулов.
  */
 function civitaiConfigForAir(air: string, models: Record<string, CivitaiModelConfig[]>): CivitaiModelConfig {
@@ -1374,10 +1443,7 @@ function civitaiConfigForAir(air: string, models: Record<string, CivitaiModelCon
     const found = pool.find((m) => m.air === air);
     if (found) return found;
   }
-  const isSd1 = air.includes(":sd1:");
-  return isSd1
-    ? { air, base: "sd1", width: 512, height: 768, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 }
-    : { air, base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 };
+  return defaultCivitaiConfig(air, baseFromAir(air));
 }
 
 /**
@@ -1410,6 +1476,101 @@ function sdDimsForAspect(
   return table[aspectRatio] || fallback;
 }
 
+/** Версии Grok Imagine на Civitai (modelVersionId → версия движка). v1.5 — только видео. */
+const GROK_IMAGE_VERSIONS: Record<string, "v1.0" | "v2.0"> = { "2738377": "v1.0", "3225510": "v2.0" };
+
+/** Наши соотношения сторон → ближайшие поддерживаемые Grok. Без аспекта — портрет 2:3. */
+const GROK_ASPECTS: Record<string, string> = { "1:1": "1:1", "4:5": "3:4", "5:4": "4:3", "9:16": "9:16", "16:9": "16:9" };
+
+/**
+ * Строит тело workflow для не-SD баз (Flux.1 / Z Image / Grok) — в том же
+ * формате, что собирает сам сайт Civitai (src/server/services/orchestrator/ecosystems).
+ */
+function buildCivitaiNonSdStep(p: {
+  model: CivitaiModelConfig;
+  prompt: string;
+  negativePrompt?: string;
+  aspectRatio?: string;
+  width: number;
+  height: number;
+  seed?: number;
+  initImageUrl?: string;
+  denoise?: number;
+  referenceImageUrl?: string;
+}): { steps: Array<Record<string, unknown>> } {
+  const { model, prompt, negativePrompt, aspectRatio, width, height, seed, initImageUrl, denoise, referenceImageUrl } = p;
+  const versionId = model.air.match(/@(\d+)$/)?.[1] || "";
+
+  if (model.base === "grok") {
+    // Grok не принимает negative/seed/steps/размеры — только промпт и аспект.
+    // Внешность держим референсом: фото img2img или аватар персонажа → editImage.
+    const version = GROK_IMAGE_VERSIONS[versionId];
+    const sourceImage = initImageUrl || referenceImageUrl;
+    if (!version) throw new Error(`Неизвестная версия Grok Imagine (${versionId}) — нужна версия для картинок (v1.0/v2.0)`);
+    return {
+      steps: [{
+        $type: "imageGen",
+        input: {
+          engine: "grok",
+          version,
+          prompt,
+          quantity: 1,
+          aspectRatio: (aspectRatio && GROK_ASPECTS[aspectRatio]) || "2:3",
+          ...(sourceImage ? { operation: "editImage", images: [sourceImage] } : { operation: "createImage" }),
+        },
+      }],
+    };
+  }
+
+  if (model.base === "zimage") {
+    const eco = (model.air.match(/^urn:air:([^:]+):/i)?.[1] || "").toLowerCase();
+    const comfy = a1111ToComfy(model.sampler, model.scheduler);
+    const comfySchedulers = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "beta"];
+    return {
+      steps: [{
+        $type: "imageGen",
+        input: {
+          engine: "comfy",
+          ecosystem: "zImage",
+          model: eco === "zimagebase" ? "base" : "turbo",
+          diffuserModel: model.air,
+          operation: "createImage",
+          prompt,
+          ...(negativePrompt ? { negativePrompt } : {}),
+          width,
+          height,
+          cfgScale: model.cfgScale || 1,
+          steps: model.steps || 9,
+          sampler: comfy.sampler || "euler",
+          scheduler: comfy.scheduler && comfySchedulers.includes(comfy.scheduler) ? comfy.scheduler : "simple",
+          quantity: 1,
+          ...(typeof seed === "number" ? { seed } : {}),
+        },
+      }],
+    };
+  }
+
+  // flux1: классический textToImage с AIR (negative prompt Flux игнорирует; seed обязателен).
+  // img2img — через sourceImage (опечатка «Strenght» — так поле названо в API).
+  return {
+    steps: [{
+      $type: "textToImage",
+      input: {
+        model: model.air,
+        prompt,
+        width,
+        height,
+        steps: model.steps || 28,
+        cfgScale: model.cfgScale || 3.5,
+        seed: typeof seed === "number" ? seed : Math.floor(Math.random() * 2_147_483_647),
+        quantity: 1,
+        batchSize: 1,
+        ...(initImageUrl ? { sourceImage: initImageUrl, sourceImageDenoiseStrenght: denoise ?? 0.65 } : {}),
+      },
+    }],
+  };
+}
+
 async function generateImageCivitai(params: {
   apiToken: string;
   generationStyle: string;
@@ -1425,6 +1586,8 @@ async function generateImageCivitai(params: {
   initImageUrl?: string;
   /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
   denoise?: number;
+  /** Аватар персонажа как референс внешности (только Grok → editImage). */
+  referenceImageUrl?: string;
   /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
   seed?: number;
   /**
@@ -1438,7 +1601,7 @@ async function generateImageCivitai(params: {
   /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
   models: Record<string, CivitaiModelConfig[]>;
 }): Promise<{ url: string; model: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, seed, modelAir, models } = params;
+  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, seed, modelAir, models } = params;
 
   // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
   // иначе случайный чекпоинт из пула стиля (как при первичной генерации аватара).
@@ -1452,20 +1615,23 @@ async function generateImageCivitai(params: {
   const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
 
   const isImg2Img = !!initImageUrl;
-  const requestBody = {
+  if (isImg2Img && model.base === "zimage") {
+    throw new Error(`Civitai img2img не поддерживается для базы ${model.base}`);
+  }
+  const sdcpp = a1111ToSdCpp(model.sampler, model.scheduler);
+  if (isSdBase(model.base) && model.sampler && !sdcpp.sampleMethod) {
+    logger.warn({ air: model.air, sampler: model.sampler }, "civitai_sampler_unsupported_by_sdcpp");
+  }
+  const requestBody = isSdBase(model.base) ? {
     steps: [{
       $type: "imageGen",
       input: {
         engine: "sdcpp",
         ecosystem: model.base === "sd1" ? "sd1" : "sdxl",
-        // Для img2img Civitai ждёт workflow "img2img" + массив исходных изображений
-        // и параметр denoise (см. payload их генератора Image Variations).
+        // img2img по схеме Sd1/SdxlVariantImageGenInput: operation "createVariant",
+        // исходник — строкой в `image`, сила изменения — `strength` (0..1).
         ...(isImg2Img
-          ? {
-              workflow: "img2img",
-              images: [{ url: initImageUrl, width: w, height: h }],
-              denoise: denoise ?? 0.65,
-            }
+          ? { operation: "createVariant", image: initImageUrl, strength: denoise ?? 0.65 }
           : { operation: "createImage" }),
         model: model.air,
         prompt,
@@ -1475,18 +1641,18 @@ async function generateImageCivitai(params: {
         cfgScale: model.cfgScale,
         steps: model.steps,
         clipSkip: model.clipSkip,
-        // Сэмплер/расписание отправляем только если заданы явно; иначе Civitai
-        // берёт свой дефолт (сохраняет поведение легаси-пулов без сэмплера).
-        ...(model.sampler ? { sampler: model.sampler } : {}),
-        ...(model.scheduler ? { scheduler: model.scheduler } : {}),
+        // Сэмплер/расписание — в полях sdcpp (sampleMethod/schedule), только если
+        // заданы явно; иначе Civitai берёт свой дефолт.
+        ...(sdcpp.sampleMethod ? { sampleMethod: sdcpp.sampleMethod } : {}),
+        ...(sdcpp.schedule ? { schedule: sdcpp.schedule } : {}),
         quantity: 1,
         // Фиксируем seed, если пришёл сверху (сохранение внешности персонажа).
         ...(typeof seed === "number" ? { seed } : {}),
       },
     }],
-  };
+  } : buildCivitaiNonSdStep({ model, prompt, negativePrompt, aspectRatio, width: w, height: h, seed, initImageUrl, denoise, referenceImageUrl });
 
-  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampler: model.sampler || undefined, scheduler: model.scheduler || undefined, cfgScale: model.cfgScale, steps: model.steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
+  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampleMethod: sdcpp.sampleMethod, schedule: sdcpp.schedule, cfgScale: model.cfgScale, steps: model.steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
 
   const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
     method: "POST",
@@ -2313,14 +2479,18 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
 
     // ── Продвинутый режим: IP-Adapter identity через comfy-workflow (Фаза 1). ──
     // Включается настройкой COMFY_ENABLED и наличием ipAdapterImageUrl в запросе.
+    // Граф рассчитан на SD-чекпоинты: для Flux/ZImage/Grok comfy-путь пропускаем
+    // и идём в обычную генерацию (на том же выбранном чекпоинте).
     const ipAdapterImageUrl = (req.body as { ipAdapterImageUrl?: string }).ipAdapterImageUrl;
-    if (ipAdapterImageUrl && settings.COMFY_ENABLED === "true") {
+    const comfyModels = resolveCivitaiModels(settings);
+    const comfyCfg = ipAdapterImageUrl && settings.COMFY_ENABLED === "true"
+      ? (civitaiModelAir
+          ? civitaiConfigForAir(civitaiModelAir, comfyModels)
+          : comfyModels[generationStyle]?.[Math.floor(Math.random() * (comfyModels[generationStyle]?.length || 1))])
+      : undefined;
+    if (ipAdapterImageUrl && comfyCfg && isSdBase(comfyCfg.base)) {
       try {
-        const models = resolveCivitaiModels(settings);
-        const cfg = civitaiModelAir
-          ? civitaiConfigForAir(civitaiModelAir, models)
-          : models[generationStyle]?.[Math.floor(Math.random() * (models[generationStyle]?.length || 1))];
-        if (!cfg) throw new Error(`No Civitai model for style ${generationStyle}`);
+        const cfg = comfyCfg;
         const { width: cw, height: ch } = sdDimsForAspect(cfg.base, req.body.aspectRatio, { width: cfg.width, height: cfg.height });
         const preset = settings.IPADAPTER_PRESET || "PLUS (high strength)";
         // Явные модели IP-Adapter/CLIP-Vision (split-loader). Если обе заданы —
@@ -2396,8 +2566,10 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         negativePrompt,
         aspectRatio: req.body.aspectRatio,
         seed,
-        modelAir: civitaiModelAir,
-        models: resolveCivitaiModels(settings),
+        // Аватар персонажа как референс — используется только Grok-чекпоинтами.
+        referenceImageUrl: req.body.referenceImageUrl,
+        modelAir: civitaiModelAir ?? comfyCfg?.air,
+        models: comfyModels,
       });
 
       const imageResponse = await fetch(result.url);
