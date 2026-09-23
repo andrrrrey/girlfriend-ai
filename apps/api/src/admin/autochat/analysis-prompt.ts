@@ -139,10 +139,43 @@ export function parseAnalysisJson(raw: string): AnalysisResult {
 
   let parsed = tryParse(clean);
   if (!parsed) {
-    const start = clean.indexOf("{");
-    const end = clean.lastIndexOf("}");
-    if (start !== -1 && end > start) parsed = tryParse(clean.slice(start, end + 1));
+    // Берём ПЕРВЫЙ сбалансированный {…} — модель иногда после валидного JSON
+    // сыплет мусор (╝╝╝, повторы), и жадный lastIndexOf('}') ломал разбор.
+    const obj = extractFirstJsonObject(clean);
+    if (obj) parsed = tryParse(obj);
   }
-  // Фолбэк: не удалось распарсить — отдаём сырой текст как summary.
-  return parsed || { summary: clean || "Empty analysis response", findings: [] };
+  // Фолбэк: не распарсили — отдаём текст как summary, но чистим мусорные прогоны.
+  return parsed || { summary: sanitizeGarbage(clean) || "Empty analysis response", findings: [] };
+}
+
+/** Возвращает первую сбалансированную {…}-подстроку (учитывает строки/эскейпы). */
+function extractFirstJsonObject(s: string): string | null {
+  const start = s.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/** Схлопывает длинные прогоны одинаковых символов и режет длину (для фолбэка). */
+function sanitizeGarbage(s: string): string {
+  return s
+    .replace(/(\S)\1{3,}/gu, "$1$1$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim()
+    .slice(0, 1500);
 }

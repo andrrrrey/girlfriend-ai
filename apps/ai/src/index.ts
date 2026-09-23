@@ -337,6 +337,9 @@ function stripRoleplayActions(text: string): string {
   let out = text
     .replace(/\*[^*\n]*\*/g, " ") // *...* и **
     .replace(/\*/g, " ") // одиночные звёздочки
+    // Схлопываем деградацию модели: прогоны одного символа/эмодзи (🌙🌙🌙…,
+    // ╝╝╝, !!!!) до трёх максимум — иначе в чат прилетает «стена».
+    .replace(/(\S)\1{3,}/gu, "$1$1$1")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/ +([,.!?;:…»)])/g, "$1")
     .replace(/\n{3,}/g, "\n\n")
@@ -379,7 +382,11 @@ async function callOpenRouter(params: {
       max_tokens: maxTokens,
       temperature,
       top_p: 0.9,
-      ...(penalties ? { frequency_penalty: 0.7, presence_penalty: 0.5 } : {}),
+      // Чат — сильные штрафы против шаблонов; иначе (анализ) — лёгкий штраф,
+      // чтобы модель не срывалась в прогоны символов (╝╝╝), но JSON не ломался.
+      ...(penalties
+        ? { frequency_penalty: 0.7, presence_penalty: 0.5 }
+        : { frequency_penalty: 0.3 }),
     }),
     signal,
   });

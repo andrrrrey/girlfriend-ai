@@ -85,6 +85,13 @@ function similarity(a: string, b: string): number {
 /** Порог похожести реплик, выше которого считаем диалог зациклившимся. */
 const STUCK_SIMILARITY = 0.7;
 
+/** Вырожденная реплика: почти нет букв (стена эмодзи/символов, деградация модели). */
+function isDegenerate(text: string): boolean {
+  const letters = (text.match(/\p{L}/gu) || []).length;
+  const len = text.replace(/\s/g, "").length;
+  return len > 4 && letters / len < 0.2;
+}
+
 /** Ошибка «нет баланса» — останавливает всю задачу. */
 class BalanceError extends Error {}
 
@@ -287,7 +294,8 @@ export class AutochatService implements OnModuleInit {
               data: { succeeded: { increment: 1 } },
             });
 
-            if (reply && prevReply.length > 0 && similarity(reply, prevReply) >= STUCK_SIMILARITY) {
+            const looped = reply && prevReply.length > 0 && similarity(reply, prevReply) >= STUCK_SIMILARITY;
+            if (looped || isDegenerate(reply || "")) {
               stuckStreak++;
             } else {
               stuckStreak = 0;
