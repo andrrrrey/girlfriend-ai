@@ -327,6 +327,24 @@ function resolveChatProvider(settings: Record<string, string>): ChatProviderCfg 
 class ProviderBalanceError extends Error {}
 
 /**
+ * Убирает ролеплей-ремарки в звёздочках (*обнимает*, *smiles*, **…**) — модели,
+ * заточенные под ролеплей (MiniMax и др.), любят их вставлять, но нам нужна
+ * обычная человеческая переписка. Если после чистки не осталось слов (реплика
+ * была ЦЕЛИКОМ действием) — возвращаем исходный текст, чтобы не слать пустоту.
+ */
+function stripRoleplayActions(text: string): string {
+  if (!text) return text;
+  let out = text
+    .replace(/\*[^*\n]*\*/g, " ") // *...* и **
+    .replace(/\*/g, " ") // одиночные звёздочки
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.!?;:…»)])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return out || text.trim();
+}
+
+/**
  * Вызов OpenRouter (OpenAI-совместимый). Возвращает полный текст и токены.
  * Не-стрим (stream:false) — эндпоинты у нас всё равно эмитят один SSE-чанк.
  */
@@ -573,7 +591,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
   // chatMessages уже содержит system-сообщение первым, поэтому передаём как есть.
   if (chatCfg.provider === "openrouter") {
     try {
-      const { output, totalTokens } = await callOpenRouter({
+      const or = await callOpenRouter({
         apiKey,
         model,
         messages: chatMessages,
@@ -582,6 +600,8 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
         penalties: true,
         signal: abortController.signal,
       });
+      const output = stripRoleplayActions(or.output);
+      const totalTokens = or.totalTokens;
       if (!output) {
         logger.error({ model }, "openrouter_chat_empty_output");
         return reply.status(502).send({ error: "Empty response from AI model" });
@@ -709,7 +729,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     }
 
     let output: string = (Array.isArray(data.output) ? data.output.join("") : data.output) ?? data.message ?? "";
-    output = (output || "").trim();
+    output = stripRoleplayActions((output || "").trim());
 
     if (!output) {
       // Пустой ответ от LLM — это не ошибка сети, но и не валидный ответ.
@@ -825,7 +845,7 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
   // ─── Ветка OpenRouter ──────────────────────────────────────────────────────
   if (chatCfg.provider === "openrouter") {
     try {
-      const { output } = await callOpenRouter({
+      const or = await callOpenRouter({
         apiKey,
         model,
         system,
@@ -835,6 +855,8 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
         penalties: !!bodyMessages, // штрафы только в чат-режиме, не для JSON-анализа
         signal: abortController.signal,
       });
+      // Ремарки-звёздочки чистим только в чат-режиме (робот), не в JSON-анализе.
+      const output = bodyMessages ? stripRoleplayActions(or.output) : or.output;
       if (!output) return reply.status(502).send({ error: "Empty response from AI model" });
       return reply.send({ content: output });
     } catch (err: any) {
@@ -923,6 +945,8 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
 
     let output: string = (Array.isArray(data.output) ? data.output.join("") : data.output) ?? data.message ?? "";
     output = (output || "").trim();
+    // Ремарки-звёздочки чистим только в чат-режиме (робот), не в JSON-анализе.
+    if (bodyMessages) output = stripRoleplayActions(output);
 
     if (!output) {
       logger.error({ data, model }, "text_completion_empty_output");
