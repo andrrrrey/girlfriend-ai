@@ -1435,7 +1435,7 @@ function resolveCivitaiModels(settings: Record<string, string>): Record<string, 
  * Возвращает конфиг чекпоинта Civitai по его AIR. Сначала ищет во всех пулах
  * (чтобы взять корректные base/dims/steps). Если AIR в пулах нет (пул изменился
  * с момента генерации аватара) — синтезирует конфиг, определяя базу по сегменту
- * ecosystem самого AIR (sd1/flux1/zimage*/grok, иначе SDXL). Так переиспользование чекпоинта
+ * ecosystem самого AIR (sd1, flux1, zimageturbo/zimagebase, grok; иначе SDXL). Так переиспользование чекпоинта
  * персонажа не ломается даже после правок пулов.
  */
 function civitaiConfigForAir(air: string, models: Record<string, CivitaiModelConfig[]>): CivitaiModelConfig {
