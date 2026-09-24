@@ -1588,6 +1588,8 @@ async function generateImageCivitai(params: {
   denoise?: number;
   /** Аватар персонажа как референс внешности (только Grok → editImage). */
   referenceImageUrl?: string;
+  /** Промпт с SFW-тегами — подменяет `prompt` для Grok (модерация xAI не пропускает NSFW). */
+  sfwPrompt?: string;
   /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
   seed?: number;
   /**
@@ -1600,8 +1602,8 @@ async function generateImageCivitai(params: {
   modelAir?: string;
   /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
   models: Record<string, CivitaiModelConfig[]>;
-}): Promise<{ url: string; model: string }> {
-  const { apiToken, generationStyle, prompt, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, seed, modelAir, models } = params;
+}): Promise<{ url: string; model: string; prompt: string }> {
+  const { apiToken, generationStyle, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, sfwPrompt, seed, modelAir, models } = params;
 
   // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
   // иначе случайный чекпоинт из пула стиля (как при первичной генерации аватара).
@@ -1613,6 +1615,7 @@ async function generateImageCivitai(params: {
         return pool[Math.floor(Math.random() * pool.length)];
       })();
   const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
+  const prompt = model.base === "grok" && sfwPrompt ? sfwPrompt : params.prompt;
 
   const isImg2Img = !!initImageUrl;
   if (isImg2Img && model.base === "zimage") {
@@ -1677,8 +1680,15 @@ async function generateImageCivitai(params: {
       status?: string;
       output?: {
         images?: Array<{ id?: string; url?: string; available?: boolean }>;
+        errors?: string[] | null;
       };
     }>;
+  };
+
+  /** Причина отказа из ответа Civitai (напр. модерация xAI) — для текста ошибки. */
+  const failReason = (r: CivitaiWorkflow): string => {
+    const errs = (r.steps || []).flatMap((st) => st.output?.errors || []).filter(Boolean);
+    return errs.length ? `: ${errs.join("; ")}` : "";
   };
 
   let result = await response.json() as CivitaiWorkflow;
@@ -1692,7 +1702,7 @@ async function generateImageCivitai(params: {
 
   if (result.status === "succeeded" || result.status === "completed") {
     const imageUrl = extractImageUrl(result);
-    if (imageUrl) return { url: imageUrl, model: model.air };
+    if (imageUrl) return { url: imageUrl, model: model.air, prompt };
   }
 
   if ((result.status === "scheduled" || result.status === "processing") && result.id) {
@@ -1712,11 +1722,11 @@ async function generateImageCivitai(params: {
 
       if (result.status === "succeeded" || result.status === "completed") {
         const imageUrl = extractImageUrl(result);
-        if (imageUrl) return { url: imageUrl, model: model.air };
+        if (imageUrl) return { url: imageUrl, model: model.air, prompt };
       }
       if (result.status === "failed") {
         logger.error({ result }, "civitai_step_failed");
-        throw new Error("Civitai image generation failed");
+        throw new Error(`Civitai image generation failed${failReason(result)}`);
       }
     }
     throw new Error("Civitai image generation timed out after polling");
@@ -1725,11 +1735,11 @@ async function generateImageCivitai(params: {
   const stepStatus = result.steps?.[0]?.status;
   if (stepStatus === "failed") {
     logger.error({ result }, "civitai_step_failed");
-    throw new Error("Civitai image generation step failed");
+    throw new Error(`Civitai image generation step failed${failReason(result)}`);
   }
 
   logger.error({ result }, "civitai_unexpected_response");
-  throw new Error("Civitai image generation: no image URL in response");
+  throw new Error(`Civitai image generation: no image URL in response${failReason(result)}`);
 }
 
 // ─── Civitai comfy-workflow (Фаза 1: IP-Adapter identity) ──────────────────────
@@ -2241,6 +2251,10 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   // английский, иначе провайдер получит смешанный RU/EN промпт и сломает генерацию.
   prompt = await ensureEnglishPrompt(prompt);
 
+  // Grok (xAI) пропускает только SFW: внешняя модерация отклоняет NSFW-теги.
+  // Для Grok-чекпоинтов всегда используем SFW-набор глобальных тегов.
+  const grokSfwPrompt = applyGlobalPromptSettings(settings, prompt, negativePrompt, "sfw").prompt;
+
   // Глобальные теги (позитив) + обязательный negative_prompt (мердж с пользовательским).
   // В SFW-режиме подставляются SFW-теги и SFW-негатив вместо NSFW.
   ({ prompt, negativePrompt } = applyGlobalPromptSettings(settings, prompt, negativePrompt, contentMode));
@@ -2256,12 +2270,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   // (для Civitai это конкретный чекпоинт model.air, а не generic "civitai").
   const sendResult = (
     url: string,
-    meta: { model?: string; generationStyle?: string; width?: number; height?: number },
+    meta: { model?: string; generationStyle?: string; width?: number; height?: number; finalPrompt?: string },
   ) =>
     reply.send({
       url,
       meta: {
-        finalPrompt: prompt,
+        finalPrompt: meta.finalPrompt ?? prompt,
         finalNegativePrompt: negativePrompt,
         provider: provider || "modelslab",
         img2img: !!initImageUrl,
@@ -2300,6 +2314,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             initImageUrl,
             denoise,
             seed,
+            sfwPrompt: grokSfwPrompt,
             modelAir: civitaiModelAir,
             models: resolveCivitaiModels(settings),
           });
@@ -2314,13 +2329,13 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
                 const key = `images/${randomUUID()}.png`;
                 const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
                 logger.info({ key, generationStyle, denoise }, "civitai_img2img_uploaded_to_s3");
-                return sendResult(url, { model: result.model, generationStyle });
+                return sendResult(url, { model: result.model, generationStyle, finalPrompt: result.prompt });
               } catch (s3Err: any) {
                 logger.warn({ err: s3Err }, "civitai_img2img_s3_upload_failed");
               }
             }
           }
-          return sendResult(result.url, { model: result.model, generationStyle });
+          return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
         } catch (err: any) {
           logger.warn({ err: err?.message }, "civitai_img2img_failed_fallback_to_modelslab");
           // продолжаем в ModelsLab img2img ниже
@@ -2568,13 +2583,14 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         seed,
         // Аватар персонажа как референс — используется только Grok-чекпоинтами.
         referenceImageUrl: req.body.referenceImageUrl,
+        sfwPrompt: grokSfwPrompt,
         modelAir: civitaiModelAir ?? comfyCfg?.air,
         models: comfyModels,
       });
 
       const imageResponse = await fetch(result.url);
       if (!imageResponse.ok) {
-        return sendResult(result.url, { model: result.model, generationStyle });
+        return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
       }
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       const s3 = createS3Client();
@@ -2584,12 +2600,12 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           const key = `images/${randomUUID()}.png`;
           const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
           logger.info({ key, generationStyle }, "civitai_image_uploaded_to_s3");
-          return sendResult(url, { model: result.model, generationStyle });
+          return sendResult(url, { model: result.model, generationStyle, finalPrompt: result.prompt });
         } catch (s3Err: any) {
           logger.warn({ err: s3Err }, "civitai_image_s3_upload_failed");
         }
       }
-      return sendResult(result.url, { model: result.model, generationStyle });
+      return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
     } catch (err: any) {
       logger.error({ err }, "civitai_image_generation_error");
       if (isInsufficientBalance(0, String(err?.message ?? ""))) {
