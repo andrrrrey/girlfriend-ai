@@ -29,21 +29,24 @@ export type HealthResponse = { ok: boolean; service: string };
 
 /** Дефолтные позитивные теги: NSFW + базовое качество и анатомия. */
 export const DEFAULT_NSFW_PROMPT_TAGS =
-  "nsfw, explicit, masterpiece, best quality, highres, perfect anatomy, detailed face, detailed eyes";
+  "nsfw, explicit, masterpiece, best quality, highres, perfect anatomy, natural body proportions, detailed face, detailed eyes";
 
 /**
  * Дефолтный обязательный negative_prompt — защита от типовых артефактов
  * диффузионных моделей: кривые глаза/лицо, лишние/недостающие руки, ноги,
- * головы, пальцы, сросшиеся тела, лишние люди, низкое качество + возрастной
+ * головы, пальцы, сросшиеся тела, огромная голова без торса («голова на ногах»),
+ * fisheye-искажения перспективы, лишние люди, низкое качество + возрастной
  * safety-guard. Группы с весом (term:1.x) понимают SD1/SDXL (sdcpp), Z-Image,
  * ModelsLab; Flux и Grok негатив не используют. Веса ≤ 1.5: сильнее — модель
  * начинает «ломаться» и терять детализацию.
  */
 export const DEFAULT_NEGATIVE_PROMPT = [
   "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
-  "(bad anatomy, wrong anatomy, bad proportions, gross proportions, deformed, disfigured, mutation, mutated, malformed, body horror:1.3)",
+  "(bad anatomy, wrong anatomy, bad proportions, gross proportions, disproportionate body, deformed, disfigured, mutation, mutated, malformed, body horror:1.3)",
+  "(big head, oversized head, giant head, disproportionate head, bobblehead, tiny body, shrunken body, missing torso, no torso, no body, head on legs, floating head, disembodied head:1.4)",
+  "(fisheye, fisheye lens, lens distortion, wide-angle distortion, distorted perspective, warped perspective, extreme foreshortening, stretched face, warped body:1.3)",
   "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands, bad feet, extra toes, malformed feet:1.3)",
-  "(extra arms, extra arm, third arm, one arm, missing arms, missing arm, extra hands, extra limbs, missing limbs, amputee, extra legs, extra leg, third leg, one leg, missing legs, missing leg, fused limbs, malformed limbs, disconnected limbs, floating limbs:1.35)",
+  "(extra arms, extra arm, third arm, one arm, missing arms, missing arm, extra hands, extra limbs, missing limbs, amputee, extra legs, extra leg, third leg, one leg, missing legs, missing leg, fused limbs, malformed limbs, disconnected limbs, floating limbs, short legs, stretched legs:1.35)",
   "(two heads, extra head, multiple heads, missing head, headless, conjoined, fused bodies, extra torso, long neck, long body, elongated body:1.35)",
   "(poorly drawn face, distorted face, deformed face, mutated face, double face, asymmetric face, bad eyes, deformed eyes, asymmetric eyes, uneven eyes, mismatched eyes, misaligned eyes, lazy eye, cross-eyed, wall-eyed, extra eyes, missing eye, one eye, deformed iris, deformed pupils, extra pupils:1.3)",
   "(extra people, multiple people, crowd, duplicate, cloned face, twins:1.3)",
@@ -57,45 +60,69 @@ export const DEFAULT_NEGATIVE_PROMPT = [
 
 /** Дефолтные позитивные теги для SFW: закрытая одежда, нейтральный тон + качество и анатомия. */
 export const DEFAULT_SFW_PROMPT_TAGS =
-  "sfw, safe for work, fully clothed, modest clothing, covered body, wholesome, tasteful, non-sexual, family friendly, masterpiece, best quality, highres, perfect anatomy, detailed face, detailed eyes";
+  "sfw, safe for work, fully clothed, modest clothing, covered body, wholesome, tasteful, non-sexual, family friendly, masterpiece, best quality, highres, perfect anatomy, natural body proportions, detailed face, detailed eyes";
+
+/** Блоки SFW-негатива, исключающие откровенный контент (без артефактных). */
+const SFW_NEGATIVE_CONTENT = [
+  "(nsfw, explicit, nude, nudity, naked, topless, bottomless, partially nude, see-through, transparent clothing, sexual, sex, sex act, porn, pornographic, hentai, erotic, suggestive, lewd, seductive pose, provocative pose, spread legs, fetish, bdsm, bondage:1.5)",
+  "(lingerie, underwear, panties, bra, bikini, swimsuit, cleavage, exposed breasts, breasts out, nipples, areola, genitalia, pussy, penis, bare buttocks, cameltoe, cum, bodily fluids:1.5)",
+  "(blood, gore, violence, injury, wound:1.2)",
+];
 
 /**
  * Дефолтный negative_prompt для SFW: жёсткое исключение наготы, белья,
  * откровенных поз и фетиш-контента, а также крови/насилия + все артефактные
  * негативы и возрастной safety-guard.
  */
-export const DEFAULT_SFW_NEGATIVE_PROMPT = [
-  "(nsfw, explicit, nude, nudity, naked, topless, bottomless, partially nude, see-through, transparent clothing, sexual, sex, sex act, porn, pornographic, hentai, erotic, suggestive, lewd, seductive pose, provocative pose, spread legs, fetish, bdsm, bondage:1.5)",
-  "(lingerie, underwear, panties, bra, bikini, swimsuit, cleavage, exposed breasts, breasts out, nipples, areola, genitalia, pussy, penis, bare buttocks, cameltoe, cum, bodily fluids:1.5)",
-  "(blood, gore, violence, injury, wound:1.2)",
-  DEFAULT_NEGATIVE_PROMPT,
+export const DEFAULT_SFW_NEGATIVE_PROMPT = [...SFW_NEGATIVE_CONTENT, DEFAULT_NEGATIVE_PROMPT].join(", ");
+
+// ─── Прежние версии дефолтов (для апгрейда в миграторе) ──────────────────────
+
+/** v1 — исходный дефолт. */
+const NEGATIVE_PROMPT_V1 = [
+  "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
+  "bad anatomy, wrong anatomy, deformed, disfigured, mutation, mutated, malformed",
+  "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands:1.3)",
+  "extra arms, missing arms, extra hands, extra limbs, missing limbs, extra legs, missing legs, fused limbs, malformed limbs, disconnected limbs, long neck, long body",
+  "(poorly drawn face, distorted face, asymmetric eyes, cross-eyed, extra eyes, deformed eyes, closed eyes:1.1)",
+  "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
+  "(child, kid, toddler, infant, underage, loli, shota:1.5)",
+].join(", ");
+
+/** v2 — усиленный дефолт (руки/ноги/головы/глаза), до групп «голова без торса» и fisheye. */
+const NEGATIVE_PROMPT_V2 = [
+  "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
+  "(bad anatomy, wrong anatomy, bad proportions, gross proportions, deformed, disfigured, mutation, mutated, malformed, body horror:1.3)",
+  "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands, bad feet, extra toes, malformed feet:1.3)",
+  "(extra arms, extra arm, third arm, one arm, missing arms, missing arm, extra hands, extra limbs, missing limbs, amputee, extra legs, extra leg, third leg, one leg, missing legs, missing leg, fused limbs, malformed limbs, disconnected limbs, floating limbs:1.35)",
+  "(two heads, extra head, multiple heads, missing head, headless, conjoined, fused bodies, extra torso, long neck, long body, elongated body:1.35)",
+  "(poorly drawn face, distorted face, deformed face, mutated face, double face, asymmetric face, bad eyes, deformed eyes, asymmetric eyes, uneven eyes, mismatched eyes, misaligned eyes, lazy eye, cross-eyed, wall-eyed, extra eyes, missing eye, one eye, deformed iris, deformed pupils, extra pupils:1.3)",
+  "(extra people, multiple people, crowd, duplicate, cloned face, twins:1.3)",
+  "(child, kid, toddler, infant, underage, loli, shota:1.5)",
 ].join(", ");
 
 /**
  * Прежние дефолты — чтобы мигратор заменил значения в БД, которые админ не
- * правил (совпадают со старым дефолтом), на новые. Правленые вручную не трогаем.
+ * правил (совпадают с одной из прежних версий), на новые. Правленые вручную не трогаем.
  */
 export const LEGACY_PROMPT_DEFAULTS: Record<string, string[]> = {
-  NSFW_PROMPT_TAGS: ["nsfw, explicit, masterpiece, best quality, highres"],
-  SFW_PROMPT_TAGS: ["sfw, safe for work, wholesome, fully clothed, tasteful, masterpiece, best quality, highres"],
-  NEGATIVE_PROMPT: [
+  NSFW_PROMPT_TAGS: [
+    "nsfw, explicit, masterpiece, best quality, highres",
+    "nsfw, explicit, masterpiece, best quality, highres, perfect anatomy, detailed face, detailed eyes",
+  ],
+  SFW_PROMPT_TAGS: [
+    "sfw, safe for work, wholesome, fully clothed, tasteful, masterpiece, best quality, highres",
+    "sfw, safe for work, fully clothed, modest clothing, covered body, wholesome, tasteful, non-sexual, family friendly, masterpiece, best quality, highres, perfect anatomy, detailed face, detailed eyes",
+  ],
+  NEGATIVE_PROMPT: [NEGATIVE_PROMPT_V1, NEGATIVE_PROMPT_V2],
+  SFW_NEGATIVE_PROMPT: [
     [
-      "(worst quality, low quality, normal quality, lowres:1.4), blurry, out of focus, jpeg artifacts, grainy, watermark, signature, text, logo, username, error, cropped, out of frame",
-      "bad anatomy, wrong anatomy, deformed, disfigured, mutation, mutated, malformed",
-      "(bad hands, bad fingers, extra fingers, fused fingers, too many fingers, missing fingers, extra digit, fewer digits, mutated hands, malformed hands, poorly drawn hands:1.3)",
-      "extra arms, missing arms, extra hands, extra limbs, missing limbs, extra legs, missing legs, fused limbs, malformed limbs, disconnected limbs, long neck, long body",
-      "(poorly drawn face, distorted face, asymmetric eyes, cross-eyed, extra eyes, deformed eyes, closed eyes:1.1)",
-      "(extra people, multiple people, crowd, duplicate, cloned face, two heads, twins:1.3)",
-      "(child, kid, toddler, infant, underage, loli, shota:1.5)",
+      "(nsfw, explicit, nude, nudity, naked, topless, bottomless, sexual, sex, porn, hentai, erotic, suggestive, lingerie, underwear, cleavage, exposed breasts, nipples, genitalia:1.5)",
+      NEGATIVE_PROMPT_V1,
     ].join(", "),
+    [...SFW_NEGATIVE_CONTENT, NEGATIVE_PROMPT_V2].join(", "),
   ],
 };
-LEGACY_PROMPT_DEFAULTS.SFW_NEGATIVE_PROMPT = [
-  [
-    "(nsfw, explicit, nude, nudity, naked, topless, bottomless, sexual, sex, porn, hentai, erotic, suggestive, lingerie, underwear, cleavage, exposed breasts, nipples, genitalia:1.5)",
-    LEGACY_PROMPT_DEFAULTS.NEGATIVE_PROMPT[0],
-  ].join(", "),
-];
 
 /** Актуальные дефолты промпт-настроек генерации по ключу AppSetting. */
 export const PROMPT_SETTING_DEFAULTS: Record<string, string> = {

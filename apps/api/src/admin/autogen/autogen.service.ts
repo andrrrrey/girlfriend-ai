@@ -172,7 +172,7 @@ export class AutogenService implements OnModuleInit {
    * случайной одежды/позы/сцены/кадра. В SFW-режиме — только nsfw=false опции.
    */
   private async loadContext(mode: "nsfw" | "sfw"): Promise<AutogenContext> {
-    const [options, voices, appearance, pose, scene, camera, allowedGenders] = await Promise.all([
+    const [options, voices, appearance, pose, scene, camera, allowedGenders, existing] = await Promise.all([
       this.generation.getCharacterOptions(undefined, mode),
       this.prisma.voice.findMany({ where: { isActive: true }, orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
       this.generation.getAppearanceOptions(mode),
@@ -180,6 +180,8 @@ export class AutogenService implements OnModuleInit {
       this.generation.getSceneOptions(mode),
       this.generation.getCameraOptions(mode),
       this.generation.getEnabledGenders(),
+      // Имена существующих персонажей — чтобы новые не повторяли их.
+      this.prisma.character.findMany({ select: { name: true } }),
     ]);
     const byCategory = (category: string): PoolOption[] =>
       options
@@ -202,6 +204,7 @@ export class AutogenService implements OnModuleInit {
       locations: promptsOf(scene.LOCATION),
       framings: camera.FRAMING.map((o) => o.prompt).filter((p): p is string => !!p),
       allowedGenders,
+      usedNames: new Set(existing.map((c) => c.name.trim().toLowerCase())),
     };
   }
 

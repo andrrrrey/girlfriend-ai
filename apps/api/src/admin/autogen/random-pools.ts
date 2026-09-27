@@ -34,10 +34,45 @@ const KINKS = [
 const PERSONALITIES = ["Overly Confident", "Mysterious", "Obsessed With You", "Caregiver", "Dominant", "Submissive", "Seductress", "Cruel & Unforgiving", "Free Spirited", "Demanding Bully", "Hopeless Romantic", "Insatiable", "Shy & Innocent", "Playful Tease", "Intellectual", "Motherly", "Tsundere", "Yandere"];
 const STYLES = ["Realistic", "Semi-real", "Anime", "2d"];
 
-// Имена для генератора. Не привязаны к полу жёстко — рандом есть рандом.
-const FEMALE_NAMES = ["Ava", "Sofia", "Mia", "Luna", "Isabella", "Aria", "Nova", "Chloe", "Emma", "Zoe", "Layla", "Nina", "Elena", "Yuki", "Sakura", "Ingrid", "Freya", "Camila", "Priya", "Amara", "Bianca", "Daria", "Vera", "Mila"];
-const MALE_NAMES = ["Liam", "Noah", "Ethan", "Kai", "Adrian", "Leo", "Marco", "Dylan", "Elias", "Ivan", "Hiro", "Diego", "Aran", "Felix", "Nikolai", "Theo", "Ruben", "Sebastian"];
-const SURNAMES = ["Smith", "Novak", "Ivanova", "Rossi", "Dubois", "Kim", "Tanaka", "Silva", "Nguyen", "Ahmed", "Muller", "Johansson", "Reyes", "Kowalski", "Petrova", "Okafor", "Castillo", "Bauer"];
+// Имена для генератора — разные культуры, чтобы персонажи не повторялись.
+// Не привязаны к национальности жёстко. Уже занятые имена отсеиваются (usedNames).
+const FEMALE_NAMES = [
+  // англоязычные
+  "Ava", "Mia", "Chloe", "Emma", "Zoe", "Layla", "Olivia", "Amelia", "Harper", "Evelyn", "Abigail", "Emily", "Ella", "Scarlett", "Grace", "Lily", "Hannah", "Addison", "Aubrey", "Brooklyn", "Savannah", "Skylar", "Paisley", "Madison", "Kennedy", "Hailey", "Stella", "Hazel", "Violet", "Aurora", "Ivy", "Ruby", "Willow", "Summer", "Autumn", "Daisy", "Megan", "Jessica", "Ashley", "Brianna", "Kayla", "Taylor", "Morgan", "Sienna", "Poppy", "Imogen", "Evie", "Phoebe", "Tessa", "Jade",
+  // романские
+  "Sofia", "Isabella", "Camila", "Valentina", "Lucia", "Martina", "Paula", "Carmen", "Ines", "Alba", "Giulia", "Chiara", "Francesca", "Alessia", "Bianca", "Serena", "Elodie", "Camille", "Manon", "Chloé", "Juliette", "Margaux", "Léa", "Amélie", "Beatriz", "Mariana", "Gabriela", "Larissa", "Renata", "Fernanda", "Ximena", "Daniela", "Catalina", "Mariela",
+  // славянские и балтийские
+  "Daria", "Vera", "Mila", "Anastasia", "Polina", "Alina", "Ksenia", "Sofiya", "Yana", "Milana", "Kristina", "Oksana", "Olesya", "Veronika", "Zlata", "Katarina", "Agnieszka", "Zofia", "Marta", "Ivana", "Petra", "Lenka", "Tereza", "Rasa", "Liepa",
+  // германские и скандинавские
+  "Ingrid", "Freya", "Astrid", "Sigrid", "Linnea", "Elsa", "Maja", "Saga", "Frida", "Greta", "Lena", "Leonie", "Johanna", "Annika", "Nora", "Ida",
+  // азиатские
+  "Yuki", "Sakura", "Hana", "Aiko", "Mei", "Rin", "Emi", "Naomi", "Haruka", "Akari", "Ji-woo", "Seo-yeon", "Min-ji", "Soo-ah", "Ha-eun", "Lin", "Xiaoyu", "Mei-Ling", "Lan", "Mai", "Linh", "Thao", "Anong", "Malee", "Priya", "Ananya", "Aisha", "Diya", "Kavya", "Meera", "Isha",
+  // Ближний Восток, Африка, Турция
+  "Amara", "Layla", "Yasmin", "Leila", "Noor", "Zara", "Samira", "Farah", "Nadia", "Dalia", "Selin", "Elif", "Defne", "Zeynep", "Ayla", "Imani", "Zuri", "Nia", "Adaeze", "Amina", "Kemi", "Thandiwe", "Makena",
+  // короткие «модные»
+  "Luna", "Aria", "Nova", "Nina", "Elena", "Kira", "Lara", "Eva", "Maya", "Lexi", "Remi", "Cleo", "Iris", "Juno", "Esme", "Nyla", "Kaia", "Lola", "Rosa", "Tia",
+];
+const MALE_NAMES = [
+  "Liam", "Noah", "Ethan", "Mason", "Logan", "Lucas", "Jackson", "Aiden", "Carter", "Owen", "Wyatt", "Caleb", "Hunter", "Connor", "Jack", "Ryan", "Nathan", "Tyler", "Austin", "Blake", "Chase", "Cole", "Dylan", "Grant", "Miles", "Oscar", "Harry", "Alfie", "Archie", "Finn",
+  "Mateo", "Santiago", "Diego", "Alejandro", "Javier", "Rafael", "Marco", "Luca", "Matteo", "Lorenzo", "Enzo", "Hugo", "Louis", "Julien", "Antoine", "Bastien", "Thiago", "Gabriel", "Bruno", "Joao",
+  "Ivan", "Nikolai", "Dmitri", "Alexei", "Maxim", "Artem", "Kirill", "Roman", "Mikhail", "Pavel", "Timur", "Bogdan", "Marek", "Tomas", "Jakub", "Milan", "Luka", "Stefan",
+  "Elias", "Felix", "Theo", "Leon", "Emil", "Anton", "Jonas", "Lukas", "Nils", "Erik", "Sven", "Axel", "Magnus", "Viggo", "Bjorn", "Ruben", "Sebastian", "Adrian",
+  "Hiro", "Kenji", "Ren", "Haruto", "Sora", "Takumi", "Min-jun", "Ji-ho", "Seo-jun", "Wei", "Jun", "Hao", "Minh", "Arjun", "Rohan", "Vikram", "Kabir", "Dev",
+  "Omar", "Karim", "Tariq", "Youssef", "Emre", "Kerem", "Can", "Deniz", "Kofi", "Kwame", "Tunde", "Chidi", "Jabari", "Malik", "Idris",
+  "Kai", "Leo", "Aran", "Zane", "Jax", "Nico", "Ezra", "Rhys", "Silas", "Dante",
+];
+/** Нейтральные имена — для Non-binary. */
+const NEUTRAL_NAMES = [
+  "Alex", "Sam", "Jordan", "Riley", "Quinn", "Avery", "Rowan", "Sage", "River", "Skyler", "Emerson", "Finley", "Harley", "Jesse", "Kendall", "Parker", "Reese", "Robin", "Sasha", "Charlie", "Remy", "Ash", "Blair", "Eden", "Indigo", "Lane", "Marlowe", "Noa", "Ocean", "Phoenix", "Rain", "Shay", "Tatum", "Wren", "Yael", "Zion", "Kit", "Lux", "Nevada", "Arden",
+];
+const SURNAMES = [
+  "Smith", "Johnson", "Brooks", "Carter", "Hayes", "Bennett", "Foster", "Reed", "Walsh", "Quinn", "Hart", "Blake", "Monroe", "Sinclair", "Ellison", "Whitaker",
+  "Novak", "Ivanova", "Petrova", "Volkova", "Sokolova", "Morozova", "Kowalski", "Nowak", "Horvat", "Dvorak", "Kovac", "Popescu", "Marin",
+  "Rossi", "Bianchi", "Romano", "Ricci", "Moretti", "Dubois", "Laurent", "Moreau", "Lefevre", "Garcia", "Martinez", "Lopez", "Reyes", "Castillo", "Morales", "Silva", "Santos", "Costa", "Oliveira", "Ferreira",
+  "Muller", "Schmidt", "Weber", "Bauer", "Fischer", "Johansson", "Lindqvist", "Nilsson", "Berg", "Larsen", "Hansen", "De Vries", "Janssen",
+  "Kim", "Park", "Lee", "Choi", "Tanaka", "Sato", "Suzuki", "Watanabe", "Nakamura", "Chen", "Wang", "Li", "Zhang", "Nguyen", "Tran", "Pham", "Srisai", "Sharma", "Patel", "Kapoor", "Mehta", "Rao",
+  "Ahmed", "Haddad", "Khalil", "Nasser", "Yilmaz", "Demir", "Kaya", "Okafor", "Adeyemi", "Mensah", "Diallo", "Mbeki", "Kariuki",
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +122,20 @@ export interface AutogenContext {
   locations: string[];
   framings: string[];
   allowedGenders?: string[];
+  /**
+   * Имена уже существующих персонажей (lower-case). Новое имя выбирается из
+   * незанятых; после создания персонажа имя добавляется сюда же.
+   */
+  usedNames: Set<string>;
+}
+
+/** Случайное имя из пула, по возможности ещё не занятое; помечает его занятым. */
+function pickFreshName(pool: string[], used: Set<string>): string {
+  const unique = Array.from(new Set(pool));
+  const fresh = unique.filter((n) => !used.has(n.toLowerCase()));
+  const name = pick(fresh.length > 0 ? fresh : unique);
+  used.add(name.toLowerCase());
+  return name;
 }
 
 /** Доля персонажей с фэнтези-расой (на /create она опциональна, поверх обычной). */
@@ -120,8 +169,13 @@ export function buildRandomCharacter(ctx: AutogenContext, style?: PoolOption): R
       ? GENDERS.filter((g) => ctx.allowedGenders!.includes(g))
       : GENDERS;
   const gender = pick(genderPool.length > 0 ? genderPool : ["Female"]);
-  const isFemale = gender === "Female" || gender === "Trans Female";
-  const namePool = isFemale ? FEMALE_NAMES : Math.random() < 0.5 ? MALE_NAMES : FEMALE_NAMES;
+  const namePool =
+    gender === "Female" || gender === "Trans Female"
+      ? FEMALE_NAMES
+      : gender === "Male" || gender === "Trans Male"
+        ? MALE_NAMES
+        : NEUTRAL_NAMES;
+  const name = pickFreshName(namePool, ctx.usedNames);
 
   const styleOpt = style ?? (ctx.styles.length > 0 ? pick(ctx.styles) : undefined);
   const human = pickOpt(ctx.humanRaces, ETHNICITIES);
@@ -134,7 +188,7 @@ export function buildRandomCharacter(ctx: AutogenContext, style?: PoolOption): R
   const voice = ctx.voices.length > 0 ? pick(ctx.voices) : undefined;
 
   const dto: CreateUserCharacterDto = {
-    name: pick(namePool),
+    name,
     surname: Math.random() < 0.6 ? pick(SURNAMES) : undefined,
     age: randInt(18, 50),
     gender,
