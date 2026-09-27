@@ -1136,7 +1136,11 @@ async function startAvatarGeneration() {
     // активная модель = первая включённая; её провайдер определяет бэкенд.
     await loadImageModels();
     const activeModel = enabledImageModels[0];
-    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt, seed, contentMode: activeContentMode };
+    // Аватар — вертикальный 9:16 (SDXL 768×1344 — родной бакет модели; дефолтный
+    // 1024×1536 выше ~1 Мп и даёт вытянутую анатомию). hiresFix: аватар — исходник
+    // для всех фото персонажа (чат, generation), поэтому дорабатываем его в большем
+    // разрешении (апскейл + img2img-проход, Civitai SD/SDXL).
+    const jobPayload: Parameters<typeof createImageJob>[0] = { prompt, seed, aspectRatio: "9:16", hiresFix: true, contentMode: activeContentMode };
     if (activeModel) {
       jobPayload.model = activeModel.id;
       jobPayload.provider = activeModel.provider;

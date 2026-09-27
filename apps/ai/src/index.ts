@@ -37,6 +37,7 @@ import { File } from "buffer";
 import { translate as googleTranslate } from "@vitalets/google-translate-api";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 // Загружаем и валидируем переменные окружения
 const env = loadEnv();
@@ -1216,6 +1217,8 @@ interface ImageGenerateBody {
    *  "kontext" (Flux Kontext). Per-request перекрывает глобальный KONTEXT_ENABLED:
    *  явный "sdxl" запрещает Kontext даже при включённой настройке. */
   engine?: "sdxl" | "kontext";
+  /** Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create. */
+  hiresFix?: boolean;
 }
 
 // ─── Civitai RED Orchestration API ─────────────────────────────────────────
@@ -1602,7 +1605,11 @@ async function generateImageCivitai(params: {
   modelAir?: string;
   /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
   models: Record<string, CivitaiModelConfig[]>;
-}): Promise<{ url: string; model: string; prompt: string }> {
+  /** Явные размеры кадра (hires-проход) — перекрывают размеры по aspectRatio. */
+  dims?: { width: number; height: number };
+  /** Явное число шагов (hires-проход) — перекрывает шаги чекпоинта. */
+  steps?: number;
+}): Promise<{ url: string; model: string; prompt: string; base: CivitaiBase; width: number; height: number }> {
   const { apiToken, generationStyle, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, sfwPrompt, seed, modelAir, models } = params;
 
   // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
@@ -1614,7 +1621,8 @@ async function generateImageCivitai(params: {
         if (!pool?.length) throw new Error(`No Civitai models configured for style: ${generationStyle}`);
         return pool[Math.floor(Math.random() * pool.length)];
       })();
-  const { width: w, height: h } = sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
+  const { width: w, height: h } = params.dims ?? sdDimsForAspect(model.base, aspectRatio, { width: model.width, height: model.height });
+  const steps = params.steps ?? model.steps;
   const prompt = model.base === "grok" && sfwPrompt ? sfwPrompt : params.prompt;
 
   const isImg2Img = !!initImageUrl;
@@ -1642,7 +1650,7 @@ async function generateImageCivitai(params: {
         width: w,
         height: h,
         cfgScale: model.cfgScale,
-        steps: model.steps,
+        steps,
         clipSkip: model.clipSkip,
         // Сэмплер/расписание — в полях sdcpp (sampleMethod/schedule), только если
         // заданы явно; иначе Civitai берёт свой дефолт.
@@ -1655,7 +1663,7 @@ async function generateImageCivitai(params: {
     }],
   } : buildCivitaiNonSdStep({ model, prompt, negativePrompt, aspectRatio, width: w, height: h, seed, initImageUrl, denoise, referenceImageUrl });
 
-  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampleMethod: sdcpp.sampleMethod, schedule: sdcpp.schedule, cfgScale: model.cfgScale, steps: model.steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
+  logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampleMethod: sdcpp.sampleMethod, schedule: sdcpp.schedule, cfgScale: model.cfgScale, steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
 
   const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
     method: "POST",
@@ -1702,7 +1710,7 @@ async function generateImageCivitai(params: {
 
   if (result.status === "succeeded" || result.status === "completed") {
     const imageUrl = extractImageUrl(result);
-    if (imageUrl) return { url: imageUrl, model: model.air, prompt };
+    if (imageUrl) return { url: imageUrl, model: model.air, prompt, base: model.base, width: w, height: h };
   }
 
   if ((result.status === "scheduled" || result.status === "processing") && result.id) {
@@ -1722,7 +1730,7 @@ async function generateImageCivitai(params: {
 
       if (result.status === "succeeded" || result.status === "completed") {
         const imageUrl = extractImageUrl(result);
-        if (imageUrl) return { url: imageUrl, model: model.air, prompt };
+        if (imageUrl) return { url: imageUrl, model: model.air, prompt, base: model.base, width: w, height: h };
       }
       if (result.status === "failed") {
         logger.error({ result }, "civitai_step_failed");
@@ -1740,6 +1748,197 @@ async function generateImageCivitai(params: {
 
   logger.error({ result }, "civitai_unexpected_response");
   throw new Error(`Civitai image generation: no image URL in response${failReason(result)}`);
+}
+
+// ─── Постобработка результатов Civitai: апскейл и hires-fix ──────────────────
+// Настройки (AppSetting, все опциональны):
+//   CIVITAI_UPSCALE_ENABLED — "false" выключает апскейл результатов (по умолчанию вкл.);
+//   CIVITAI_UPSCALE_FACTOR  — итоговый множитель к исходному размеру, 1..4 (по умолчанию 2):
+//                             апскейлер даёт 4×, затем ужимаем sharp'ом до нужного;
+//   CIVITAI_UPSCALER_AIR    — AIR модели апскейлера (по умолчанию 4x-Remacri);
+//   HIRES_SCALE / HIRES_DENOISE / HIRES_STEPS — параметры hires-прохода аватара.
+
+/** 4x-Remacri — дефолтный апскейлер Civitai, хорош для фото и реализма. */
+const DEFAULT_UPSCALER_AIR = "urn:air:other:upscaler:civitai:147759@164821";
+/** Лимит стороны для SD1/SDXL (sdcpp): 2048, кратно 16. */
+const SD_MAX_SIDE = 2048;
+
+/**
+ * Апскейл картинки шагом `imageUpscaler` Orchestration API. Возвращает URL блоба.
+ * Цена — ~4 Buzz за 1 Мп исходника (4x-модель, 1 проход).
+ */
+async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir: string): Promise<string> {
+  type UpscaleWorkflow = {
+    id?: string;
+    status?: string;
+    steps?: Array<{
+      status?: string;
+      output?: { blob?: { url?: string; available?: boolean }; errors?: string[] | null };
+    }>;
+  };
+  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
+    body: JSON.stringify({
+      steps: [{ $type: "imageUpscaler", input: { image: imageUrl, model: modelAir, numberOfRepeats: 1 } }],
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Civitai upscaler API error: ${response.status} ${await response.text()}`);
+  }
+  let wf = await response.json() as UpscaleWorkflow;
+  const blobUrl = (r: UpscaleWorkflow): string | undefined => {
+    const blob = r.steps?.[0]?.output?.blob;
+    return blob?.url && blob.available !== false ? blob.url : undefined;
+  };
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const url = blobUrl(wf);
+    if (url && (wf.status === "succeeded" || wf.status === "completed")) return url;
+    if (wf.status === "failed" || wf.status === "canceled" || wf.steps?.[0]?.status === "failed") {
+      const errs = (wf.steps || []).flatMap((st) => st.output?.errors || []).filter(Boolean);
+      throw new Error(`Civitai upscaler failed${errs.length ? `: ${errs.join("; ")}` : ""}`);
+    }
+    if (!wf.id) break;
+    await new Promise((r) => setTimeout(r, 5000));
+    const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${wf.id}`, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+    });
+    if (!pollRes.ok) continue;
+    wf = await pollRes.json() as UpscaleWorkflow;
+  }
+  throw new Error("Civitai upscaler timed out");
+}
+
+async function downloadImage(url: string): Promise<Buffer> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`image download failed: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+const IMAGE_FORMATS: Record<string, { contentType: string; ext: string }> = {
+  jpeg: { contentType: "image/jpeg", ext: "jpg" },
+  png: { contentType: "image/png", ext: "png" },
+  webp: { contentType: "image/webp", ext: "webp" },
+};
+
+/**
+ * Скачивает результат Civitai и сохраняет в S3. С `upscale` — прогоняет через
+ * апскейлер (4×) и ужимает sharp'ом до CIVITAI_UPSCALE_FACTOR× от исходника
+ * (по умолчанию 2×: 768×1344 → 1536×2688, а не 3072×5376). Ошибка апскейла не
+ * валит генерацию — сохраняем исходник. Тип файла — по реальному формату
+ * (Civitai отдаёт JPEG; раньше всё сохранялось как .png/image/png).
+ * Возвращает null, если S3 не настроен или загрузка не удалась — тогда вызывающий
+ * отдаёт временный URL Civitai, как раньше.
+ */
+async function storeCivitaiImage(
+  apiToken: string,
+  sourceUrl: string,
+  settings: Record<string, string>,
+  opts: { upscale: boolean; log: Record<string, unknown> },
+): Promise<{ url: string; width?: number; height?: number } | null> {
+  const s3 = createS3Client();
+  if (!s3) return null;
+  try {
+    const original = await downloadImage(sourceUrl);
+    const meta = await sharp(original).metadata();
+    let body = original;
+    let format = IMAGE_FORMATS[meta.format ?? ""] ?? IMAGE_FORMATS.png;
+    let width = meta.width;
+    let height = meta.height;
+
+    const factor = Math.min(4, Math.max(1, Number(settings.CIVITAI_UPSCALE_FACTOR) || 2));
+    if (opts.upscale && settings.CIVITAI_UPSCALE_ENABLED !== "false" && factor > 1 && meta.width && meta.height) {
+      try {
+        const upscaledUrl = await upscaleImageCivitai(apiToken, sourceUrl, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR);
+        const upscaled = await downloadImage(upscaledUrl);
+        const { data, info } = await sharp(upscaled)
+          .resize(Math.round(meta.width * factor), Math.round(meta.height * factor), { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 92, mozjpeg: true })
+          .toBuffer({ resolveWithObject: true });
+        body = data;
+        format = IMAGE_FORMATS.jpeg;
+        width = info.width;
+        height = info.height;
+      } catch (err: any) {
+        logger.warn({ ...opts.log, err: err?.message }, "civitai_upscale_failed_store_original");
+      }
+    }
+
+    const key = `images/${randomUUID()}.${format.ext}`;
+    const url = await uploadToS3(s3, env.S3_BUCKET || "media", key, body, format.contentType);
+    logger.info({ ...opts.log, key, width, height, upscaled: body !== original }, "civitai_image_uploaded_to_s3");
+    return { url, width, height };
+  } catch (err: any) {
+    logger.warn({ ...opts.log, err: err?.message }, "civitai_image_store_failed");
+    return null;
+  }
+}
+
+/**
+ * Размеры hires-прохода: исходник × scale, с ограничением стороны 2048 и кратностью 16.
+ */
+function hiresDims(width: number, height: number, scale: number): { width: number; height: number } {
+  const k = Math.min(scale, SD_MAX_SIDE / Math.max(width, height));
+  return {
+    width: Math.floor((width * k) / 16) * 16,
+    height: Math.floor((height * k) / 16) * 16,
+  };
+}
+
+/**
+ * Hires-fix для SD1/SDXL: базовую картинку (~1 Мп) апскейлим и прогоняем через
+ * img2img на ТОМ ЖЕ чекпоинте и seed в большем разрешении с малой силой изменения.
+ * Модель дорисовывает реальные детали (кожа, глаза, волосы, руки), композиция и
+ * внешность сохраняются. SDXL ×1.5 (768×1344 → 1152×2016), SD1 ×2 (512×896 → 1024×1792).
+ * Используется для аватара на /create — он исходник для всех фото персонажа.
+ */
+async function hiresFixCivitai(params: {
+  apiToken: string;
+  base: { url: string; model: string; base: CivitaiBase; width: number; height: number };
+  prompt: string;
+  negativePrompt?: string;
+  generationStyle: string;
+  seed?: number;
+  models: Record<string, CivitaiModelConfig[]>;
+  settings: Record<string, string>;
+}): Promise<Awaited<ReturnType<typeof generateImageCivitai>>> {
+  const { apiToken, base, settings } = params;
+  const scale = Number(settings.HIRES_SCALE) || (base.base === "sd1" ? 2 : 1.5);
+  const dims = hiresDims(base.width, base.height, scale);
+  const denoise = Number(settings.HIRES_DENOISE) || 0.35;
+  const steps = Number(settings.HIRES_STEPS) || undefined;
+
+  // Источник для второго прохода — апскейл (чётче, чем простое растяжение внутри
+  // sdcpp). Не вышло — отдаём базовую картинку: Civitai растянет её сам.
+  let source = base.url;
+  try {
+    source = await upscaleImageCivitai(apiToken, base.url, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR);
+  } catch (err: any) {
+    logger.warn({ err: err?.message }, "hires_upscale_failed_use_base");
+  }
+
+  logger.info({ air: base.model, from: `${base.width}x${base.height}`, to: `${dims.width}x${dims.height}`, denoise }, "civitai_hires_fix");
+  const pass = (initImageUrl: string) => generateImageCivitai({
+    apiToken,
+    generationStyle: params.generationStyle,
+    prompt: params.prompt,
+    negativePrompt: params.negativePrompt,
+    initImageUrl,
+    denoise,
+    seed: params.seed,
+    modelAir: base.model,
+    models: params.models,
+    dims,
+    steps,
+  });
+  try {
+    return await pass(source);
+  } catch (err) {
+    // 4×-апскейл (~16 Мп) мог не пройти как исходник — повторяем с базовой картинкой.
+    if (source === base.url) throw err;
+    logger.warn({ err: (err as Error)?.message }, "hires_pass_failed_retry_with_base");
+    return pass(base.url);
+  }
 }
 
 // ─── Civitai comfy-workflow (Фаза 1: IP-Adapter identity) ──────────────────────
@@ -2319,23 +2518,14 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             models: resolveCivitaiModels(settings),
           });
 
-          const imageResponse = await fetch(result.url);
-          if (imageResponse.ok) {
-            const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-            const s3 = createS3Client();
-            const bucket = env.S3_BUCKET || "media";
-            if (s3) {
-              try {
-                const key = `images/${randomUUID()}.png`;
-                const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
-                logger.info({ key, generationStyle, denoise }, "civitai_img2img_uploaded_to_s3");
-                return sendResult(url, { model: result.model, generationStyle, finalPrompt: result.prompt });
-              } catch (s3Err: any) {
-                logger.warn({ err: s3Err }, "civitai_img2img_s3_upload_failed");
-              }
-            }
-          }
-          return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
+          const stored = await storeCivitaiImage(civitaiToken, result.url, settings, {
+            upscale: true,
+            log: { generationStyle, denoise, mode: "img2img" },
+          });
+          return sendResult(stored?.url ?? result.url, {
+            model: result.model, generationStyle, finalPrompt: result.prompt,
+            width: stored?.width ?? result.width, height: stored?.height ?? result.height,
+          });
         } catch (err: any) {
           logger.warn({ err: err?.message }, "civitai_img2img_failed_fallback_to_modelslab");
           // продолжаем в ModelsLab img2img ниже
@@ -2467,22 +2657,13 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
           guidanceScale: guidance,
           seed: typeof seed === "number" ? seed : undefined,
         });
-        const imgResp = await fetch(kontext.url);
-        if (imgResp.ok) {
-          const buf = Buffer.from(await imgResp.arrayBuffer());
-          const s3c = createS3Client();
-          if (s3c) {
-            try {
-              const key = `images/${randomUUID()}.png`;
-              const url = await uploadToS3(s3c, env.S3_BUCKET || "media", key, buf, "image/png");
-              logger.info({ key, generationStyle, mode: "flux-kontext", model: kmodel }, "civitai_kontext_uploaded_to_s3");
-              return sendResult(url, { model: `flux1-kontext-${kmodel}`, generationStyle });
-            } catch (s3Err: any) {
-              logger.warn({ err: s3Err }, "civitai_kontext_s3_upload_failed");
-            }
-          }
-        }
-        return sendResult(kontext.url, { model: `flux1-kontext-${kmodel}`, generationStyle });
+        const stored = await storeCivitaiImage(civitaiToken, kontext.url, settings, {
+          upscale: true,
+          log: { generationStyle, mode: "flux-kontext", model: kmodel },
+        });
+        return sendResult(stored?.url ?? kontext.url, {
+          model: `flux1-kontext-${kmodel}`, generationStyle, width: stored?.width, height: stored?.height,
+        });
       } catch (err: any) {
         logger.error({ err }, "civitai_kontext_generation_error");
         if (isInsufficientBalance(0, String(err?.message ?? ""))) {
@@ -2548,22 +2729,13 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         // В split-режиме модели IP-Adapter + CLIP-Vision объявляем как resources.
         const resources = [cfg.air, ...layers, ...(useSplit ? [ipModelAir, clipVisionAir] : [])];
         const comfy = await generateImageComfy({ apiToken: civitaiToken, workflow, resources, trace: "logs" });
-        const imgResp = await fetch(comfy.url);
-        if (imgResp.ok) {
-          const buf = Buffer.from(await imgResp.arrayBuffer());
-          const s3c = createS3Client();
-          if (s3c) {
-            try {
-              const key = `images/${randomUUID()}.png`;
-              const url = await uploadToS3(s3c, env.S3_BUCKET || "media", key, buf, "image/png");
-              logger.info({ key, generationStyle, mode: "comfy-ipadapter" }, "civitai_comfy_uploaded_to_s3");
-              return sendResult(url, { model: cfg.air, generationStyle });
-            } catch (s3Err: any) {
-              logger.warn({ err: s3Err }, "civitai_comfy_s3_upload_failed");
-            }
-          }
-        }
-        return sendResult(comfy.url, { model: cfg.air, generationStyle });
+        const stored = await storeCivitaiImage(civitaiToken, comfy.url, settings, {
+          upscale: true,
+          log: { generationStyle, mode: "comfy-ipadapter" },
+        });
+        return sendResult(stored?.url ?? comfy.url, {
+          model: cfg.air, generationStyle, width: stored?.width, height: stored?.height,
+        });
       } catch (err: any) {
         logger.error({ err }, "civitai_comfy_generation_error");
         if (isInsufficientBalance(0, String(err?.message ?? ""))) {
@@ -2574,7 +2746,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     }
 
     try {
-      const result = await generateImageCivitai({
+      let result = await generateImageCivitai({
         apiToken: civitaiToken,
         generationStyle,
         prompt,
@@ -2588,24 +2760,36 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         models: comfyModels,
       });
 
-      const imageResponse = await fetch(result.url);
-      if (!imageResponse.ok) {
-        return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
-      }
-      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-      const s3 = createS3Client();
-      const bucket = env.S3_BUCKET || "media";
-      if (s3) {
+      // Hires-fix (аватар на /create): второй img2img-проход в большем разрешении.
+      // Только SD1/SDXL — у Flux/ZImage/Grok нет такого img2img; им — обычный апскейл.
+      // Не вышло — сохраняем базовую картинку с апскейлом, аватар всё равно будет.
+      let hires = false;
+      if (req.body.hiresFix && isSdBase(result.base)) {
         try {
-          const key = `images/${randomUUID()}.png`;
-          const url = await uploadToS3(s3, bucket, key, imageBuffer, "image/png");
-          logger.info({ key, generationStyle }, "civitai_image_uploaded_to_s3");
-          return sendResult(url, { model: result.model, generationStyle, finalPrompt: result.prompt });
-        } catch (s3Err: any) {
-          logger.warn({ err: s3Err }, "civitai_image_s3_upload_failed");
+          result = await hiresFixCivitai({
+            apiToken: civitaiToken,
+            base: result,
+            prompt,
+            negativePrompt,
+            generationStyle,
+            seed,
+            models: comfyModels,
+            settings,
+          });
+          hires = true;
+        } catch (err: any) {
+          logger.warn({ err: err?.message }, "civitai_hires_fix_failed_use_base");
         }
       }
-      return sendResult(result.url, { model: result.model, generationStyle, finalPrompt: result.prompt });
+
+      const stored = await storeCivitaiImage(civitaiToken, result.url, settings, {
+        upscale: !hires,
+        log: { generationStyle, hires },
+      });
+      return sendResult(stored?.url ?? result.url, {
+        model: result.model, generationStyle, finalPrompt: result.prompt,
+        width: stored?.width ?? result.width, height: stored?.height ?? result.height,
+      });
     } catch (err: any) {
       logger.error({ err }, "civitai_image_generation_error");
       if (isInsufficientBalance(0, String(err?.message ?? ""))) {

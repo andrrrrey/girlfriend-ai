@@ -65,6 +65,12 @@ const SETTING_GROUPS = [
     keys: [
       { key: "CIVITAI_API_TOKEN", label: "Civitai API Token", type: "password" },
       { key: "CIVITAI_IMG2IMG_DENOISE", label: "Сила изменения img2img по умолчанию (0.1–1, деф. 0.65). Ниже — ближе к аватару, выше — свободнее поза/сцена. Применяется к чату/генерации, если не задано в запросе.", type: "text" },
+      { key: "CIVITAI_UPSCALE_ENABLED", label: "Апскейл результатов (чат, generation). Апскейлер Civitai 4× → ужимаем до множителя ниже. ~4 Buzz за картинку, +10–30 с.", type: "select", options: ["true", "false"] },
+      { key: "CIVITAI_UPSCALE_FACTOR", label: "Множитель апскейла к исходнику (1–4, деф. 2: 768×1344 → 1536×2688)", type: "text" },
+      { key: "CIVITAI_UPSCALER_AIR", label: "AIR апскейлера. Пусто = 4x-Remacri (urn:air:other:upscaler:civitai:147759@164821)", type: "text" },
+      { key: "HIRES_SCALE", label: "Hires-fix аватара: масштаб второго прохода (деф. SDXL 1.5, SD1 2; сторона ≤ 2048)", type: "text" },
+      { key: "HIRES_DENOISE", label: "Hires-fix аватара: сила изменения второго прохода (деф. 0.35; выше — больше деталей, но может уйти композиция)", type: "text" },
+      { key: "HIRES_STEPS", label: "Hires-fix аватара: шаги второго прохода (пусто = как у чекпоинта)", type: "text" },
     ],
   },
   {

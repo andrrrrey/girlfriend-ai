@@ -15,6 +15,7 @@
     "@repo/types": "workspace:*",
     "fastify": "^4.28.1",
     "openai": "^4.73.0",
+    "sharp": "^0.33.5",
     "@vitalets/google-translate-api": "^9.2.0"
   },
   "devDependencies": {

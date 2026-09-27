@@ -1,4 +1,4 @@
-import { IsString, MinLength, IsOptional, IsIn, IsInt, IsNumber, Min, Max } from "class-validator";
+import { IsString, MinLength, IsOptional, IsIn, IsInt, IsNumber, IsBoolean, Min, Max } from "class-validator";
 
 const ALLOWED_MODELS = [
   "realistic-vision-v51",
@@ -88,4 +88,12 @@ export class CreateImageJobDto {
   @Min(0.1)
   @Max(1)
   denoise?: number;
+
+  /**
+   * Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create.
+   * Дороже и дольше обычной генерации; для SD1/SDXL-чекпоинтов Civitai.
+   */
+  @IsOptional()
+  @IsBoolean()
+  hiresFix?: boolean;
 }

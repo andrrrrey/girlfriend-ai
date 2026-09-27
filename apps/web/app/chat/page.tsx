@@ -19,6 +19,7 @@ import {
   createImageJob,
   saveImageMessage,
   resizedMediaUrl,
+  aspectRatioForImage,
   type ChatSession,
   type Message,
   type Character,
@@ -48,6 +49,14 @@ function ChatPageInner() {
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  // Полноэкранный просмотр картинки из чата (оригинал, без пережатия).
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxUrl(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxUrl]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamContent, setStreamContent] = useState("");
@@ -732,9 +741,13 @@ function ChatPageInner() {
       const charModel = typeof activeCharPersonality.avatarModel === "string"
         ? (activeCharPersonality.avatarModel as string)
         : undefined;
+      // Пропорция кадра = пропорции аватара: новые аватары 9:16, старые — 2:3
+      // (дефолт бэкенда). Иначе img2img растягивает исходник под чужой кадр.
+      const avatarAspect = initImageUrl ? await aspectRatioForImage(initImageUrl) : undefined;
       const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
         ...(initImageUrl ? { initImageUrl } : {}),
+        ...(avatarAspect ? { aspectRatio: avatarAspect } : {}),
         ...(charSeed !== undefined ? { seed: charSeed } : {}),
         ...(charModel ? { model: charModel } : {}),
         provider: "civitai",
@@ -855,7 +868,11 @@ function ChatPageInner() {
 .choose-pose-btn { flex: 1; height: 32px; background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif; }
 .choose-pose-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .image-message { padding: 4px !important; }
-.chat-gen-image { max-width: 300px; width: 100%; border-radius: 8px; cursor: pointer; display: block; }
+.chat-gen-image { max-width: 300px; width: 100%; border-radius: 8px; cursor: zoom-in; display: block; }
+.chat-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.chat-lightbox-media { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; box-shadow: 0 0 60px rgba(0,0,0,0.8); cursor: default; }
+.chat-lightbox-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.chat-lightbox-close:hover { background: rgba(255,255,255,0.2); }
 .generating-indicator { display: flex; align-items: center; gap: 8px; }
 .generating-spinner { width: 14px; height: 14px; border: 2px solid #f95bad; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1098,11 +1115,14 @@ function ChatPageInner() {
                     </div>
                   ) : msg.type === "image" && msg.mediaUrl ? (
                     <div className="message-bubble image-message">
+                      {/* В ленте — webp 768/q90 (хватает для 300px на ретине и
+                          грузится в разы быстрее PNG); по клику — оригинал. */}
                       <img
-                        src={msg.mediaUrl}
+                        src={resizedMediaUrl(msg.mediaUrl, { w: 768, q: 90 }) ?? msg.mediaUrl}
                         alt={msg.content}
                         className="chat-gen-image"
-                        onClick={() => window.open(msg.mediaUrl!, "_blank")}
+                        decoding="async"
+                        onClick={() => setLightboxUrl(msg.mediaUrl!)}
                       />
                     </div>
                   ) : msg.type === "image" && !msg.mediaUrl ? (
@@ -1343,7 +1363,7 @@ function ChatPageInner() {
           <div
             className="profile-gallery"
             style={galleryImages[galleryIndex]
-              ? { backgroundImage: `url(${galleryImages[galleryIndex].url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              ? { backgroundImage: `url(${resizedMediaUrl(galleryImages[galleryIndex].url, { w: 768, q: 90 }) ?? galleryImages[galleryIndex].url})`, backgroundSize: 'cover', backgroundPosition: 'center top' }
               : {}
             }
           >
@@ -1496,6 +1516,15 @@ function ChatPageInner() {
           used={premiumPopup.used}
           onClose={() => setPremiumPopup(null)}
         />
+      )}
+
+      {lightboxUrl && (
+        <div className="chat-lightbox" onClick={() => setLightboxUrl(null)}>
+          <button className="chat-lightbox-close" onClick={() => setLightboxUrl(null)} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+          <img className="chat-lightbox-media" src={lightboxUrl} alt="" decoding="async" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );

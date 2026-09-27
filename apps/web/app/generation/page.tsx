@@ -19,6 +19,7 @@ import {
   deleteGenerationJob,
   uploadMedia,
   resizedMediaUrl,
+  aspectRatioForImage,
   characters as charactersApi,
 } from "../../lib/api";
 import { buildCharacterImagePrompt } from "../../lib/prompt";
@@ -1502,6 +1503,9 @@ function GenerationPageInner() {
         // Сохранённый seed и чекпоинт персонажа → совпадение внешности и модели.
         const charSeed = typeof personality.avatarSeed === "number" ? (personality.avatarSeed as number) : undefined;
         const charModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
+        // Кадр — в пропорции аватара, а не выбранной ориентации: img2img в чужой
+        // пропорции растягивает/кадрирует исходник и искажает внешность.
+        const charAspect = selectedCharacter.avatarUrl ? await aspectRatioForImage(selectedCharacter.avatarUrl) : undefined;
         const result = await createImageJob({
           prompt: finalPrompt,
           negativePrompt,
@@ -1510,7 +1514,7 @@ function GenerationPageInner() {
           ...(charModel ? { model: charModel } : {}),
           provider: "civitai",
           generationStyle: charStyle,
-          aspectRatio,
+          ...(charAspect ? { aspectRatio: charAspect } : {}),
           count,
           characterId: selectedCharacter.id,
           contentMode: activeContentMode,
@@ -2087,7 +2091,8 @@ function GenerationPageInner() {
           {/* Separator */}
           <div className="sep" />
 
-          {/* Orientation */}
+          {/* Orientation — с персонажем не показываем: кадр берётся по пропорции аватара. */}
+          {!(activeTab === "image" && selectedCharacter) && (<>
           <div className="chips-section">
             <div className="section-title">{tr("gp.orientation")}</div>
             <div className="chips-row">
@@ -2110,6 +2115,7 @@ function GenerationPageInner() {
 
           {/* Separator */}
           <div className="sep" />
+          </>)}
 
           {/* Number of items */}
           <div className="chips-section">

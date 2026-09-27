@@ -143,6 +143,8 @@ export interface ImageJobData {
   /** Движок identity: "sdxl" (обычный путь) | "kontext" (Flux Kontext). Per-request
    *  перекрывает глобальный KONTEXT_ENABLED в AI-сервисе. */
   engine?: "sdxl" | "kontext";
+  /** Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create. */
+  hiresFix?: boolean;
 }
 
 /**

@@ -67,6 +67,58 @@ export function resizedMediaUrl(
 }
 
 /**
+ * Соотношения сторон, которые понимает генерация (h/w). undefined = дефолт модели
+ * (портрет 2:3: SDXL 1024×1536, Flux/ZImage 832×1216, Grok 2:3).
+ */
+const GEN_ASPECTS: Array<{ value: string | undefined; ratio: number }> = [
+  { value: "9:16", ratio: 16 / 9 },
+  { value: undefined, ratio: 3 / 2 },
+  { value: "4:5", ratio: 5 / 4 },
+  { value: "1:1", ratio: 1 },
+  { value: "5:4", ratio: 4 / 5 },
+  { value: "16:9", ratio: 9 / 16 },
+];
+
+/**
+ * aspectRatio для img2img по фото персонажа: ближайший поддерживаемый к пропорции
+ * самого аватара. Кадр другой пропорции img2img растягивает/кадрирует исходник —
+ * лицо и фигура искажаются. Грузим 256px-дериватив: пропорции те же, а в UI он
+ * обычно уже в кеше. Не удалось загрузить → undefined (дефолт модели, 2:3).
+ */
+export function aspectRatioForImage(url: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (!img.naturalWidth) return resolve(undefined);
+      const ratio = img.naturalHeight / img.naturalWidth;
+      let best = GEN_ASPECTS[1];
+      for (const a of GEN_ASPECTS) {
+        if (Math.abs(a.ratio - ratio) < Math.abs(best.ratio - ratio)) best = a;
+      }
+      resolve(best.value);
+    };
+    img.onerror = () => resolve(undefined);
+    img.src = resizedMediaUrl(url, { w: 256 }) ?? url;
+  });
+}
+
+/**
+ * srcset из нескольких ширин медиа-стрима — браузер сам выберет нужную под
+ * DPR/размер (на ретине карточке 250px нужен ~500px, а не 400px).
+ * Для чужих URL (не наш стрим) возвращает undefined — srcset не нужен.
+ */
+export function resizedMediaSrcSet(
+  url: string | null | undefined,
+  widths: number[],
+  q?: number,
+): string | undefined {
+  if (!url || !url.includes("/media/stream")) return undefined;
+  return widths
+    .map((w) => `${resizedMediaUrl(url, { w, q })} ${w}w`)
+    .join(", ");
+}
+
+/**
  * Пара JWT-токенов, возвращаемая при входе/регистрации/обновлении.
  * accessToken — короткоживущий JWT (7 дней).
  * refreshToken — долгоживущий UUID (30 дней), хранится в БД.
@@ -2378,6 +2430,8 @@ export async function createImageJob(data: {
   seed?: number;
   contentMode?: "nsfw" | "sfw";
   denoise?: number;
+  /** Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create. */
+  hiresFix?: boolean;
 }) {
   return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
     method: "POST",
