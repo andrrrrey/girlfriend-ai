@@ -25,12 +25,7 @@ import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { backfillAllCharacterSeo } from "../chats/character-seo";
 import { loadEnv } from "@repo/config";
-import {
-  DEFAULT_NSFW_PROMPT_TAGS,
-  DEFAULT_NEGATIVE_PROMPT,
-  DEFAULT_SFW_PROMPT_TAGS,
-  DEFAULT_SFW_NEGATIVE_PROMPT,
-} from "@repo/types";
+import { PROMPT_SETTING_DEFAULTS, CHAT_PROMPT_SETTING_DEFAULTS } from "@repo/types";
 import { randomUUID } from "crypto";
 
 const env = loadEnv();
@@ -43,10 +38,9 @@ const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
  * @repo/types как фолбэк, поэтому показанное в админке = реально применяемому.
  */
 const SETTING_DEFAULTS: Record<string, string> = {
-  NSFW_PROMPT_TAGS: DEFAULT_NSFW_PROMPT_TAGS,
-  NEGATIVE_PROMPT: DEFAULT_NEGATIVE_PROMPT,
-  SFW_PROMPT_TAGS: DEFAULT_SFW_PROMPT_TAGS,
-  SFW_NEGATIVE_PROMPT: DEFAULT_SFW_NEGATIVE_PROMPT,
+  ...PROMPT_SETTING_DEFAULTS,
+  // Преамбулы и правила системного промпта чата (раньше были зашиты в apps/ai).
+  ...CHAT_PROMPT_SETTING_DEFAULTS,
 };
 
 /**

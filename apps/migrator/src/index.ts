@@ -24,7 +24,7 @@
 
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
-import { DEFAULT_NSFW_PROMPT_TAGS, DEFAULT_NEGATIVE_PROMPT } from "@repo/types";
+import { DEFAULT_NSFW_PROMPT_TAGS, DEFAULT_NEGATIVE_PROMPT, LEGACY_PROMPT_DEFAULTS, PROMPT_SETTING_DEFAULTS } from "@repo/types";
 import { Client } from "pg";
 import { spawn } from "child_process";
 import { existsSync, readFileSync } from "fs";
@@ -127,6 +127,19 @@ async function seedDatabase(client: Client): Promise<void> {
        ON CONFLICT (key) DO NOTHING`,
       [key, value],
     );
+  }
+
+  // Апгрейд промпт-дефолтов: значения, которые админ не правил (совпадают с
+  // прежним дефолтом), заменяем на актуальные. Изменённые вручную — не трогаем.
+  for (const [key, legacyValues] of Object.entries(LEGACY_PROMPT_DEFAULTS)) {
+    const current = PROMPT_SETTING_DEFAULTS[key];
+    if (!current) continue;
+    const res = await client.query(
+      `UPDATE "app_settings" SET value = $2, updated_at = NOW()
+       WHERE key = $1 AND value = ANY($3::text[])`,
+      [key, current, legacyValues],
+    );
+    if (res.rowCount) logger.info({ key }, "prompt_default_upgraded");
   }
 
   // ── Demo characters ──

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
-import { admin, type AutogenTask, type AutogenStatus } from "../../../lib/api";
+import { admin, type AutogenTask, type AutogenStatus, type CharacterOption } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 
@@ -91,6 +91,17 @@ const badge = (color: string): React.CSSProperties => ({
   whiteSpace: "nowrap",
 });
 
+const styleChip = (on: boolean): React.CSSProperties => ({
+  padding: "6px 14px",
+  borderRadius: 6,
+  border: `1px solid ${on ? "#f95bad" : "#313131"}`,
+  background: on ? "#f95bad" : "transparent",
+  color: on ? "#fff" : "#969696",
+  fontSize: 12,
+  cursor: "pointer",
+  fontFamily: "inherit",
+});
+
 /** Активный статус — задачу можно ставить на паузу/возобновлять/отменять. */
 function isLive(status: AutogenStatus): boolean {
   return status === "running" || status === "paused" || status === "stopped_no_balance";
@@ -101,6 +112,10 @@ export default function AdminAutogenPage() {
   const [tasks, setTasks] = useState<AutogenTask[]>([]);
   const [count, setCount] = useState("10");
   const [genMode, setGenMode] = useState<"nsfw" | "sfw">("nsfw");
+  // Стили (опции STYLE из «Настроек генераций»). Выбраны все — персонажи делятся
+  // поровну между стилями; один — все в нём.
+  const [styles, setStyles] = useState<CharacterOption[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -111,6 +126,14 @@ export default function AdminAutogenPage() {
 
   useEffect(() => {
     if (loading || user?.role !== "admin") return;
+    admin
+      .getCharacterOptions("STYLE")
+      .then((opts) => {
+        const sorted = [...opts].sort((a, b) => a.order - b.order);
+        setStyles(sorted);
+        setSelectedStyles(sorted.map((o) => o.id));
+      })
+      .catch(() => {});
     load();
     pollRef.current = setInterval(load, 3000);
     return () => {
@@ -139,10 +162,16 @@ export default function AdminAutogenPage() {
       setError("Укажите количество от 1 до 200");
       return;
     }
+    if (styles.length > 0 && selectedStyles.length === 0) {
+      setError("Выберите хотя бы один стиль");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      await admin.startAutogen(n, genMode);
+      // Все стили = пустой список (сервер возьмёт актуальные стили на момент запуска).
+      const allSelected = selectedStyles.length === styles.length;
+      await admin.startAutogen(n, genMode, allSelected ? [] : selectedStyles);
       load();
     } catch (err: any) {
       setError(err.message || "Не удалось запустить");
@@ -166,7 +195,8 @@ export default function AdminAutogenPage() {
 
       <h1 style={adminStyles.title}>Автогенерация персонажей</h1>
       <p style={adminStyles.subtitle}>
-        Фоновое создание персонажей со случайными атрибутами и AI-заполнением бэкстори.
+        Фоновое создание персонажей со случайными атрибутами (как «Create Your Character»:
+        опции из «Настроек генераций», голоса из каталога) и AI-заполнением бэкстори.
         Готовые персонажи сразу появляются в каталоге. При нехватке баланса генерация
         останавливается автоматически.
       </p>
@@ -199,6 +229,45 @@ export default function AdminAutogenPage() {
         <button style={adminStyles.button} onClick={start} disabled={busy}>
           {busy ? "Запуск..." : "Запустить"}
         </button>
+        {styles.length > 0 && (
+          <div style={{ flexBasis: "100%" }}>
+            <label style={adminStyles.label}>
+              Стиль персонажей{" "}
+              <span style={{ color: "#848484", fontWeight: 400 }}>
+                {selectedStyles.length > 1 && Number(count) > 0
+                  ? `— поровну: ~${Math.floor(Number(count) / selectedStyles.length)}–${Math.ceil(Number(count) / selectedStyles.length)} на стиль`
+                  : ""}
+              </span>
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <button
+                type="button"
+                style={styleChip(selectedStyles.length === styles.length)}
+                onClick={() =>
+                  setSelectedStyles(selectedStyles.length === styles.length ? [] : styles.map((o) => o.id))
+                }
+              >
+                Все стили
+              </button>
+              {styles.map((o) => {
+                const on = selectedStyles.includes(o.id);
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    style={styleChip(on)}
+                    onClick={() =>
+                      setSelectedStyles(on ? selectedStyles.filter((id) => id !== o.id) : [...selectedStyles, o.id])
+                    }
+                  >
+                    {o.name}
+                    {o.generationStyle ? <span style={{ opacity: 0.6 }}> · {o.generationStyle}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {tasks.length === 0 && (
@@ -218,6 +287,12 @@ export default function AdminAutogenPage() {
               </span>
               <span style={{ color: "#848484", fontSize: 11 }}>
                 {new Date(t.createdAt).toLocaleString("ru-RU")}
+              </span>
+              <span style={{ color: "#848484", fontSize: 11 }}>
+                {t.params?.contentMode === "sfw" ? "SFW" : "NSFW"} ·{" "}
+                {t.params?.styleIds?.length
+                  ? t.params.styleIds.map((id) => styles.find((o) => o.id === id)?.name ?? "?").join(", ")
+                  : "все стили"}
               </span>
             </div>
 

@@ -56,63 +56,140 @@ function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-// ─── Public ──────────────────────────────────────────────────────────────────
+// ─── Опции из БД (как на /create) ────────────────────────────────────────────
+
+/** Опция персонажа из админки (CharacterOption): имя + английский промпт. */
+export interface PoolOption {
+  id: string;
+  name: string;
+  prompt?: string | null;
+  generationStyle?: string | null;
+}
 
 /**
- * Собирает полностью случайный DTO персонажа (английские лейблы, как с фронта).
- * Нормализация значений произойдёт при создании (normalizeCharacterDto).
+ * Контекст задачи: всё, что /create берёт из админки. Загружается один раз на
+ * задачу (AutogenService.loadContext). Пустой список → фолбэк на статичный пул.
  */
-export function buildRandomCharacterDto(allowedGenders?: string[]): CreateUserCharacterDto {
+export interface AutogenContext {
+  styles: PoolOption[];
+  humanRaces: PoolOption[];
+  fantasyRaces: PoolOption[];
+  hairStyles: PoolOption[];
+  bodyTypes: PoolOption[];
+  breastSizes: PoolOption[];
+  buttSizes: PoolOption[];
+  /** Голоса из каталога (Voice.isActive) — name + ElevenLabs voiceId. */
+  voices: { name: string; voiceId: string }[];
+  /** Промпты опций генерации для случайных одежды/эмоции/позы/локации/кадра. */
+  outfits: string[];
+  expressions: string[];
+  poses: string[];
+  locations: string[];
+  framings: string[];
+  allowedGenders?: string[];
+}
+
+/** Доля персонажей с фэнтези-расой (на /create она опциональна, поверх обычной). */
+const FANTASY_RACE_CHANCE = 0.2;
+
+function pickOpt(options: PoolOption[], fallback: string[]): { name: string; prompt?: string } {
+  if (options.length > 0) {
+    const o = pick(options);
+    return { name: o.name, prompt: o.prompt || undefined };
+  }
+  return { name: pick(fallback) };
+}
+
+/** Случайный DTO + промпты выбранных опций (нужны только для аватара). */
+export interface RandomCharacter {
+  dto: CreateUserCharacterDto;
+  prompts: { ethnicity?: string; hairStyle?: string; bodyType?: string };
+}
+
+/**
+ * Собирает случайного персонажа так же, как «Create Your Character» (/create):
+ * стиль/расы/причёски/типы тела/размеры — из опций админки (с их промптами и
+ * generationStyle стиля), голос — из каталога, остальное — из тех же списков,
+ * что и на /create. Нормализация значений — при создании (normalizeCharacterDto).
+ *
+ * @param style — стиль персонажа (опция STYLE), выбранный планом задачи.
+ */
+export function buildRandomCharacter(ctx: AutogenContext, style?: PoolOption): RandomCharacter {
   const genderPool =
-    allowedGenders && allowedGenders.length > 0
-      ? GENDERS.filter((g) => allowedGenders.includes(g))
+    ctx.allowedGenders && ctx.allowedGenders.length > 0
+      ? GENDERS.filter((g) => ctx.allowedGenders!.includes(g))
       : GENDERS;
   const gender = pick(genderPool.length > 0 ? genderPool : ["Female"]);
   const isFemale = gender === "Female" || gender === "Trans Female";
   const namePool = isFemale ? FEMALE_NAMES : Math.random() < 0.5 ? MALE_NAMES : FEMALE_NAMES;
 
-  return {
+  const styleOpt = style ?? (ctx.styles.length > 0 ? pick(ctx.styles) : undefined);
+  const human = pickOpt(ctx.humanRaces, ETHNICITIES);
+  // Фэнтези-раса (эльф, демон…) заменяет обычную, как на /create.
+  const fantasy =
+    ctx.fantasyRaces.length > 0 && Math.random() < FANTASY_RACE_CHANCE ? pickOpt(ctx.fantasyRaces, []) : undefined;
+  const race = fantasy ?? human;
+  const hairStyle = pickOpt(ctx.hairStyles, HAIR_STYLES);
+  const bodyType = pickOpt(ctx.bodyTypes, BODY_TYPES);
+  const voice = ctx.voices.length > 0 ? pick(ctx.voices) : undefined;
+
+  const dto: CreateUserCharacterDto = {
     name: pick(namePool),
     surname: Math.random() < 0.6 ? pick(SURNAMES) : undefined,
-    age: randInt(18, 45),
+    age: randInt(18, 50),
     gender,
     orientation: pick(ORIENTATIONS),
-    style: pick(STYLES),
+    style: styleOpt?.name ?? pick(STYLES),
+    generationStyle: styleOpt?.generationStyle || undefined,
     nationality: pick(NATIONALITIES),
     language: pick(LANGUAGES),
-    ethnicity: pick(ETHNICITIES),
+    ethnicity: race.name,
+    voice: voice?.name,
+    voiceId: voice?.voiceId,
     eyeColor: pick(EYE_COLORS),
-    hairStyle: pick(HAIR_STYLES),
+    hairStyle: hairStyle.name,
     hairColor: pick(HAIR_COLORS),
-    bodyType: pick(BODY_TYPES),
-    breastSize: pick(SIZES),
-    buttSize: pick(SIZES),
+    bodyType: bodyType.name,
+    breastSize: pickOpt(ctx.breastSizes, SIZES).name,
+    buttSize: pickOpt(ctx.buttSizes, SIZES).name,
     personality: pick(PERSONALITIES),
     relationshipType: pick(RELATIONSHIP_TYPES),
     familyStatus: pick(FAMILY_STATUSES),
     lifestyle: pick(LIFESTYLES),
-    work: pickSome(WORKS, 1, 2),
-    hobbies: pickSome(HOBBIES, 2, 4),
-    kinks: pickSome(KINKS, 2, 5),
+    work: pickSome(WORKS, 1, 3),
+    hobbies: pickSome(HOBBIES, 1, 3),
+    kinks: pickSome(KINKS, 3, 7),
+  };
+  return {
+    dto,
+    prompts: { ethnicity: race.prompt, hairStyle: hairStyle.prompt, bodyType: bodyType.prompt },
   };
 }
 
+/** Случайные одежда/эмоция/поза/локация/кадр — как pickRandomPrompts на /create. */
+export function pickRandomScenePrompts(ctx: AutogenContext): string[] {
+  const one = (arr: string[]) => (arr.length > 0 ? [pick(arr)] : []);
+  return [...one(ctx.outfits), ...one(ctx.expressions), ...one(ctx.poses), ...one(ctx.locations), ...one(ctx.framings)];
+}
+
 /**
- * Строит промпт для генерации аватара из случайного DTO.
- * Аналог buildAvatarPrompt из apps/web/app/create/page.tsx, но на серверных
- * (ещё не нормализованных) английских лейблах — их можно класть в промпт как есть.
+ * Промпт аватара — зеркало buildAvatarPrompt из apps/web/app/create/page.tsx:
+ * английский промпт опции, если есть, иначе её имя. Без extraPrompts — это
+ * identity-промпт (сохраняется как avatarPrompt и переиспользуется в чате).
  */
-export function buildAvatarPrompt(dto: CreateUserCharacterDto): string {
+export function buildAvatarPrompt(char: RandomCharacter, extraPrompts: string[] = []): string {
+  const { dto, prompts } = char;
   const parts = [
     dto.style === "Anime" ? "anime style" : "photorealistic",
     (dto.gender || "female").toLowerCase(),
     dto.age ? `${dto.age} years old` : "",
-    dto.ethnicity ? dto.ethnicity.toLowerCase() : "",
+    prompts.ethnicity || (dto.ethnicity ? dto.ethnicity.toLowerCase() : ""),
     dto.hairColor ? `${dto.hairColor.toLowerCase()} hair` : "",
-    dto.hairStyle ? `${dto.hairStyle.toLowerCase()} hairstyle` : "",
+    prompts.hairStyle || (dto.hairStyle ? `${dto.hairStyle.toLowerCase()} hairstyle` : ""),
     dto.eyeColor ? `${dto.eyeColor.toLowerCase()} eyes` : "",
-    dto.bodyType ? `${dto.bodyType.toLowerCase()} body` : "",
-    "beautiful, high quality, detailed, portrait",
+    prompts.bodyType || (dto.bodyType ? `${dto.bodyType.toLowerCase()} body` : ""),
+    ...extraPrompts,
+    "beautiful, high quality, detailed",
   ].filter(Boolean);
   return parts.join(", ");
 }

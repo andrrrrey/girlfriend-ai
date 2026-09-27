@@ -99,10 +99,13 @@ const SETTING_GROUPS = [
   },
   {
     title: "System Prompt",
-    subtitle: "Глобальный шаблон системного промпта для всех AI-персонажей",
+    subtitle: "Системный промпт чата собирается так: преамбула (NSFW или SFW) → глобальный шаблон → промпт персонажа (генерируется из его анкеты) → «о пользователе» (чат-профиль) → правила. Пустое поле отключает блок.",
     keys: [
-      { key: "GLOBAL_SYSTEM_PROMPT_TEMPLATE", label: "Глобальный шаблон промпта (добавляется перед промптом каждого персонажа)", type: "textarea" },
+      { key: "CHAT_NSFW_PREAMBLE", label: "Преамбула NSFW-чата (самое начало промпта; без неё модель начинает цензурировать)", type: "textarea" },
+      { key: "CHAT_SFW_PREAMBLE", label: "Преамбула SFW-чата (вместо NSFW-преамбулы в режиме SFW)", type: "textarea" },
+      { key: "GLOBAL_SYSTEM_PROMPT_TEMPLATE", label: "Глобальный шаблон промпта (добавляется перед промптом каждого персонажа; по умолчанию пусто)", type: "textarea" },
       { key: "SFW_SYSTEM_PROMPT_TEMPLATE", label: "Шаблон системного промпта для SFW-режима (если пусто — используется глобальный)", type: "textarea" },
+      { key: "CHAT_RULES", label: "Правила поведения (добавляются в конец промпта блоком «RULES (follow strictly)»; по одному правилу на строку)", type: "textarea" },
       { key: "DEFAULT_STT_LANGUAGE", label: "Язык STT по умолчанию (en, ru, etc.)", type: "text" },
     ],
   },

@@ -572,6 +572,8 @@ export interface AutogenTask {
   createdAt: string;
   updatedAt: string;
   finishedAt: string | null;
+  /** Параметры запуска: режим контента и выбранные стили (id опций STYLE; пусто — все). */
+  params?: { contentMode?: "nsfw" | "sfw"; styleIds?: string[] } | null;
 }
 
 /** Статус фоновой задачи автопереписки (совпадает с AutogenStatus). */
@@ -1046,10 +1048,11 @@ export const admin = {
   // ─── Автогенерация персонажей ───────────────────────────────
 
   /** Запускает фоновую автогенерацию N персонажей (POST /admin/autogen). */
-  async startAutogen(count: number, contentMode?: "nsfw" | "sfw"): Promise<AutogenTask> {
+  /** styleIds — id опций STYLE; пусто — все стили, поровну от count. */
+  async startAutogen(count: number, contentMode?: "nsfw" | "sfw", styleIds?: string[]): Promise<AutogenTask> {
     return apiFetch<AutogenTask>("/admin/autogen", {
       method: "POST",
-      body: JSON.stringify({ count, contentMode }),
+      body: JSON.stringify({ count, contentMode, styleIds }),
     });
   },
 

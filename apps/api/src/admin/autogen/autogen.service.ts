@@ -3,8 +3,9 @@
  * @description Оркестратор фоновой автогенерации персонажей (админка).
  *
  * Для каждой задачи (AutoGenTask) последовательно создаёт N персонажей со
- * случайными атрибутами:
- *   1. случайный DTO (random-pools)
+ * случайными атрибутами — так же, как «Create Your Character» (/create):
+ *   1. случайный DTO из опций админки (random-pools + loadContext); стиль — по
+ *      плану задачи: выбранные стили чередуются равномерно (round-robin по номеру)
  *   2. аватар — image-job через очередь + поллинг AiJob
  *   3. бэкстори (childhood/lifeStory/phobias) через AI-текст
  *   4. создание персонажа (createdBy=null → платформенный, сразу виден на сайте)
@@ -24,7 +25,14 @@ import { PrismaService } from "../../prisma.service";
 import { CharactersService } from "../../chats/characters.service";
 import { GenerationService } from "../../generation/generation.service";
 import { generateBackstory } from "../../chats/generate-backstory";
-import { buildRandomCharacterDto, buildAvatarPrompt } from "./random-pools";
+import {
+  buildRandomCharacter,
+  buildAvatarPrompt,
+  pickRandomScenePrompts,
+  type AutogenContext,
+  type PoolOption,
+  type RandomCharacter,
+} from "./random-pools";
 
 /** Максимум повторов на одного персонажа при не-балансовой ошибке. */
 const MAX_RETRIES = 3;
@@ -69,10 +77,19 @@ export class AutogenService implements OnModuleInit {
 
   // ─── Публичный API (используется контроллером) ──────────────────────────────
 
-  async createTask(adminId: string, count: number, contentMode?: "nsfw" | "sfw") {
+  /**
+   * @param styleIds — id опций STYLE, в которых создавать персонажей. Пусто —
+   *   все стили. Несколько стилей делятся поровну от общего числа.
+   */
+  async createTask(adminId: string, count: number, contentMode?: "nsfw" | "sfw", styleIds?: string[]) {
     const mode: "nsfw" | "sfw" = contentMode === "sfw" ? "sfw" : "nsfw";
     const task = await this.prisma.autoGenTask.create({
-      data: { total: count, status: "running", createdBy: adminId, params: { contentMode: mode } },
+      data: {
+        total: count,
+        status: "running",
+        createdBy: adminId,
+        params: { contentMode: mode, styleIds: styleIds ?? [] },
+      },
     });
     void this.runTask(task.id);
     return task;
@@ -149,6 +166,45 @@ export class AutogenService implements OnModuleInit {
     return task;
   }
 
+  /**
+   * Всё, что /create берёт из админки: опции персонажа (стили с generationStyle,
+   * расы, причёски, типы тела, размеры), голоса каталога и опции генерации для
+   * случайной одежды/позы/сцены/кадра. В SFW-режиме — только nsfw=false опции.
+   */
+  private async loadContext(mode: "nsfw" | "sfw"): Promise<AutogenContext> {
+    const [options, voices, appearance, pose, scene, camera, allowedGenders] = await Promise.all([
+      this.generation.getCharacterOptions(undefined, mode),
+      this.prisma.voice.findMany({ where: { isActive: true }, orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
+      this.generation.getAppearanceOptions(mode),
+      this.generation.getPoseOptions(mode),
+      this.generation.getSceneOptions(mode),
+      this.generation.getCameraOptions(mode),
+      this.generation.getEnabledGenders(),
+    ]);
+    const byCategory = (category: string): PoolOption[] =>
+      options
+        .filter((o) => o.category === category)
+        .map((o) => ({ id: o.id, name: o.name, prompt: o.prompt, generationStyle: o.generationStyle }));
+    const promptsOf = (cats: { options: { prompt?: string | null }[] }[]) =>
+      cats.flatMap((c) => c.options).map((o) => o.prompt).filter((p): p is string => !!p);
+    return {
+      styles: byCategory("STYLE"),
+      humanRaces: byCategory("HUMAN_RACE"),
+      fantasyRaces: byCategory("FANTASY_RACE"),
+      hairStyles: byCategory("HAIR_STYLE"),
+      bodyTypes: byCategory("BODY_TYPE"),
+      breastSizes: byCategory("BREAST_SIZE"),
+      buttSizes: byCategory("BUTT_SIZE"),
+      voices: voices.map((v) => ({ name: v.name, voiceId: v.voiceId })),
+      outfits: promptsOf(appearance.OUTFITS),
+      expressions: promptsOf(pose.FACIAL_EXPRESSION),
+      poses: promptsOf(pose.POSE),
+      locations: promptsOf(scene.LOCATION),
+      framings: camera.FRAMING.map((o) => o.prompt).filter((p): p is string => !!p),
+      allowedGenders,
+    };
+  }
+
   // ─── Цикл генерации ─────────────────────────────────────────────────────────
 
   private async runTask(taskId: string): Promise<void> {
@@ -159,8 +215,17 @@ export class AutogenService implements OnModuleInit {
       const models = await this.generation.getImageStyles();
       const activeModel = models[0];
 
-      // Разрешённые админом гендеры (для авто-генерации).
-      const allowedGenders = await this.generation.getEnabledGenders();
+      const initial = await this.prisma.autoGenTask.findUnique({ where: { id: taskId } });
+      if (!initial) return;
+      const params = (initial.params ?? {}) as { contentMode?: string; styleIds?: string[] };
+      // Режим контента задачи: SFW-персонажи генерируются без NSFW-опций/промптов.
+      const contentMode: "nsfw" | "sfw" = params.contentMode === "sfw" ? "sfw" : "nsfw";
+      const ctx = await this.loadContext(contentMode);
+      // План стилей: выбранные (или все) опции STYLE по кругу — равные доли от total.
+      const selected = params.styleIds?.length
+        ? ctx.styles.filter((st) => params.styleIds!.includes(st.id))
+        : ctx.styles;
+      const stylePlan: PoolOption[] = selected.length > 0 ? selected : ctx.styles;
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -175,12 +240,13 @@ export class AutogenService implements OnModuleInit {
           return;
         }
 
-        // Режим контента задачи (из params): SFW-персонажи генерируются без NSFW.
-        const contentMode: "nsfw" | "sfw" =
-          (task.params as { contentMode?: string } | null)?.contentMode === "sfw" ? "sfw" : "nsfw";
+        // Стиль этого слота: номер персонажа в задаче по кругу по плану стилей.
+        // Слот сгорает и при пропуске (failed), поэтому доли равны по попыткам.
+        const slot = task.succeeded + task.failed;
+        const style = stylePlan.length > 0 ? stylePlan[slot % stylePlan.length] : undefined;
 
         try {
-          const characterId = await this.generateOneCharacter(task.createdBy, activeModel, allowedGenders, contentMode);
+          const characterId = await this.generateOneCharacter(task.createdBy, activeModel, ctx, contentMode, style);
           await this.prisma.autoGenTask.update({
             where: { id: taskId },
             data: { succeeded: { increment: 1 }, characterIds: { push: characterId } },
@@ -215,18 +281,20 @@ export class AutogenService implements OnModuleInit {
   private async generateOneCharacter(
     adminId: string,
     activeModel: { id: string; provider?: string } | undefined,
-    allowedGenders?: string[],
+    ctx: AutogenContext,
     contentMode: "nsfw" | "sfw" = "nsfw",
+    style?: PoolOption,
   ): Promise<string> {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const dto = buildRandomCharacterDto(allowedGenders);
+        const char = buildRandomCharacter(ctx, style);
+        const dto = char.dto;
 
         // 1. Аватар — ставим image-job и ждём результат. Сохраняем точный промпт
         // и seed показанного аватара, чтобы генерация картинок этого персонажа
         // (чат/страница генерации) совпадала с его аватаром.
-        const avatar = await this.generateAvatar(adminId, dto, activeModel, contentMode);
+        const avatar = await this.generateAvatar(adminId, char, ctx, activeModel, contentMode);
         dto.avatarUrl = avatar.url;
         dto.avatarPrompt = avatar.prompt;
         dto.avatarSeed = avatar.seed;
@@ -266,18 +334,35 @@ export class AutogenService implements OnModuleInit {
    */
   private async generateAvatar(
     adminId: string,
-    dto: ReturnType<typeof buildRandomCharacterDto>,
+    char: RandomCharacter,
+    ctx: AutogenContext,
     activeModel: { id: string; provider?: string } | undefined,
     contentMode: "nsfw" | "sfw" = "nsfw",
   ): Promise<{ url: string; prompt: string; seed: number; model?: string }> {
-    const prompt = buildAvatarPrompt(dto);
+    // Как на /create: в генерацию идёт identity + случайные одежда/поза/сцена/кадр,
+    // а сохраняется только identity (её переиспользуют чат и generation).
+    const identityPrompt = buildAvatarPrompt(char);
+    const prompt = buildAvatarPrompt(char, pickRandomScenePrompts(ctx));
     // Фиксируем seed, чтобы аватар был воспроизводим и совпадал с картинками в чате.
     const seed = Math.floor(Math.random() * 2_147_483_647);
-    const payload: Parameters<GenerationService["createImageJob"]>[1] = { prompt, seed, contentMode };
+    // 9:16 + hires-fix — те же параметры аватара, что на /create.
+    const payload: Parameters<GenerationService["createImageJob"]>[1] = {
+      prompt,
+      seed,
+      contentMode,
+      aspectRatio: "9:16",
+      hiresFix: true,
+    };
+    // generationStyle из стиля персонажа (Anime → аниме-чекпоинты и т.п.);
+    // без маппинга — realism, как на /create.
+    const generationStyle = char.dto.generationStyle || "realism";
     if (activeModel) {
       payload.model = activeModel.id;
       payload.provider = activeModel.provider;
-      if (activeModel.provider === "civitai") payload.generationStyle = "realism";
+      if (activeModel.provider === "civitai") payload.generationStyle = generationStyle;
+    } else {
+      payload.provider = "civitai";
+      payload.generationStyle = generationStyle;
     }
 
     const { jobId } = await this.generation.createImageJob(adminId, payload);
@@ -290,7 +375,7 @@ export class AutogenService implements OnModuleInit {
           const url = output?.url;
           // Чекпоинт (для Civitai — AIR) фактической генерации — чтобы картинки
           // персонажа шли на той же модели.
-          if (url) return { url, prompt, seed, model: output?.meta?.model };
+          if (url) return { url, prompt: identityPrompt, seed, model: output?.meta?.model };
           throw new Error("image job completed without url");
         }
         if (status.status === "failed") {
