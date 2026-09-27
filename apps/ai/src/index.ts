@@ -1676,7 +1676,9 @@ async function generateImageCivitai(params: {
 
   if (!response.ok) {
     const errBody = await response.text();
-    logger.error({ status: response.status, body: errBody, requestBody }, "civitai_api_error");
+    // data URL (инлайн-фото персонажа) в лог не тащим — там мегабайты base64.
+    const loggableBody = JSON.stringify(requestBody).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/g, "data:image/…(inline)");
+    logger.error({ status: response.status, body: errBody, requestBody: loggableBody }, "civitai_api_error");
     throw new Error(`Civitai Orchestration API error: ${response.status}`);
   }
 
@@ -1814,6 +1816,36 @@ async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir:
     wf = await pollRes.json() as UpscaleWorkflow;
   }
   throw new Error("Civitai upscaler timed out");
+}
+
+/**
+ * Внешний провайдер не скачает картинку по внутреннему адресу docker-сети
+ * (presigned URL на http://minio:9000 в dev/стейдже) — Civitai отвечал
+ * «Input image failed to download from URL» / 500. AI-сервис в той же сети, поэтому
+ * скачиваем сам и передаём data URL (JPEG, сторона ≤ 2048). Публичные URL не трогаем.
+ */
+async function inlineInternalImage(url: string | undefined): Promise<string | undefined> {
+  if (!url || url.startsWith("data:")) return url;
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return url;
+  }
+  const internal = host === "localhost" || host === "127.0.0.1" || !host.includes(".");
+  if (!internal) return url;
+  try {
+    const jpeg = await sharp(await downloadImage(url))
+      .rotate()
+      .resize(SD_MAX_SIDE, SD_MAX_SIDE, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    logger.info({ host, bytes: jpeg.length }, "internal_image_inlined");
+    return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+  } catch (err: any) {
+    logger.warn({ host, err: err?.message }, "internal_image_inline_failed");
+    return url;
+  }
 }
 
 async function downloadImage(url: string): Promise<Buffer> {
@@ -2446,7 +2478,11 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   // prompt/negativePrompt — let: ниже дописываем NSFW-теги и мерджим глобальный
   // negative_prompt из настроек (единое поведение для всех путей генерации).
   let { prompt, negativePrompt } = req.body;
-  const { model, provider, width, height, initImageUrl, seed } = req.body;
+  const { model, provider, width, height, seed } = req.body;
+  // Фото персонажа (img2img/Kontext) и референс Grok — во внешний провайдер
+  // нельзя отдавать внутренние адреса MinIO: инлайним их в data URL.
+  const initImageUrl = await inlineInternalImage(req.body.initImageUrl);
+  const referenceImageUrl = await inlineInternalImage(req.body.referenceImageUrl);
   const contentMode: "nsfw" | "sfw" = req.body.contentMode === "sfw" ? "sfw" : "nsfw";
 
   if (!prompt) {
@@ -2770,7 +2806,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         aspectRatio: req.body.aspectRatio,
         seed,
         // Аватар персонажа как референс — используется только Grok-чекпоинтами.
-        referenceImageUrl: req.body.referenceImageUrl,
+        referenceImageUrl,
         sfwPrompt: grokSfwPrompt,
         modelAir: civitaiModelAir ?? comfyCfg?.air,
         models: comfyModels,
