@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { resizedMediaUrl } from "../../lib/api";
+import { resizedMediaUrl, resizedMediaSrcSet } from "../../lib/api";
 import { localizeOption } from "../../lib/optionLabel";
 import { listCharactersForSeo } from "../../lib/serverApi";
 
@@ -64,7 +64,14 @@ export default async function CharactersCatalogPage() {
                   <div className="seo-card-bg">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} loading="lazy" decoding="async" alt={char.name} />
+                      <img
+                        src={img}
+                        srcSet={resizedMediaSrcSet(char.avatarUrl, [400, 768])}
+                        sizes="(max-width: 768px) 50vw, 260px"
+                        loading="lazy"
+                        decoding="async"
+                        alt={char.name}
+                      />
                     ) : (
                       <div className="seo-card-placeholder" />
                     )}
@@ -109,7 +116,7 @@ const catalogCss = `
   }
   .seo-card-wrap:hover .seo-card { border-color: #5b5b5b; }
   .seo-card-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; }
-  .seo-card-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+  .seo-card-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; border-radius: 8px; }
   .seo-card-placeholder { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%); }
   .seo-card-overlay { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(to bottom, rgba(9,9,9,0) 50%, rgba(9,9,9,0.85) 100%); }
   .seo-card-info { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 5px; }

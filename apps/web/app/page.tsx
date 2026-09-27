@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { characters, auth, likes, resizedMediaUrl } from "../lib/api";
+import { characters, auth, likes, resizedMediaUrl, resizedMediaSrcSet } from "../lib/api";
 import type { Character } from "../lib/api";
 import CharacterProfilePopup from "./components/CharacterProfilePopup";
 import ShareModal from "./components/ShareModal";
@@ -161,8 +161,9 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       const descHtml = description
         ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
         : `<p class="hover-description" style="color:#969696;">${t("home.noDescYet")}</p>`;
+      const cardSrcSet = resizedMediaSrcSet(char.avatarUrl, [400, 768]);
       const bgContent = char.avatarUrl
-        ? `<img src="${resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl}" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${char.name}" />`
+        ? `<img src="${resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl}"${cardSrcSet ? ` srcset="${cardSrcSet}" sizes="(max-width: 768px) 50vw, 280px"` : ""} loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:8px;" alt="${char.name}" />`
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
       const isLiked = likeStatuses[char.id]?.liked || false;
       const likeCount = likeStatuses[char.id]?.count || 0;

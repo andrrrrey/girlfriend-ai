@@ -312,8 +312,11 @@ export const PAGE_CSS = `
   .s9-header { display: flex; align-items: flex-start; width: 100%; flex-shrink: 0; }
   .s9-sep { width: 100%; border-top: 1px solid #313131; flex-shrink: 0; }
   .s9-body { display: flex; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
-  .s9-avatar-col { display: flex; flex-direction: column; gap: 8px; width: 205px; flex-shrink: 0; }
-  .s9-avatar-wrap { position: relative; flex: 1; background: #1e1e1e; border-radius: 8px; overflow: hidden; min-height: 280px; }
+  .s9-avatar-col { display: flex; flex-direction: column; gap: 8px; width: 220px; flex-shrink: 0; }
+  /* Пропорция 9:16 = как у сгенерированного аватара (aspectRatio "9:16" → 768×1344).
+     Раньше блок тянулся на всю высоту колонки (~205×500), и cover-кроп
+     превращал портрет в узкую вытянутую полосу. */
+  .s9-avatar-wrap { position: relative; flex: none; width: 100%; aspect-ratio: 9 / 16; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
   .s9-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
   .s9-spinner-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; }
   .s9-spinner { width: 28px; height: 28px; border: 2px solid #313131; border-top-color: #f95bad; border-radius: 50%; animation: s9spin 0.8s linear infinite; }
@@ -413,7 +416,7 @@ export const PAGE_CSS = `
   }
   @media (max-width: 600px) {
     .s9-body { flex-direction: column; }
-    .s9-avatar-col { width: 100%; }
+    .s9-avatar-col { width: 100%; max-width: 280px; align-self: center; }
     .s9-attrs-col { width: 100%; }
     .s9-custom-textareas { grid-template-columns: 1fr; }
     .dropdown-row { flex-direction: column; gap: 8px; }

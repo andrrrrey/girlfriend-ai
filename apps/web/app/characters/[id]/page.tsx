@@ -78,8 +78,9 @@ export default async function CharacterDetailPage({ params }: PageProps) {
   const personality = (character.personality as Record<string, unknown> | null) || {};
   const age = personality["age"];
   const heading = age ? `${character.name}, ${age}` : character.name;
+  // q=90: при q=80 webp давал заметные артефакты на коже/градиентах.
   const img = character.avatarUrl
-    ? resizedMediaUrl(character.avatarUrl, { w: 1080 }) ?? character.avatarUrl
+    ? resizedMediaUrl(character.avatarUrl, { w: 1080, q: 90 }) ?? character.avatarUrl
     : null;
   const tags = character.tags || [];
 
@@ -166,7 +167,7 @@ const detailCss = `
     border: 1px solid #313131; background: #0d0d0d;
     display: flex; align-items: center; justify-content: center;
   }
-  .seo-hero-img { max-width: 100%; max-height: 460px; width: auto; height: auto; object-fit: contain; display: block; }
+  .seo-hero-img { max-width: 100%; max-height: min(640px, 75vh); width: auto; height: auto; object-fit: contain; display: block; }
   .seo-detail-head { margin-bottom: 20px; }
   .seo-detail-title { font-size: 38px; font-weight: 800; line-height: 1.05; color: #fff; margin: 0 0 12px; }
   .seo-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }

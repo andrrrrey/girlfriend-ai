@@ -568,7 +568,8 @@ export default function GalleryPage() {
               lightbox.type === "video" ? (
                 <video className="g-lightbox-media" src={lightbox.url} controls autoPlay loop />
               ) : (
-                <img className="g-lightbox-media" src={resizedMediaUrl(lightbox.url, { w: 1080 }) ?? lightbox.url} alt="Gallery" decoding="async" />
+                // Полноэкранный просмотр — всегда оригинал, без webp-пережатия.
+                <img className="g-lightbox-media" src={lightbox.url} alt="Gallery" decoding="async" />
               )
             )}
           </div>

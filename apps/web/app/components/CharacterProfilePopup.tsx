@@ -152,7 +152,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
         <div className="cpp-left" style={s.left}>
           <div className="cpp-imgwrap" style={s.imgWrap}>
             {mainImage
-              ? <img src={resizedMediaUrl(mainImage, { w: 768 }) ?? mainImage} alt={character.name} style={s.avatar} decoding="async" />
+              ? <img src={resizedMediaUrl(mainImage, { w: 1080, q: 90 }) ?? mainImage} alt={character.name} style={s.avatar} decoding="async" />
               : <div style={s.avatarBg} />
             }
             {/* Миниатюры последних 5 изображений из чатов всех пользователей */}
@@ -164,7 +164,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                   title={tr("char.avatar")}
                 >
                   {character.avatarUrl && (
-                    <img src={resizedMediaUrl(character.avatarUrl, { w: 120 }) ?? character.avatarUrl} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
+                    <img src={resizedMediaUrl(character.avatarUrl, { w: 256 }) ?? character.avatarUrl} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
                   )}
                 </div>
                 {genImages.map((img) => (
@@ -174,7 +174,7 @@ export default function CharacterProfilePopup({ character, onClose, onLikeChange
                     onClick={() => setMainImage(img.url)}
                     title={img.label || tr("myai.generated")}
                   >
-                    <img src={resizedMediaUrl(img.url, { w: 120 }) ?? img.url} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
+                    <img src={resizedMediaUrl(img.url, { w: 256 }) ?? img.url} alt="" style={s.thumbImg} loading="lazy" decoding="async" />
                   </div>
                 ))}
               </div>

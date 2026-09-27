@@ -39,10 +39,11 @@ const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 МБ (видео для conti
 // держать их в кеше сколько угодно.
 const IMMUTABLE_CACHE = "public, max-age=31536000, immutable";
 
-// Разрешённые ширины ресайза. Любой иной `w` игнорируется и отдаётся оригинал —
-// это и защита от абуза (бесконечные размеры → засорение S3), и фиксированный
+// Разрешённые ширины ресайза. Произвольный `w` округляется вверх до ближайшей
+// разрешённой (w=120 → 256), а `w` больше максимальной — отдаёт оригинал.
+// Это и защита от абуза (бесконечные размеры → засорение S3), и фиксированный
 // набор деривативов с хорошим cache-hit.
-const ALLOWED_WIDTHS = new Set([96, 256, 400, 768, 1080]);
+const ALLOWED_WIDTHS = [96, 256, 400, 768, 1080];
 const DEFAULT_QUALITY = 80;
 
 /** Собирает Readable-поток S3-объекта в Buffer (нужно для sharp). */
@@ -54,11 +55,15 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/** Парсит и валидирует параметр ширины. Возвращает null, если ресайз не нужен. */
+/**
+ * Парсит параметр ширины и округляет вверх до ближайшей разрешённой.
+ * Возвращает null, если ресайз не нужен (нет/невалидный `w` или он больше максимума).
+ */
 function parseWidth(raw?: string): number | null {
   if (!raw) return null;
   const w = Number.parseInt(raw, 10);
-  return ALLOWED_WIDTHS.has(w) ? w : null;
+  if (!Number.isFinite(w) || w <= 0) return null;
+  return ALLOWED_WIDTHS.find((allowed) => allowed >= w) ?? null;
 }
 
 /** Парсит и ограничивает качество webp в диапазоне 40..90. */
