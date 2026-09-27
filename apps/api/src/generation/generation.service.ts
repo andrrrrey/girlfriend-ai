@@ -9,6 +9,17 @@ import { loadEnv } from "@repo/config";
 import { resolveEnabledGenders } from "../common/genders";
 
 const env = loadEnv();
+
+/** Хост без точки (minio, api) или localhost — адрес виден только внутри docker-сети. */
+function isInternalUrl(url: string | undefined): boolean {
+  if (!url) return true;
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1" || !host.includes(".");
+  } catch {
+    return true;
+  }
+}
 const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
 
 const CYRILLIC_RE = /[а-яА-ЯёЁ]/;
@@ -120,13 +131,13 @@ export class GenerationService {
       const keyMatch = url.match(/[?&]key=([^&]+)/);
       if (keyMatch) {
         const key = decodeURIComponent(keyMatch[1]);
-        return await this.s3.getSignedUrl(key);
+        return await this.publicUrlForKey(key);
       }
       // Прямой S3 URL → извлекаем ключ и подписываем.
       const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
       if (publicBase) {
         const key = S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media");
-        if (key) return await this.s3.getSignedUrl(key);
+        if (key) return await this.publicUrlForKey(key);
       }
       // Внешний http(s) URL — отдаём как есть.
       if (url.startsWith("http://") || url.startsWith("https://")) return url;
@@ -134,6 +145,19 @@ export class GenerationService {
       this.logger.warn(`Failed to build public init image url: ${err}`);
     }
     return undefined;
+  }
+
+  /**
+   * Публичный URL объекта S3 для внешнего провайдера. Подписанный URL строится на
+   * S3_ENDPOINT; если это внутренний адрес (dev/стейдж на MinIO: http://minio:9000),
+   * Civitai/ModelsLab его не скачают (Civitai отвечал 500 на editImage/img2img).
+   * Тогда отдаём наш публичный медиа-стрим через веб-прокси: WEB_URL/api-proxy/media/stream.
+   */
+  private async publicUrlForKey(key: string): Promise<string> {
+    if (isInternalUrl(env.S3_ENDPOINT) && !isInternalUrl(env.WEB_URL)) {
+      return `${env.WEB_URL.replace(/\/+$/, "")}/api-proxy/media/stream?key=${encodeURIComponent(key)}`;
+    }
+    return this.s3.getSignedUrl(key);
   }
 
   async createImageJob(

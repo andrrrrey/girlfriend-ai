@@ -1755,6 +1755,7 @@ async function generateImageCivitai(params: {
 //   CIVITAI_UPSCALE_ENABLED — "false" выключает апскейл результатов (по умолчанию вкл.);
 //   CIVITAI_UPSCALE_FACTOR  — итоговый множитель к исходному размеру, 1..4 (по умолчанию 2):
 //                             апскейлер даёт 4×, затем ужимаем sharp'ом до нужного;
+//   CIVITAI_UPSCALE_MAX_SIDE — потолок длинной стороны результата (по умолчанию 2688);
 //   CIVITAI_UPSCALER_AIR    — AIR модели апскейлера (по умолчанию 4x-Remacri);
 //   HIRES_SCALE / HIRES_DENOISE / HIRES_STEPS — параметры hires-прохода аватара.
 
@@ -1762,6 +1763,12 @@ async function generateImageCivitai(params: {
 const DEFAULT_UPSCALER_AIR = "urn:air:other:upscaler:civitai:147759@164821";
 /** Лимит стороны для SD1/SDXL (sdcpp): 2048, кратно 16. */
 const SD_MAX_SIDE = 2048;
+/**
+ * Апскейлер Civitai отклоняет крупные исходники («Source image dimensions exceed
+ * maximum allowed resolution of 4098 pixels»): Grok 1664×2496 не проходит,
+ * SDXL 1024×1536 — проходит. Такие картинки и так достаточно крупные — не апскейлим.
+ */
+const UPSCALER_MAX_SOURCE_SIDE = 2048;
 
 /**
  * Апскейл картинки шагом `imageUpscaler` Orchestration API. Возвращает URL блоба.
@@ -1824,7 +1831,9 @@ const IMAGE_FORMATS: Record<string, { contentType: string; ext: string }> = {
 /**
  * Скачивает результат Civitai и сохраняет в S3. С `upscale` — прогоняет через
  * апскейлер (4×) и ужимает sharp'ом до CIVITAI_UPSCALE_FACTOR× от исходника
- * (по умолчанию 2×: 768×1344 → 1536×2688, а не 3072×5376). Ошибка апскейла не
+ * (по умолчанию 2×: 768×1344 → 1536×2688, а не 3072×5376), но не больше
+ * CIVITAI_UPSCALE_MAX_SIDE по длинной стороне (1024×1536 → 1792×2688).
+ * Уже крупные картинки (Grok 1664×2496) не апскейлим. Ошибка апскейла не
  * валит генерацию — сохраняем исходник. Тип файла — по реальному формату
  * (Civitai отдаёт JPEG; раньше всё сохранялось как .png/image/png).
  * Возвращает null, если S3 не настроен или загрузка не удалась — тогда вызывающий
@@ -1847,12 +1856,19 @@ async function storeCivitaiImage(
     let height = meta.height;
 
     const factor = Math.min(4, Math.max(1, Number(settings.CIVITAI_UPSCALE_FACTOR) || 2));
-    if (opts.upscale && settings.CIVITAI_UPSCALE_ENABLED !== "false" && factor > 1 && meta.width && meta.height) {
+    const maxSide = Number(settings.CIVITAI_UPSCALE_MAX_SIDE) || 2688;
+    const srcSide = Math.max(meta.width ?? 0, meta.height ?? 0);
+    // Итоговый масштаб: factor×, но длинная сторона не больше maxSide.
+    const scale = srcSide ? Math.min(factor, maxSide / srcSide) : 1;
+    if (
+      opts.upscale && settings.CIVITAI_UPSCALE_ENABLED !== "false" && meta.width && meta.height &&
+      scale > 1.05 && srcSide <= UPSCALER_MAX_SOURCE_SIDE
+    ) {
       try {
         const upscaledUrl = await upscaleImageCivitai(apiToken, sourceUrl, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR);
         const upscaled = await downloadImage(upscaledUrl);
         const { data, info } = await sharp(upscaled)
-          .resize(Math.round(meta.width * factor), Math.round(meta.height * factor), { fit: "inside", withoutEnlargement: true })
+          .resize(Math.round(meta.width * scale), Math.round(meta.height * scale), { fit: "inside", withoutEnlargement: true })
           .jpeg({ quality: 92, mozjpeg: true })
           .toBuffer({ resolveWithObject: true });
         body = data;
