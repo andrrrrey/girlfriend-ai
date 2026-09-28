@@ -34,6 +34,7 @@ import {
   DEFAULT_CHAT_NSFW_PREAMBLE,
   DEFAULT_CHAT_SFW_PREAMBLE,
   DEFAULT_CHAT_RULES,
+  applyPeopleCountHints,
 } from "@repo/types";
 import OpenAI from "openai";
 import { File } from "buffer";
@@ -2496,11 +2497,15 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
 
   // Grok (xAI) пропускает только SFW: внешняя модерация отклоняет NSFW-теги.
   // Для Grok-чекпоинтов всегда используем SFW-набор глобальных тегов.
-  const grokSfwPrompt = applyGlobalPromptSettings(settings, prompt, negativePrompt, "sfw").prompt;
+  const grokSfwPrompt = applyPeopleCountHints(applyGlobalPromptSettings(settings, prompt, negativePrompt, "sfw").prompt, "").prompt;
 
   // Глобальные теги (позитив) + обязательный negative_prompt (мердж с пользовательским).
   // В SFW-режиме подставляются SFW-теги и SFW-негатив вместо NSFW.
   ({ prompt, negativePrompt } = applyGlobalPromptSettings(settings, prompt, negativePrompt, contentMode));
+  // Число людей в кадре: поза на двоих — явно называем партнёра (иначе модель
+  // рисует клон персонажа) и не запрещаем «лишних людей»; одиночная — «solo»
+  // в позитив (работает и там, где негатив игнорируется: Z-Image Turbo, Flux, Grok).
+  ({ prompt, negativePrompt } = applyPeopleCountHints(prompt, negativePrompt ?? ""));
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
   // Точный чекпоинт Civitai для переиспользования: если сверху пришёл AIR

@@ -25,6 +25,7 @@ import { PrismaService } from "../../prisma.service";
 import { CharactersService } from "../../chats/characters.service";
 import { GenerationService } from "../../generation/generation.service";
 import { generateBackstory } from "../../chats/generate-backstory";
+import { isMultiPersonPrompt } from "@repo/types";
 import {
   buildRandomCharacter,
   buildAvatarPrompt,
@@ -200,7 +201,9 @@ export class AutogenService implements OnModuleInit {
       voices: voices.map((v) => ({ name: v.name, voiceId: v.voiceId })),
       outfits: promptsOf(appearance.OUTFITS),
       expressions: promptsOf(pose.FACIAL_EXPRESSION),
-      poses: promptsOf(pose.POSE),
+      // Аватар — один человек: позы/действия на двоих+ (1boy, 2girls, секс-позы
+      // с партнёром) не берём — модель рисует второго человека клоном персонажа.
+      poses: promptsOf(pose.POSE).filter((p) => !isMultiPersonPrompt(p)),
       locations: promptsOf(scene.LOCATION),
       framings: camera.FRAMING.map((o) => o.prompt).filter((p): p is string => !!p),
       allowedGenders,

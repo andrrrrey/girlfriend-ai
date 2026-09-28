@@ -172,3 +172,57 @@ export const CHAT_PROMPT_SETTING_DEFAULTS: Record<string, string> = {
   CHAT_SFW_PREAMBLE: DEFAULT_CHAT_SFW_PREAMBLE,
   CHAT_RULES: DEFAULT_CHAT_RULES,
 };
+// ─── Число людей в кадре (позы на двоих и больше) ───────────────────────────
+// Опции поз/действий из каталога генерации бывают на двоих и больше: «1boy»,
+// «2girls», минет, миссионерская, поцелуи с партнёром и т.п. Для аватара
+// персонажа (/create, автогенерация) такие позы не берём, а в генерации явно
+// описываем второго человека — иначе модель рисует клон персонажа.
+// Правило проверено на manifest.json: 233 позы/действия на двоих+, ноль
+// срабатываний в расах, причёсках, одежде, локациях, выражениях и кадрах.
+
+/** Явная пометка одиночной позы — перекрывает всё остальное. */
+const SOLO_RE = /\bsolo\b/i;
+
+const MULTI_PERSON_RE =
+  /\b(1boy|1boys|1man|2boys|2girls|3girls|couple|partner|partners|threesome|foursome|orgy|gangbang|group sex|bukkake|makeout|making out|french kissing|deep kissing|kissing each other|mutual|men|69|his|him|another (woman|girl|man)|two (women|girls|men|people|bodies)|with a (man|woman|guy)|pov from (a )?man|man's|missionary|doggystyle|doggy style|spooning|scissoring|tribbing|penis|penises|cock|dick|handjob|footjob|titjob|titfuck|paizuri|blowjob|fellatio|cunnilingus|creampie|penetration|penetrating (her|1girl|another)|penetrated by|fantasy creature|non-human entity|tentacles?|worship\w*)\b/i;
+
+/** Партнёр — мужчина (а не только девушки/существа). */
+const MALE_PARTNER_RE = /\b(1boy|1boys|1man|2boys|men|his|him|man's|pov from (a )?man|penis|penises|cock|dick)\b/i;
+/** Только девушки (юри) — мужской партнёр не нужен. */
+const FEMALE_ONLY_RE = /\b(2girls|3girls|two girls|two women|another girl|another woman|yuri|lesbian)\b/i;
+
+/** Промпт (поза/действие) предполагает больше одного человека в кадре. */
+export function isMultiPersonPrompt(prompt: string | null | undefined): boolean {
+  if (!prompt) return false;
+  return !SOLO_RE.test(prompt) && MULTI_PERSON_RE.test(prompt);
+}
+
+/** Поза уже задаёт выражение лица — случайное выражение поверх неё конфликтует. */
+const EXPRESSION_IN_PROMPT_RE =
+  /\b(expression|smil\w*|grin\w*|frown\w*|pout\w*|blush\w*|moan\w*|ahegao|gaze|laugh\w*|crying|tears|tongue out|biting (her )?lip|eyes (closed|half-closed|rolled|shut))\b/i;
+
+export function promptDescribesExpression(prompt: string | null | undefined): boolean {
+  return !!prompt && EXPRESSION_IN_PROMPT_RE.test(prompt);
+}
+
+/**
+ * Подсказки о числе людей для итогового промпта генерации:
+ *  - сцена на двоих+ → явно называем партнёра (иначе модель рисует второго
+ *    человека по описанию персонажа — клон) и убираем из негатива
+ *    «extra people / multiple people», которые спорят с такой позой;
+ *  - одиночная → «solo, single person»: работает и там, где негатив
+ *    игнорируется (Z-Image Turbo, Flux, Grok).
+ */
+export function applyPeopleCountHints(prompt: string, negativePrompt: string): { prompt: string; negativePrompt: string } {
+  if (!isMultiPersonPrompt(prompt)) {
+    return { prompt: `${prompt}, solo, single person`, negativePrompt };
+  }
+  const partner =
+    MALE_PARTNER_RE.test(prompt) && !FEMALE_ONLY_RE.test(prompt)
+      ? "a man and a woman, two different people"
+      : "two different people with different faces, not clones";
+  return {
+    prompt: `${prompt}, ${partner}`,
+    negativePrompt: negativePrompt.replace(/\b(extra people|multiple people),\s*/gi, ""),
+  };
+}

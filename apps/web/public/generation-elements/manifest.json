@@ -10,43 +10,43 @@
         "european": {
           "name": "Европейская",
           "group": "Человеческие",
-          "prompt": "european caucasian ethnicity, light fair pale white skin tone, european facial bone structure with a defined narrow nose bridge, round or deep-set eyes with light colored irises such as blue green or grey, naturally straight or wavy hair in blonde brown or red shades, thin to medium lips, high cheekbones, typical Northern or Western European appearance",
+          "prompt": "european caucasian ethnicity, light fair pale white skin tone, european facial bone structure with a defined narrow nose bridge, round or deep-set eyes, thin to medium lips, high cheekbones, typical Northern or Western European appearance",
           "file": "Этничность/european.jpg"
         },
         "latina": {
           "name": "Латиноамериканская",
           "group": "Человеческие",
-          "prompt": "latina hispanic ethnicity, warm olive to light brown tan skin tone with golden undertones, soft rounded facial features with full lips, dark brown or black slightly wavy to curly thick hair, dark brown expressive almond-shaped eyes, wider nose bridge than european, naturally curvaceous body type, typical Latin American or Hispanic appearance",
+          "prompt": "latina hispanic ethnicity, warm olive to light brown tan skin tone with golden undertones, soft rounded facial features with full lips, expressive almond-shaped eyes, wider nose bridge than european, typical Latin American or Hispanic appearance",
           "file": "Этничность/latina.jpg"
         },
         "east_asian": {
           "name": "Восточноазиатская",
           "group": "Человеческие",
-          "prompt": "east asian ethnicity of Japanese Korean or Chinese descent, light to pale smooth porcelain skin tone with yellow or neutral undertones, monolid or slight double-eyelid almond-shaped dark brown to black eyes, flat nose bridge with a small rounded nose tip, straight sleek black or very dark brown hair, small lips, delicate refined facial structure with soft jawline, compact facial proportions",
+          "prompt": "east asian ethnicity of Japanese Korean or Chinese descent, light to pale smooth porcelain skin tone with yellow or neutral undertones, monolid or slight double-eyelid almond-shaped eyes, flat nose bridge with a small rounded nose tip, small lips, delicate refined facial structure with soft jawline, compact facial proportions",
           "file": "Этничность/east_asian.jpg"
         },
         "southeast_asian": {
           "name": "Юго-Восточная Азия",
           "group": "Человеческие",
-          "prompt": "southeast asian ethnicity of Thai Filipino Vietnamese or Indonesian descent, warm medium brown to golden tan skin tone, wider flatter nose bridge, full soft lips, dark brown to black eyes that are rounder and more open than East Asian, thick dark black straight or wavy hair, softer rounder facial features with a wider face shape, naturally petite body frame",
+          "prompt": "southeast asian ethnicity of Thai Filipino Vietnamese or Indonesian descent, warm medium brown to golden tan skin tone, wider flatter nose bridge, full soft lips, eyes that are rounder and more open than East Asian, softer rounder facial features with a wider face shape",
           "file": "Этничность/southeast_asian.jpg"
         },
         "south_asian": {
           "name": "Южноазиатская",
           "group": "Человеческие",
-          "prompt": "south asian ethnicity of Indian Sri Lankan or Pakistani descent, medium to deep brown warm skin tone with rich warm undertones, large expressive dark brown nearly black eyes with thick dark eyelashes and naturally shaped eyebrows, prominent defined nose with a straight or slightly aquiline bridge, thick dark black wavy or curly hair, full pigmented lips, strong defined facial bone structure",
+          "prompt": "south asian ethnicity of Indian Sri Lankan or Pakistani descent, medium to deep brown warm skin tone with rich warm undertones, large expressive eyes with thick dark eyelashes and naturally shaped eyebrows, prominent defined nose with a straight or slightly aquiline bridge, full pigmented lips, strong defined facial bone structure",
           "file": "Этничность/south_asian.jpg"
         },
         "arabian": {
           "name": "Арабская",
           "group": "Человеческие",
-          "prompt": "middle eastern Arabian ethnicity, light olive to warm medium brown skin tone with warm golden undertones, large dark expressive deep brown or hazel eyes with thick dark lashes and naturally dense eyebrows, prominent aquiline or straight defined nose, full well-shaped lips, strong angular facial features with a defined jawline, thick dark black wavy hair, distinct Middle Eastern Arabic facial structure",
+          "prompt": "middle eastern Arabian ethnicity, light olive to warm medium brown skin tone with warm golden undertones, large expressive eyes with thick dark lashes and naturally dense eyebrows, prominent aquiline or straight defined nose, full well-shaped lips, strong angular facial features with a defined jawline, distinct Middle Eastern Arabic facial structure",
           "file": "Этничность/arabian.jpg"
         },
         "african": {
           "name": "Африканская",
           "group": "Человеческие",
-          "prompt": "african Black ethnicity, deep rich dark brown to very dark ebony skin tone with warm undertones that catch light beautifully, broad flat wide nose with a low bridge and rounded nostrils, full thick prominent lips, dark brown nearly black eyes, tightly coiled kinky or curly natural black hair texture, wider facial structure with prominent cheekbones, strong defined features",
+          "prompt": "african Black ethnicity, deep rich dark brown to very dark ebony skin tone with warm undertones that catch light beautifully, broad flat wide nose with a low bridge and rounded nostrils, full thick prominent lips, wider facial structure with prominent cheekbones, strong defined features",
           "file": "Этничность/african.jpg"
         },
         "mixed": {

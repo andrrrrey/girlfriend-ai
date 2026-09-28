@@ -15,6 +15,7 @@ import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
+import { isMultiPersonPrompt, promptDescribesExpression } from "../../lib/peopleCount";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -1022,12 +1023,19 @@ function pickRandomPrompts(): string[] {
   }
 
   if (cachedPoseOptions) {
-    const expressions = cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options);
-    const expr = pick(expressions);
-    if (expr?.prompt) prompts.push(expr.prompt);
-
-    const poses = cachedPoseOptions.POSE.flatMap(c => c.options);
+    // Аватар — один человек: позы/действия на двоих и больше (1boy, 2girls,
+    // поцелуи с партнёром, секс-позы) не берём — иначе модель дорисовывает
+    // второго человека по описанию персонажа (клон).
+    const poses = cachedPoseOptions.POSE.flatMap(c => c.options).filter(o => !isMultiPersonPrompt(o.prompt));
     const pose = pick(poses);
+
+    // Выражение — только если поза сама его не задаёт (иначе «poker face» +
+    // «довольная улыбка» в одном промпте).
+    if (!promptDescribesExpression(pose?.prompt)) {
+      const expressions = cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options);
+      const expr = pick(expressions);
+      if (expr?.prompt) prompts.push(expr.prompt);
+    }
     if (pose?.prompt) prompts.push(pose.prompt);
   }
 

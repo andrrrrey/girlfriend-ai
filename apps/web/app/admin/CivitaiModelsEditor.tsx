@@ -105,6 +105,21 @@ function baseFromAir(air: string): CivitaiBase {
   return "sdxl";
 }
 /** Дефолтные размеры/шаги/cfg под базу (Grok их не использует — только аспект). */
+/**
+ * Работает ли negative prompt у чекпоинта (зеркало логики apps/ai):
+ *  - Flux.1 и Grok негатив вообще не получают (API их движков его не принимает);
+ *  - SD1/SDXL/Z-Image получают, но при CFG ≤ 1 classifier-free guidance выключен —
+ *    негатив ни на что не влияет (Z-Image Turbo и lightning/turbo-чекпоинты).
+ */
+function negativeSupport(m: { base: CivitaiBase; cfgScale: number }): { ok: boolean; why: string } {
+  if (m.base === "flux1") return { ok: false, why: "Flux.1: движок не принимает negative prompt" };
+  if (m.base === "grok") return { ok: false, why: "Grok: только промпт и соотношение сторон, негатив не поддерживается" };
+  if (!(m.cfgScale > 1)) {
+    return { ok: false, why: `CFG ${m.cfgScale || 0} ≤ 1: guidance выключен, негатив игнорируется (так работают Turbo/distilled-модели)` };
+  }
+  return { ok: true, why: `негатив применяется (CFG ${m.cfgScale})` };
+}
+
 function defaultsForBase(base: CivitaiBase): { width: number; height: number; steps: number; cfgScale: number } {
   switch (base) {
     case "sd1": return { width: 512, height: 768, steps: 25, cfgScale: 7 };
@@ -304,6 +319,7 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
               <span style={{ width: 140 }} title="Сэмплер (пусто = дефолт Civitai)">сэмплер</span>
               <span style={{ width: 96 }} title="Тип расписания шумов (пусто = дефолт Civitai)">расписание</span>
               <span style={{ width: 52 }} title="Clip skip">clip</span>
+              <span style={{ width: 64 }} title="Работает ли негативный промпт у этого чекпоинта (по базе и CFG)">негатив</span>
               <span style={{ width: 34 }} title="Подтянуть рекомендованные автором параметры">рек.</span>
               <span style={{ width: 34 }} />
             </div>
@@ -339,6 +355,21 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
                   {CIVITAI_SCHEDULERS.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <input style={{ ...cellInput, width: 52 }} type="number" title="clipSkip" value={m.clipSkip} onChange={(e) => updateItem(style, idx, { clipSkip: parseInt(e.target.value, 10) || 0 })} />
+                {(() => {
+                  const neg = negativeSupport(m);
+                  return (
+                    <span
+                      title={neg.why}
+                      style={{
+                        width: 64, textAlign: "center", fontSize: 11, padding: "5px 0", borderRadius: 6, cursor: "help",
+                        border: `1px solid ${neg.ok ? "#2f5a3a" : "#5a2f2f"}`,
+                        color: neg.ok ? "#4caf7d" : "#e36466",
+                      }}
+                    >
+                      {neg.ok ? "✓ да" : "✕ нет"}
+                    </span>
+                  );
+                })()}
                 <button
                   onClick={() => void refreshRecommended(style, idx)}
                   disabled={!m.air || AIR_RE.test(m.air) === false || !!refreshing[`${style}:${idx}`]}

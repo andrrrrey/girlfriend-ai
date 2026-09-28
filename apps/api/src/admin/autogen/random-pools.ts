@@ -8,6 +8,7 @@
  */
 
 import type { CreateUserCharacterDto } from "../../chats/dto/create-user-character.dto";
+import { promptDescribesExpression } from "@repo/types";
 
 // ─── Пулы (зеркало create/data.ts) ───────────────────────────────────────────
 
@@ -223,7 +224,11 @@ export function buildRandomCharacter(ctx: AutogenContext, style?: PoolOption): R
 /** Случайные одежда/эмоция/поза/локация/кадр — как pickRandomPrompts на /create. */
 export function pickRandomScenePrompts(ctx: AutogenContext): string[] {
   const one = (arr: string[]) => (arr.length > 0 ? [pick(arr)] : []);
-  return [...one(ctx.outfits), ...one(ctx.expressions), ...one(ctx.poses), ...one(ctx.locations), ...one(ctx.framings)];
+  // ctx.poses — уже без поз на двоих (loadContext). Выражение — только если поза
+  // сама его не задаёт, иначе в промпте спорят два выражения лица.
+  const pose = one(ctx.poses);
+  const expression = pose.length > 0 && promptDescribesExpression(pose[0]) ? [] : one(ctx.expressions);
+  return [...one(ctx.outfits), ...expression, ...pose, ...one(ctx.locations), ...one(ctx.framings)];
 }
 
 /**
