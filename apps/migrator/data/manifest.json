@@ -58,31 +58,31 @@
         "elf": {
           "name": "Эльф",
           "group": "Фэнтезийные",
-          "prompt": "fantasy elf race with distinctly long pointed ears extending several inches beyond the head, extremely refined elegant angular facial features with high sharp cheekbones and a narrow chin, unnaturally smooth flawless ageless skin with a subtle ethereal glow, large bright vivid colored eyes, long straight silky hair, slender graceful elongated body proportions, otherworldly inhuman beauty",
+          "prompt": "fantasy elf race with distinctly long pointed ears extending several inches beyond the head, extremely refined elegant angular facial features with high sharp cheekbones and a narrow chin, unnaturally smooth flawless ageless skin with a subtle ethereal glow, otherworldly inhuman beauty",
           "file": "Этничность/elf.jpg"
         },
         "demon": {
           "name": "Демон / Суккуб",
           "group": "Фэнтезийные",
-          "prompt": "fantasy demon or succubus race with prominent curved horns growing from the forehead or temples, a long sinuous pointed tail extending from the base of the spine, skin in an unusual tone such as red purple grey or unnaturally pale, glowing red orange or yellow slit-pupil eyes, sharp pointed canine fangs visible when the mouth opens, optional small dark bat-like wings on the back, seductive dangerous inhuman beauty",
+          "prompt": "fantasy demon or succubus race with prominent curved horns growing from the forehead or temples, a long sinuous pointed tail extending from the base of the spine, skin in an unusual tone such as red purple grey or unnaturally pale, slit-pupil eyes, sharp pointed canine fangs visible when the mouth opens, optional small dark bat-like wings on the back, seductive dangerous inhuman beauty",
           "file": "Этничность/demon.jpg"
         },
         "angel": {
           "name": "Ангел",
           "group": "Фэнтезийные",
-          "prompt": "celestial angel being with a luminous golden glowing halo floating above the head, large feathered white or golden wings extending from the shoulder blades, radiantly pure flawless glowing skin that emits soft divine warm light, bright piercing blue gold or white glowing eyes, flowing golden or white hair, an aura of holy divine purity and ethereal supernatural beauty",
+          "prompt": "celestial angel being with a luminous golden glowing halo floating above the head, large feathered white or golden wings extending from the shoulder blades, radiantly pure flawless glowing skin that emits soft divine warm light, an aura of holy divine purity and ethereal supernatural beauty",
           "file": "Этничность/angel.jpg"
         },
         "vampire": {
           "name": "Вампир",
           "group": "Фэнтезийные",
-          "prompt": "vampire undead creature with extremely pale white bloodless porcelain skin completely drained of warm color, piercing bright red crimson or glowing amber predatory eyes with slit or intense pupils, sharp elongated pointed canine fang teeth visible at the corners of the mouth, dark circles under the eyes, unnaturally beautiful but cold and dangerous, dark hair contrasting sharply with the deathly pale skin",
+          "prompt": "vampire undead creature with extremely pale white bloodless porcelain skin completely drained of warm color, piercing predatory eyes with intense pupils, sharp elongated pointed canine fang teeth visible at the corners of the mouth, dark circles under the eyes, unnaturally beautiful but cold and dangerous",
           "file": "Этничность/vampire.jpg"
         },
         "werewolf": {
           "name": "Оборотень",
           "group": "Фэнтезийные",
-          "prompt": "werewolf lycanthrope in partial or full transformation, bestial feral facial features mixing human and wolf characteristics, pronounced sharp canine fangs and elongated teeth, wild untamed thick hair or fur, intense glowing amber or yellow predatory animal eyes with slit pupils, pointed ears, clawed hands, muscular powerful raw animalistic body, savage barely-contained primal energy",
+          "prompt": "werewolf lycanthrope in partial or full transformation, bestial feral facial features mixing human and wolf characteristics, pronounced sharp canine fangs and elongated teeth, patches of wild fur on the body, intense predatory animal eyes with slit pupils, pointed ears, clawed hands, raw animalistic presence, savage barely-contained primal energy",
           "file": "Этничность/werewolf.jpg"
         },
         "neko": {
@@ -94,7 +94,7 @@
         "kitsune": {
           "name": "Кицунэ",
           "group": "Фэнтезийные",
-          "prompt": "kitsune fox-spirit with a pair of large pointed fluffy fox ears on top of the head, one or more large bushy fox tails extending from the base of the spine with white or colored fluffy fur, otherwise human appearance with delicate refined features, optional golden amber or heterochromatic fox-like eyes, the mystical Japanese fox spirit in humanoid form, elegant and supernatural",
+          "prompt": "kitsune fox-spirit with a pair of large pointed fluffy fox ears on top of the head, one or more large bushy fox tails extending from the base of the spine with white or colored fluffy fur, otherwise human appearance with delicate refined features, optional fox-like eyes, the mystical Japanese fox spirit in humanoid form, elegant and supernatural",
           "file": "Этничность/kitsune.jpg"
         },
         "bunny_girl": {
@@ -106,7 +106,7 @@
         "alien": {
           "name": "Инопланетянин",
           "group": "Фэнтезийные",
-          "prompt": "extraterrestrial alien being with clearly non-human features, unusual skin color such as blue green grey or purple, non-standard eye configuration with unusual colors like solid black fully glowing or multi-pupiled eyes, possible additional features like antennae ridges bioluminescent markings or unusual head shape, science fiction otherworldly non-earth humanoid species",
+          "prompt": "extraterrestrial alien being with clearly non-human features, unusual skin color such as blue green grey or purple, non-standard eye configuration such as multi-pupiled eyes, possible additional features like antennae ridges bioluminescent markings or unusual head shape, science fiction otherworldly non-earth humanoid species",
           "file": "Этничность/alien.jpg"
         },
         "android": {
@@ -124,19 +124,19 @@
         "fairy": {
           "name": "Фея",
           "group": "Фэнтезийные",
-          "prompt": "tiny magical fairy being with delicate translucent iridescent insect-like wings sprouting from the shoulder blades, the wings shimmering with rainbow prismatic colors like a dragonfly, a soft magical sparkle glow emanating from the body and wings, very delicate refined miniature features, optionally tiny in stature, surrounded by floating magical glowing dust particles, enchanted forest sprite",
+          "prompt": "magical fairy being with delicate translucent iridescent insect-like wings sprouting from the shoulder blades, the wings shimmering with rainbow prismatic colors like a dragonfly, a soft magical sparkle glow emanating from the body and wings, very delicate refined features, surrounded by floating magical glowing dust particles, enchanted forest sprite",
           "file": "Этничность/fairy.jpg"
         },
         "orc": {
           "name": "Орк",
           "group": "Фэнтезийные",
-          "prompt": "fantasy orc race with distinctive green or grey-green rough thick skin, prominent lower jaw with two large tusks or fangs protruding upward from the lower lip, broad flat wide nose, small fierce eyes often yellow or red, extremely muscular thick heavily built powerful body type, heavy brow ridge, pointed ears shorter than elf ears, brutal savage warrior appearance, barbaric and imposing",
+          "prompt": "fantasy orc race with distinctive green or grey-green rough thick skin, prominent lower jaw with two large tusks or fangs protruding upward from the lower lip, broad flat wide nose, small fierce eyes, heavy brow ridge, pointed ears shorter than elf ears, brutal savage warrior appearance, barbaric and imposing",
           "file": "Этничность/orc.jpg"
         },
         "drow": {
           "name": "Дроу",
           "group": "Фэнтезийные",
-          "prompt": "drow dark elf race with deep obsidian dark purple-black or charcoal grey skin tone, striking snow-white or silver-white long straight hair creating dramatic contrast against the dark skin, bright vivid red crimson or glowing purple eyes, long pointed elven ears, sharp refined angular elven facial features similar to surface elves but with darker more sinister beauty, the elegant dangerous subterranean dark elf",
+          "prompt": "drow dark elf race with deep obsidian dark purple-black or charcoal grey skin tone, long pointed elven ears, sharp refined angular elven facial features similar to surface elves but with darker more sinister beauty, the elegant dangerous subterranean dark elf",
           "file": "Этничность/drow.jpg"
         }
       }
