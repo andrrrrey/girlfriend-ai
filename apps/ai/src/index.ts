@@ -1708,7 +1708,13 @@ async function generateImageCivitai(params: {
     if (imageUrl) return { url: imageUrl, model: model.air, prompt, base: model.base, width: w, height: h };
   }
 
-  if ((result.status === "scheduled" || result.status === "processing") && result.id) {
+  // Промежуточные статусы WorkflowStatus: unassigned/preparing (загрузка модели
+  // на воркер — частое дело у холодных чекпоинтов), scheduled, processing.
+  // Терминальные неуспешные: failed/expired/canceled.
+  const PENDING_STATUSES = ["unassigned", "preparing", "scheduled", "processing"];
+  const FAILED_STATUSES = ["failed", "expired", "canceled"];
+
+  if (result.status && PENDING_STATUSES.includes(result.status) && result.id) {
     const workflowId = result.id;
     const maxAttempts = 30;
     for (let i = 0; i < maxAttempts; i++) {
@@ -1727,9 +1733,9 @@ async function generateImageCivitai(params: {
         const imageUrl = extractImageUrl(result);
         if (imageUrl) return { url: imageUrl, model: model.air, prompt, base: model.base, width: w, height: h };
       }
-      if (result.status === "failed") {
+      if (result.status && FAILED_STATUSES.includes(result.status)) {
         logger.error({ result }, "civitai_step_failed");
-        throw new Error(`Civitai image generation failed${failReason(result)}`);
+        throw new Error(`Civitai image generation ${result.status}${failReason(result)}`);
       }
     }
     throw new Error("Civitai image generation timed out after polling");
@@ -2111,7 +2117,7 @@ async function snapshotNodepackLayers(params: { apiToken: string; nodepacks: str
       result = await pollRes.json();
       logger.info({ status: result?.status, attempt: i }, "civitai_snapshot_poll");
       layers = extractLayers(result);
-      if (!layers && (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired")) {
+      if (!layers && (result?.status === "failed" || result?.status === "cancelled" || result?.status === "canceled" || result?.status === "expired")) {
         logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_snapshot_failed");
         throw new Error(`Civitai nodepack snapshot ${result?.status}`);
       }
@@ -2180,7 +2186,7 @@ async function generateImageComfy(params: {
       logger.info({ status: result?.status, attempt: i }, "civitai_comfy_poll");
       const u = extractUrl(result);
       if (u) return { url: u };
-      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired") {
+      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "canceled" || result?.status === "expired") {
         logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_comfy_failed");
         throw new Error(`Civitai customComfy ${result?.status}`);
       }
@@ -2253,7 +2259,7 @@ async function generateImageFluxKontext(params: {
       logger.info({ status: result?.status, attempt: i }, "civitai_kontext_poll");
       const u = extractUrl(result);
       if (u) return { url: u };
-      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "expired") {
+      if (result?.status === "failed" || result?.status === "cancelled" || result?.status === "canceled" || result?.status === "expired") {
         logger.error({ status: result?.status, body: JSON.stringify(result).slice(0, 700) }, "civitai_kontext_failed");
         throw new Error(`Civitai Kontext ${result?.status}`);
       }
