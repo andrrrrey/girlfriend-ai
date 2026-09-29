@@ -26,10 +26,8 @@ import { S3Service } from "../s3/s3.service";
 import { backfillAllCharacterSeo } from "../chats/character-seo";
 import { loadEnv } from "@repo/config";
 import { PROMPT_SETTING_DEFAULTS, CHAT_PROMPT_SETTING_DEFAULTS } from "@repo/types";
-import { randomUUID } from "crypto";
 
 const env = loadEnv();
-const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
 
 /**
  * Дефолты для ключей AppSetting, у которых пока может не быть строки в БД, но
@@ -1178,100 +1176,6 @@ export class AdminService {
       throw new NotFoundException(`Unsupported target type "${targetType}"`);
     }
     return { targetType, count: ids.length, boostLikes: value };
-  }
-
-  /**
-   * Гарантирует пул бот-пользователей (isDemo) для авторства автокомментариев.
-   * Логин под ними невозможен (passwordHash = "!"), email в домене bots.local.
-   */
-  private async ensureBotUsers(count: number): Promise<{ id: string }[]> {
-    const existing = await this.prisma.user.findMany({
-      where: { isDemo: true, nickname: { startsWith: "bot_" } },
-      select: { id: true },
-      take: count,
-    });
-    if (existing.length >= count) return existing;
-    const created: { id: string }[] = [];
-    for (let i = 0; i < count - existing.length; i++) {
-      const suffix = randomUUID().slice(0, 8);
-      const u = await this.prisma.user.create({
-        data: {
-          email: `bot_${suffix}@bots.local`,
-          passwordHash: "!",
-          nickname: `bot_${suffix}`,
-          isDemo: true,
-          emailVerified: true,
-        },
-        select: { id: true },
-      });
-      created.push(u);
-    }
-    return [...existing, ...created];
-  }
-
-  /**
-   * Генерирует N автокомментариев к каждому из выбранных персонажей или шортов
-   * через AI-сервис (/ai/text/completion), от лица пула бот-пользователей.
-   */
-  async generateComments(targetType: string, targetIds: string[], count: number) {
-    const n = Math.min(Math.max(1, Math.floor(count || 0)), 50);
-    const ids = (targetIds || []).filter(Boolean);
-    if (ids.length === 0) throw new NotFoundException("No targets selected");
-    if (targetType !== "character" && targetType !== "short" && targetType !== "gallery_item") {
-      throw new NotFoundException(`Unsupported target type "${targetType}"`);
-    }
-
-    const normalizedTarget = targetType === "gallery_item" ? "short" : targetType;
-    const bots = await this.ensureBotUsers(Math.min(n, 12));
-    const system =
-      "You write short, casual, positive social-media style viewer comments (1 sentence, max 12 words). " +
-      "No hashtags, no surrounding quotes. Vary the tone across comments.";
-
-    let created = 0;
-    let requested = 0;
-
-    for (const targetId of ids) {
-      // Контекст генерации: имя/описание персонажа или промпт шорта.
-      let context = "";
-      if (targetType === "character") {
-        const c = await this.prisma.character.findUnique({ where: { id: targetId } });
-        if (!c) continue; // пропускаем несуществующую цель, не прерывая всю пачку
-        const p = (c.personality as Record<string, unknown>) || {};
-        context = `AI companion named ${c.name}. ${(p["description"] as string) ?? (p["bio"] as string) ?? ""}`.trim();
-      } else {
-        const j = await this.prisma.aiJob.findUnique({ where: { id: targetId } });
-        if (!j) continue;
-        const input = (j.input as Record<string, unknown>) || {};
-        context = `A short AI-generated video. Prompt: ${(input["prompt"] as string) ?? ""}`.trim();
-      }
-
-      requested += n;
-      for (let i = 0; i < n; i++) {
-        try {
-          const res = await fetch(`${AI_BASE}/ai/text/completion`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              system,
-              prompt: `Write ONE fresh viewer comment for: ${context}\nReturn only the comment text.`,
-              maxTokens: 60,
-            }),
-          });
-          if (!res.ok) continue;
-          const data = (await res.json()) as { content?: string };
-          const text = (data.content || "").trim().replace(/^["']+|["']+$/g, "").slice(0, 500);
-          if (!text) continue;
-          const bot = bots[i % bots.length];
-          await this.prisma.comment.create({
-            data: { userId: bot.id, targetType: normalizedTarget, targetId, content: text },
-          });
-          created++;
-        } catch {
-          /* пропускаем неудачную генерацию отдельного комментария */
-        }
-      }
-    }
-    return { created, requested, targets: ids.length };
   }
 
   // ─── Civitai AIR: резолв ссылки/идентификатора в готовый чекпоинт ────────────

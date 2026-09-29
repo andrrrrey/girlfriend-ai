@@ -37,6 +37,7 @@ import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard, Roles } from "../auth/guards/roles.guard";
 import { AdminService } from "./admin.service";
+import { CommentGenService } from "./comment-gen/comment-gen.service";
 import { UpsertSettingsDto } from "./dto/upsert-settings.dto";
 import { CreateCharacterDto } from "./dto/create-character.dto";
 import { UpdateCharacterDto } from "./dto/update-character.dto";
@@ -73,7 +74,10 @@ export class AdminController {
   /**
    * @param adminService — сервис, реализующий бизнес-логику администрирования.
    */
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly commentGen: CommentGenService,
+  ) {}
 
   // ─── Settings ──────────────────────────────────────────────
 
@@ -619,12 +623,27 @@ export class AdminController {
     return this.adminService.setBoostLikes(dto.targetType, dto.targetIds, dto.boostLikes);
   }
 
-  /** Генерирует N автокомментариев (бот-юзеры) к выбранным персонажам или шортам. */
+  /**
+   * Запускает фоновую генерацию N автокомментариев (бот-юзеры) к выбранным
+   * персонажам или шортам. Сразу возвращает задачу; прогресс — GET .../jobs/:id.
+   */
   @Post("engagement/comments")
   async generateComments(
     @Body() dto: { targetType: string; targetIds: string[]; count: number },
   ) {
-    return this.adminService.generateComments(dto.targetType, dto.targetIds, dto.count);
+    return this.commentGen.start(dto.targetType, dto.targetIds, dto.count);
+  }
+
+  /** Прогресс задачи автокомментариев. */
+  @Get("engagement/comments/jobs/:id")
+  getCommentJob(@Param("id") id: string) {
+    return this.commentGen.getJob(id);
+  }
+
+  /** Удаляет комментарии бот-пользователей у выбранных целей. */
+  @Post("engagement/comments/delete-bots")
+  async deleteBotComments(@Body() dto: { targetType: string; targetIds: string[] }) {
+    return this.commentGen.deleteBotComments(dto.targetType, dto.targetIds);
   }
 
   // ─── Civitai AIR ────────────────────────────────────────────

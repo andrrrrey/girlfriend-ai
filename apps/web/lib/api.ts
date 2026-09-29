@@ -619,6 +619,19 @@ export interface AutoChatTask {
 }
 
 /** Задача автогенерации контента для персонажей (админка, «Вовлечённость»). */
+/** Фоновая задача автокомментариев (хранится в памяти API). */
+export interface CommentGenJob {
+  id: string;
+  status: "running" | "done" | "failed";
+  targets: number;
+  targetsDone: number;
+  requested: number;
+  created: number;
+  errors: string[];
+  startedAt: string;
+  finishedAt?: string;
+}
+
 export interface EngagementGenTask {
   id: string;
   status: AutogenStatus;
@@ -1535,10 +1548,23 @@ export const admin = {
     });
   },
 
-  async generateComments(targetType: "character" | "short", targetIds: string[], count: number): Promise<{ created: number; requested: number; targets: number }> {
+  /** Запускает фоновую генерацию автокомментариев; прогресс — getCommentJob. */
+  async generateComments(targetType: "character" | "short", targetIds: string[], count: number): Promise<CommentGenJob> {
     return apiFetch("/admin/engagement/comments", {
       method: "POST",
       body: JSON.stringify({ targetType, targetIds, count }),
+    });
+  },
+
+  async getCommentJob(id: string): Promise<CommentGenJob> {
+    return apiFetch(`/admin/engagement/comments/jobs/${id}`);
+  },
+
+  /** Удаляет комментарии бот-пользователей у выбранных целей. */
+  async deleteBotComments(targetType: "character" | "short", targetIds: string[]): Promise<{ deleted: number }> {
+    return apiFetch("/admin/engagement/comments/delete-bots", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetIds }),
     });
   },
 

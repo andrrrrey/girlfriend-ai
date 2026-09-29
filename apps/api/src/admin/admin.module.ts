@@ -19,6 +19,7 @@ import { AdminUploadController } from "./upload.controller";
 import { AdminService } from "./admin.service";
 import { PrismaService } from "../prisma.service";
 import { S3Module } from "../s3/s3.module";
+import { CommentGenService } from "./comment-gen/comment-gen.service";
 
 /**
  * Модуль администрирования.
@@ -33,7 +34,7 @@ import { S3Module } from "../s3/s3.module";
 @Module({
   imports: [S3Module],
   controllers: [AdminController, AdminUploadController],
-  providers: [AdminService, PrismaService],
+  providers: [AdminService, CommentGenService, PrismaService],
   exports: [AdminService],
 })
 export class AdminModule {}

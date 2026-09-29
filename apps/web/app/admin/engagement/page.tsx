@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
-import { admin, type EngagementGenTask } from "../../../lib/api";
+import { admin, ApiError, type CommentGenJob, type EngagementGenTask } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 
@@ -90,6 +90,7 @@ export default function AdminEngagementPage() {
   const [cmtCount, setCmtCount] = useState("5");
   const [cmtMsg, setCmtMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [cmtBusy, setCmtBusy] = useState(false);
+  const [cmtJob, setCmtJob] = useState<CommentGenJob | null>(null);
 
   // Автогенерация контента (изображения/видео на персонажа)
   const [genImages, setGenImages] = useState("2");
@@ -144,6 +145,16 @@ export default function AdminEngagementPage() {
     };
   }, [isAdmin, loadGenTasks]);
 
+  // Поллинг фоновой задачи автокомментариев, пока она выполняется.
+  const cmtJobId = cmtJob?.status === "running" ? cmtJob.id : null;
+  useEffect(() => {
+    if (!cmtJobId) return;
+    const t = setInterval(() => {
+      admin.getCommentJob(cmtJobId).then(setCmtJob).catch(() => {});
+    }, 2000);
+    return () => clearInterval(t);
+  }, [cmtJobId]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -191,10 +202,24 @@ export default function AdminEngagementPage() {
     if (ids.length === 0) { setCmtMsg({ ok: false, text: "Выберите цели" }); return; }
     setCmtBusy(true); setCmtMsg(null);
     try {
-      const res = await admin.generateComments(targetType, ids, parseInt(cmtCount, 10) || 0);
-      setCmtMsg({ ok: true, text: `Создано ${res.created} из ${res.requested} комментариев (${res.targets} целей)` });
-    } catch {
-      setCmtMsg({ ok: false, text: "Не удалось сгенерировать" });
+      setCmtJob(await admin.generateComments(targetType, ids, parseInt(cmtCount, 10) || 0));
+    } catch (e) {
+      setCmtMsg({ ok: false, text: `Не удалось запустить: ${e instanceof ApiError ? e.message : String(e)}` });
+    } finally {
+      setCmtBusy(false);
+    }
+  };
+
+  const handleDeleteBotComments = async () => {
+    const ids = selectedIds();
+    if (ids.length === 0) { setCmtMsg({ ok: false, text: "Выберите цели" }); return; }
+    if (!window.confirm(`Удалить все комментарии ботов у ${ids.length} выбранных целей?`)) return;
+    setCmtBusy(true); setCmtMsg(null);
+    try {
+      const res = await admin.deleteBotComments(targetType, ids);
+      setCmtMsg({ ok: true, text: `Удалено комментариев ботов: ${res.deleted}` });
+    } catch (e) {
+      setCmtMsg({ ok: false, text: `Не удалось удалить: ${e instanceof ApiError ? e.message : String(e)}` });
     } finally {
       setCmtBusy(false);
     }
@@ -290,13 +315,42 @@ export default function AdminEngagementPage() {
 
         {/* Автокомментарии */}
         <h2 style={{ ...s.sectionTitle, marginTop: 24 }}>Автогенерация комментариев</h2>
-        <p style={s.hint}>Генерирует комментарии через AI от лица пула бот-пользователей. До 50 на каждую выбранную цель.</p>
+        <p style={s.hint}>Генерирует комментарии через AI от лица пула бот-пользователей (на английском, флирт без пошлости). До 50 на каждую выбранную цель. Работает в фоне — страницу можно не держать открытой. Модель — настройка COMMENTS_MODEL.</p>
         <div style={s.card}>
           <div style={s.row}>
             <input style={s.numInput} type="number" min={1} max={50} placeholder="Кол-во" value={cmtCount} onChange={(e) => setCmtCount(e.target.value)} />
-            <button style={s.btn} onClick={handleComments} disabled={cmtBusy}>{cmtBusy ? "Генерация..." : `Сгенерировать (${selected.size})`}</button>
+            <button style={s.btn} onClick={handleComments} disabled={cmtBusy || cmtJob?.status === "running"}>
+              {cmtJob?.status === "running" ? "Генерация..." : `Сгенерировать (${selected.size})`}
+            </button>
+            <button style={{ ...s.btnGhost, borderColor: "#e36466", color: "#e36466" }} onClick={handleDeleteBotComments} disabled={cmtBusy}>
+              Удалить комментарии ботов ({selected.size})
+            </button>
           </div>
           {cmtMsg && <span style={cmtMsg.ok ? s.result : s.error}>{cmtMsg.text}</span>}
+          {cmtJob && (() => {
+            const pct = cmtJob.targets > 0 ? Math.round((cmtJob.targetsDone / cmtJob.targets) * 100) : 0;
+            const color = cmtJob.status === "running" ? "#4caf7d" : cmtJob.status === "done" ? "#7d9cff" : "#e36466";
+            const label = cmtJob.status === "running" ? "Выполняется" : cmtJob.status === "done" ? "Завершено" : "Ошибка";
+            return (
+              <div>
+                <div style={s.taskHead}>
+                  <span style={{ ...s.badge, border: `1px solid ${color}`, color }}>{label}</span>
+                  <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>
+                    Целей: {cmtJob.targetsDone} / {cmtJob.targets}
+                  </span>
+                  <span style={{ color: "#969696", fontSize: 12 }}>
+                    Комментариев создано: {cmtJob.created} из {cmtJob.requested}
+                  </span>
+                </div>
+                <div style={s.barTrack}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width .4s" }} />
+                </div>
+                {cmtJob.errors.length > 0 && (
+                  <div style={{ color: "#e36466", fontSize: 11 }}>Последняя ошибка: {cmtJob.errors[cmtJob.errors.length - 1]}</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Автогенерация контента (изображения/видео) */}

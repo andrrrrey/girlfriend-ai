@@ -799,6 +799,12 @@ interface TextCompletionBody {
   maxTokens?: number;
   /** Температура сэмплинга. По умолчанию 0.7. */
   temperature?: number;
+  /**
+   * Явная модель OpenRouter для этой задачи (напр. автокомментарии). Если задана
+   * и есть OPENROUTER_API_KEY — запрос идёт в OpenRouter независимо от
+   * CHAT_PROVIDER; иначе используется чат-провайдер из настроек.
+   */
+  model?: string;
 }
 
 /**
@@ -827,7 +833,11 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
     return reply.status(503).send({ error: "Failed to fetch AI settings" });
   }
 
-  const chatCfg = resolveChatProvider(settings);
+  const overrideModel = typeof req.body.model === "string" ? req.body.model.trim() : "";
+  const chatCfg: ChatProviderCfg =
+    overrideModel && settings.OPENROUTER_API_KEY
+      ? { provider: "openrouter", apiKey: settings.OPENROUTER_API_KEY, model: overrideModel }
+      : resolveChatProvider(settings);
   const apiKey = chatCfg.apiKey;
   if (!apiKey) {
     return reply.status(503).send({ error: `${chatCfg.provider} API key not configured` });

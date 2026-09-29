@@ -22,6 +22,12 @@ const SETTING_GROUPS = [
           "Модель OpenRouter (slug). Рекомендации: minimax/minimax-m2-her (ролеплей-компаньон), deepseek/deepseek-v4-flash (дёшево, 1M контекст), anthracite-org/magnum-v4-72b, sao10k/l3.3-euryale-70b",
         type: "text",
       },
+      {
+        key: "COMMENTS_MODEL",
+        label:
+          "Модель OpenRouter для автокомментариев (Вовлечённость). Нужна модель, которая слушается инструкций и отдаёт JSON, а не ролевая. Пусто = mistralai/mistral-small-3.2-24b-instruct. Работает при заданном ключе OpenRouter",
+        type: "text",
+      },
     ],
   },
   {
