@@ -1602,6 +1602,8 @@ async function generateImageCivitai(params: {
   dims?: { width: number; height: number };
   /** Явное число шагов (hires-проход) — перекрывает шаги чекпоинта. */
   steps?: number;
+  /** Дедлайн (epoch ms) для необязательных проходов: по истечении — отмена и ошибка. */
+  deadline?: number;
 }): Promise<{ url: string; model: string; prompt: string; base: CivitaiBase; width: number; height: number }> {
   const { apiToken, generationStyle, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, sfwPrompt, seed, modelAir, models } = params;
 
@@ -1658,7 +1660,8 @@ async function generateImageCivitai(params: {
 
   logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampleMethod: sdcpp.sampleMethod, schedule: sdcpp.schedule, cfgScale: model.cfgScale, steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
 
-  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60&allowMatureContent=true", {
+  const { deadline } = params;
+  const response = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows?wait=${civitaiSubmitWait(deadline)}&allowMatureContent=true`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1717,7 +1720,7 @@ async function generateImageCivitai(params: {
   if (result.status && PENDING_STATUSES.includes(result.status) && result.id) {
     const workflowId = result.id;
     const maxAttempts = 30;
-    for (let i = 0; i < maxAttempts; i++) {
+    for (let i = 0; i < maxAttempts && (!deadline || Date.now() < deadline); i++) {
       await new Promise((r) => setTimeout(r, 5000));
       const pollRes = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${workflowId}`, {
         headers: { Authorization: `Bearer ${apiToken}` },
@@ -1738,7 +1741,8 @@ async function generateImageCivitai(params: {
         throw new Error(`Civitai image generation ${result.status}${failReason(result)}`);
       }
     }
-    throw new Error("Civitai image generation timed out after polling");
+    await cancelCivitaiWorkflow(apiToken, workflowId);
+    throw new Error(`Civitai image generation timed out after polling (status ${result.status ?? "?"})`);
   }
 
   const stepStatus = result.steps?.[0]?.status;
@@ -1772,10 +1776,49 @@ const SD_MAX_SIDE = 2048;
 const UPSCALER_MAX_SOURCE_SIDE = 2048;
 
 /**
+ * Параметр `wait` (сек, 0..60) для submit воркфлоу с учётом дедлайна: submit
+ * блокирует соединение до `wait` секунд, и без учёта дедлайна съедал бюджет.
+ */
+function civitaiSubmitWait(deadline?: number): number {
+  if (!deadline) return 60;
+  return Math.max(0, Math.min(60, Math.floor((deadline - Date.now()) / 1000)));
+}
+
+/**
+ * Отменяет брошенный воркфлоу (PUT status=canceled), чтобы он не доделывался
+ * и не списывал Buzz после того, как мы перестали ждать. Ошибки игнорируем.
+ */
+async function cancelCivitaiWorkflow(apiToken: string, workflowId: string): Promise<void> {
+  try {
+    await fetch(`https://orchestration.civitai.com/v2/consumer/workflows/${workflowId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
+      body: JSON.stringify({ status: "canceled" }),
+    });
+  } catch (err: any) {
+    logger.warn({ workflowId, err: err?.message }, "civitai_workflow_cancel_failed");
+  }
+}
+
+/**
+ * Бюджет времени (мс) на необязательную постобработку (hires-fix + апскейл)
+ * после готовой базовой картинки. Шаги с входной картинкой у Civitai могут
+ * долго висеть в preparing — без бюджета запрос шёл 4–5 мин и автогенерация
+ * (ждёт ~200 с) считала его ошибкой. Настройка CIVITAI_POSTPROCESS_BUDGET_SEC.
+ */
+function civitaiPostprocessDeadline(settings: Record<string, string>): number {
+  const sec = Number(settings.CIVITAI_POSTPROCESS_BUDGET_SEC) || 60;
+  return Date.now() + sec * 1000;
+}
+
+/** Меньше этого остатка бюджета (мс) новый шаг постобработки не запускаем. */
+const CIVITAI_MIN_STEP_MS = 15_000;
+
+/**
  * Апскейл картинки шагом `imageUpscaler` Orchestration API. Возвращает URL блоба.
  * Цена — ~4 Buzz за 1 Мп исходника (4x-модель, 1 проход).
  */
-async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir: string): Promise<string> {
+async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir: string, deadline?: number): Promise<string> {
   type UpscaleWorkflow = {
     id?: string;
     status?: string;
@@ -1784,7 +1827,10 @@ async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir:
       output?: { blob?: { url?: string; available?: boolean }; errors?: string[] | null };
     }>;
   };
-  const response = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?wait=60", {
+  if (deadline && deadline - Date.now() < CIVITAI_MIN_STEP_MS) throw new Error("Civitai upscaler skipped: no time budget left");
+  // allowMatureContent обязателен: без него воркфлоу с NSFW-исходником
+  // придерживается ограничением на mature-контент (висел в preparing до таймаута).
+  const response = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows?wait=${civitaiSubmitWait(deadline)}&allowMatureContent=true`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
     body: JSON.stringify({
@@ -1799,7 +1845,7 @@ async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir:
     const blob = r.steps?.[0]?.output?.blob;
     return blob?.url && blob.available !== false ? blob.url : undefined;
   };
-  for (let attempt = 0; attempt < 24; attempt++) {
+  for (let attempt = 0; attempt < 24 && (!deadline || Date.now() < deadline); attempt++) {
     const url = blobUrl(wf);
     if (url && (wf.status === "succeeded" || wf.status === "completed")) return url;
     if (wf.status === "failed" || wf.status === "canceled" || wf.steps?.[0]?.status === "failed") {
@@ -1814,7 +1860,8 @@ async function upscaleImageCivitai(apiToken: string, imageUrl: string, modelAir:
     if (!pollRes.ok) continue;
     wf = await pollRes.json() as UpscaleWorkflow;
   }
-  throw new Error("Civitai upscaler timed out");
+  if (wf.id) await cancelCivitaiWorkflow(apiToken, wf.id);
+  throw new Error(`Civitai upscaler timed out (status ${wf.status ?? "?"})`);
 }
 
 /**
@@ -1874,7 +1921,7 @@ async function storeCivitaiImage(
   apiToken: string,
   sourceUrl: string,
   settings: Record<string, string>,
-  opts: { upscale: boolean; log: Record<string, unknown> },
+  opts: { upscale: boolean; log: Record<string, unknown>; deadline?: number },
 ): Promise<{ url: string; width?: number; height?: number } | null> {
   const s3 = createS3Client();
   if (!s3) return null;
@@ -1896,7 +1943,10 @@ async function storeCivitaiImage(
       scale > 1.05 && srcSide <= UPSCALER_MAX_SOURCE_SIDE
     ) {
       try {
-        const upscaledUrl = await upscaleImageCivitai(apiToken, sourceUrl, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR);
+        const upscaledUrl = await upscaleImageCivitai(
+          apiToken, sourceUrl, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR,
+          opts.deadline ?? civitaiPostprocessDeadline(settings),
+        );
         const upscaled = await downloadImage(upscaledUrl);
         const { data, info } = await sharp(upscaled)
           .resize(Math.round(meta.width * scale), Math.round(meta.height * scale), { fit: "inside", withoutEnlargement: true })
@@ -1948,8 +1998,10 @@ async function hiresFixCivitai(params: {
   seed?: number;
   models: Record<string, CivitaiModelConfig[]>;
   settings: Record<string, string>;
+  /** Общий дедлайн постобработки (civitaiPostprocessDeadline). */
+  deadline: number;
 }): Promise<Awaited<ReturnType<typeof generateImageCivitai>>> {
-  const { apiToken, base, settings } = params;
+  const { apiToken, base, settings, deadline } = params;
   const scale = Number(settings.HIRES_SCALE) || (base.base === "sd1" ? 2 : 1.5);
   const dims = hiresDims(base.width, base.height, scale);
   const denoise = Number(settings.HIRES_DENOISE) || 0.35;
@@ -1957,9 +2009,11 @@ async function hiresFixCivitai(params: {
 
   // Источник для второго прохода — апскейл (чётче, чем простое растяжение внутри
   // sdcpp). Не вышло — отдаём базовую картинку: Civitai растянет её сам.
+  // Апскейлу — не больше трети оставшегося бюджета, основное время — самому проходу.
   let source = base.url;
   try {
-    source = await upscaleImageCivitai(apiToken, base.url, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR);
+    const upscaleDeadline = Date.now() + Math.floor((deadline - Date.now()) / 3);
+    source = await upscaleImageCivitai(apiToken, base.url, settings.CIVITAI_UPSCALER_AIR || DEFAULT_UPSCALER_AIR, upscaleDeadline);
   } catch (err: any) {
     logger.warn({ err: err?.message }, "hires_upscale_failed_use_base");
   }
@@ -1977,12 +2031,14 @@ async function hiresFixCivitai(params: {
     models: params.models,
     dims,
     steps,
+    deadline,
   });
+  if (deadline - Date.now() < CIVITAI_MIN_STEP_MS) throw new Error("Civitai hires-fix skipped: no time budget left");
   try {
     return await pass(source);
   } catch (err) {
     // 4×-апскейл (~16 Мп) мог не пройти как исходник — повторяем с базовой картинкой.
-    if (source === base.url) throw err;
+    if (source === base.url || deadline - Date.now() < CIVITAI_MIN_STEP_MS) throw err;
     logger.warn({ err: (err as Error)?.message }, "hires_pass_failed_retry_with_base");
     return pass(base.url);
   }
@@ -2818,6 +2874,9 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       // Hires-fix (аватар на /create): второй img2img-проход в большем разрешении.
       // Только SD1/SDXL — у Flux/ZImage/Grok нет такого img2img; им — обычный апскейл.
       // Не вышло — сохраняем базовую картинку с апскейлом, аватар всё равно будет.
+      // Один бюджет на всю постобработку (hires + апскейл) — базовая картинка
+      // уже есть, дальше не держим запрос дольше CIVITAI_POSTPROCESS_BUDGET_SEC.
+      const postDeadline = civitaiPostprocessDeadline(settings);
       let hires = false;
       if (req.body.hiresFix && isSdBase(result.base)) {
         try {
@@ -2830,6 +2889,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
             seed,
             models: comfyModels,
             settings,
+            deadline: postDeadline,
           });
           hires = true;
         } catch (err: any) {
@@ -2840,6 +2900,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
       const stored = await storeCivitaiImage(civitaiToken, result.url, settings, {
         upscale: !hires,
         log: { generationStyle, hires },
+        deadline: postDeadline,
       });
       return sendResult(stored?.url ?? result.url, {
         model: result.model, generationStyle, finalPrompt: result.prompt,
