@@ -1896,6 +1896,75 @@ async function cancelCivitaiWorkflow(apiToken: string, workflowId: string): Prom
  * долго висеть в preparing — без бюджета запрос шёл 4–5 мин и автогенерация
  * (ждёт ~200 с) считала его ошибкой. Настройка CIVITAI_POSTPROCESS_BUDGET_SEC.
  */
+/** Общий бюджет основной генерации Civitai с повторами и откатом (мс). Вместе с
+ *  постобработкой (CIVITAI_POSTPROCESS_BUDGET_SEC, деф. 60с) укладывается в ~300с,
+ *  которые воркер ждёт ответа AI-сервиса. */
+const CIVITAI_GEN_BUDGET_MS = 220_000;
+/** Потолок одной попытки (мс): зависшая в очереди задача не съедает весь бюджет,
+ *  и остаётся время на другую модель. */
+const CIVITAI_ATTEMPT_MS = 120_000;
+
+/**
+ * Временная ошибка Civitai, после которой есть смысл повторить или взять другую
+ * модель: 5xx/429 при отправке, нет воркеров под модель («No provider supports
+ * this job»), зависание в очереди, сбой шага. Баланс — не временная ошибка.
+ */
+function isTransientCivitaiError(msg: string): boolean {
+  if (isInsufficientBalance(0, msg)) return false;
+  return /Orchestration API error: (5\d\d|429)|No provider supports|timed out|expired|canceled|step failed|generation failed/i.test(msg);
+}
+
+/**
+ * generateImageCivitai с повторами и откатом на другую модель пула.
+ *  - 5xx/429 при отправке → один повтор на той же модели через 5с;
+ *  - нет воркеров / зависание в очереди → сразу к следующей модели (та же
+ *    модель всё ещё недоступна);
+ *  - allowFallback=false (чекпоинт закреплён за персонажем — чат, generation)
+ *    → только повтор на той же модели: другая модель изменит внешность.
+ * Модели для отката — другие AIR из пула того же стиля, до 2 штук, в случайном порядке.
+ */
+async function generateImageCivitaiResilient(
+  params: Parameters<typeof generateImageCivitai>[0],
+  opts: { allowFallback: boolean },
+): ReturnType<typeof generateImageCivitai> {
+  const pool = params.models[params.generationStyle] ?? [];
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).map((m) => m.air);
+  const primary = params.modelAir ?? shuffled[0];
+  // Нет ни закреплённого AIR, ни пула — пусть generateImageCivitai сам выдаст понятную ошибку.
+  if (!primary) return generateImageCivitai(params);
+  const candidates = opts.allowFallback
+    ? [primary, ...shuffled.filter((a) => a !== primary).slice(0, 2)]
+    : [primary];
+
+  const budgetEnd = Date.now() + CIVITAI_GEN_BUDGET_MS;
+  let lastErr: unknown;
+  for (let mi = 0; mi < candidates.length; mi++) {
+    const air = candidates[mi];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (Date.now() >= budgetEnd - CIVITAI_MIN_STEP_MS) throw lastErr ?? new Error("Civitai generation budget exhausted");
+      try {
+        const result = await generateImageCivitai({
+          ...params,
+          modelAir: air,
+          deadline: Math.min(budgetEnd, Date.now() + CIVITAI_ATTEMPT_MS),
+        });
+        if (mi > 0 || attempt > 0) logger.info({ air, attempt, fallback: mi > 0 }, "civitai_retry_succeeded");
+        return result;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message ?? err);
+        if (!isTransientCivitaiError(msg)) throw err;
+        const noCapacity = /No provider supports|timed out|expired/i.test(msg);
+        const next = noCapacity || attempt === 1 ? candidates[mi + 1] : air;
+        logger.warn({ air, attempt, err: msg, next: next ?? null }, "civitai_retry");
+        if (noCapacity) break;
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 5000));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 function civitaiPostprocessDeadline(settings: Record<string, string>): number {
   const sec = Number(settings.CIVITAI_POSTPROCESS_BUDGET_SEC) || 60;
   return Date.now() + sec * 1000;
@@ -2951,7 +3020,9 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     }
 
     try {
-      let result = await generateImageCivitai({
+      // Повторы при сбоях Civitai; откат на другую модель пула — только когда
+      // чекпоинт не закреплён (новый аватар: create, автогенерация).
+      let result = await generateImageCivitaiResilient({
         apiToken: civitaiToken,
         generationStyle,
         prompt,
@@ -2963,7 +3034,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
         sfwPrompt: grokSfwPrompt,
         modelAir: civitaiModelAir ?? comfyCfg?.air,
         models: comfyModels,
-      });
+      }, { allowFallback: !civitaiModelAir && !comfyCfg });
 
       // Hires-fix (аватар на /create): второй img2img-проход в большем разрешении.
       // Только SD1/SDXL — у Flux/ZImage/Grok нет такого img2img; им — обычный апскейл.

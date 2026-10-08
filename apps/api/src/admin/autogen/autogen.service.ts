@@ -39,8 +39,9 @@ import {
 const MAX_RETRIES = 3;
 /** Интервал поллинга статуса image-job. */
 const POLL_INTERVAL_MS = 2500;
-/** Максимум попыток поллинга (~200с при 2.5с). */
-const POLL_MAX_ATTEMPTS = 80;
+/** Максимум попыток поллинга (~350с при 2.5с): AI-сервис при сбоях Civitai
+ *  повторяет и откатывается на другую модель пула (до ~220с + постобработка). */
+const POLL_MAX_ATTEMPTS = 140;
 
 /** Ошибка «нет баланса» — останавливает всю задачу. */
 class BalanceError extends Error {}
