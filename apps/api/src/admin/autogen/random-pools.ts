@@ -8,7 +8,7 @@
  */
 
 import type { CreateUserCharacterDto } from "../../chats/dto/create-user-character.dto";
-import { promptDescribesExpression, promptDescribesSetting } from "@repo/types";
+import { firstClause, promptDescribesExpression, promptDescribesSetting } from "@repo/types";
 
 // ─── Пулы (зеркало create/data.ts) ───────────────────────────────────────────
 
@@ -227,10 +227,12 @@ export function pickRandomScenePrompts(ctx: AutogenContext): string[] {
   // ctx.poses — уже без поз на двоих (loadContext). Выражение — только если поза
   // сама его не задаёт, иначе в промпте спорят два выражения лица.
   const pose = one(ctx.poses);
-  const expression = pose.length > 0 && promptDescribesExpression(pose[0]) ? [] : one(ctx.expressions);
+  // Выражение и локация — только первой фразой: полные описания (~250 символов)
+  // перетягивают генерацию, и вместо персонажа выходит одна обстановка.
+  const expression = pose.length > 0 && promptDescribesExpression(pose[0]) ? [] : one(ctx.expressions).map(firstClause);
   // Локация — только если поза не задаёт свою обстановку (кровать, душ, кухня…),
   // иначе две сцены спорят и модель рисует коллаж из нескольких кадров.
-  const location = pose.length > 0 && promptDescribesSetting(pose[0]) ? [] : one(ctx.locations);
+  const location = pose.length > 0 && promptDescribesSetting(pose[0]) ? [] : one(ctx.locations).map((l) => `background: ${firstClause(l)}`);
   return [...one(ctx.outfits), ...expression, ...pose, ...location, ...one(ctx.framings)];
 }
 

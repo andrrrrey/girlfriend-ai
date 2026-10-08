@@ -15,7 +15,7 @@ import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
-import { isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
+import { firstClause, isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -1123,7 +1123,8 @@ function pickRandomPrompts(): string[] {
     if (!promptDescribesExpression(pose?.prompt)) {
       const expressions = solo(cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options));
       const expr = pick(expressions);
-      if (expr?.prompt) prompts.push(expr.prompt);
+      // Только первая фраза: полные описания (~250 символов) перетягивают генерацию.
+      if (expr?.prompt) prompts.push(firstClause(expr.prompt));
     }
     if (pose?.prompt) prompts.push(pose.prompt);
     poseSetsScene = promptDescribesSetting(pose?.prompt);
@@ -1134,7 +1135,8 @@ function pickRandomPrompts(): string[] {
   if (cachedSceneOptions && !poseSetsScene) {
     const locations = solo(cachedSceneOptions.LOCATION.flatMap(c => c.options));
     const loc = pick(locations);
-    if (loc?.prompt) prompts.push(loc.prompt);
+    // Локация — фоном и одной фразой, иначе вместо персонажа рисуется одна обстановка.
+    if (loc?.prompt) prompts.push(`background: ${firstClause(loc.prompt)}`);
   }
 
   if (cachedCameraOptions) {

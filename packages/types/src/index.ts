@@ -211,7 +211,23 @@ const EXTRA_BODY_RE =
  * люди в кадре. Применяется ко всем категориям (поза, одежда, выражение, локация, кадр).
  */
 export function isUnsafeForSoloAvatar(prompt: string | null | undefined): boolean {
-  return !!prompt && (isMultiPersonPrompt(prompt) || EXTRA_BODY_RE.test(prompt));
+  return !!prompt && (isMultiPersonPrompt(prompt) || EXTRA_BODY_RE.test(prompt) || NO_FACE_FRAMING_RE.test(prompt));
+}
+
+/**
+ * Кадры, где персонажа не видно целиком или нет лица: детальный план части тела,
+ * «только глаза/губы», крошечная фигура в огромном пространстве. Для аватара
+ * модель в таких случаях рисует одну обстановку (лестницу, комнату) без человека.
+ */
+const NO_FACE_FRAMING_RE =
+  /\b(detail shot|extreme close-up shot|only eyes|only lips|specific body part|extreme wide shot|small figure|environment dominates)\b/i;
+
+/**
+ * Первая фраза опции (до первой запятой). Описания локаций/выражений длинные
+ * (~250 символов) и перетягивают генерацию на себя — для аватара берём суть.
+ */
+export function firstClause(prompt: string): string {
+  return prompt.split(",")[0].trim();
 }
 
 /**
