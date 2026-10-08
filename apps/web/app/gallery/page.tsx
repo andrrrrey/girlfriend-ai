@@ -705,7 +705,24 @@ export default function GalleryPage() {
                 <video key={lightboxItem.jobId} className="g-lightbox-media" src={lightboxItem.output.url} controls autoPlay loop />
               ) : (
                 // Полноэкранный просмотр — всегда оригинал, без webp-пережатия.
-                <img key={lightboxItem.jobId} className="g-lightbox-media" src={lightboxItem.output.url} alt="Gallery" decoding="async" />
+                <img
+                  key={lightboxItem.jobId}
+                  className="g-lightbox-media"
+                  src={lightboxItem.output.url}
+                  alt="Gallery"
+                  decoding="async"
+                  // Оригинал не загрузился — показываем крупный дериватив (1080px),
+                  // а не иконку битой картинки.
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    const fallback = resizedMediaUrl(lightboxItem.output?.url, { w: 1080 });
+                    if (fallback && img.dataset.fallback !== "1" && fallback !== img.src) {
+                      img.dataset.fallback = "1";
+                      img.classList.remove("media-broken");
+                      img.src = fallback;
+                    }
+                  }}
+                />
               )
             )}
           </div>

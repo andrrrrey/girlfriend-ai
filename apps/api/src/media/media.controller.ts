@@ -17,6 +17,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 // Подтягивает type-augmentation для Express.Multer.File:
 import "multer";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { IsArray, IsString } from "class-validator";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
@@ -94,6 +95,10 @@ export class MediaController {
     summary:
       "Stream a media object directly (no auth). ?w=<width>&q=<quality> отдаёт сжатый webp нужной ширины",
   })
+  // Публичный immutable-контент. Глобальный throttler считает по IP, а все
+  // запросы приходят через Next api-proxy с одного адреса — лимит делился на
+  // весь сайт, и при листании галереи оригиналы начинали получать 429.
+  @SkipThrottle()
   @Get("stream")
   async streamMedia(
     @Query("key") key: string,
