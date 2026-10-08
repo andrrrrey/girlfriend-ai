@@ -38,6 +38,18 @@ export function isUnsafeForSoloAvatar(prompt: string | null | undefined): boolea
   return !!prompt && (isMultiPersonPrompt(prompt) || EXTRA_BODY_RE.test(prompt));
 }
 
+/**
+ * Поза сама задаёт обстановку (кровать, ванна, душ, кухня, пляж, спортзал…).
+ * Отдельная случайная локация с ней спорит («спит в кровати» + «сад») — модель
+ * не может совместить сцены и рисует коллаж из нескольких кадров.
+ */
+const SETTING_IN_PROMPT_RE =
+  /\b(bed|beds|bedroom|pillows?|blankets?|sheets|mattress|sofa|couch|bath|bathtub|bathroom|shower|tub|pool|kitchen|gym|beach|beach towel|lounge chair|window|swing|waterfall|desk|office|classroom|car|backseat|stage|sauna|hot tub|jacuzzi)\b/i;
+
+export function promptDescribesSetting(prompt: string | null | undefined): boolean {
+  return !!prompt && SETTING_IN_PROMPT_RE.test(prompt);
+}
+
 /** Поза уже задаёт выражение лица — случайное выражение поверх неё конфликтует. */
 export function promptDescribesExpression(prompt: string | null | undefined): boolean {
   return !!prompt && EXPRESSION_IN_PROMPT_RE.test(prompt);

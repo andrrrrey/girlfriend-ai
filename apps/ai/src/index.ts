@@ -2658,6 +2658,10 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
   // рисует клон персонажа) и не запрещаем «лишних людей»; одиночная — «solo»
   // в позитив (работает и там, где негатив игнорируется: Z-Image Turbo, Flux, Grok).
   ({ prompt, negativePrompt } = applyPeopleCountHints(prompt, negativePrompt ?? ""));
+  // Один цельный кадр: при конфликтующих сценах (поза в кровати + локация «сад»)
+  // и вертикальном формате модели склеивают коллаж из 2–3 панелей.
+  prompt = mergePromptParts(prompt, "single image, one continuous scene");
+  negativePrompt = mergePromptParts(negativePrompt, "(collage, split screen, multiple panels, diptych, triptych, grid layout, comic panels, multiple views, picture in picture, frame border:1.3)");
 
   const modelId = model || settings.MODELSLAB_DEFAULT_MODEL || "realistic-vision-v51";
   // Точный чекпоинт Civitai для переиспользования: если сверху пришёл AIR

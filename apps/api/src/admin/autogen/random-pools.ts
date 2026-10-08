@@ -8,7 +8,7 @@
  */
 
 import type { CreateUserCharacterDto } from "../../chats/dto/create-user-character.dto";
-import { promptDescribesExpression } from "@repo/types";
+import { promptDescribesExpression, promptDescribesSetting } from "@repo/types";
 
 // ─── Пулы (зеркало create/data.ts) ───────────────────────────────────────────
 
@@ -228,7 +228,10 @@ export function pickRandomScenePrompts(ctx: AutogenContext): string[] {
   // сама его не задаёт, иначе в промпте спорят два выражения лица.
   const pose = one(ctx.poses);
   const expression = pose.length > 0 && promptDescribesExpression(pose[0]) ? [] : one(ctx.expressions);
-  return [...one(ctx.outfits), ...expression, ...pose, ...one(ctx.locations), ...one(ctx.framings)];
+  // Локация — только если поза не задаёт свою обстановку (кровать, душ, кухня…),
+  // иначе две сцены спорят и модель рисует коллаж из нескольких кадров.
+  const location = pose.length > 0 && promptDescribesSetting(pose[0]) ? [] : one(ctx.locations);
+  return [...one(ctx.outfits), ...expression, ...pose, ...location, ...one(ctx.framings)];
 }
 
 /**

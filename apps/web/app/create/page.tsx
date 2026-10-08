@@ -15,7 +15,7 @@ import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
-import { isUnsafeForSoloAvatar, promptDescribesExpression } from "../../lib/peopleCount";
+import { isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -1106,6 +1106,7 @@ function pickRandomPrompts(): string[] {
   // толпа на фоне…) — иначе модель дорисовывает лишние конечности и клонов.
   const solo = <T extends { prompt?: string | null },>(opts: T[]): T[] => opts.filter((o) => !isUnsafeForSoloAvatar(o.prompt));
   const prompts: string[] = [];
+  let poseSetsScene = false;
 
   if (cachedAppearanceOptions) {
     const allOutfits = solo(cachedAppearanceOptions.OUTFITS.flatMap(c => c.options));
@@ -1125,9 +1126,12 @@ function pickRandomPrompts(): string[] {
       if (expr?.prompt) prompts.push(expr.prompt);
     }
     if (pose?.prompt) prompts.push(pose.prompt);
+    poseSetsScene = promptDescribesSetting(pose?.prompt);
   }
 
-  if (cachedSceneOptions) {
+  // Локация — только если поза не задаёт свою обстановку (кровать, душ, кухня…),
+  // иначе две сцены спорят и модель рисует коллаж из нескольких кадров.
+  if (cachedSceneOptions && !poseSetsScene) {
     const locations = solo(cachedSceneOptions.LOCATION.flatMap(c => c.options));
     const loc = pick(locations);
     if (loc?.prompt) prompts.push(loc.prompt);
