@@ -262,7 +262,7 @@ export class EngagementGenService implements OnModuleInit {
     const personality = (character.personality as Record<string, unknown>) || {};
     const contentMode: "nsfw" | "sfw" = dtoMode ?? (character.nsfw === false ? "sfw" : "nsfw");
     const basePrompt = buildBasePrompt(personality, character.name);
-    const prompt = await buildRandomEngagementPrompt(this.prisma, basePrompt, contentMode);
+    const prompt = await buildRandomEngagementPrompt(this.generation, basePrompt, contentMode);
     const seed = Math.floor(Math.random() * 2_147_483_647);
 
     let jobId: string;
@@ -287,6 +287,8 @@ export class EngagementGenService implements OnModuleInit {
         prompt,
         mode: "scratch",
         model: videoModel,
+        // Вертикальное видео — под ленту Shorts (туда идут только вертикальные).
+        aspectRatio: "9:16",
         characterId: character.id,
         seed,
         contentMode,

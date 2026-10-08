@@ -222,7 +222,10 @@ export function buildRandomCharacter(ctx: AutogenContext, style?: PoolOption): R
 }
 
 /** Случайные одежда/эмоция/поза/локация/кадр — как pickRandomPrompts на /create. */
-export function pickRandomScenePrompts(ctx: AutogenContext): string[] {
+/** Пулы сцены (уже отфильтрованные для одного человека в кадре). */
+export type ScenePools = Pick<AutogenContext, "outfits" | "expressions" | "poses" | "locations" | "framings">;
+
+export function pickRandomScenePrompts(ctx: ScenePools): string[] {
   const one = (arr: string[]) => (arr.length > 0 ? [pick(arr)] : []);
   // ctx.poses — уже без поз на двоих (loadContext). Выражение — только если поза
   // сама его не задаёт, иначе в промпте спорят два выражения лица.

@@ -8,12 +8,9 @@
  * контент. Quality/NSFW-теги добавит AI-сервис.
  */
 
-import { PrismaService } from "../../prisma.service";
-
-/** Случайный элемент массива (или undefined для пустого). */
-function pick<T>(arr: T[]): T | undefined {
-  return arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined;
-}
+import { isUnsafeForSoloAvatar } from "@repo/types";
+import type { GenerationService } from "../../generation/generation.service";
+import { pickRandomScenePrompts } from "../autogen/random-pools";
 
 /**
  * База-идентичность персонажа для промпта. Приоритет — сохранённый avatarPrompt.
@@ -37,33 +34,46 @@ export function buildBasePrompt(personality: Record<string, unknown>, name: stri
   return parts.length ? parts.join(", ") : name;
 }
 
+/** Промпты опций категорий без опций на двоих+ и с чужими телами/без лица в кадре. */
+function soloPrompts(cats: { options: { prompt?: string | null }[] }[]): string[] {
+  return soloOptionPrompts(cats.flatMap((c) => c.options));
+}
+
+function soloOptionPrompts(opts: { prompt?: string | null }[]): string[] {
+  return opts
+    .map((o) => o.prompt?.trim())
+    .filter((p): p is string => !!p && !isUnsafeForSoloAvatar(p));
+}
+
 /**
- * Собирает случайный промпт: база персонажа + по одному случайному фрагменту из
- * каждой оси (одежда/поза/локация/камера). При SFW-режиме исключает nsfw-опции.
+ * Собирает случайный промпт: база персонажа + одежда, выражение, поза, локация,
+ * кадр — по тем же правилам, что аватар в create/автогенерации:
+ *  - без поз на двоих+ и с чужими руками/ногами/людьми (spitroast и т.п.);
+ *  - локация фоном одной фразой и только если поза не задаёт свою обстановку;
+ *  - кадр — только FRAMING с лицом (ракурсы вроде «отражение в зеркале»,
+ *    dutch angle и детальные планы не берём: модель рисовала обстановку без
+ *    человека или лицо в зеркале).
+ * В SFW-режиме геттеры отдают только nsfw=false опции.
  */
 export async function buildRandomEngagementPrompt(
-  prisma: PrismaService,
+  generation: GenerationService,
   basePrompt: string,
   contentMode: "nsfw" | "sfw",
 ): Promise<string> {
-  // При SFW-режиме исключаем nsfw-опции; иначе берём любые с непустым промптом.
-  const nsfwWhere: { nsfw?: boolean } = contentMode === "sfw" ? { nsfw: false } : {};
-
   const [appearance, pose, scene, camera] = await Promise.all([
-    prisma.appearanceOption.findMany({ where: { prompt: { not: null }, ...nsfwWhere }, select: { prompt: true } }),
-    prisma.poseOption.findMany({ where: { prompt: { not: null }, ...nsfwWhere }, select: { prompt: true } }),
-    prisma.sceneOption.findMany({ where: { prompt: { not: null }, ...nsfwWhere }, select: { prompt: true } }),
-    prisma.cameraOption.findMany({ where: { prompt: { not: null }, ...nsfwWhere }, select: { prompt: true } }),
+    generation.getAppearanceOptions(contentMode),
+    generation.getPoseOptions(contentMode),
+    generation.getSceneOptions(contentMode),
+    generation.getCameraOptions(contentMode),
   ]);
 
-  const fragments = [
-    pick(appearance)?.prompt,
-    pick(pose)?.prompt,
-    pick(scene)?.prompt,
-    pick(camera)?.prompt,
-  ]
-    .map((p) => (typeof p === "string" ? p.trim() : ""))
-    .filter(Boolean);
+  const fragments = pickRandomScenePrompts({
+    outfits: soloPrompts(appearance.OUTFITS),
+    expressions: soloPrompts(pose.FACIAL_EXPRESSION),
+    poses: soloPrompts(pose.POSE),
+    locations: soloPrompts(scene.LOCATION),
+    framings: soloOptionPrompts(camera.FRAMING),
+  });
 
   return [basePrompt, ...fragments].filter(Boolean).join(", ");
 }
