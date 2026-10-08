@@ -101,7 +101,15 @@ const PAGE_CSS = `
   }
 `;
 
-function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number } }) {
+/** Горизонтальные/квадратные пропорции — такие видео в Shorts не пускаем. */
+const NON_VERTICAL_RATIOS = new Set(["16:9", "21:9", "4:3", "3:2", "5:4", "1:1"]);
+
+function isKnownNonVertical(item: GalleryItem): boolean {
+  const ar = item.input?.aspectRatio;
+  return !!ar && NON_VERTICAL_RATIOS.has(ar);
+}
+
+function ShortCard({ item, likeStatus, onNotVertical }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number }; onNotVertical: (jobId: string) => void }) {
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -168,9 +176,23 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
     <div className="shorts-card-wrap">
       <div className="shorts-card" ref={cardRef}>
         {url && shouldLoad ? (
-          <video ref={videoRef} className="shorts-video" src={url} muted loop playsInline preload="metadata" />
+          <video
+            ref={videoRef}
+            className="shorts-video"
+            src={url}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            // Пропорция в job может отсутствовать (img2vid) — проверяем реальные
+            // размеры кадра и убираем из ленты всё, что не вертикальное.
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget;
+              if (v.videoWidth && v.videoHeight && v.videoWidth >= v.videoHeight) onNotVertical(item.jobId);
+            }}
+          />
         ) : (
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "#141414" }} />
         )}
 
         <div className="shorts-gradient" />
@@ -211,7 +233,7 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
             </button>
             {showMenu && (
-              <div style={{ position: "absolute", right: 44, bottom: 0, background: "#1e1e2e", border: "1px solid #313150", borderRadius: 8, padding: 4, zIndex: 50 }}>
+              <div style={{ position: "absolute", right: 44, bottom: 0, background: "#1a1a1a", border: "1px solid #313131", borderRadius: 8, padding: 4, zIndex: 50 }}>
                 <button
                   style={{ background: "transparent", border: "none", color: "#e36466", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}
                   onClick={() => { setShowMenu(false); setShowReport(true); }}
@@ -245,16 +267,23 @@ export default function ShortsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
+  // jobId видео, оказавшихся не вертикальными по метаданным кадра.
+  const [notVertical, setNotVertical] = useState<Set<string>>(() => new Set());
+  const markNotVertical = useCallback((jobId: string) => {
+    setNotVertical((prev) => (prev.has(jobId) ? prev : new Set(prev).add(jobId)));
+  }, []);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchItems = useCallback((pageNum: number, append: boolean) => {
     if (append) setLoadingMore(true); else setFetching(true);
     getPublicShorts({ page: pageNum, limit: SHORTS_PAGE_SIZE })
       .then((data) => {
-        const newItems = data.items || [];
+        // В Shorts — только вертикальные видео.
+        const rawItems = data.items || [];
+        const newItems = rawItems.filter((i) => !isKnownNonVertical(i));
         if (append) setItems((prev) => [...prev, ...newItems]);
         else setItems(newItems);
-        setHasMore(newItems.length >= SHORTS_PAGE_SIZE);
+        setHasMore(rawItems.length >= SHORTS_PAGE_SIZE);
       })
       .catch(() => { if (!append) setItems([]); })
       .finally(() => { setFetching(false); setLoadingMore(false); });
@@ -289,6 +318,8 @@ export default function ShortsPage() {
       .catch(() => {});
   }, [items]);
 
+  const visibleItems = items.filter((i) => !notVertical.has(i.jobId));
+
   if (loading) return null;
 
   return (
@@ -309,7 +340,7 @@ export default function ShortsPage() {
           Array.from({ length: 3 }).map((_, i) => (
             <div className="shorts-skeleton" key={i}><div className="shorts-skeleton-inner" /></div>
           ))
-        ) : items.length === 0 ? (
+        ) : visibleItems.length === 0 && !hasMore ? (
           <div className="shorts-card-wrap">
             <div className="shorts-card">
               <div className="shorts-empty">
@@ -323,7 +354,7 @@ export default function ShortsPage() {
           </div>
         ) : (
           <>
-            {items.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} />)}
+            {visibleItems.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} onNotVertical={markNotVertical} />)}
             {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
           </>
         )}

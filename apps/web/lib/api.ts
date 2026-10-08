@@ -926,6 +926,11 @@ export interface AdminReport {
   createdAt: string;
   user: { id: string; email: string; nickname: string | null } | null;
   character: { id: string; name: string } | null;
+  /** Полиморфная цель: character | short | image (фото галереи). */
+  targetType?: string;
+  targetId?: string | null;
+  /** Медиа цели для short/image (подписанный url и автор). */
+  target?: { type: string; url: string | null; author: { id: string; nickname: string | null } | null } | null;
 }
 
 export interface StoryImage {
@@ -2081,11 +2086,11 @@ export const comments = {
 export const reports = {
   /**
    * Отправляет жалобу (POST /reports). Требует авторизации.
-   * Цель: персонаж (characterId) либо полиморфная (targetType/targetId — short).
+   * Цель: персонаж (characterId) либо полиморфная (targetType/targetId — short | image).
    */
   async create(data: {
     characterId?: string;
-    targetType?: "character" | "short";
+    targetType?: "character" | "short" | "image";
     targetId?: string;
     reasons: string[];
     details?: string;
@@ -2572,7 +2577,7 @@ export interface GalleryItem {
   jobId: string;
   type: string;
   output: { url?: string } | null;
-  input: { prompt?: string; model?: string } | null;
+  input: { prompt?: string; model?: string; aspectRatio?: string } | null;
   createdAt: string;
   user: { id: string; nickname: string | null; avatarUrl: string | null } | null;
 }
@@ -2585,6 +2590,8 @@ export async function getPublicGallery(params?: {
   userId?: string;
   gender?: string;
   style?: string;
+  /** Ключи тегов галереи (см. galleryTag.* в i18n), OR-фильтр на сервере. */
+  tags?: string[];
 }): Promise<{ items: GalleryItem[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.type) query.set("type", params.type);
@@ -2594,6 +2601,7 @@ export async function getPublicGallery(params?: {
   if (params?.userId) query.set("userId", params.userId);
   if (params?.gender) query.set("gender", params.gender);
   if (params?.style) query.set("style", params.style);
+  if (params?.tags?.length) query.set("tags", params.tags.join(","));
   query.set("mode", getClientContentMode());
   const qs = query.toString();
   return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);

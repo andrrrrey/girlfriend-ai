@@ -618,14 +618,36 @@ export class AdminService {
       this.prisma.report.count({ where }),
     ]);
 
-    const reports = rows.map((r) => ({
-      id: r.id,
-      reasons: r.reasons,
-      details: r.details,
-      status: r.status,
-      createdAt: r.createdAt.toISOString(),
-      user: r.user,
-      character: r.character,
+    // Для жалоб на shorts/фото галереи подтягиваем медиа цели (aiJob), чтобы
+    // админ видел, на что именно пожаловались.
+    const jobIds = rows
+      .filter((r) => r.targetType !== "character" && r.targetId)
+      .map((r) => r.targetId as string);
+    const jobs = jobIds.length
+      ? await this.prisma.aiJob.findMany({
+          where: { id: { in: jobIds } },
+          select: { id: true, type: true, output: true, user: { select: { id: true, nickname: true } } },
+        })
+      : [];
+    const jobMap = new Map(jobs.map((j) => [j.id, j] as const));
+
+    const reports = await Promise.all(rows.map(async (r) => {
+      const job = r.targetId ? jobMap.get(r.targetId) : undefined;
+      const output = job ? ((await this.signOutput(job.output)) as { url?: string } | null) : null;
+      return {
+        id: r.id,
+        reasons: r.reasons,
+        details: r.details,
+        status: r.status,
+        createdAt: r.createdAt.toISOString(),
+        user: r.user,
+        character: r.character,
+        targetType: r.targetType,
+        targetId: r.targetId,
+        target: job
+          ? { type: job.type, url: output?.url ?? null, author: job.user }
+          : null,
+      };
     }));
 
     return { reports, total };

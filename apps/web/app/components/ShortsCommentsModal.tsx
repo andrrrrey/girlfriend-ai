@@ -70,7 +70,7 @@ export default function ShortsCommentsModal({ jobId, onClose, onCountChange }: P
         <div style={s.header}>
           <span style={s.title}>{t("comments.title")}</span>
           <button style={s.closeBtn} onClick={onClose} aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfd3e6" strokeWidth="1.6" strokeLinecap="round" /></svg>
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfcfcf" strokeWidth="1.6" strokeLinecap="round" /></svg>
           </button>
         </div>
 
@@ -128,18 +128,18 @@ export default function ShortsCommentsModal({ jobId, onClose, onCountChange }: P
 
 const s: Record<string, React.CSSProperties> = {
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 0 },
-  modal: { position: "relative", background: "#14132e", borderRadius: "18px 18px 0 0", border: "1px solid #2a2950", width: "min(560px, 100vw)", height: "70vh", display: "flex", flexDirection: "column", boxShadow: "0 -20px 60px rgba(0,0,0,0.5)" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2a2950" },
+  modal: { position: "relative", background: "#111111", borderRadius: "18px 18px 0 0", border: "1px solid #2a2a2a", width: "min(560px, 100vw)", height: "70vh", display: "flex", flexDirection: "column", boxShadow: "0 -20px 60px rgba(0,0,0,0.5)" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2a2a2a" },
   title: { color: "#fff", fontSize: 16, fontWeight: 700 },
   closeBtn: { width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   list: { flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 14 },
-  empty: { color: "#6f7496", fontSize: 14, textAlign: "center", padding: "30px 0" },
+  empty: { color: "#6b6b6b", fontSize: 14, textAlign: "center", padding: "30px 0" },
   row: { display: "flex", alignItems: "flex-start", gap: 10 },
   avatar: { width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f95bad, #c1f0aa)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden" },
-  name: { color: "#cfd3e6", fontSize: 13, fontWeight: 700 },
-  text: { color: "#dfe2f2", fontSize: 14, lineHeight: 1.4, wordBreak: "break-word" },
+  name: { color: "#cfcfcf", fontSize: 13, fontWeight: 700 },
+  text: { color: "#e6e6e6", fontSize: 14, lineHeight: 1.4, wordBreak: "break-word" },
   loadMore: { background: "transparent", border: "none", color: "#f95bad", fontSize: 13, cursor: "pointer", padding: "8px 0" },
-  footer: { display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid #2a2950" },
-  input: { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid #2f2e58", borderRadius: 999, padding: "10px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" },
+  footer: { display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid #2a2a2a" },
+  input: { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid #313131", borderRadius: 999, padding: "10px 16px", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit" },
   sendBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "10px 22px", borderRadius: 999, border: "none", background: "linear-gradient(90deg, #f95bad, #ff0084)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" },
 };

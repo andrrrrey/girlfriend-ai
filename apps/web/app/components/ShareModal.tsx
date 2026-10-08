@@ -26,7 +26,7 @@ export default function ShareModal({ url, title, onClose }: Props) {
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.closeBtn} onClick={onClose} aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfd3e6" strokeWidth="1.6" strokeLinecap="round" /></svg>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfcfcf" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
 
         <h2 style={s.title}>{title || t("share.title")}</h2>
@@ -50,11 +50,11 @@ export default function ShareModal({ url, title, onClose }: Props) {
 
 const s: Record<string, React.CSSProperties> = {
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 },
-  modal: { position: "relative", background: "#14132e", borderRadius: 18, border: "1px solid #2a2950", width: "min(560px, 96vw)", padding: "36px 40px 40px", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", textAlign: "center" },
+  modal: { position: "relative", background: "#111111", borderRadius: 18, border: "1px solid #2a2a2a", width: "min(560px, 96vw)", padding: "36px 40px 40px", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", textAlign: "center" },
   closeBtn: { position: "absolute", top: 16, right: 16, width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   title: { margin: 0, color: "#f95bad", fontSize: 26, fontWeight: 800 },
-  subtitle: { margin: "12px 0 24px", color: "#9aa0bd", fontSize: 16, fontWeight: 500 },
-  linkPill: { background: "rgba(255,255,255,0.04)", border: "1px solid #2f2e58", borderRadius: 999, padding: "4px 8px", marginBottom: 28 },
-  linkInput: { width: "100%", background: "transparent", border: "none", outline: "none", color: "#b9bdd6", fontSize: 16, textAlign: "center", padding: "12px 8px", fontFamily: "inherit" },
+  subtitle: { margin: "12px 0 24px", color: "#969696", fontSize: 16, fontWeight: 500 },
+  linkPill: { background: "rgba(255,255,255,0.04)", border: "1px solid #313131", borderRadius: 999, padding: "4px 8px", marginBottom: 28 },
+  linkInput: { width: "100%", background: "transparent", border: "none", outline: "none", color: "#bdbdbd", fontSize: 16, textAlign: "center", padding: "12px 8px", fontFamily: "inherit" },
   copyBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, minWidth: 200, padding: "14px 36px", borderRadius: 999, border: "none", background: "linear-gradient(90deg, #f95bad, #ff0084)", color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
 };

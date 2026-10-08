@@ -7,11 +7,11 @@ import { reports } from "../../lib/api";
 import type { TKey } from "../../lib/i18n";
 
 interface Props {
-  /** Легаси: жалоба на персонажа. Игнорируется, если задан targetType="short". */
+  /** Легаси: жалоба на персонажа. Игнорируется, если задан targetType="short" | "image". */
   characterId?: string;
   /** Полиморфная цель жалобы. По умолчанию "character". */
-  targetType?: "character" | "short";
-  /** ID цели для targetType="short" (jobId шорта). */
+  targetType?: "character" | "short" | "image";
+  /** ID цели для targetType="short" | "image" (jobId шорта/фото). */
   targetId?: string;
   onClose: () => void;
 }
@@ -52,7 +52,7 @@ export default function ReportModal({ characterId, targetType = "character", tar
     setError("");
     try {
       await reports.create({
-        ...(targetType === "short"
+        ...(targetType !== "character"
           ? { targetType, targetId }
           : { characterId, targetType: "character" }),
         reasons: selected,
@@ -70,7 +70,7 @@ export default function ReportModal({ characterId, targetType = "character", tar
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.closeBtn} onClick={onClose} aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfd3e6" strokeWidth="1.6" strokeLinecap="round" /></svg>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#cfcfcf" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
 
         <h2 style={s.title}>{t("report.title")}</h2>
@@ -137,17 +137,17 @@ export default function ReportModal({ characterId, targetType = "character", tar
 
 const s: Record<string, React.CSSProperties> = {
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 },
-  modal: { position: "relative", background: "#14132e", borderRadius: 18, border: "1px solid #2a2950", width: "min(560px, 96vw)", maxHeight: "90vh", overflowY: "auto", padding: "36px 40px 32px", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", textAlign: "center" },
+  modal: { position: "relative", background: "#111111", borderRadius: 18, border: "1px solid #2a2a2a", width: "min(560px, 96vw)", maxHeight: "90vh", overflowY: "auto", padding: "36px 40px 32px", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", textAlign: "center" },
   closeBtn: { position: "absolute", top: 16, right: 16, width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   title: { margin: 0, color: "#f95bad", fontSize: 26, fontWeight: 800 },
-  subtitle: { margin: "12px 0 20px", color: "#9aa0bd", fontSize: 15, fontWeight: 500, lineHeight: 1.5 },
+  subtitle: { margin: "12px 0 20px", color: "#969696", fontSize: 15, fontWeight: 500, lineHeight: 1.5 },
   centerBlock: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "10px 0 6px" },
   sectionLabel: { color: "#f95bad", fontSize: 14, fontWeight: 700, textAlign: "center", margin: "16px 0 10px" },
   reasonList: { display: "flex", flexDirection: "column", gap: 10 },
-  reasonPill: { width: "100%", padding: "13px 16px", borderRadius: 999, border: "1px solid #2f2e58", background: "rgba(255,255,255,0.03)", color: "#dfe2f2", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "center" },
+  reasonPill: { width: "100%", padding: "13px 16px", borderRadius: 999, border: "1px solid #313131", background: "rgba(255,255,255,0.03)", color: "#e6e6e6", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "center" },
   reasonPillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.18)", color: "#fff" },
-  textarea: { width: "100%", minHeight: 96, background: "rgba(255,255,255,0.03)", border: "1px solid #2f2e58", borderRadius: 14, padding: "14px 16px", color: "#dfe2f2", fontSize: 15, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" },
-  charCount: { color: "#6f7496", fontSize: 13, textAlign: "left", margin: "8px 2px 0" },
+  textarea: { width: "100%", minHeight: 96, background: "rgba(255,255,255,0.03)", border: "1px solid #313131", borderRadius: 14, padding: "14px 16px", color: "#e6e6e6", fontSize: 15, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" },
+  charCount: { color: "#6b6b6b", fontSize: 13, textAlign: "left", margin: "8px 2px 0" },
   error: { color: "#e36466", fontSize: 14, marginTop: 12 },
   actions: { display: "flex", gap: 14, marginTop: 24, justifyContent: "center" },
   cancelBtn: { flex: 1, maxWidth: 220, padding: "14px 28px", borderRadius: 999, border: "none", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },

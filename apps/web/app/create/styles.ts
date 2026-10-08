@@ -70,11 +70,29 @@ export const PAGE_CSS = `
     padding: 12px; overflow: hidden; position: relative; cursor: pointer;
     background: #121212;
   }
-  .style-card.selected { border: 1px solid #f95bad; }
-  .style-card.unselected { border: 1px dashed #969696; }
+  .style-card { transition: border-color .15s ease, box-shadow .2s ease, transform .15s ease; border: 1px solid #313131; }
+  .style-card:hover { border-color: #5b5b5b; }
+  .style-card.selected {
+    border: 2px solid #f95bad;
+    box-shadow: 0 0 0 3px rgba(249,91,173,0.18), 0 0 22px rgba(249,91,173,0.35);
+    transform: translateY(-1px);
+  }
+  .style-card.unselected { border: 1px solid #313131; }
+  .style-card.unselected .style-card-img { opacity: 0.35; filter: grayscale(0.35); }
+  .style-card.selected::after, .ethnicity-card.selected:not(.color-card)::after, .personality-card.selected::after {
+    content: ''; position: absolute; top: 8px; right: 8px; z-index: 2;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg, #f95bad, #ff0084) center / 100% no-repeat;
+    box-shadow: 0 0 10px rgba(249,91,173,0.6);
+  }
+  .style-card.selected::before, .ethnicity-card.selected:not(.color-card)::before, .personality-card.selected::before {
+    content: ''; position: absolute; top: 13px; right: 12.5px; z-index: 3;
+    width: 8px; height: 4.5px; border-left: 1.8px solid #fff; border-bottom: 1.8px solid #fff;
+    transform: rotate(-45deg);
+  }
   .style-card .name { position: relative; z-index: 1; font-weight: 700; font-size: 16px; color: #fff; text-align: center; width: 100%; }
   .style-card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5; z-index: 0; }
-  .style-card.selected .style-card-img { opacity: 0.7; }
+  .style-card.selected .style-card-img { opacity: 0.95; filter: none; }
 
   /* Buttons */
   .buttons-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0; }
@@ -125,15 +143,23 @@ export const PAGE_CSS = `
   .ethnicity-card {
     width: calc(20% - 8px); aspect-ratio: 1; border-radius: 8px; position: relative;
     display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
-    border: 1px dashed #969696; background: #121212;
+    border: 1px solid #313131; background: #121212;
+    transition: border-color .15s ease, box-shadow .2s ease, background .15s ease;
   }
-  .ethnicity-card.selected { border: 1px solid #f95bad; background: #1a1316; }
+  .ethnicity-card:hover { border-color: #5b5b5b; }
+  .ethnicity-card.selected {
+    border: 2px solid #f95bad; background: rgba(249,91,173,0.14);
+    box-shadow: 0 0 0 3px rgba(249,91,173,0.18), 0 0 22px rgba(249,91,173,0.35);
+  }
+  .ethnicity-card.selected .card-name { color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,0.8); }
   .ethnicity-card .card-name { position: relative; z-index: 1; font-weight: 700; font-size: 14px; color: #fff; text-align: center; }
   .ethnicity-card-img {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    object-fit: cover; opacity: 0.4; z-index: 0; border-radius: 8px;
+    object-fit: cover; opacity: 0.45; z-index: 0; border-radius: 8px;
+    transition: opacity .15s ease;
   }
-  .ethnicity-card.selected .ethnicity-card-img { opacity: 0.65; }
+  .ethnicity-card:hover .ethnicity-card-img { opacity: 0.6; }
+  .ethnicity-card.selected .ethnicity-card-img { opacity: 1; }
   .facial-grid { flex-wrap: wrap; overflow-x: hidden; overflow-y: hidden; }
   .facial-grid .ethnicity-card { width: calc(25% - 8px); flex-shrink: 0; }
   /* Цветовые плашки (Цвет глаз / Цвет волос) — как в генерации изображения. */
@@ -148,8 +174,55 @@ export const PAGE_CSS = `
     border: 1px solid rgba(255,255,255,0.15);
   }
   .color-card .card-name { font-size: 13px; font-weight: 500; color: #ccc; }
-  .color-card.selected { border: 1px solid #f95bad; background: rgba(249,91,173,0.12); }
-  .color-card.selected .card-name { color: #f95bad; }
+  .color-card.selected { border: 1px solid #f95bad; background: rgba(249,91,173,0.2); box-shadow: 0 0 14px rgba(249,91,173,0.35); }
+  .color-card.selected .card-name { color: #fff; }
+  .color-card.selected .color-dot { box-shadow: 0 0 0 2px #090909, 0 0 0 3.5px #f95bad; }
+
+  /* Иконки вместо эмодзи */
+  .ic { display: block; flex-shrink: 0; }
+  .ic-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%; color: #fff; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(249,91,173,0.28), rgba(255,0,132,0.12));
+    border: 1px solid rgba(249,91,173,0.45);
+  }
+  .ic-gem {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%; color: #fff;
+    background: linear-gradient(135deg, #f95bad, #ff0084);
+  }
+
+  /* Карточки с иконкой (образ жизни) */
+  .icon-grid { gap: 8px; }
+  .icon-card {
+    width: calc(16.666% - 7px); aspect-ratio: auto; min-height: 84px;
+    flex-direction: column; gap: 8px; padding: 12px 6px;
+  }
+  .icon-card .card-name { font-size: 11px; font-weight: 600; color: #ccc; }
+  .icon-card.selected .card-name { color: #fff; }
+  .icon-card.selected .ic-badge { background: linear-gradient(135deg, #f95bad, #ff0084); border-color: transparent; box-shadow: 0 0 12px rgba(249,91,173,0.6); }
+
+  /* Поле «свой вариант» */
+  .custom-input-row {
+    display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px;
+    height: 32px; margin-top: 8px; padding: 0 4px 0 10px;
+    background: #121212; border: 1px dashed #3a3a3a; border-radius: 6px;
+    transition: border-color .15s ease;
+  }
+  .custom-input-row:focus-within { border: 1px solid #f95bad; }
+  .custom-input-icon { color: #969696; display: flex; }
+  .custom-input {
+    flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 500; color: #fff;
+  }
+  .custom-input::placeholder { color: #6b6b6b; }
+  .custom-add-btn {
+    display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
+    border: none; border-radius: 4px; cursor: pointer; color: #fff;
+    background: linear-gradient(to right, #f95bad, #ff0084);
+    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 600;
+  }
+  .tag-chip.custom { border-style: dashed; }
   .facial-scroll {
     display: flex; flex-direction: column; gap: 22px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
   }
@@ -166,7 +239,7 @@ export const PAGE_CSS = `
     display: flex; align-items: center; justify-content: center; gap: 8px;
     cursor: pointer; font-weight: 500; font-size: 12px; color: #fff; border: 1px solid transparent;
   }
-  .voice-btn.selected { background: #252525; border: 1px solid #313131; }
+  .voice-btn.selected { background: rgba(249,91,173,0.16); border: 1px solid #f95bad; box-shadow: 0 0 10px rgba(249,91,173,0.3); }
   .voice-btn .voice-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
   /* Personality grid */
@@ -179,11 +252,19 @@ export const PAGE_CSS = `
     background: #121212; border: 1px solid #313131; border-radius: 8px; padding: 12px;
     display: flex; flex-direction: column; gap: 8px; cursor: pointer; min-height: 90px;
   }
-  .personality-card.selected { border: 1px solid #f95bad; }
-  .personality-card .p-icon {
-    width: 24px; height: 24px; background: #252525; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  .personality-card { position: relative; transition: border-color .15s ease, box-shadow .2s ease, background .15s ease; }
+  .personality-card:hover { border-color: #5b5b5b; }
+  .personality-card.selected {
+    border: 2px solid #f95bad; background: rgba(249,91,173,0.12);
+    box-shadow: 0 0 0 3px rgba(249,91,173,0.15), 0 0 20px rgba(249,91,173,0.3);
   }
+  .personality-card .p-icon {
+    width: 28px; height: 28px; border-radius: 50%; color: #f95bad;
+    background: rgba(249,91,173,0.12); border: 1px solid rgba(249,91,173,0.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .personality-card.selected .p-icon { color: #fff; background: linear-gradient(135deg, #f95bad, #ff0084); border-color: transparent; }
+  .personality-card.selected .p-desc { color: #d6d6d6; }
   .personality-card .p-title { font-weight: 700; font-size: 10px; color: #fff; line-height: 1.3; }
   .personality-card .p-desc { font-weight: 400; font-size: 8px; color: #969696; line-height: 1.3; }
 
@@ -195,7 +276,12 @@ export const PAGE_CSS = `
     display: flex; align-items: center; justify-content: center; padding: 6px 14px;
     cursor: pointer; font-weight: 500; font-size: 10px; color: #fff; white-space: nowrap;
   }
-  .tag-chip.selected { background: #252525; border-color: #f95bad; }
+  .tag-chip { transition: background .15s ease, border-color .15s ease; }
+  .tag-chip:hover { border-color: #5b5b5b; }
+  .tag-chip.selected {
+    background: linear-gradient(to right, rgba(249,91,173,0.35), rgba(255,0,132,0.25));
+    border-color: #f95bad; color: #fff; box-shadow: 0 0 10px rgba(249,91,173,0.3);
+  }
 
   /* Memory textareas */
   .memory-field { display: flex; flex-direction: column; gap: 12px; width: 100%; flex-shrink: 0; }
@@ -254,18 +340,47 @@ export const PAGE_CSS = `
   .progress-stage { display: flex; gap: 8px; align-items: center; width: 200px; }
   .stage-icon-wrap { display: flex; align-items: center; align-self: stretch; }
   .stage-icon-active {
-    width: 36px; align-self: stretch; min-height: 36px;
+    width: 36px; height: 36px;
     background: linear-gradient(180deg, #f9a0c8 0%, #f95bad 30%, #ff0084 100%);
-    border-radius: 34px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
     position: relative; overflow: visible; flex-shrink: 0;
+    box-shadow: 0 0 14px rgba(249,91,173,0.55);
   }
-  .stage-icon-active::before {
-    content: ''; position: absolute; top: -5px; left: -5px;
-    width: 35px; height: 35px;
-    background: radial-gradient(ellipse at center, rgba(255,200,80,0.55) 0%, rgba(249,160,100,0.25) 50%, transparent 75%);
-    border-radius: 50%; pointer-events: none;
+  .stage-icon-active .icon-content { position: relative; z-index: 2; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+  /* Пульсирующий ореол */
+  .stage-halo {
+    position: absolute; inset: -4px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgba(255,153,206,0.55) 0%, rgba(249,91,173,0.25) 45%, transparent 70%);
+    animation: stage-halo 2.2s ease-in-out infinite;
   }
-  .stage-icon-active .icon-content { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+  /* Орбита: вращающийся контейнер с кольцом-«шлейфом» и шариком, летающим вокруг иконки */
+  .stage-orbit {
+    position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px;
+    pointer-events: none; z-index: 1;
+    animation: stage-orbit 2.4s linear infinite;
+  }
+  .stage-orbit-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 200deg, rgba(249,91,173,0.05) 220deg, rgba(255,153,206,0.85) 358deg, transparent 360deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  }
+  .stage-orbit-ball {
+    position: absolute; left: 50%; top: 0; width: 8px; height: 8px; margin: -3px 0 0 -4px;
+    border-radius: 50%; background: #fff;
+    box-shadow: 0 0 6px 2px #ff99ce, 0 0 14px 4px rgba(249,91,173,0.7);
+  }
+  .stage-icon-active.stage-enter { animation: stage-enter .55s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes stage-orbit { to { transform: rotate(360deg); } }
+  @keyframes stage-halo { 0%,100% { transform: scale(1); opacity: .75; } 50% { transform: scale(1.45); opacity: .15; } }
+  @keyframes stage-enter { 0% { transform: scale(.6); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  .stage-sep-line.pink { animation: sep-fill .5s ease-out; transform-origin: top; }
+  @keyframes sep-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .mobile-dot.active { animation: mdot-pulse 1.6s ease-in-out infinite; }
+  @keyframes mdot-pulse { 0%,100% { box-shadow: 0 0 6px rgba(249,91,173,0.6); } 50% { box-shadow: 0 0 14px 3px rgba(249,91,173,0.75); } }
+  @media (prefers-reduced-motion: reduce) {
+    .stage-orbit, .stage-halo, .stage-icon-active.stage-enter, .stage-sep-line.pink, .mobile-dot.active { animation: none; }
+  }
   .stage-icon-inactive {
     width: 36px; height: 36px; background: #313131; border-radius: 34px;
     display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
@@ -334,7 +449,7 @@ export const PAGE_CSS = `
   .s9-tab-sep { width: 100%; border-top: 1px solid #313131; flex-shrink: 0; }
   .s9-attr-grid { display: grid; grid-template-columns: repeat(3, 1fr) repeat(1, 120px); gap: 8px; }
   .s9-tile { background: #1e1e1e; border: 1px solid #313131; border-radius: 8px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-height: 80px; cursor: default; position: relative; overflow: hidden; }
-  .s9-tile-icon { font-size: 20px; margin-bottom: 4px; }
+  .s9-tile-icon { margin-bottom: 4px; display: flex; }
   .s9-tile-name { font-weight: 700; font-size: 13px; color: #fff; text-align: center; }
   .s9-tile-label { font-size: 8px; font-weight: 500; color: #969696; text-transform: uppercase; letter-spacing: 0.5px; }
   .s9-color-tiles { display: flex; flex-direction: column; gap: 8px; }
@@ -348,7 +463,8 @@ export const PAGE_CSS = `
   .s9-custom-textarea::placeholder { color: #5b5b5b; }
   .s9-pers-list { display: flex; flex-direction: column; gap: 8px; }
   .s9-pers-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e1e; }
-  .s9-pers-icon { font-size: 16px; flex-shrink: 0; }
+  .s9-pers-icon { flex-shrink: 0; display: flex; }
+  .s9-pers-icon .ic-badge { width: 28px; height: 28px; }
   .s9-pers-text { display: flex; flex-direction: column; gap: 2px; }
   .s9-pers-label { font-size: 10px; font-weight: 500; color: #969696; }
   .s9-pers-value { font-size: 12px; font-weight: 500; color: #fff; }
@@ -422,6 +538,8 @@ export const PAGE_CSS = `
     .dropdown-row { flex-direction: column; gap: 8px; }
     /* Плотные сетки на узком экране: 5 колонок нечитаемы. */
     .personality-grid { grid-template-columns: repeat(2, 1fr); }
+    .icon-card { width: calc(33.333% - 6px); }
+    .custom-input-row { max-width: none; }
     .ethnicity-card { width: calc(33.333% - 7px); }
     .facial-grid .ethnicity-card { width: calc(50% - 5px); }
     .s9-attr-grid { grid-template-columns: repeat(2, 1fr); }

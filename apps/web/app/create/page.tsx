@@ -23,9 +23,10 @@ import {
   GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
   EYE_COLORS, HAIR_STYLES, HAIR_COLORS, BODY_TYPES, BREAST_SIZES, BUTT_SIZES,
   RELATIONSHIP_TYPES, FAMILY_STATUSES, LIFESTYLES, WORKS, HOBBIES,
-  KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_ICONS,
+  KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_ICONS, AGE_MIN, AGE_MAX,
   CHEVRON_SVG, GENERATE_BTN_SVG, VOICE_ICON_SVG, CHECK_SVG, LOADER_SVG, PREMIUM_BADGE_SVG,
 } from "./data";
+import { svgIcon, PERSONALITY_ICONS, LIFESTYLE_ICONS } from "./icons";
 
 /* ── Module-level state for AI image generation ── */
 
@@ -152,6 +153,18 @@ const STAGE_TITLE_KEYS: TKey[] = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+const AGE_SPAN = AGE_MAX - AGE_MIN;
+const clampAge = (v: number) => Math.max(AGE_MIN, Math.min(AGE_MAX, Math.round(v)));
+/** Подпись возраста: на верхней границе — «55+». */
+const ageLabel = (v: number) => (v >= AGE_MAX ? `${AGE_MAX}+` : String(v));
+
+// Смешанная внешность убрана из визарда — фильтруем и опции из админки.
+const isMixedEthnicity = (name: string) => /^(mixed|смешанн(ая|ый|ое))$/i.test(name.trim());
+
+/** Иконка в розовом кружке — единый стиль вместо эмодзи. */
+const iconBadge = (name: string, size = 16) => `<span class="ic-badge">${svgIcon(name, size)}</span>`;
+const premiumGem = () => `<span class="ic-gem">${svgIcon("gem", 11)}</span>`;
+
 function dropdown(field: string, label: string, options: string[], def: string) {
   const opts = options.map((o) => `<div class="dropdown-option" data-value="${o}">${cvLabel(field, o)}</div>`).join("");
   return `<div class="dropdown-container" data-field="${field}" data-selected="${def}">
@@ -162,6 +175,71 @@ function dropdown(field: string, label: string, options: string[], def: string) 
 function cardGrid(field: string, items: string[], scrollable = false) {
   const cards = items.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${cvLabel(field, v)}</span></div>`).join("");
   return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}">${cards}</div>`;
+}
+
+// Сетка карточек с иконкой (образ жизни).
+function iconCardGrid(field: string, items: string[], icons: Record<string, string>) {
+  const cards = items
+    .map((v) => `<div class="ethnicity-card icon-card" data-value="${v}">${iconBadge(icons[v] || "sparkle", 18)}<span class="card-name">${cvLabel(field, v)}</span></div>`)
+    .join("");
+  return `<div class="ethnicity-grid icon-grid" data-field="${field}">${cards}</div>`;
+}
+
+/**
+ * Поле «свой вариант»: для чипов (мультивыбор) добавляет выбранный чип, для
+ * карточек (одиночный выбор) — карточку и выбирает её. Значение уходит в
+ * collectFormData как обычный выбор.
+ */
+function customInput(field: string, kind: "chip" | "card", placeholderKey: TKey) {
+  return `<div class="custom-input-row" data-custom-for="${field}" data-kind="${kind}">
+    <span class="custom-input-icon">${svgIcon("pen", 14)}</span>
+    <input type="text" class="custom-input" maxlength="40" placeholder="${tr(placeholderKey)}">
+    <button type="button" class="custom-add-btn">${svgIcon("plus", 14)}<span>${tr("create.customAdd")}</span></button>
+  </div>`;
+}
+
+const sameValue = (a: string | undefined, b: string) => (a || "").trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Добавляет (или выбирает существующий) чип с произвольным значением. */
+function addCustomChip(field: string, value: string) {
+  const wrap = document.querySelector<HTMLElement>(`.tags-wrap[data-field="${field}"]`);
+  if (!wrap || !value.trim()) return;
+  const existing = Array.from(wrap.querySelectorAll<HTMLElement>(".tag-chip")).find((c) => sameValue(c.dataset.value, value));
+  if (existing) { existing.classList.add("selected"); return; }
+  const chip = document.createElement("div");
+  chip.className = "tag-chip custom selected";
+  chip.dataset.value = value.trim();
+  chip.textContent = value.trim();
+  chip.onclick = () => { chip.classList.toggle("selected"); wrap.classList.remove("field-error-ring"); };
+  wrap.appendChild(chip);
+  wrap.classList.remove("field-error-ring");
+}
+
+/** Добавляет (или выбирает существующую) карточку с произвольным значением. */
+function addCustomCard(field: string, value: string) {
+  const grid = document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${field}"]`);
+  if (!grid || !value.trim()) return;
+  grid.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
+  let card = Array.from(grid.querySelectorAll<HTMLElement>(".ethnicity-card")).find((c) => sameValue(c.dataset.value, value));
+  if (!card) {
+    card = document.createElement("div");
+    card.className = "ethnicity-card icon-card custom-card";
+    card.dataset.value = value.trim();
+    card.innerHTML = iconBadge("sparkle", 18);
+    const name = document.createElement("span");
+    name.className = "card-name";
+    name.textContent = value.trim();
+    card.appendChild(name);
+    const c = card;
+    c.onclick = () => {
+      grid.querySelectorAll(".ethnicity-card").forEach((x) => x.classList.remove("selected"));
+      c.classList.add("selected");
+      grid.classList.remove("field-error-ring");
+    };
+    grid.appendChild(card);
+  }
+  card.classList.add("selected");
+  grid.classList.remove("field-error-ring");
 }
 
 // Сетка цветовых плашек с цветным кружком (data-value остаётся английским).
@@ -247,9 +325,9 @@ function stage01() {
     <div class="field"><div class="field-label">${tr("create.name")}</div><input type="text" class="input-text" id="input-name" placeholder="${tr("create.namePlaceholder")}" value=""></div>
     <div class="field"><div class="field-label">${tr("create.surname")}</div><input type="text" class="input-text" id="input-surname" placeholder="${tr("create.surnamePlaceholder")}"></div>
     <div class="field-age"><div class="field-label">${tr("create.age")}</div>
-      <div class="slider-container"><span class="slider-min">18</span>
+      <div class="slider-container"><span class="slider-min">${AGE_MIN}</span>
         <div class="slider-track" data-value="25"><div class="slider-fill"><div class="slider-thumb"><div class="slider-tooltip">25</div></div></div></div>
-        <span class="slider-max">100</span></div></div>
+        <span class="slider-max">${AGE_MAX}+</span></div></div>
     <div class="field-style"><div class="field-label">${tr("create.style")}</div>
       <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${cvLabel("style", s)}</span></div>`).join("")}</div></div>
     ${navButtons(1, 2)}
@@ -274,9 +352,9 @@ function stage03() {
   return `<div class="stage-content" id="stage-03-content">
     ${stageHeader(3, "create.stageFacial")}
     <div class="facial-scroll">
+      <div class="ethnicity-section"><div class="field-label">${tr("create.hairColor")}</div>${colorCardGrid("hairColor", HAIR_COLORS, HAIR_COLOR_HEX)}</div>
       <div class="ethnicity-section"><div class="field-label">${tr("create.eyeColor")}</div>${colorCardGrid("eyeColor", EYE_COLORS, EYE_COLOR_HEX)}</div>
       <div class="ethnicity-section"><div class="field-label">${tr("create.hairStyle")}</div>${imageCardGrid("hairStyle", "hairstyle-grid-container", true)}</div>
-      <div class="ethnicity-section"><div class="field-label">${tr("create.hairColor")}</div>${colorCardGrid("hairColor", HAIR_COLORS, HAIR_COLOR_HEX)}</div>
     </div>
     ${navButtons(2, 4)}
   </div>`;
@@ -296,7 +374,7 @@ function stage04() {
 
 function stage05() {
   const persCards = PERSONALITIES.map((p) =>
-    `<div class="personality-card" data-value="${p.name}"><div class="p-icon">${p.icon}</div><div class="p-title">${persName(p.name)}</div><div class="p-desc">${persDesc(p.name, p.desc)}</div></div>`
+    `<div class="personality-card" data-value="${p.name}"><div class="p-icon">${svgIcon(PERSONALITY_ICONS[p.name] || "sparkle", 14)}</div><div class="p-title">${persName(p.name)}</div><div class="p-desc">${persDesc(p.name, p.desc)}</div></div>`
   ).join("");
   return `<div class="stage-content" id="stage-05-content">
     ${stageHeader(5, "create.stagePersonality")}
@@ -310,9 +388,9 @@ function stage06() {
   return `<div class="stage-content" id="stage-06-content">
     ${stageHeader(6, "create.stageLifestyle")}
     <div class="facial-scroll">
-      <div class="ethnicity-section"><div class="field-label">${tr("create.lifestyle")}</div>${cardGrid("lifestyle", LIFESTYLES, true)}</div>
-      <div class="tags-section"><div class="field-label">${tr("create.work")}</div>${chips("work", WORKS)}</div>
-      <div class="tags-section"><div class="field-label">${tr("create.hobby")}</div>${chips("hobbies", HOBBIES)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.lifestyle")}</div>${iconCardGrid("lifestyle", LIFESTYLES, LIFESTYLE_ICONS)}${customInput("lifestyle", "card", "create.customLifestylePh")}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.work")}</div>${chips("work", WORKS)}${customInput("work", "chip", "create.customWorkPh")}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.hobby")}</div>${chips("hobbies", HOBBIES)}${customInput("hobbies", "chip", "create.customHobbyPh")}</div>
     </div>
     ${navButtons(5, 7)}
   </div>`;
@@ -322,9 +400,9 @@ function stage07() {
   return `<div class="stage-content" id="stage-07-content">
     ${stageHeader(7, "create.stageKinks")}
     <div class="facial-scroll">
-      <div class="tags-section"><div class="field-label">${tr("create.kinksScenarios")}</div>${chips("kinks1", KINKS_1)}</div>
-      <div class="tags-section"><div class="field-label">${tr("create.kinksPower")}</div>${chips("kinks2", KINKS_2)}</div>
-      <div class="tags-section"><div class="field-label">${tr("create.kinksSensory")}</div>${chips("kinks3", KINKS_3)}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksScenarios")}</div>${chips("kinks1", KINKS_1)}${customInput("kinks1", "chip", "create.customKinkPh")}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksPower")}</div>${chips("kinks2", KINKS_2)}${customInput("kinks2", "chip", "create.customKinkPh")}</div>
+      <div class="tags-section"><div class="field-label">${tr("create.kinksSensory")}</div>${chips("kinks3", KINKS_3)}${customInput("kinks3", "chip", "create.customKinkPh")}</div>
     </div>
     ${navButtons(6, 8)}
   </div>`;
@@ -390,6 +468,13 @@ function stage09() {
 
 /* ── Stages Progress Panel ────────────────────── */
 
+// Активный шаг: иконка + орбита с «шариком», летающим вокруг (см. .stage-orbit в styles.ts).
+function activeStageIconInner(i: number) {
+  const svg = STAGE_ICONS[i].replace(/__CLR__/g, "white");
+  return `<span class="stage-halo"></span><span class="stage-orbit"><span class="stage-orbit-ring"></span><span class="stage-orbit-ball"></span></span>`
+    + `<div class="icon-content"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svg}</svg></div>`;
+}
+
 function stagesPanel() {
   let html = '<div class="stages-panel">';
   for (let i = 1; i <= 9; i++) {
@@ -397,7 +482,7 @@ function stagesPanel() {
     const isActive = i === 1;
     const iconClass = isActive ? "stage-icon-active" : "stage-icon-inactive";
     const iconContent = isActive
-      ? `<div class="icon-content"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svgInner}</svg></div>`
+      ? activeStageIconInner(i)
       : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svgInner}</svg>`;
     const desc = isActive
       ? `<div class="stage-desc" id="stage-${pad(i)}-desc">${tr("create.facialDesc")}</div>`
@@ -551,10 +636,10 @@ function restoreFormState(): boolean {
       const fill = document.querySelector<HTMLElement>(".slider-fill");
       const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
       if (track && fill && tooltip) {
-        const pct = (d.age - 18) / 82;
-        fill.style.width = Math.max(0, Math.min(100, pct * 100)) + "%";
-        tooltip.textContent = String(d.age);
-        track.dataset.value = String(d.age);
+        const age = clampAge(d.age);
+        fill.style.width = ((age - AGE_MIN) / AGE_SPAN) * 100 + "%";
+        tooltip.textContent = ageLabel(age);
+        track.dataset.value = String(age);
       }
     }
 
@@ -592,8 +677,10 @@ function restoreFormState(): boolean {
       const grid = document.querySelector<HTMLElement>(`.ethnicity-grid[data-field="${field}"]`);
       if (!grid) return;
       grid.querySelectorAll(".ethnicity-card").forEach((c) => c.classList.remove("selected"));
-      const card = grid.querySelector<HTMLElement>(`.ethnicity-card[data-value="${value}"]`);
-      card?.classList.add("selected");
+      const card = Array.from(grid.querySelectorAll<HTMLElement>(".ethnicity-card")).find((c) => c.dataset.value === value);
+      if (card) card.classList.add("selected");
+      // Свой вариант (поле «custom») — карточки нет в списке, создаём заново.
+      else if (grid.parentElement?.querySelector(`.custom-input-row[data-custom-for="${field}"]`)) addCustomCard(field, value);
     };
     restoreCard("ethnicity", d.ethnicity);
     restoreCard("fantasyRace", d.fantasyRace);
@@ -621,21 +708,28 @@ function restoreFormState(): boolean {
     }
 
     // Restore chips (work, hobbies, kinks)
-    const restoreChips = (field: string, values: string[] | undefined) => {
-      if (!values || values.length === 0) return;
+    // Возвращает значения, для которых чипа в поле не нашлось (свои варианты).
+    const restoreChips = (field: string, values: string[] | undefined): string[] => {
+      if (!values || values.length === 0) return [];
       const wrap = document.querySelector<HTMLElement>(`.tags-wrap[data-field="${field}"]`);
-      if (!wrap) return;
+      if (!wrap) return [];
+      const found = new Set<string>();
       wrap.querySelectorAll<HTMLElement>(".tag-chip").forEach((chip) => {
-        chip.classList.toggle("selected", values.includes(chip.dataset.value || ""));
+        const on = values.includes(chip.dataset.value || "");
+        chip.classList.toggle("selected", on);
+        if (on) found.add(chip.dataset.value || "");
       });
+      return values.filter((v) => !found.has(v));
     };
-    restoreChips("work", d.work);
-    restoreChips("hobbies", d.hobbies);
-    // Kinks are stored as combined array — need to restore across all 3 fields
+    restoreChips("work", d.work).forEach((v) => addCustomChip("work", v));
+    restoreChips("hobbies", d.hobbies).forEach((v) => addCustomChip("hobbies", v));
+    // Kinks are stored as combined array — need to restore across all 3 fields;
+    // не найденные ни в одной группе — свои варианты, кладём в первую.
     if (d.kinks && d.kinks.length > 0) {
-      restoreChips("kinks1", d.kinks);
-      restoreChips("kinks2", d.kinks);
-      restoreChips("kinks3", d.kinks);
+      const m1 = restoreChips("kinks1", d.kinks);
+      const m2 = restoreChips("kinks2", d.kinks);
+      const m3 = restoreChips("kinks3", d.kinks);
+      d.kinks.filter((v) => m1.includes(v) && m2.includes(v) && m3.includes(v)).forEach((v) => addCustomChip("kinks1", v));
     }
 
     // Restore textareas
@@ -812,16 +906,7 @@ function randomizeStage(n: number) {
       const nameInput = document.getElementById("input-name") as HTMLInputElement | null;
       if (nameInput) nameInput.value = pick(RANDOM_NAMES);
       nameInput?.classList.remove("field-error-ring");
-      const age = 18 + Math.floor(Math.random() * 33);
-      const track = document.querySelector<HTMLElement>(".slider-track");
-      const fill = document.querySelector<HTMLElement>(".slider-fill");
-      const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
-      if (track && fill && tooltip) {
-        const pct = (age - 18) / 82;
-        fill.style.width = pct * 100 + "%";
-        tooltip.textContent = String(age);
-        track.dataset.value = String(age);
-      }
+      setSliderValue(AGE_MIN + Math.floor(Math.random() * (AGE_SPAN + 1)));
       setDropdown("gender", pick(allowedGenders));
       setDropdown("orientation", pick(ORIENTATIONS));
       const styleRow = document.getElementById("style-row-container");
@@ -917,33 +1002,33 @@ function populatePreview() {
   const nameEl = document.getElementById("preview-name");
   const ageEl = document.getElementById("preview-age");
   if (nameEl) nameEl.textContent = d.surname ? `${d.name} ${d.surname}` : d.name;
-  if (ageEl) ageEl.textContent = tr("create.yo", { age: d.age });
+  if (ageEl) ageEl.textContent = tr("create.yo", { age: ageLabel(d.age) });
 
   // Appearance tab — tile grid + color tiles + custom textareas
   const app = document.getElementById("tab-appearance");
   if (app) {
     app.innerHTML = `
       <div class="s9-attr-grid">
-        ${s9Tile("🔊", d.voice ? localizeOption(d.voice, currentLang) : "—", tr("create.pvVoice"))}
-        ${s9Tile("💇", d.hairStyle ? localizeOption(d.hairStyle, currentLang) : "—", tr("create.pvHairstyle"))}
-        ${s9Tile("🌍", d.ethnicity ? localizeOption(d.ethnicity, currentLang) : "—", tr("create.pvEthnicity"))}
+        ${s9Tile(iconBadge("volume"), d.voice ? localizeOption(d.voice, currentLang) : "—", tr("create.pvVoice"))}
+        ${s9Tile(iconBadge("scissors"), d.hairStyle ? localizeOption(d.hairStyle, currentLang) : "—", tr("create.pvHairstyle"))}
+        ${s9Tile(iconBadge("globe"), d.ethnicity ? localizeOption(d.ethnicity, currentLang) : "—", tr("create.pvEthnicity"))}
         <div class="s9-color-tiles">
           ${s9ColorTile(d.eyeColor, tr("create.pvEyes"))}
           ${s9ColorTile(d.hairColor, tr("create.pvHair"))}
         </div>
       </div>
       <div class="s9-attr-grid" style="grid-template-columns:repeat(3,1fr)">
-        ${s9Tile("🏋️", d.bodyType ? localizeOption(d.bodyType, currentLang) : "—", tr("create.pvBodyType"))}
-        ${s9Tile("🌸", d.breastSize ? localizeOption(d.breastSize, currentLang) : "—", tr("create.pvBreastSize"))}
-        ${s9Tile("🍑", d.buttSize ? localizeOption(d.buttSize, currentLang) : "—", tr("create.pvButtSize"))}
+        ${s9Tile(iconBadge("body"), d.bodyType ? localizeOption(d.bodyType, currentLang) : "—", tr("create.pvBodyType"))}
+        ${s9Tile(iconBadge("sparkle"), d.breastSize ? localizeOption(d.breastSize, currentLang) : "—", tr("create.pvBreastSize"))}
+        ${s9Tile(iconBadge("peach"), d.buttSize ? localizeOption(d.buttSize, currentLang) : "—", tr("create.pvButtSize"))}
       </div>
       <div class="s9-custom-textareas">
         <div>
-          <div class="s9-custom-label">${tr("create.customAppearance")} 💎</div>
+          <div class="s9-custom-label">${tr("create.customAppearance")} ${premiumGem()}</div>
           <textarea class="s9-custom-textarea" placeholder="${tr("create.customAppearancePh")}"></textarea>
         </div>
         <div>
-          <div class="s9-custom-label">${tr("create.customFace")} 💎</div>
+          <div class="s9-custom-label">${tr("create.customFace")} ${premiumGem()}</div>
           <textarea class="s9-custom-textarea" placeholder="${tr("create.customFacePh")}"></textarea>
         </div>
       </div>`;
@@ -953,13 +1038,13 @@ function populatePreview() {
   const per = document.getElementById("tab-personality");
   if (per) {
     per.innerHTML = `<div class="s9-pers-list">
-      ${s9PersRow("💬", tr("create.pvPersonality"), d.personality ? persName(d.personality) : "")}
-      ${s9PersRow("🏠", tr("create.pvLifestyle"), d.lifestyle ? localizeOption(d.lifestyle, currentLang) : "")}
-      ${s9PersRow("💑", tr("create.pvRelationship"), d.relationshipType ? cvLabel("relationshipType", d.relationshipType) : "")}
-      ${s9PersRow("👨‍👩‍👧", tr("create.pvFamilyStatus"), d.familyStatus ? cvLabel("familyStatus", d.familyStatus) : "")}
-      ${s9PersRow("💼", tr("create.pvWork"), d.work?.join(", ") || "")}
-      ${s9PersRow("🎯", tr("create.pvHobbies"), d.hobbies?.join(", ") || "")}
-      ${s9PersRow("🔥", tr("create.pvKinks"), d.kinks?.join(", ") || "")}
+      ${s9PersRow(iconBadge("message", 14), tr("create.pvPersonality"), d.personality ? persName(d.personality) : "")}
+      ${s9PersRow(iconBadge("home", 14), tr("create.pvLifestyle"), d.lifestyle ? localizeOption(d.lifestyle, currentLang) : "")}
+      ${s9PersRow(iconBadge("couple", 14), tr("create.pvRelationship"), d.relationshipType ? cvLabel("relationshipType", d.relationshipType) : "")}
+      ${s9PersRow(iconBadge("family", 14), tr("create.pvFamilyStatus"), d.familyStatus ? cvLabel("familyStatus", d.familyStatus) : "")}
+      ${s9PersRow(iconBadge("briefcase", 14), tr("create.pvWork"), d.work?.join(", ") || "")}
+      ${s9PersRow(iconBadge("target", 14), tr("create.pvHobbies"), d.hobbies?.join(", ") || "")}
+      ${s9PersRow(iconBadge("flame", 14), tr("create.pvKinks"), d.kinks?.join(", ") || "")}
     </div>`;
   }
 
@@ -967,9 +1052,9 @@ function populatePreview() {
   const mem = document.getElementById("tab-memories");
   if (mem) {
     mem.innerHTML = `<div class="s9-pers-list">
-      ${s9PersRow("🧒", tr("create.pvChildhood"), d.childhoodMemory || "")}
-      ${s9PersRow("📖", tr("create.pvLifeStory"), d.lifeStory || "")}
-      ${s9PersRow("😨", tr("create.pvPhobias"), d.phobias || "")}
+      ${s9PersRow(iconBadge("star", 14), tr("create.pvChildhood"), d.childhoodMemory || "")}
+      ${s9PersRow(iconBadge("book", 14), tr("create.pvLifeStory"), d.lifeStory || "")}
+      ${s9PersRow(iconBadge("ghost", 14), tr("create.pvPhobias"), d.phobias || "")}
     </div>`;
   }
 }
@@ -1228,9 +1313,11 @@ function goToStage(n: number) {
       if (desc) desc.style.display = "none";
       if (loader) loader.style.display = "none";
     } else if (i === n) {
+      // Перезапускаем анимацию появления при каждом переходе на шаг.
       icon.className = "stage-icon-active";
-      const svg = STAGE_ICONS[i].replace(/__CLR__/g, "white");
-      icon.innerHTML = `<div class="icon-content"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">${svg}</svg></div>`;
+      void icon.offsetWidth;
+      icon.classList.add("stage-enter");
+      icon.innerHTML = activeStageIconInner(i);
       if (nameEl) nameEl.style.textDecoration = "none";
       if (textEl) textEl.classList.add("with-desc");
       let desc = document.getElementById(`stage-${pad(i)}-desc`);
@@ -1341,6 +1428,23 @@ function initInteractive() {
     });
   });
 
+  // Поля «свой вариант»
+  document.querySelectorAll<HTMLElement>(".custom-input-row").forEach((row) => {
+    const field = row.dataset.customFor!;
+    const input = row.querySelector<HTMLInputElement>(".custom-input");
+    const btn = row.querySelector<HTMLElement>(".custom-add-btn");
+    if (!input || !btn) return;
+    const add = () => {
+      const value = input.value.replace(/[<>"]/g, "").trim();
+      if (!value) return;
+      if (row.dataset.kind === "card") addCustomCard(field, value);
+      else addCustomChip(field, value);
+      input.value = "";
+    };
+    btn.onclick = add;
+    input.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } };
+  });
+
   // Preview tab switching
   document.querySelectorAll<HTMLElement>(".preview-tab").forEach((tab) => {
     tab.onclick = () => {
@@ -1374,10 +1478,9 @@ function setSliderValue(val: number) {
   const fill = document.querySelector<HTMLElement>(".slider-fill");
   const tooltip = document.querySelector<HTMLElement>(".slider-tooltip");
   if (!track || !fill || !tooltip) return;
-  const v = Math.max(18, Math.min(100, Math.round(val)));
-  const pct = (v - 18) / 82;
-  fill.style.width = pct * 100 + "%";
-  tooltip.textContent = String(v);
+  const v = clampAge(val);
+  fill.style.width = ((v - AGE_MIN) / AGE_SPAN) * 100 + "%";
+  tooltip.textContent = ageLabel(v);
   track.dataset.value = String(v);
 }
 
@@ -1385,7 +1488,7 @@ function setSliderByClientX(clientX: number) {
   const track = document.querySelector<HTMLElement>(".slider-track");
   if (!track) return;
   const rect = track.getBoundingClientRect();
-  setSliderValue(18 + Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * 82);
+  setSliderValue(AGE_MIN + Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * AGE_SPAN);
 }
 
 // Глобальные слушатели (закрытие дропдаунов, перетаскивание слайдера) —
@@ -1474,7 +1577,7 @@ export default function CreateCharacterPage() {
       }
 
       // HUMAN_RACE -> ethnicity (Stage 02)
-      const humanRaceOpts = allOpts.filter((o) => o.category === "HUMAN_RACE").sort((a, b) => a.order - b.order);
+      const humanRaceOpts = allOpts.filter((o) => o.category === "HUMAN_RACE" && !isMixedEthnicity(o.name)).sort((a, b) => a.order - b.order);
       if (humanRaceOpts.length > 0) {
         populateImageCards("ethnicity-grid-container", humanRaceOpts);
       } else {

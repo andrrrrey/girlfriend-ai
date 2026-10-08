@@ -2,7 +2,7 @@ export const GENDERS = ["Female", "Male", "Non-binary", "Trans Female", "Trans M
 export const ORIENTATIONS = ["Heterosexual", "Bisexual", "Homosexual", "Pansexual", "Asexual"];
 export const NATIONALITIES = ["American", "British", "German", "French", "Italian", "Spanish", "Japanese", "Korean", "Chinese", "Brazilian", "Russian", "Australian", "Canadian", "Mexican", "Indian", "Swedish", "Norwegian", "Dutch", "Polish", "Ukrainian", "Thai", "Colombian", "Argentine", "Turkish", "Egyptian", "Irish"];
 export const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Russian", "Arabic", "Hindi", "Turkish", "Polish", "Dutch", "Swedish", "Thai", "Vietnamese"];
-export const ETHNICITIES = ["Slavic", "Caucasian", "Asian", "Hispanic", "Arabic", "Black", "Latino", "Indian", "Mixed", "Scandinavian"];
+export const ETHNICITIES = ["Slavic", "Caucasian", "Asian", "Hispanic", "Arabic", "Black", "Latino", "Indian", "Scandinavian"];
 export const VOICES = ["Gentle", "High-pitched", "Deep", "Rough", "Calm"];
 export const EYE_COLORS = ["Blue", "Brown", "Green", "Hazel", "Gray", "Amber", "Violet", "Black"];
 export const HAIR_STYLES = ["Straight", "Wavy", "Curly", "Braids", "Bun", "Ponytail", "Pixie Cut", "Bob", "Long Layers", "Dreadlocks", "Bangs", "Twin Tails", "Updo", "Messy", "Side Part"];
@@ -13,32 +13,36 @@ export const BUTT_SIZES = ["Flat", "Small", "Medium", "Large", "Huge"];
 export const RELATIONSHIP_TYPES = ["Girlfriend", "Boyfriend", "Friend", "Companion", "Mentor", "Rival", "Secret Lover", "Soulmate", "Sugar Baby", "Mistress", "Dominatrix", "Submissive Partner"];
 export const FAMILY_STATUSES = ["Single", "In a Relationship", "Married", "Divorced", "Widowed", "Separated", "Complicated"];
 export const LIFESTYLES = ["Active", "Lazy", "Homebody", "Sporty", "Party Girl", "Workaholic", "Adventurer", "Minimalist", "Luxurious", "Bohemian", "Health-Conscious", "Night Owl"];
-export const WORKS = ["Unemployed", "Housewife", "Teacher", "Cook", "Nurse", "Model", "Dancer", "Artist", "Writer", "Student", "Barista", "Yoga Instructor", "Fitness Trainer", "Influencer", "Photographer", "Entrepreneur", "Lawyer", "Doctor", "Programmer", "Fashion Designer", "Musician", "Waitress", "Librarian", "Florist", "Chef", "Therapist", "Streamer", "Masseuse"];
+export const WORKS = ["Student", "Model", "Nurse", "Teacher", "Fitness Trainer", "Influencer", "Artist", "Photographer", "Doctor", "Programmer", "Chef", "Dancer", "Barista", "Entrepreneur"];
 export const HOBBIES = ["Pottery", "Photography", "Painting", "Yoga", "Dancing", "Cooking", "Reading", "Gaming", "Hiking", "Swimming", "Surfing", "Singing", "Piano", "Guitar", "Gardening", "Cosplay", "Fashion", "Travel", "Anime", "Writing", "Meditation", "Rock Climbing", "Horseback Riding", "Archery", "Martial Arts", "Wine Tasting", "Baking", "Shopping", "Film Making"];
-export const KINKS_1 = ["Role Play", "Teacher/Student", "Boss/Secretary", "Strangers", "Cosplay", "Nurse", "Maid", "Public", "Office", "Pool Party", "Massage", "Photoshoot", "Workout Partner", "Roommate", "Neighbor"];
-export const KINKS_2 = ["Dominant", "Submissive", "Bondage", "Blindfold", "Handcuffs", "Teasing", "Edging", "Worship", "Praise", "Humiliation", "Pet Play", "Collar", "Leash", "Service"];
-export const KINKS_3 = ["Lingerie", "Leather", "Latex", "Stockings", "High Heels", "Uniform", "Wet", "Ice Play", "Wax", "Feather", "Whispering", "ASMR", "Dirty Talk", "Voyeurism", "Exhibitionism"];
+export const KINKS_1 = ["Role Play", "Teacher/Student", "Boss/Secretary", "Strangers", "Cosplay", "Nurse", "Maid", "Public", "Massage", "Roommate"];
+export const KINKS_2 = ["Dominant", "Submissive", "Bondage", "Blindfold", "Handcuffs", "Teasing", "Edging", "Praise", "Pet Play", "Collar"];
+export const KINKS_3 = ["Lingerie", "Leather", "Latex", "Stockings", "High Heels", "Uniform", "Wax", "Dirty Talk", "Voyeurism", "Exhibitionism"];
+/** Границы слайдера возраста; на максимуме показываем «55+». */
+export const AGE_MIN = 18;
+export const AGE_MAX = 55;
+
 export const STYLES = ["Realistic", "Semi-real", "Anime", "2d"];
 
 export const PERSONALITIES = [
-  { name: "Overly Confident", icon: "\u{1F451}", desc: "Bold and dominating, with a magnetic presence in intimacy." },
-  { name: "Mysterious", icon: "\u{1F52E}", desc: "Secretive and intriguing, sparking curiosity in others." },
-  { name: "Obsessed With You", icon: "\u{1F495}", desc: "Possessive and needy, with an intense focus on love." },
-  { name: "Caregiver", icon: "\u{1F338}", desc: "Tender and nurturing, providing comforting sensuality." },
-  { name: "Dominant", icon: "\u{1F525}", desc: "Assertive and commanding, arousing in erotic encounters." },
-  { name: "Submissive", icon: "\u{1F380}", desc: "Yielding and obedient, finding pleasure in compliance." },
-  { name: "Seductress", icon: "\u{1F48B}", desc: "Seductively secretive, fueling curiosity and desire." },
-  { name: "Cruel & Unforgiving", icon: "\u{26D3}\u{FE0F}", desc: "Harsh and ruthless, gives a darkly thrilling experience." },
-  { name: "Free Spirited", icon: "\u{1F98B}", desc: "Uninhibited and adventurous, passionately spontaneous." },
-  { name: "Demanding Bully", icon: "\u{1F608}", desc: "Aggressive and uses power to get what they want." },
-  { name: "Hopeless Romantic", icon: "\u{1F49D}", desc: "Deeply passionate, cherishing emotional intimacy." },
-  { name: "Insatiable", icon: "\u{1F319}", desc: "Unending lust, constantly demanding of your affection." },
-  { name: "Shy & Innocent", icon: "\u{1F337}", desc: "Timid and sweet, easily flustered with a gentle charm." },
-  { name: "Playful Tease", icon: "\u{1F61C}", desc: "Witty and flirty, keeping things fun and lighthearted." },
-  { name: "Intellectual", icon: "\u{1F4DA}", desc: "Thoughtful and eloquent, loves deep conversations." },
-  { name: "Motherly", icon: "\u{1F931}", desc: "Warm and protective, offering comfort and guidance." },
-  { name: "Tsundere", icon: "\u{1F4A2}", desc: "Cold on the surface but deeply caring underneath." },
-  { name: "Yandere", icon: "\u{1F5A4}", desc: "Obsessively devoted with intense possessive love." },
+  { name: "Overly Confident", desc: "Bold and dominating, with a magnetic presence in intimacy." },
+  { name: "Mysterious", desc: "Secretive and intriguing, sparking curiosity in others." },
+  { name: "Obsessed With You", desc: "Possessive and needy, with an intense focus on love." },
+  { name: "Caregiver", desc: "Tender and nurturing, providing comforting sensuality." },
+  { name: "Dominant", desc: "Assertive and commanding, arousing in erotic encounters." },
+  { name: "Submissive", desc: "Yielding and obedient, finding pleasure in compliance." },
+  { name: "Seductress", desc: "Seductively secretive, fueling curiosity and desire." },
+  { name: "Cruel & Unforgiving", desc: "Harsh and ruthless, gives a darkly thrilling experience." },
+  { name: "Free Spirited", desc: "Uninhibited and adventurous, passionately spontaneous." },
+  { name: "Demanding Bully", desc: "Aggressive and uses power to get what they want." },
+  { name: "Hopeless Romantic", desc: "Deeply passionate, cherishing emotional intimacy." },
+  { name: "Insatiable", desc: "Unending lust, constantly demanding of your affection." },
+  { name: "Shy & Innocent", desc: "Timid and sweet, easily flustered with a gentle charm." },
+  { name: "Playful Tease", desc: "Witty and flirty, keeping things fun and lighthearted." },
+  { name: "Intellectual", desc: "Thoughtful and eloquent, loves deep conversations." },
+  { name: "Motherly", desc: "Warm and protective, offering comfort and guidance." },
+  { name: "Tsundere", desc: "Cold on the surface but deeply caring underneath." },
+  { name: "Yandere", desc: "Obsessively devoted with intense possessive love." },
 ];
 
 export const STAGE_NAMES = ["Basic parameters", "Origin", "Facial", "Body type", "Personality", "Lifestyle", "Kinks", "Memories", "Final preview"];

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { GALLERY_TAGS, promptMatchesTag, styleCondition, tagsCondition } from "./gallery-filters";
 import { Queue } from "bullmq";
 import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
@@ -503,7 +504,7 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string, mode?: string) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string, mode?: string, tags?: string[]) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
@@ -535,7 +536,12 @@ export class GenerationService {
       andConditions.push({ input: { path: ["prompt"], string_contains: gender.toLowerCase() } });
     }
     if (style) {
-      andConditions.push({ input: { path: ["prompt"], string_contains: style.toLowerCase() } });
+      const cond = styleCondition(style);
+      if (cond) andConditions.push(cond);
+    }
+    if (tags?.length) {
+      const cond = tagsCondition(tags);
+      if (cond) andConditions.push(cond);
     }
     if (andConditions.length > 0) {
       where["AND"] = andConditions;
@@ -561,7 +567,7 @@ export class GenerationService {
       input: (() => {
         const input = job.input as Record<string, unknown> | null;
         if (!input) return {};
-        return { prompt: input["prompt"], model: input["model"] };
+        return { prompt: input["prompt"], model: input["model"], aspectRatio: input["aspectRatio"] };
       })(),
       createdAt: job.createdAt,
       user: job.user,
@@ -571,50 +577,23 @@ export class GenerationService {
   }
 
   async getGalleryTags() {
-    const STOP_WORDS = new Set([
-      "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-      "of", "with", "by", "from", "as", "is", "was", "are", "be", "been",
-      "being", "have", "has", "had", "do", "does", "did", "will", "would",
-      "could", "should", "may", "might", "must", "shall", "can", "need",
-      "not", "no", "nor", "so", "if", "then", "than", "too", "very",
-      "just", "about", "above", "after", "again", "all", "also", "any",
-      "because", "before", "between", "both", "each", "few", "her", "here",
-      "him", "his", "how", "its", "let", "more", "most", "my", "new",
-      "now", "old", "only", "other", "our", "out", "own", "same", "she",
-      "some", "still", "such", "tell", "that", "their", "them", "there",
-      "these", "they", "this", "those", "through", "under", "until", "up",
-      "upon", "what", "when", "where", "which", "while", "who", "whom",
-      "why", "you", "your", "into", "over", "down", "off", "once",
-      "during", "without", "within", "along", "among", "around",
-      "style", "quality", "high", "resolution", "detailed", "ultra",
-      "photo", "image", "video", "prompt", "generate", "creating",
-    ]);
-
+    // Фиксированный словарь тегов; считаем, сколько свежих работ под каждый
+    // подходит, и отдаём только непустые (по убыванию популярности).
     const jobs = await this.prisma.aiJob.findMany({
       where: { status: "completed", type: { in: ["image", "video"] } },
       select: { input: true },
-      take: 500,
+      take: 1000,
       orderBy: { createdAt: "desc" },
     });
 
-    const freq = new Map<string, number>();
-    for (const job of jobs) {
-      const input = job.input as Record<string, unknown> | null;
-      const prompt = input?.["prompt"] as string | undefined;
-      if (!prompt) continue;
-      const words = prompt.toLowerCase().split(/[,\s]+/).filter(
-        (w) => w.length > 2 && w.length < 20 && /^[a-z]+$/.test(w) && !STOP_WORDS.has(w),
-      );
-      for (const word of words) {
-        freq.set(word, (freq.get(word) ?? 0) + 1);
-      }
-    }
+    const prompts = jobs
+      .map((job) => ((job.input as Record<string, unknown> | null)?.["prompt"] as string | undefined)?.toLowerCase())
+      .filter((p): p is string => !!p);
 
-    return Array.from(freq.entries())
-      .filter(([, count]) => count >= 2)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 50)
-      .map(([tag, count]) => ({ tag, count }));
+    return GALLERY_TAGS
+      .map((def) => ({ tag: def.key, count: prompts.filter((p) => promptMatchesTag(p, def)).length }))
+      .filter((t) => t.count > 0)
+      .sort((a, b) => b.count - a.count);
   }
 
   async deleteJob(jobId: string, userId: string) {

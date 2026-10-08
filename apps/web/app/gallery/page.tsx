@@ -7,9 +7,10 @@ import type { GalleryItem } from "../../lib/api";
 import AuthRequiredOverlay from "../components/AuthRequiredOverlay";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
-import { formatTag } from "../../lib/tags";
 import LikeButton from "../components/LikeButton";
 import ShareModal from "../components/ShareModal";
+import ReportModal from "../components/ReportModal";
+import type { TKey } from "../../lib/i18n";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 
@@ -287,16 +288,70 @@ const PAGE_CSS = `
     color: #fff;
   }
   .g-lightbox-close:hover { background: rgba(255,255,255,0.2); }
+  .g-lightbox-report {
+    position: absolute;
+    top: 20px;
+    right: 72px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .g-lightbox-report:hover { background: rgba(227,100,102,0.25); border-color: rgba(227,100,102,0.5); }
+  .g-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.15s ease;
+  }
+  .g-lightbox-nav:hover { background: rgba(249,91,173,0.35); }
+  .g-lightbox-nav:disabled { opacity: 0.25; cursor: default; background: rgba(255,255,255,0.06); }
+  .g-lightbox-nav.prev { left: 24px; }
+  .g-lightbox-nav.next { right: 24px; }
+  .g-lightbox-counter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .g-hover-panel { cursor: pointer; }
+  .g-hover-btn.icon { flex: 0 0 28px; }
+  .g-hover-btn.icon:hover { background: rgba(227,100,102,0.35); }
 
   @media (max-width: 768px) {
     .gallery-content { padding: 16px 16px 40px; gap: 14px; }
     .gallery-title { font-size: 22px; }
     .gallery-filter-row { flex-wrap: wrap; }
     .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    .g-lightbox-nav { width: 40px; height: 40px; }
+    .g-lightbox-nav.prev { left: 8px; }
+    .g-lightbox-nav.next { right: 8px; }
   }
 `;
 
-function GalleryCard({ item, onOpen, onShare, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; onShare: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
+function GalleryCard({ item, onOpen, onShare, onReport, likeStatus }: { item: GalleryItem; onOpen: (item: GalleryItem) => void; onShare: (item: GalleryItem) => void; onReport: (item: GalleryItem) => void; likeStatus?: { liked: boolean; count: number } }) {
   const { t } = useT();
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
@@ -304,7 +359,8 @@ function GalleryCard({ item, onOpen, onShare, likeStatus }: { item: GalleryItem;
 
   return (
     <div className="g-card-wrap">
-      <div className="g-hover-panel">
+      {/* Клик по любому месту карточки (в т.ч. по hover-панели) открывает просмотр. */}
+      <div className="g-hover-panel" onClick={() => { if (url) onOpen(item); }}>
         {prompt && <p className="g-hover-prompt">{prompt}</p>}
         <div className="g-hover-actions">
           <button className="g-hover-btn primary" onClick={(e) => { e.stopPropagation(); if (url) onOpen(item); }}>
@@ -317,6 +373,14 @@ function GalleryCard({ item, onOpen, onShare, likeStatus }: { item: GalleryItem;
           }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="4" cy="8" r="1.5" stroke="#fff" strokeWidth="1.2"/><circle cx="12" cy="13" r="1.5" stroke="#fff" strokeWidth="1.2"/><path d="M5.5 9l5 3M10.5 4.5l-5 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
             {t("gallery.share")}
+          </button>
+          <button
+            className="g-hover-btn secondary icon"
+            title={t("gallery.report")}
+            aria-label={t("gallery.report")}
+            onClick={(e) => { e.stopPropagation(); onReport(item); }}
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 14V2.5"/><path d="M3 2.5h8.5l-1.8 3 1.8 3H3"/></svg>
           </button>
         </div>
       </div>
@@ -338,7 +402,7 @@ function GalleryCard({ item, onOpen, onShare, likeStatus }: { item: GalleryItem;
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
           )
         ) : (
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "absolute", inset: 0, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
           </div>
         )}
@@ -370,9 +434,13 @@ export default function GalleryPage() {
   ];
   const STYLE_OPTIONS = [
     { value: "", label: t("common.all") },
-    { value: "Realistic", label: t("filter.realistic") },
-    { value: "Anime", label: t("filter.anime") },
-    { value: "Fantasy", label: t("filter.fantasy") },
+    { value: "realistic", label: t("filter.realistic") },
+    { value: "anime", label: t("filter.anime") },
+    { value: "illustration", label: t("filter.illustration") },
+    { value: "cartoon", label: t("filter.cartoon") },
+    { value: "fantasy", label: t("filter.fantasy") },
+    { value: "furry", label: t("filter.furry") },
+    { value: "cyberpunk", label: t("filter.cyberpunk") },
   ];
   const SORT_OPTIONS = [
     { value: "newest", label: t("filter.newest") },
@@ -389,8 +457,11 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  // Индекс открытой в лайтбоксе работы в items (листание стрелками/колесом).
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [shareItem, setShareItem] = useState<GalleryItem | null>(null);
+  const [reportItem, setReportItem] = useState<GalleryItem | null>(null);
+  const wheelLockRef = useRef(0);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -400,6 +471,7 @@ export default function GalleryPage() {
     if (activeTab !== "all") params.type = activeTab;
     if (gender) params.gender = gender;
     if (style) params.style = style;
+    if (selectedTags.length) params.tags = selectedTags;
 
     getPublicGallery(params)
       .then((data) => {
@@ -413,7 +485,7 @@ export default function GalleryPage() {
       })
       .catch(() => { if (!append) setItems([]); })
       .finally(() => { setFetching(false); setLoadingMore(false); });
-  }, [activeTab, gender, style, sortBy]);
+  }, [activeTab, gender, style, sortBy, selectedTags]);
 
   useEffect(() => {
     if (loading) return;
@@ -421,7 +493,7 @@ export default function GalleryPage() {
     setHasMore(true);
     fetchItems(1, false);
     // contentMode: перезагрузка галереи при переключении NSFW/SFW.
-  }, [loading, activeTab, gender, style, sortBy, contentMode]);
+  }, [loading, activeTab, gender, style, sortBy, selectedTags, contentMode]);
 
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;
@@ -451,16 +523,62 @@ export default function GalleryPage() {
       .catch(() => setTags([]));
   }, [loading]);
 
-  const filteredItems = selectedTags.length > 0
-    ? items.filter((item) => {
-        const prompt = (item.input?.prompt || "").toLowerCase();
-        return selectedTags.some((tag) => prompt.includes(tag.toLowerCase()));
-      })
-    : items;
-
   const openLightbox = (item: GalleryItem) => {
-    const url = item.output?.url;
-    if (url) setLightbox({ url, type: item.type });
+    const idx = items.findIndex((i) => i.jobId === item.jobId);
+    if (idx >= 0 && item.output?.url) setLightboxIndex(idx);
+  };
+  const lightboxItem = lightboxIndex != null ? items[lightboxIndex] ?? null : null;
+  const canPrev = lightboxIndex != null && lightboxIndex > 0;
+  const canNext = lightboxIndex != null && (lightboxIndex < items.length - 1);
+
+  const stepLightbox = useCallback((dir: 1 | -1) => {
+    setLightboxIndex((cur) => {
+      if (cur == null) return cur;
+      const next = cur + dir;
+      if (next < 0 || next >= items.length) return cur;
+      return next;
+    });
+  }, [items.length]);
+
+  // Подгружаем следующую страницу, когда в лайтбоксе долистали почти до конца.
+  useEffect(() => {
+    if (lightboxIndex == null || !hasMore || loadingMore || fetching) return;
+    if (lightboxIndex >= items.length - 3) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchItems(nextPage, true);
+    }
+  }, [lightboxIndex, items.length, hasMore, loadingMore, fetching, page, fetchItems]);
+
+  // Клавиатура: ←/→ листают, Esc закрывает.
+  useEffect(() => {
+    if (lightboxIndex == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") stepLightbox(1);
+      else if (e.key === "ArrowLeft") stepLightbox(-1);
+      else if (e.key === "Escape") setLightboxIndex(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIndex, stepLightbox]);
+
+  // Пока открыт лайтбокс, колесо листает фото, а не страницу под ним.
+  const lightboxOpen = lightboxIndex != null;
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [lightboxOpen]);
+
+  // Колесо мыши листает (с троттлингом, чтобы один жест = одно фото).
+  const onLightboxWheel = (e: React.WheelEvent) => {
+    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(delta) < 8) return;
+    const now = Date.now();
+    if (now - wheelLockRef.current < 350) return;
+    wheelLockRef.current = now;
+    stepLightbox(delta > 0 ? 1 : -1);
   };
 
   if (loading) return null;
@@ -512,7 +630,8 @@ export default function GalleryPage() {
           <ScrollableTagsRow
             tags={tags}
             selectedTags={selectedTags}
-            formatLabel={formatTag}
+            maxVisible={tags.length}
+            formatLabel={(tag) => t(`galleryTag.${tag}` as TKey)}
             onTagToggle={(tag) => {
               if (tag === "__ALL__") {
                 setSelectedTags([]);
@@ -530,7 +649,7 @@ export default function GalleryPage() {
             Array.from({ length: 10 }).map((_, i) => (
               <div className="g-card-skeleton" key={i} />
             ))
-          ) : filteredItems.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="gallery-empty">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -540,8 +659,8 @@ export default function GalleryPage() {
               <span>{t("gallery.empty")}</span>
             </div>
           ) : (
-            filteredItems.map((item) => (
-              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} onShare={setShareItem} likeStatus={likeStatuses[item.jobId]} />
+            items.map((item) => (
+              <GalleryCard key={item.jobId} item={item} onOpen={openLightbox} onShare={setShareItem} onReport={setReportItem} likeStatus={likeStatuses[item.jobId]} />
             ))
           )}
           {loadingMore && Array.from({ length: 4 }).map((_, i) => (
@@ -551,29 +670,57 @@ export default function GalleryPage() {
         </div>
 
         <div
-          className={`g-lightbox${lightbox ? " open" : ""}`}
+          className={`g-lightbox${lightboxItem ? " open" : ""}`}
+          onWheel={onLightboxWheel}
           onClick={(e) => {
-            if (!(e.target as HTMLElement).closest(".g-lightbox-media")) {
-              setLightbox(null);
+            if (!(e.target as HTMLElement).closest(".g-lightbox-media, .g-lightbox-nav, .g-lightbox-report")) {
+              setLightboxIndex(null);
             }
           }}
         >
-          <button className="g-lightbox-close" onClick={() => setLightbox(null)}>
+          <button className="g-lightbox-close" onClick={() => setLightboxIndex(null)} aria-label="Close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
+          {lightboxItem && (
+            <button className="g-lightbox-report" onClick={() => setReportItem(lightboxItem)}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 14V2.5"/><path d="M3 2.5h8.5l-1.8 3 1.8 3H3"/></svg>
+              {t("gallery.report")}
+            </button>
+          )}
+          {lightboxItem && (
+            <>
+              <button className="g-lightbox-nav prev" disabled={!canPrev} onClick={() => stepLightbox(-1)} aria-label={t("gallery.prev")}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <button className="g-lightbox-nav next" disabled={!canNext} onClick={() => stepLightbox(1)} aria-label={t("gallery.next")}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
+            </>
+          )}
           <div>
-            {lightbox && (
-              lightbox.type === "video" ? (
-                <video className="g-lightbox-media" src={lightbox.url} controls autoPlay loop />
+            {lightboxItem?.output?.url && (
+              lightboxItem.type === "video" ? (
+                <video key={lightboxItem.jobId} className="g-lightbox-media" src={lightboxItem.output.url} controls autoPlay loop />
               ) : (
                 // Полноэкранный просмотр — всегда оригинал, без webp-пережатия.
-                <img className="g-lightbox-media" src={lightbox.url} alt="Gallery" decoding="async" />
+                <img key={lightboxItem.jobId} className="g-lightbox-media" src={lightboxItem.output.url} alt="Gallery" decoding="async" />
               )
             )}
           </div>
+          {lightboxItem && lightboxIndex != null && (
+            <div className="g-lightbox-counter">{lightboxIndex + 1} / {hasMore ? `${items.length}+` : items.length}</div>
+          )}
         </div>
+
+        {reportItem && (
+          <ReportModal
+            targetType={reportItem.type === "video" ? "short" : "image"}
+            targetId={reportItem.jobId}
+            onClose={() => setReportItem(null)}
+          />
+        )}
 
         {shareItem && (
           <ShareModal

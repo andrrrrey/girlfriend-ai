@@ -215,7 +215,7 @@ export default function AdminReportsPage() {
                   <tr>
                     <th style={pageStyles.th}>От кого</th>
                     <th style={pageStyles.th}>Дата</th>
-                    <th style={pageStyles.th}>Персонаж</th>
+                    <th style={pageStyles.th}>Объект</th>
                     <th style={pageStyles.th}>Причины</th>
                     <th style={pageStyles.th}>Детали</th>
                     <th style={pageStyles.th}>Статус</th>
@@ -233,7 +233,24 @@ export default function AdminReportsPage() {
                         <span style={pageStyles.dateText}>{new Date(r.createdAt).toLocaleString("ru-RU")}</span>
                       </td>
                       <td style={pageStyles.td}>
-                        <span style={pageStyles.charName}>{r.character?.name ?? "—"}</span>
+                        {r.targetType && r.targetType !== "character" ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <span style={pageStyles.reasonBadge}>{r.targetType === "short" ? "Шорт (видео)" : "Фото галереи"}</span>
+                            {r.target?.url ? (
+                              <a href={r.target.url} target="_blank" rel="noreferrer">
+                                {r.target.type === "video"
+                                  ? <video src={r.target.url} muted preload="metadata" style={{ width: 72, height: 96, objectFit: "cover", borderRadius: 6, background: "#000" }} />
+                                  : <img src={r.target.url} alt="" style={{ width: 72, height: 96, objectFit: "cover", borderRadius: 6 }} />}
+                              </a>
+                            ) : (
+                              <span style={{ color: "#555", fontSize: 12 }}>медиа удалено</span>
+                            )}
+                            {r.target?.author?.nickname && <span style={pageStyles.userNick}>автор: @{r.target.author.nickname}</span>}
+                            <span style={{ color: "#555", fontSize: 11 }}>{r.targetId}</span>
+                          </div>
+                        ) : (
+                          <span style={pageStyles.charName}>{r.character?.name ?? "—"}</span>
+                        )}
                       </td>
                       <td style={pageStyles.td}>
                         <div style={pageStyles.reasonBadges}>

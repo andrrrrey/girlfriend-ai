@@ -14,10 +14,10 @@ export class CreateReportDto {
   @IsUUID()
   characterId?: string;
 
-  /** Полиморфная цель: "character" | "short". */
+  /** Полиморфная цель: "character" | "short" | "image" (фото из галереи). */
   @IsOptional()
   @IsString()
-  @IsIn(["character", "short"])
+  @IsIn(["character", "short", "image"])
   targetType?: string;
 
   @IsOptional()
