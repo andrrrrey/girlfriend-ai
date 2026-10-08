@@ -19,7 +19,6 @@ import {
   deleteGenerationJob,
   uploadMedia,
   resizedMediaUrl,
-  aspectRatioForImage,
   characters as charactersApi,
 } from "../../lib/api";
 import { buildCharacterImagePrompt } from "../../lib/prompt";
@@ -1490,31 +1489,26 @@ function GenerationPageInner() {
         });
         jobIds = result.jobIds;
       } else if (selectedCharacter) {
-        // Готовый персонаж: img2img по его фото (как в чате). Промпт = атрибуты
-        // персонажа + выбранные Appearance/Pose/Scene/Camera + кастомный текст.
+        // Готовый персонаж: text2img, как txt2img в admin/gentest (даёт лучший
+        // результат, чем img2img по аватару). Промпт = сохранённый промпт аватара
+        // (identity) + выбранные Appearance/Pose/Scene/Camera + кастомный текст.
+        // Внешность держат identity-промпт и тот же чекпоинт (avatarModel); seed
+        // не фиксируем — с seed аватара кадр повторял исходник.
         // compositePrompt уже содержит quality-префикс, поэтому в хелпер его не
         // добавляем (includeQuality=false).
         const personality = (selectedCharacter.personality || {}) as Record<string, unknown>;
         const personalityPart = buildCharacterImagePrompt(personality, undefined, false);
         const finalPrompt = personalityPart ? `${personalityPart}, ${compositePrompt}` : compositePrompt;
-        // Всегда Civitai img2img: только он использует фото персонажа как референс
-        // и сохраняет его стиль. Нет своего generationStyle → дефолт "realism".
+        // Civitai + стиль персонажа; нет своего generationStyle → дефолт "realism".
         const charStyle = (personality.generationStyle as string | undefined) || "realism";
-        // Сохранённый seed и чекпоинт персонажа → совпадение внешности и модели.
-        const charSeed = typeof personality.avatarSeed === "number" ? (personality.avatarSeed as number) : undefined;
         const charModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
-        // Кадр — в пропорции аватара, а не выбранной ориентации: img2img в чужой
-        // пропорции растягивает/кадрирует исходник и искажает внешность.
-        const charAspect = selectedCharacter.avatarUrl ? await aspectRatioForImage(selectedCharacter.avatarUrl) : undefined;
         const result = await createImageJob({
           prompt: finalPrompt,
           negativePrompt,
-          ...(selectedCharacter.avatarUrl ? { initImageUrl: selectedCharacter.avatarUrl } : {}),
-          ...(charSeed !== undefined ? { seed: charSeed } : {}),
           ...(charModel ? { model: charModel } : {}),
           provider: "civitai",
           generationStyle: charStyle,
-          ...(charAspect ? { aspectRatio: charAspect } : {}),
+          aspectRatio,
           count,
           characterId: selectedCharacter.id,
           contentMode: activeContentMode,

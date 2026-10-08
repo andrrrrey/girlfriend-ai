@@ -19,7 +19,6 @@ import {
   createImageJob,
   saveImageMessage,
   resizedMediaUrl,
-  aspectRatioForImage,
   type ChatSession,
   type Message,
   type Character,
@@ -721,34 +720,22 @@ function ChatPageInner() {
     const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
 
     try {
-      // Генерация изображений персонажа всегда идёт через Civitai img2img: только
-      // этот провайдер использует фото персонажа как референс И сохраняет его стиль.
-      // AtlasCloud/ModelsLab-фолбэки давали несовпадение с внешностью персонажа.
-      // Если у персонажа нет своего generationStyle — дефолт "realism" (валидный
-      // ключ CIVITAI_MODELS, бэкенд тоже дефолтит в него).
+      // Генерация изображений персонажа — text2img через Civitai, как txt2img в
+      // admin/gentest (лучше img2img по аватару: тот копировал исходный кадр и
+      // игнорировал позу). Внешность держат сохранённый промпт аватара (identity,
+      // см. buildCharacterImagePrompt) и тот же чекпоинт. Нет своего
+      // generationStyle → дефолт "realism" (валидный ключ CIVITAI_MODELS).
       const charStyle = (activeCharPersonality.generationStyle as string | undefined) || "realism";
-      // Фото персонажа → img2img, чтобы сгенерированная поза была похожа на
-      // исходного персонажа, а не на случайного человека по текстовому промпту.
-      const initImageUrl = activeChatData?.character?.avatarUrl || undefined;
-      // Обязательный negative_prompt против артефактов теперь добавляется
-      // глобально на сервере (apps/ai, настройка NEGATIVE_PROMPT) — здесь его не
-      // хардкодим. seed берём сохранённый у персонажа для совпадения внешности.
-      const charSeed = typeof activeCharPersonality.avatarSeed === "number"
-        ? (activeCharPersonality.avatarSeed as number)
-        : undefined;
+      // Обязательный negative_prompt против артефактов добавляется глобально на
+      // сервере (apps/ai, настройка NEGATIVE_PROMPT). seed не фиксируем — с seed
+      // аватара получался тот же кадр.
       // Чекпоинт аватара (Civitai AIR) — генерируем на той же модели, иначе Civitai
       // возьмёт случайный чекпоинт из пула и картинка не будет похожа на аватар.
       const charModel = typeof activeCharPersonality.avatarModel === "string"
         ? (activeCharPersonality.avatarModel as string)
         : undefined;
-      // Пропорция кадра = пропорции аватара: новые аватары 9:16, старые — 2:3
-      // (дефолт бэкенда). Иначе img2img растягивает исходник под чужой кадр.
-      const avatarAspect = initImageUrl ? await aspectRatioForImage(initImageUrl) : undefined;
       const jobPayload: Parameters<typeof createImageJob>[0] = {
         prompt,
-        ...(initImageUrl ? { initImageUrl } : {}),
-        ...(avatarAspect ? { aspectRatio: avatarAspect } : {}),
-        ...(charSeed !== undefined ? { seed: charSeed } : {}),
         ...(charModel ? { model: charModel } : {}),
         provider: "civitai",
         generationStyle: charStyle,

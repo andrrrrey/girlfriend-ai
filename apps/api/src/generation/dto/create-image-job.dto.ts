@@ -90,6 +90,14 @@ export class CreateImageJobDto {
   denoise?: number;
 
   /**
+   * Движок img2img: "sdxl" — чекпоинт персонажа (учитывает denoise), "kontext" —
+   * Flux Kontext. Перекрывает глобальный KONTEXT_ENABLED в AI-сервисе.
+   */
+  @IsOptional()
+  @IsIn(["sdxl", "kontext"])
+  engine?: "sdxl" | "kontext";
+
+  /**
    * Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create.
    * Дороже и дольше обычной генерации; для SD1/SDXL-чекпоинтов Civitai.
    */

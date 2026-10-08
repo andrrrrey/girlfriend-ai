@@ -2464,6 +2464,8 @@ export async function createImageJob(data: {
   seed?: number;
   contentMode?: "nsfw" | "sfw";
   denoise?: number;
+  /** Движок img2img: "sdxl" (чекпоинт персонажа) | "kontext" (Flux Kontext). */
+  engine?: "sdxl" | "kontext";
   /** Hires-fix (апскейл + img2img-проход в большем разрешении) — только для аватара на /create. */
   hiresFix?: boolean;
 }) {

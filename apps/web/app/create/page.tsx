@@ -309,11 +309,13 @@ function stageHeader(num: number, titleKey: TKey, genDisabled = false) {
     </div></div><div class="form-sep"></div>`;
 }
 
-function navButtons(prev: number, next: number | "submit") {
+// prev = null — первый шаг: кнопки «Назад» нет.
+function navButtons(prev: number | null, next: number | "submit") {
   const right = next === "submit"
     ? `<div class="btn-bring-to-life disabled" id="btn-submit">${tr("create.bringToLife")}</div>`
     : `<div class="btn-continue" data-goto="${next}">${tr("create.continue")}</div>`;
-  return `<div class="buttons-row"><div class="btn-cancel" data-goto="${prev}">${tr("common.cancel")}</div>${right}</div>`;
+  const back = prev === null ? "" : `<div class="btn-cancel" data-goto="${prev}">${tr("common.back")}</div>`;
+  return `<div class="buttons-row">${back}${right}</div>`;
 }
 
 /* ── Stage HTML ───────────────────────────────── */
@@ -330,7 +332,7 @@ function stage01() {
         <span class="slider-max">${AGE_MAX}+</span></div></div>
     <div class="field-style"><div class="field-label">${tr("create.style")}</div>
       <div class="style-row" id="style-row-container">${STYLES.map((s, i) => `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s}" data-generation-style=""><span class="name">${cvLabel("style", s)}</span></div>`).join("")}</div></div>
-    ${navButtons(1, 2)}
+    ${navButtons(null, 2)}
   </div>`;
 }
 
