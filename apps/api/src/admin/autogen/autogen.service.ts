@@ -25,7 +25,7 @@ import { PrismaService } from "../../prisma.service";
 import { CharactersService } from "../../chats/characters.service";
 import { GenerationService } from "../../generation/generation.service";
 import { generateBackstory } from "../../chats/generate-backstory";
-import { isMultiPersonPrompt } from "@repo/types";
+import { isUnsafeForSoloAvatar } from "@repo/types";
 import {
   buildRandomCharacter,
   buildAvatarPrompt,
@@ -188,8 +188,11 @@ export class AutogenService implements OnModuleInit {
       options
         .filter((o) => o.category === category)
         .map((o) => ({ id: o.id, name: o.name, prompt: o.prompt, generationStyle: o.generationStyle }));
+    // Аватар — один человек: во всех категориях отбрасываем опции на двоих+ и с
+    // чужими руками/ногами/людьми в кадре (POV-руки, толпа, хватают сзади…) —
+    // иначе модель дорисовывает лишние конечности и клонов персонажа.
     const promptsOf = (cats: { options: { prompt?: string | null }[] }[]) =>
-      cats.flatMap((c) => c.options).map((o) => o.prompt).filter((p): p is string => !!p);
+      cats.flatMap((c) => c.options).map((o) => o.prompt).filter((p): p is string => !!p && !isUnsafeForSoloAvatar(p));
     return {
       styles: byCategory("STYLE"),
       humanRaces: byCategory("HUMAN_RACE"),
@@ -201,11 +204,9 @@ export class AutogenService implements OnModuleInit {
       voices: voices.map((v) => ({ name: v.name, voiceId: v.voiceId })),
       outfits: promptsOf(appearance.OUTFITS),
       expressions: promptsOf(pose.FACIAL_EXPRESSION),
-      // Аватар — один человек: позы/действия на двоих+ (1boy, 2girls, секс-позы
-      // с партнёром) не берём — модель рисует второго человека клоном персонажа.
-      poses: promptsOf(pose.POSE).filter((p) => !isMultiPersonPrompt(p)),
+      poses: promptsOf(pose.POSE),
       locations: promptsOf(scene.LOCATION),
-      framings: camera.FRAMING.map((o) => o.prompt).filter((p): p is string => !!p),
+      framings: camera.FRAMING.map((o) => o.prompt).filter((p): p is string => !!p && !isUnsafeForSoloAvatar(p)),
       allowedGenders,
       usedNames: new Set(existing.map((c) => c.name.trim().toLowerCase())),
     };

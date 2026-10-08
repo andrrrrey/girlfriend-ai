@@ -21,6 +21,23 @@ export function isMultiPersonPrompt(prompt: string | null | undefined): boolean 
   return !SOLO_RE.test(prompt) && MULTI_PERSON_RE.test(prompt);
 }
 
+/**
+ * Чужие тела в кадре без явного второго человека: POV-руки зрителя, «гладят по
+ * голове», руки, хватающие сзади, колени зрителя, толпа/зрители на фоне, тело,
+ * застрявшее в окне. Для аватара (create/автогенерация) такие опции не берём —
+ * модель дорисовывает лишние руки, ноги и людей.
+ */
+const EXTRA_BODY_RE =
+  /\b(head ?pats?|headpat\w*|hands? reaching from|(viewer|someone|pov|male|another)'?s? (hands?|arms?|legs?|feet|lap|body|chest|thighs?)|pov (receiving|being|getting|from below)|(beside|next to|pulling) (the )?viewer|being (touched|groped|grabbed|held|hugged|carried|petted|inserted)|groped|holding hands|hands? (suddenly )?grabbing|grabbing 1girl|hand wrapped|hand or paddle|striking|sucking toes|toe sucking|another 1(girl|boy)|1girl's|stuck in|lap dance|seated person|crowd|audience|spectators|passengers|bystanders|people|their hands|hands or body)\b/i;;
+
+/**
+ * Опция не годится для одиночного аватара: сцена на двоих+ или чужие руки/ноги/
+ * люди в кадре. Применяется ко всем категориям (поза, одежда, выражение, локация, кадр).
+ */
+export function isUnsafeForSoloAvatar(prompt: string | null | undefined): boolean {
+  return !!prompt && (isMultiPersonPrompt(prompt) || EXTRA_BODY_RE.test(prompt));
+}
+
 /** Поза уже задаёт выражение лица — случайное выражение поверх неё конфликтует. */
 export function promptDescribesExpression(prompt: string | null | undefined): boolean {
   return !!prompt && EXPRESSION_IN_PROMPT_RE.test(prompt);

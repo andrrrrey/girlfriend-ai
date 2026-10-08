@@ -15,7 +15,7 @@ import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
-import { isMultiPersonPrompt, promptDescribesExpression } from "../../lib/peopleCount";
+import { isUnsafeForSoloAvatar, promptDescribesExpression } from "../../lib/peopleCount";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -1101,25 +1101,26 @@ async function loadAllowedGenders() {
 
 function pickRandomPrompts(): string[] {
   const pick = <T,>(arr: T[]): T | undefined => arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+  // Аватар — один человек: во всех категориях отбрасываем опции на двоих+ и с
+  // чужими руками/ногами/людьми в кадре (POV-руки зрителя, «гладят по голове»,
+  // толпа на фоне…) — иначе модель дорисовывает лишние конечности и клонов.
+  const solo = <T extends { prompt?: string | null },>(opts: T[]): T[] => opts.filter((o) => !isUnsafeForSoloAvatar(o.prompt));
   const prompts: string[] = [];
 
   if (cachedAppearanceOptions) {
-    const allOutfits = cachedAppearanceOptions.OUTFITS.flatMap(c => c.options);
+    const allOutfits = solo(cachedAppearanceOptions.OUTFITS.flatMap(c => c.options));
     const outfit = pick(allOutfits);
     if (outfit?.prompt) prompts.push(outfit.prompt);
   }
 
   if (cachedPoseOptions) {
-    // Аватар — один человек: позы/действия на двоих и больше (1boy, 2girls,
-    // поцелуи с партнёром, секс-позы) не берём — иначе модель дорисовывает
-    // второго человека по описанию персонажа (клон).
-    const poses = cachedPoseOptions.POSE.flatMap(c => c.options).filter(o => !isMultiPersonPrompt(o.prompt));
+    const poses = solo(cachedPoseOptions.POSE.flatMap(c => c.options));
     const pose = pick(poses);
 
     // Выражение — только если поза сама его не задаёт (иначе «poker face» +
     // «довольная улыбка» в одном промпте).
     if (!promptDescribesExpression(pose?.prompt)) {
-      const expressions = cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options);
+      const expressions = solo(cachedPoseOptions.FACIAL_EXPRESSION.flatMap(c => c.options));
       const expr = pick(expressions);
       if (expr?.prompt) prompts.push(expr.prompt);
     }
@@ -1127,13 +1128,13 @@ function pickRandomPrompts(): string[] {
   }
 
   if (cachedSceneOptions) {
-    const locations = cachedSceneOptions.LOCATION.flatMap(c => c.options);
+    const locations = solo(cachedSceneOptions.LOCATION.flatMap(c => c.options));
     const loc = pick(locations);
     if (loc?.prompt) prompts.push(loc.prompt);
   }
 
   if (cachedCameraOptions) {
-    const framings = cachedCameraOptions.FRAMING;
+    const framings = solo(cachedCameraOptions.FRAMING);
     const framing = pick(framings);
     if (framing?.prompt) prompts.push(framing.prompt);
   }
