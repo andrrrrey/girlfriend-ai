@@ -56,7 +56,7 @@ const CIVITAI_SAMPLERS = [
 const CIVITAI_SCHEDULERS = ["karras", "exponential", "simple", "discrete", "ays"];
 
 /** База чекпоинта Civitai — зеркало CivitaiBase в apps/ai. */
-type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
+type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok" | "krea2";
 
 /** Дефолтные размеры под базу (для нового элемента пула). */
 const CIVITAI_BASE_DIMS: Record<CivitaiBase, { width: number; height: number }> = {
@@ -65,6 +65,7 @@ const CIVITAI_BASE_DIMS: Record<CivitaiBase, { width: number; height: number }> 
   flux1: { width: 832, height: 1216 },
   zimage: { width: 832, height: 1216 },
   grok: { width: 1024, height: 1536 },
+  krea2: { width: 832, height: 1248 },
 };
 
 /** Версии Grok Imagine, умеющие картинки (v1.0, v2.0). v1.5 (3197990) — только видео. */
@@ -78,11 +79,12 @@ const CIVITAI_OFFICIAL_CHECKPOINTS: Record<string, string> = {
   Grok: "2738377",
   ZImageTurbo: "2442439",
   "Flux.1 D": "691639",
+  "Krea 2": "3072332",
 };
 
 /**
  * baseModel из Civitai API → сегмент ecosystem для AIR + наша база генерации.
- * null — база не поддерживается пайплайном (Krea 2, OpenAI, Flux.2, Kontext, …).
+ * null — база не поддерживается пайплайном (OpenAI, Flux.2, Kontext, …).
  */
 function civitaiEcosystemForBaseModel(baseModel: string): { ecosystem: string; base: CivitaiBase } | null {
   const b = baseModel.trim();
@@ -93,6 +95,7 @@ function civitaiEcosystemForBaseModel(baseModel: string): { ecosystem: string; b
   if (/^zimageturbo$/i.test(b)) return { ecosystem: "zimageturbo", base: "zimage" };
   if (/^zimagebase$/i.test(b)) return { ecosystem: "zimagebase", base: "zimage" };
   if (/^grok$/i.test(b)) return { ecosystem: "grok", base: "grok" };
+  if (/^krea\s*2$/i.test(b)) return { ecosystem: "krea2", base: "krea2" };
   return null;
 }
 
@@ -1287,7 +1290,7 @@ export class AdminService {
     const eco = civitaiEcosystemForBaseModel(baseModel);
     if (!eco) {
       throw new BadRequestException(
-        `База «${baseModel || "?"}» не поддерживается. Поддерживаются: SD 1.5, SDXL/Pony/Illustrious/NoobAI, Flux.1, Z Image, Grok`,
+        `База «${baseModel || "?"}» не поддерживается. Поддерживаются: SD 1.5, SDXL/Pony/Illustrious/NoobAI, Flux.1, Z Image, Grok, Krea 2`,
       );
     }
     if (eco.base === "grok" && !GROK_IMAGE_VERSION_IDS.has(versionId)) {

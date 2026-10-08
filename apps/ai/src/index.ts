@@ -1231,9 +1231,11 @@ interface ImageGenerateBody {
  *  - sd1/sdxl (SDXL/Pony/Illustrious) → imageGen engine "sdcpp";
  *  - flux1  → шаг textToImage с AIR чекпоинта (как делает сам сайт Civitai);
  *  - zimage → imageGen engine "comfy", ecosystem "zImage", AIR в diffuserModel;
- *  - grok   → imageGen engine "grok" (xAI Grok Imagine; без negative/seed/steps).
+ *  - grok   → imageGen engine "grok" (xAI Grok Imagine; без negative/seed/steps);
+ *  - krea2  → imageGen engine "comfy", ecosystem "krea2" (raw/turbo; тюны — AIR в
+ *             diffusionModel), либо engine "fal" для размерных тиров medium/large.
  */
-type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
+type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok" | "krea2";
 
 /** Базы Stable Diffusion — только они работают в comfy/IP-Adapter пути. */
 function isSdBase(base: CivitaiBase): boolean {
@@ -1250,8 +1252,27 @@ function baseFromAir(air: string): CivitaiBase {
   if (eco === "flux1" || eco === "fluxkrea") return "flux1";
   if (eco === "zimageturbo" || eco === "zimagebase") return "zimage";
   if (eco === "grok") return "grok";
+  if (eco === "krea2") return "krea2";
   return "sdxl";
 }
+
+/**
+ * Официальные версии Krea 2 на Civitai (зеркало krea2.graph.ts сайта Civitai):
+ * medium/large — FAL-тиры (без LoRA/negative/steps), raw/turbo — comfy-сборки.
+ * Любая другая версия с ecosystem krea2 — тюн сообщества: comfy raw + AIR в diffusionModel.
+ */
+const KREA2_VERSIONS = { medium: "2983023", large: "2983022", raw: "3072329", turbo: "3072332" } as const;
+
+/** Krea 2 рендерит бакеты ~1 Мп (как сайт Civitai). 5:4 — зеркало 4:5. */
+const KREA2_DIMS: Record<string, { width: number; height: number }> = {
+  "1:1": { width: 1024, height: 1024 },
+  "4:5": { width: 928, height: 1152 },
+  "5:4": { width: 1152, height: 928 },
+  "9:16": { width: 768, height: 1376 },
+  "16:9": { width: 1376, height: 768 },
+};
+/** Наши соотношения → допустимые аспекты FAL-тиров Krea 2. Без аспекта — портрет 2:3. */
+const KREA2_FAL_ASPECTS: Record<string, string> = { "1:1": "1:1", "4:5": "4:5", "5:4": "4:3", "9:16": "9:16", "16:9": "16:9" };
 
 /** Дефолтный конфиг под базу (для синтеза, когда AIR нет в пулах). */
 function defaultCivitaiConfig(air: string, base: CivitaiBase): CivitaiModelConfig {
@@ -1261,6 +1282,11 @@ function defaultCivitaiConfig(air: string, base: CivitaiBase): CivitaiModelConfi
     case "flux1": return { ...common, width: 832, height: 1216, steps: 28, cfgScale: 3.5 };
     case "zimage": return { ...common, width: 832, height: 1216, steps: 9, cfgScale: 1 };
     case "grok": return { ...common, width: 1024, height: 1536, steps: 0, cfgScale: 0 };
+    case "krea2": {
+      // Turbo — дистиллированная 8-шаговая сборка (guidance вшит, cfg ~1); остальное — как Raw.
+      const isTurbo = air.endsWith(`@${KREA2_VERSIONS.turbo}`);
+      return { ...common, width: 832, height: 1248, steps: isTurbo ? 8 : 30, cfgScale: isTurbo ? 1 : 3.5 };
+    }
     default: return { ...common, width: 1024, height: 1536, steps: 30, cfgScale: 7 };
   }
 }
@@ -1464,6 +1490,7 @@ function sdDimsForAspect(
   fallback: { width: number; height: number },
 ): { width: number; height: number } {
   if (!aspectRatio) return fallback;
+  if (base === "krea2") return KREA2_DIMS[aspectRatio] || fallback;
   const sdxl: Record<string, { width: number; height: number }> = {
     "1:1": { width: 1024, height: 1024 },
     "4:5": { width: 1024, height: 1280 },
@@ -1523,6 +1550,59 @@ function buildCivitaiNonSdStep(p: {
           quantity: 1,
           aspectRatio: (aspectRatio && GROK_ASPECTS[aspectRatio]) || "2:3",
           ...(sourceImage ? { operation: "editImage", images: [sourceImage] } : { operation: "createImage" }),
+        },
+      }],
+    };
+  }
+
+  if (model.base === "krea2") {
+    const isEdit = !!initImageUrl;
+    const size = versionId === KREA2_VERSIONS.medium ? "medium" : versionId === KREA2_VERSIONS.large ? "large" : undefined;
+    if (size) {
+      // FAL-тиры: только промпт/аспект/seed (без negative, steps, cfg, LoRA и edit).
+      if (isEdit) throw new Error(`Krea 2 ${size}: img2img не поддерживается — нужна версия Raw или Turbo`);
+      return {
+        steps: [{
+          $type: "imageGen",
+          input: {
+            engine: "fal",
+            model: "krea2",
+            operation: "createImage",
+            prompt,
+            aspectRatio: (aspectRatio && KREA2_FAL_ASPECTS[aspectRatio]) || "2:3",
+            size,
+            ...(typeof seed === "number" ? { seed } : {}),
+            quantity: 1,
+          },
+        }],
+      };
+    }
+    const isTurbo = versionId === KREA2_VERSIONS.turbo;
+    const isOfficial = isTurbo || versionId === KREA2_VERSIONS.raw;
+    // Turbo ограничен 15 шагами и cfg ≤ 2; тюны сообщества идут через raw-сборку.
+    const steps = isTurbo ? Math.min(model.steps || 8, 15) : (model.steps || 30);
+    const cfgScale = isTurbo ? Math.min(model.cfgScale || 1, 2) : (model.cfgScale || 3.5);
+    return {
+      steps: [{
+        $type: "imageGen",
+        input: {
+          engine: "comfy",
+          ecosystem: "krea2",
+          // edit — отдельная comfy-сборка: веса базы передаются AIR'ом в diffusionModel.
+          model: isEdit ? "edit" : isTurbo ? "turbo" : "raw",
+          operation: isEdit ? "editImage" : "createImage",
+          ...(isEdit || !isOfficial ? { diffusionModel: model.air } : {}),
+          ...(isEdit ? { images: [initImageUrl] } : {}),
+          prompt,
+          ...(negativePrompt ? { negativePrompt } : {}),
+          width,
+          height,
+          cfgScale,
+          steps,
+          sampler: "euler",
+          scheduler: "simple",
+          ...(typeof seed === "number" ? { seed } : {}),
+          quantity: 1,
         },
       }],
     };

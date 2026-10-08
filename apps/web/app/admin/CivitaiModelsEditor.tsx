@@ -6,10 +6,11 @@ import { adminStyles } from "./admin-styles";
 
 /**
  * База чекпоинта (зеркало CivitaiBase в apps/ai): sd1/sdxl — Stable Diffusion
- * (SDXL/Pony/Illustrious), flux1 — Flux.1 D/S/Krea, zimage — Z Image, grok — xAI Grok Imagine.
+ * (SDXL/Pony/Illustrious), flux1 — Flux.1 D/S/Krea, zimage — Z Image, grok — xAI Grok Imagine,
+ * krea2 — Krea 2 (Raw/Turbo и тюны).
  */
-export type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok";
-const CIVITAI_BASES: CivitaiBase[] = ["sdxl", "sd1", "flux1", "zimage", "grok"];
+export type CivitaiBase = "sd1" | "sdxl" | "flux1" | "zimage" | "grok" | "krea2";
+const CIVITAI_BASES: CivitaiBase[] = ["sdxl", "sd1", "flux1", "zimage", "grok", "krea2"];
 
 /** Конфиг одного чекпоинта Civitai (зеркало CivitaiModelConfig в apps/ai). */
 export interface CivitaiModelConfig {
@@ -102,6 +103,7 @@ function baseFromAir(air: string): CivitaiBase {
   if (eco === "flux1" || eco === "fluxkrea") return "flux1";
   if (eco === "zimageturbo" || eco === "zimagebase") return "zimage";
   if (eco === "grok") return "grok";
+  if (eco === "krea2") return "krea2";
   return "sdxl";
 }
 /** Дефолтные размеры/шаги/cfg под базу (Grok их не использует — только аспект). */
@@ -126,6 +128,7 @@ function defaultsForBase(base: CivitaiBase): { width: number; height: number; st
     case "flux1": return { width: 832, height: 1216, steps: 28, cfgScale: 3.5 };
     case "zimage": return { width: 832, height: 1216, steps: 9, cfgScale: 1 };
     case "grok": return { width: 1024, height: 1536, steps: 0, cfgScale: 0 };
+    case "krea2": return { width: 832, height: 1248, steps: 30, cfgScale: 3.5 };
     default: return { width: 1024, height: 1536, steps: 25, cfgScale: 7 };
   }
 }
@@ -289,8 +292,8 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
           <p style={{ margin: "0 0 6px" }}>Проще всего — вставить в поле «Добавить по ссылке» ссылку на модель (<code style={{ color: "#fff" }}>/models/&#123;modelId&#125;?modelVersionId=…</code>) или на картинку (<code style={{ color: "#fff" }}>/images/&#123;imageId&#125;</code>, civitai.com или civitai.red) — AIR, база и параметры определятся сами. Для картинки берётся чекпоинт из её блока Resources.</p>
           <p style={{ margin: "0 0 6px" }}>Формат: <code style={{ color: "#fff" }}>urn:air:&#123;ecosystem&#125;:checkpoint:civitai:&#123;modelId&#125;@&#123;versionId&#125;</code></p>
           <ol style={{ margin: "0 0 6px 18px", padding: 0 }}>
-            <li><b>ecosystem</b> по «Base Model»: SD 1.5 → <code>sd1</code>; SDXL / Pony / Illustrious → <code>sdxl</code>; Flux.1 D/S → <code>flux1</code>; Flux.1 Krea → <code>fluxkrea</code>; Z Image Turbo → <code>zimageturbo</code> (тип <code>diffusionmodel</code>); Grok → <code>grok</code>.</li>
-            <li>Тип должен быть <b>Checkpoint</b> (LoRA/embedding не поддерживаются). Krea 2, OpenAI, Flux.2 и прочие API-базы пока не поддерживаются.</li>
+            <li><b>ecosystem</b> по «Base Model»: SD 1.5 → <code>sd1</code>; SDXL / Pony / Illustrious → <code>sdxl</code>; Flux.1 D/S → <code>flux1</code>; Flux.1 Krea → <code>fluxkrea</code>; Z Image Turbo → <code>zimageturbo</code> (тип <code>diffusionmodel</code>); Grok → <code>grok</code>; Krea 2 → <code>krea2</code> (официальные: Turbo <code>urn:air:krea2:diffusionmodel:civitai:2732656@3072332</code> — 8 шагов, cfg 1; Raw <code>…:2732654@3072329</code> — ~30 шагов, cfg 3.5).</li>
+            <li>Тип должен быть <b>Checkpoint</b> (LoRA/embedding не поддерживаются). OpenAI, Flux.2 и прочие API-базы пока не поддерживаются. Krea 2: img2img идёт как edit (только Raw/Turbo и тюны).</li>
             <li><b>Grok</b>: игнорирует negative prompt, seed, шаги и cfg; модерация xAI может отклонять откровенный контент. Версии: v1.0 = 2738377, v2.0 = 3225510 (v1.5 — только видео).</li>
           </ol>
           <p style={{ margin: 0 }}>Пример: <code style={{ color: "#fff" }}>urn:air:sdxl:checkpoint:civitai:827184@1612720</code>. Описание: developer.civitai.com/site/guide/air</p>
