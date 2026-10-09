@@ -76,3 +76,28 @@ export function buildCharacterImagePrompt(
 
   return parts.filter(Boolean).join(", ");
 }
+
+/**
+ * Начало промпта аватара по стилю персонажа (имя опции STYLE: Realistic,
+ * Semi-real, Anime, 2D, 3D…; при незнакомом имени — по generationStyle пула).
+ * Раньше всё, кроме «Anime», получало «photorealistic» — 3D/2D/Semi-real
+ * уходили в аниме/иллюстрационные чекпоинты с фотореализмом в промпте, и модель
+ * выдавала постеризованную мешанину стилей.
+ */
+// Зеркало stylePromptPrefix из packages/types (web не зависит от @repo/types).
+export function stylePromptPrefix(style?: string | null, generationStyle?: string | null): string {
+  const s = (style || "").toLowerCase();
+  if (/\b3d\b|3dcg/.test(s)) return "3d render, 3dcg, stylized 3d character";
+  if (/\b2d\b|cartoon|мульт/.test(s)) return "2d illustration, flat colors, clean lineart";
+  if (/semi|полуреал/.test(s)) return "semi-realistic, detailed digital painting";
+  if (/anime|аниме/.test(s)) return "anime style, anime illustration";
+  if (/real|реал|photo/.test(s)) return "photorealistic";
+  switch (generationStyle) {
+    case "mistoon": return "anime style, anime illustration";
+    case "wai-ill": return "semi-realistic, detailed digital painting";
+    case "furry": return "2d illustration, flat colors, clean lineart";
+    case "2d": return "2d illustration, flat colors, clean lineart";
+    case "3d": return "3d render, 3dcg, stylized 3d character";
+    default: return "photorealistic";
+  }
+}

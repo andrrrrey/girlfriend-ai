@@ -16,6 +16,7 @@ import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
 import { firstClause, isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
+import { stylePromptPrefix } from "../../lib/prompt";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import type { TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
@@ -1153,7 +1154,7 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
   // прогоняем через toEnglishTag, чтобы русские подписи из манифеста
   // (Орк, Дреды) не попали в промпт как есть.
   const parts = [
-    d.style === "Anime" ? "anime style" : "photorealistic",
+    stylePromptPrefix(d.style, d.generationStyle),
     toEnglishTag(d.gender) || "female",
     d.age ? `${d.age} years old` : "",
     d.fantasyRacePrompt || toEnglishTag(d.fantasyRace) || d.ethnicityPrompt || toEnglishTag(d.ethnicity),

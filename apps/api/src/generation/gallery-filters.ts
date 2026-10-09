@@ -19,7 +19,7 @@ export const GALLERY_STYLES: GalleryFilterDef[] = [
   { key: "realistic", generationStyles: ["realism"], keywords: ["realistic", "photorealistic", "photograph", "raw photo"] },
   { key: "anime", generationStyles: ["mistoon"], keywords: ["anime", "manga"] },
   { key: "illustration", generationStyles: ["wai-ill"], keywords: ["illustration", "hentai"] },
-  { key: "cartoon", keywords: ["cartoon", "3d render", "pixar", "disney"] },
+  { key: "cartoon", generationStyles: ["3d", "2d"], keywords: ["cartoon", "3d render", "pixar", "disney"] },
   { key: "fantasy", keywords: ["fantasy", "elf", "demon", "succubus", "angel", "vampire", "fairy"] },
   { key: "furry", generationStyles: ["furry"], keywords: ["furry", "anthro"] },
   { key: "cyberpunk", keywords: ["cyberpunk", "neon", "sci-fi", "android", "cyborg"] },

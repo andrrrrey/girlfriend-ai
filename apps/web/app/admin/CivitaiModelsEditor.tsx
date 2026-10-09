@@ -91,6 +91,16 @@ const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
     { air: "urn:air:sd1:checkpoint:civitai:34469@397050", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:3671@143769", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
     { air: "urn:air:sd1:checkpoint:civitai:166485@198146", base: "sd1", width: 512, height: 768, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
+  ],  // 3D (Pixar/Blender/3DCG) — отдельно от аниме, чтобы стиль 3D не делил пул с Anime.
+  "3d": [
+    { air: "urn:air:sdxl:checkpoint:civitai:1448527@1637657", base: "sdxl", width: 1024, height: 1536, steps: 30, cfgScale: 6, sampler: "Euler a", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:1331249@1503014", base: "sdxl", width: 1024, height: 1536, steps: 35, cfgScale: 5, sampler: "DPM++ 3M SDE", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:2688058@3018189", base: "sdxl", width: 1024, height: 1536, steps: 27, cfgScale: 3.5, sampler: "Euler a", scheduler: "", clipSkip: 2 },
+  ],
+  // 2D (мультяшная/плоская иллюстрация).
+  "2d": [
+    { air: "urn:air:sdxl:checkpoint:civitai:1570391@2329740", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 5, sampler: "Euler a", scheduler: "", clipSkip: 2 },
+    { air: "urn:air:sdxl:checkpoint:civitai:376130@2940478", base: "sdxl", width: 1024, height: 1536, steps: 20, cfgScale: 4.5, sampler: "Euler a", scheduler: "", clipSkip: 2 },
   ],
 };
 

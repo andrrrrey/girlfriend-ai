@@ -124,7 +124,7 @@ export interface ImageJobData {
   model?: string;
   /** Провайдер генерации: "modelslab" | "atlascloud" | "civitai" */
   provider?: string;
-  /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "furry" */
+  /** Стиль генерации для Civitai: "realism" | "mistoon" | "wai-ill" | "3d" | "2d" | "furry" */
   generationStyle?: string;
   /** Публичный URL исходного изображения (фото персонажа) для режима img2img. */
   initImageUrl?: string;

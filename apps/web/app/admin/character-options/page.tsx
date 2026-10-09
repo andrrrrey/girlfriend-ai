@@ -114,8 +114,10 @@ const s: Record<string, React.CSSProperties> = {
 const GENERATION_STYLES = [
   { value: "", label: "— не выбран —" },
   { value: "realism", label: "Realism" },
-  { value: "mistoon", label: "Mistoon (Anime/Cartoon)" },
-  { value: "wai-ill", label: "WAI-Illustrious (NSFW)" },
+  { value: "mistoon", label: "Mistoon (Anime)" },
+  { value: "wai-ill", label: "WAI-Illustrious (Semi-real)" },
+  { value: "3d", label: "3D (Pixar/3DCG)" },
+  { value: "2d", label: "2D (Cartoon)" },
   { value: "furry", label: "Furry" },
 ];
 

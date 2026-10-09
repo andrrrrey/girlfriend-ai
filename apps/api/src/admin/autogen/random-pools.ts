@@ -8,7 +8,7 @@
  */
 
 import type { CreateUserCharacterDto } from "../../chats/dto/create-user-character.dto";
-import { firstClause, promptDescribesExpression, promptDescribesSetting } from "@repo/types";
+import { firstClause, promptDescribesExpression, promptDescribesSetting, stylePromptPrefix } from "@repo/types";
 
 // ─── Пулы (зеркало create/data.ts) ───────────────────────────────────────────
 
@@ -247,7 +247,7 @@ export function pickRandomScenePrompts(ctx: ScenePools): string[] {
 export function buildAvatarPrompt(char: RandomCharacter, extraPrompts: string[] = []): string {
   const { dto, prompts } = char;
   const parts = [
-    dto.style === "Anime" ? "anime style" : "photorealistic",
+    stylePromptPrefix(dto.style, dto.generationStyle),
     (dto.gender || "female").toLowerCase(),
     dto.age ? `${dto.age} years old` : "",
     prompts.ethnicity || (dto.ethnicity ? dto.ethnicity.toLowerCase() : ""),
