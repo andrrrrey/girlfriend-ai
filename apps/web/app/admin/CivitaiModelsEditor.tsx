@@ -100,7 +100,9 @@ const DEFAULT_CIVITAI_MODELS: Record<string, CivitaiModelConfig[]> = {
   // 2D (мультяшная/плоская иллюстрация).
   "2d": [
     { air: "urn:air:sdxl:checkpoint:civitai:1570391@2329740", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 5, sampler: "Euler a", scheduler: "", clipSkip: 2 },
-    { air: "urn:air:sdxl:checkpoint:civitai:376130@2940478", base: "sdxl", width: 1024, height: 1536, steps: 20, cfgScale: 4.5, sampler: "Euler a", scheduler: "", clipSkip: 2 },
+    // Nova Anime XL v19 (376130@2940478) не используем: на Civitai даёт пересвеченные
+    // постеризованные картинки с неоновыми контурами; берём проверенную ранее версию.
+    { air: "urn:air:sdxl:checkpoint:civitai:376130@2173013", base: "sdxl", width: 1024, height: 1536, steps: 25, cfgScale: 7, sampler: "", scheduler: "", clipSkip: 2 },
   ],
 };
 

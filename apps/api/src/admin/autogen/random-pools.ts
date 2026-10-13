@@ -250,6 +250,8 @@ export function buildAvatarPrompt(char: RandomCharacter, extraPrompts: string[] 
     stylePromptPrefix(dto.style, dto.generationStyle),
     (dto.gender || "female").toLowerCase(),
     dto.age ? `${dto.age} years old` : "",
+    // Модели тянут к молодым лицам — для 40+ явно называем зрелый возраст.
+    dto.age && dto.age >= 40 ? "mature, visible signs of age" : "",
     prompts.ethnicity || (dto.ethnicity ? dto.ethnicity.toLowerCase() : ""),
     dto.hairColor ? `${dto.hairColor.toLowerCase()} hair` : "",
     prompts.hairStyle || (dto.hairStyle ? `${dto.hairStyle.toLowerCase()} hairstyle` : ""),

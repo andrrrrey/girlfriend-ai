@@ -40,11 +40,13 @@ export function isUnsafeForSoloAvatar(prompt: string | null | undefined): boolea
 
 /**
  * Кадры, где персонажа не видно целиком или нет лица: детальный план части тела,
- * «только глаза/губы», крошечная фигура в огромном пространстве. Для аватара
+ * «только глаза/губы», крошечная фигура в огромном пространстве, а также крупный
+ * план «от подбородка до макушки» — в вертикальном кадре 2:3/9:16 лицо
+ * растягивается на всю высоту и выходит искажённым. Для аватара
  * модель в таких случаях рисует одну обстановку (лестницу, комнату) без человека.
  */
 const NO_FACE_FRAMING_RE =
-  /\b(detail shot|extreme close-up shot|only eyes|only lips|specific body part|extreme wide shot|small figure|environment dominates)\b/i;
+  /\b(detail shot|extreme close-up shot|close-up shot|from chin to top of head|only eyes|only lips|specific body part|extreme wide shot|small figure|environment dominates)\b/i;
 
 /**
  * Первая фраза опции (до первой запятой). Описания локаций/выражений длинные

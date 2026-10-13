@@ -1157,6 +1157,8 @@ function buildAvatarPrompt(d: ReturnType<typeof collectFormData>, extraPrompts: 
     stylePromptPrefix(d.style, d.generationStyle),
     toEnglishTag(d.gender) || "female",
     d.age ? `${d.age} years old` : "",
+    // Модели тянут к молодым лицам — для 40+ явно называем зрелый возраст.
+    d.age >= 40 ? "mature, visible signs of age" : "",
     d.fantasyRacePrompt || toEnglishTag(d.fantasyRace) || d.ethnicityPrompt || toEnglishTag(d.ethnicity),
     d.hairColor ? `${toEnglishTag(d.hairColor)} hair` : "",
     d.hairStylePrompt || (d.hairStyle ? `${toEnglishTag(d.hairStyle)} hairstyle` : ""),
