@@ -80,6 +80,8 @@ export const ru: Record<keyof typeof en, string> = {
   "chat.deleteChat": "Удалить чат",
   "chat.selectChatProfile": "Выберите свой чат-профиль для этого диалога",
   "chat.noProfile": "Без профиля",
+  "chat.resetChat": "Сбросить чат",
+  "chat.resetChatConfirm": "Очистить всю историю сообщений? Чат и фото в профиле персонажа сохранятся.",
   "chat.freeBadge": "Free",
   "chat.subscribe": "Оформить подписку",
   "chat.voiceMessage": "Голосовое сообщение",

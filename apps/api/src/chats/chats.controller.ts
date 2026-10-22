@@ -14,6 +14,8 @@
  *    GET    /chats/:id                          — Получить конкретный чат
  *    PATCH  /chats/:id                          — Обновить заголовок чата
  *    DELETE /chats/:id                          — Мягкое удаление чата (soft delete)
+ *    POST   /chats/:id/reset                    — Сброс чата: очистить историю, чат остаётся
+ *    GET    /chats/:id/gallery                  — Фото персонажа, сгенерированные в чате
  *
  *  Messages:
  *    GET    /chats/:id/messages                 — Список сообщений чата (cursor pagination)
@@ -251,6 +253,32 @@ export class ChatsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteChat(@Req() req: any, @Param("id") id: string) {
     await this.chatsService.deleteChat(id, req.user.id);
+  }
+
+  /**
+   * Сбрасывает чат: очищает всю историю сообщений, сам чат остаётся в списке.
+   * Фото из чата остаются в галерее персонажа. Возвращает HTTP 204.
+   *
+   * @throws 404    если чат не найден
+   * @throws 403    если чат принадлежит другому пользователю
+   */
+  @ApiOperation({ summary: "Reset chat: clear message history, keep the chat" })
+  @Post(":id/reset")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetChat(@Req() req: any, @Param("id") id: string) {
+    await this.chatsService.resetChat(id, req.user.id);
+  }
+
+  /**
+   * Галерея персонажа в чате: фото, сгенерированные в этом чате,
+   * включая скрытые сбросом чата. Аватар персонажа сюда не входит.
+   *
+   * @returns       { id, content, mediaUrl, createdAt }[] (старые → новые)
+   */
+  @ApiOperation({ summary: "List images generated in the chat (character gallery)" })
+  @Get(":id/gallery")
+  async getGallery(@Req() req: any, @Param("id") id: string) {
+    return this.chatsService.getGallery(id, req.user.id);
   }
 
   /**

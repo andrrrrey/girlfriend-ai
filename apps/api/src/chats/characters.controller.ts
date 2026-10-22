@@ -213,7 +213,7 @@ export class CharactersController {
         where: {
           type: "image",
           mediaUrl: { not: null },
-          deletedAt: null,
+          inGallery: true, // фото остаются и после сброса чата
           createdAt: { gte: since },
           chatSession: { deletedAt: null },
         },
@@ -311,7 +311,7 @@ export class CharactersController {
         where: {
           type: "image",
           mediaUrl: { not: null },
-          deletedAt: null,
+          inGallery: true, // фото остаются и после сброса чата
           createdAt: { gte: since },
           chatSession: { characterId: id, deletedAt: null },
         },
@@ -353,7 +353,7 @@ export class CharactersController {
     const msgWhere = {
       type: "image",
       mediaUrl: { not: null },
-      deletedAt: null,
+      inGallery: true, // фото остаются и после сброса чата
       chatSession: { characterId: id, deletedAt: null },
     } as const;
     const jobWhere = {

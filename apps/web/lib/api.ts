@@ -1781,7 +1781,28 @@ export const chats = {
       method: "DELETE",
     });
   },
+
+  /** Сбрасывает чат (POST /chats/:id/reset): история очищается, чат остаётся. */
+  async reset(chatId: string): Promise<void> {
+    return apiFetch(`/chats/${chatId}/reset`, { method: "POST" });
+  },
+
+  /**
+   * Фото персонажа, сгенерированные в чате (GET /chats/:id/gallery), старые → новые.
+   * Включает фото, скрытые сбросом чата; аватар сюда не входит.
+   */
+  async getGallery(chatId: string): Promise<ChatGalleryImage[]> {
+    return apiFetch(`/chats/${chatId}/gallery`);
+  },
 };
+
+/** Фото из галереи персонажа в чате (GET /chats/:id/gallery). */
+export interface ChatGalleryImage {
+  id: string;
+  content: string;
+  mediaUrl: string;
+  createdAt: string;
+}
 
 // ─── SSE: edit message (updates content + streams new AI response) ───
 

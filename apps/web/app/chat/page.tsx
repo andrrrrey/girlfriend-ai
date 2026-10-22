@@ -20,6 +20,7 @@ import {
   saveImageMessage,
   resizedMediaUrl,
   type ChatSession,
+  type ChatGalleryImage,
   type Message,
   type Character,
   type PoseOptionsResponse,
@@ -105,6 +106,8 @@ function ChatPageInner() {
 
   // Profile gallery carousel state
   const [galleryIndex, setGalleryIndex] = useState(0);
+  // Фото персонажа, сгенерированные в чате (переживают сброс чата и перегенерацию)
+  const [galleryItems, setGalleryItems] = useState<ChatGalleryImage[]>([]);
 
   // Load chat list
   const loadChats = useCallback(async () => {
@@ -129,8 +132,42 @@ function ChatPageInner() {
     }
   }, []);
 
+  // Load character gallery (photos generated in this chat)
+  const loadGallery = useCallback(async (chatId: string) => {
+    try {
+      setGalleryItems(await chats.getGallery(chatId));
+    } catch {
+      setGalleryItems([]);
+    }
+  }, []);
+
   // Чаты, для которых приветствие уже запрошено в этой сессии — чтобы не дублировать.
   const greetedRef = useRef<Set<string>>(new Set());
+
+  // Персонаж пишет первым в пустом чате (один раз на сессию/чат).
+  const startGreeting = (chatId: string) => {
+    if (greetedRef.current.has(chatId)) return;
+    greetedRef.current.add(chatId);
+    setStreaming(true);
+    setStreamContent("");
+    abortRef.current = streamGreeting(
+      chatId,
+      lang === "ru" ? "ru" : "en",
+      (delta) => setStreamContent((prev) => prev + delta),
+      () => {
+        setStreaming(false);
+        loadMessages(chatId);
+        loadChats();
+        setStreamContent("");
+      },
+      () => {
+        // Ошибка — позволяем повторить при следующем открытии чата.
+        setStreaming(false);
+        setStreamContent("");
+        greetedRef.current.delete(chatId);
+      },
+    );
+  };
 
   // Load user's chat profiles (personas) for the header dropdown
   useEffect(() => {
@@ -192,35 +229,16 @@ function ChatPageInner() {
       const chatId = activeChat;
       loadMessages(chatId).then((items) => {
         // Пустой чат → персонаж здоровается первым (один раз на сессию/чат).
-        if (items.length === 0 && !greetedRef.current.has(chatId)) {
-          greetedRef.current.add(chatId);
-          setStreaming(true);
-          setStreamContent("");
-          abortRef.current = streamGreeting(
-            chatId,
-            lang === "ru" ? "ru" : "en",
-            (delta) => setStreamContent((prev) => prev + delta),
-            () => {
-              setStreaming(false);
-              loadMessages(chatId);
-              loadChats();
-              setStreamContent("");
-            },
-            () => {
-              // Ошибка — позволяем повторить при следующем открытии чата.
-              setStreaming(false);
-              setStreamContent("");
-              greetedRef.current.delete(chatId);
-            },
-          );
-        }
+        if (items.length === 0) startGreeting(chatId);
       });
+      setGalleryItems([]);
+      loadGallery(chatId);
       setGalleryIndex(0);
       // Auto-focus the message input
       setTimeout(() => chatInputRef.current?.focus(), 100);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat, loadMessages]);
+  }, [activeChat, loadMessages, loadGallery]);
 
   // Mark chat as read whenever chatList updates with a new lastMessage or new
   // messages are loaded — separate from message loading so it doesn't trigger a
@@ -483,8 +501,29 @@ function ChatPageInner() {
     try {
       await chats.deleteMessage(activeChat, msgId);
       loadMessages(activeChat);
+      // Явно удалённое фото убирается и из галереи персонажа.
+      loadGallery(activeChat);
     } catch {
       // error
+    }
+  };
+
+  // Сброс чата: вся история очищается, чат остаётся в списке, фото — в галерее.
+  const handleResetChat = async () => {
+    if (!activeChat || streaming) return;
+    if (!window.confirm(t("chat.resetChatConfirm"))) return;
+    const chatId = activeChat;
+    try {
+      await chats.reset(chatId);
+      setMessages([]);
+      setEditingMsgId(null);
+      setDemoBanner(null);
+      loadChats();
+      // После сброса персонаж снова здоровается первым.
+      greetedRef.current.delete(chatId);
+      startGreeting(chatId);
+    } catch {
+      loadMessages(chatId);
     }
   };
 
@@ -672,13 +711,13 @@ function ChatPageInner() {
     const imgs: { url: string; label: string }[] = [];
     const avatarUrl = activeChatData?.character?.avatarUrl;
     if (avatarUrl) imgs.push({ url: avatarUrl, label: "Avatar" });
-    for (const msg of messages) {
-      if (msg.type === "image" && msg.mediaUrl) {
-        imgs.push({ url: msg.mediaUrl, label: msg.content || "Generated" });
-      }
+    // Фото из чата берём из галереи, а не из сообщений: они остаются в профиле
+    // персонажа и после сброса чата.
+    for (const img of galleryItems) {
+      imgs.push({ url: img.mediaUrl, label: img.content || "Generated" });
     }
     return imgs;
-  }, [messages, activeChatData]);
+  }, [galleryItems, activeChatData]);
 
   // Индекс галереи не должен выходить за её границы: иначе после удаления
   // сообщений (перегенерация, удаление фото) панель профиля оставалась пустой —
@@ -704,13 +743,14 @@ function ChatPageInner() {
             // Фото добавляется в галерею профиля, но главным фото (аватаром)
             // остаётся текущее — индекс галереи не переключаем на новый кадр.
             chats.getMessages(chatId).then((res) => setMessages(res.items));
+            loadGallery(chatId);
           }
         }).catch(() => {});
       } else if (n.status === "failed") {
         handledJobsRef.current.add(n.jobId);
       }
     }
-  }, [notifications, activeChat]);
+  }, [notifications, activeChat, loadGallery]);
 
   // Поза приходит из выбранной опции (opt.prompt) — он уже на английском,
   // но прогоняем через toEnglishTag на случай, если попал opt.name (RU).
@@ -811,6 +851,9 @@ function ChatPageInner() {
 .chat-header-avatar { width: 46px; height: 46px; border-radius: 8px; border: 1px solid #313131; background: #313131; }
 .chat-header-name { flex: 1; font-size: 24px; font-weight: 700; }
 .chat-back-btn { display: none; }
+.chat-reset-btn { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s; }
+.chat-reset-btn:hover:not(:disabled) { border-color: #f95bad; }
+.chat-reset-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .chat-profile-select select {
   appearance: none;
   background: #1e1e1e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23848484' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
@@ -923,6 +966,7 @@ function ChatPageInner() {
   }
   .chat-header { gap: 10px; }
   .chat-header-name { font-size: 18px; }
+  .chat-reset-label { display: none; }
 }
       `}</style>
 
@@ -1048,6 +1092,15 @@ function ChatPageInner() {
               <span className="chat-header-name">
                 {activeChatData?.character?.name || t("chat.chatFallback")}
               </span>
+              <button
+                className="chat-reset-btn"
+                onClick={handleResetChat}
+                disabled={streaming}
+                title={t("chat.resetChat")}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 109.9-3.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M12.8 1.8v3.2H9.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span className="chat-reset-label">{t("chat.resetChat")}</span>
+              </button>
               <div className="chat-profile-select">
                 <select
                   value={activeChatData?.chatProfileId ?? ""}

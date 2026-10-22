@@ -78,6 +78,8 @@ export const en = {
   "chat.deleteChat": "Delete chat",
   "chat.selectChatProfile": "Select your chat profile for this conversation",
   "chat.noProfile": "No profile",
+  "chat.resetChat": "Reset chat",
+  "chat.resetChatConfirm": "Clear the entire message history? The chat and the character's profile photos will be kept.",
   "chat.freeBadge": "Free",
   "chat.subscribe": "Subscribe",
   "chat.voiceMessage": "Voice message",

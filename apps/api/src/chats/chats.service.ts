@@ -6,6 +6,7 @@
  * 1. ChatSession CRUD — создание, получение, обновление, мягкое удаление чатов
  * 2. Message CRUD — пагинация курсором, сохранение, мягкое удаление
  * 3. История для AI — getMessageHistory (последние N сообщений для контекста LLM)
+ *    Сброс чата (resetChat) и галерея фото персонажа (getGallery)
  * 4. Редактирование сообщений — updateMessageContent с cascade soft-delete последующих
  * 5. AiJob трекинг — создание и завершение записей об AI-операциях
  * 6. UsageLog — аудит использования AI (токены, действия)
@@ -344,7 +345,42 @@ export class ChatsService {
 
     return this.prisma.message.update({
       where: { id: messageId },
-      data: { deletedAt: new Date() }, // Мягкое удаление
+      // Мягкое удаление; явное удаление фото убирает его и из галереи персонажа
+      data: { deletedAt: new Date(), inGallery: false },
+    });
+  }
+
+  /**
+   * Сбрасывает чат: мягко удаляет всю историю сообщений, сам чат остаётся.
+   *
+   * Фото, сгенерированные в чате, пропадают из переписки, но остаются в
+   * галерее персонажа (inGallery не трогаем) — см. getGallery.
+   *
+   * @param chatId — ID чата
+   * @param userId — ID владельца (проверка через getChat)
+   */
+  async resetChat(chatId: string, userId: string) {
+    const chat = await this.getChat(chatId, userId);
+    await this.prisma.message.updateMany({
+      where: { chatSessionId: chat.id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Галерея персонажа в чате — фото, сгенерированные в этом чате
+   * (в хронологическом порядке). Включает фото, скрытые сбросом чата или
+   * каскадным удалением; не включает явно удалённые пользователем.
+   *
+   * @param chatId — ID чата
+   * @param userId — ID владельца (проверка через getChat)
+   */
+  async getGallery(chatId: string, userId: string) {
+    const chat = await this.getChat(chatId, userId);
+    return this.prisma.message.findMany({
+      where: { chatSessionId: chat.id, type: "image", mediaUrl: { not: null }, inGallery: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, content: true, mediaUrl: true, createdAt: true },
     });
   }
 

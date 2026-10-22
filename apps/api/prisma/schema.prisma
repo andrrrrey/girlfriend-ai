@@ -353,6 +353,9 @@ model Message {
   type          String    @default("text") // text | audio | image
   mediaUrl      String?   @map("media_url")
   metadata      Json?
+  // Фото (type=image) остаётся в галерее персонажа и после сброса чата;
+  // false — только после явного удаления сообщения пользователем.
+  inGallery     Boolean   @default(true) @map("in_gallery")
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
 
