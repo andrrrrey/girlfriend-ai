@@ -104,12 +104,49 @@ const PAGE_CSS = `
 /** Горизонтальные/квадратные пропорции — такие видео в Shorts не пускаем. */
 const NON_VERTICAL_RATIOS = new Set(["16:9", "21:9", "4:3", "3:2", "5:4", "1:1"]);
 
-function isKnownNonVertical(item: GalleryItem): boolean {
-  const ar = item.input?.aspectRatio;
-  return !!ar && NON_VERTICAL_RATIOS.has(ar);
+const VERTICAL_RATIOS = new Set(["9:16", "2:3", "3:4", "4:5"]);
+
+/** Читает метаданные видео вне DOM и проверяет, что кадр вертикальный. */
+function probeIsVertical(url: string, timeoutMs = 8000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    let settled = false;
+    const finish = (vertical: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeAttribute("src");
+      video.load();
+      resolve(vertical);
+    };
+    // По таймауту не выкидываем: медленная сеть не повод терять видео.
+    const timer = setTimeout(() => finish(true), timeoutMs);
+    video.muted = true;
+    video.preload = "metadata";
+    video.onloadedmetadata = () => finish(!video.videoWidth || !video.videoHeight || video.videoHeight > video.videoWidth);
+    video.onerror = () => finish(false);
+    video.src = url;
+  });
 }
 
-function ShortCard({ item, likeStatus, onNotVertical }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number }; onNotVertical: (jobId: string) => void }) {
+/**
+ * Оставляет только вертикальные видео. Проверяем ДО добавления в ленту: если
+ * убирать карточки уже после рендера, лента сдвигается (выглядит как автоскролл),
+ * сентинел попадает в кадр и подгрузка страниц уходит в каскад.
+ */
+async function keepVertical(items: GalleryItem[]): Promise<GalleryItem[]> {
+  const checks = await Promise.all(items.map((item) => {
+    const url = item.output?.url;
+    const ar = item.input?.aspectRatio;
+    if (!url || (ar && NON_VERTICAL_RATIOS.has(ar))) return false;
+    // Пропорция в job может отсутствовать (img2vid) — тогда смотрим реальный кадр.
+    if (ar && VERTICAL_RATIOS.has(ar)) return true;
+    return probeIsVertical(url);
+  }));
+  return items.filter((_, i) => checks[i]);
+}
+
+function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { liked: boolean; count: number } }) {
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -176,21 +213,7 @@ function ShortCard({ item, likeStatus, onNotVertical }: { item: GalleryItem; lik
     <div className="shorts-card-wrap">
       <div className="shorts-card" ref={cardRef}>
         {url && shouldLoad ? (
-          <video
-            ref={videoRef}
-            className="shorts-video"
-            src={url}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            // Пропорция в job может отсутствовать (img2vid) — проверяем реальные
-            // размеры кадра и убираем из ленты всё, что не вертикальное.
-            onLoadedMetadata={(e) => {
-              const v = e.currentTarget;
-              if (v.videoWidth && v.videoHeight && v.videoWidth >= v.videoHeight) onNotVertical(item.jobId);
-            }}
-          />
+          <video ref={videoRef} className="shorts-video" src={url} muted loop playsInline preload="metadata" />
         ) : (
           <div style={{ position: "absolute", inset: 0, background: "#141414" }} />
         )}
@@ -267,26 +290,33 @@ export default function ShortsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
-  // jobId видео, оказавшихся не вертикальными по метаданным кадра.
-  const [notVertical, setNotVertical] = useState<Set<string>>(() => new Set());
-  const markNotVertical = useCallback((jobId: string) => {
-    setNotVertical((prev) => (prev.has(jobId) ? prev : new Set(prev).add(jobId)));
-  }, []);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Номер текущей загрузки ленты: ответы, пришедшие после смены NSFW/SFW, отбрасываем.
+  const requestIdRef = useRef(0);
 
   const fetchItems = useCallback((pageNum: number, append: boolean) => {
+    const requestId = append ? requestIdRef.current : ++requestIdRef.current;
     if (append) setLoadingMore(true); else setFetching(true);
     getPublicShorts({ page: pageNum, limit: SHORTS_PAGE_SIZE })
-      .then((data) => {
+      .then(async (data) => {
         // В Shorts — только вертикальные видео.
         const rawItems = data.items || [];
-        const newItems = rawItems.filter((i) => !isKnownNonVertical(i));
-        if (append) setItems((prev) => [...prev, ...newItems]);
-        else setItems(newItems);
+        const newItems = await keepVertical(rawItems);
+        if (requestId !== requestIdRef.current) return;
+        if (append) {
+          setItems((prev) => {
+            const seen = new Set(prev.map((i) => i.jobId));
+            return [...prev, ...newItems.filter((i) => !seen.has(i.jobId))];
+          });
+        } else setItems(newItems);
         setHasMore(rawItems.length >= SHORTS_PAGE_SIZE);
       })
-      .catch(() => { if (!append) setItems([]); })
-      .finally(() => { setFetching(false); setLoadingMore(false); });
+      .catch(() => { if (!append && requestId === requestIdRef.current) setItems([]); })
+      .finally(() => {
+        if (requestId !== requestIdRef.current) return;
+        setFetching(false);
+        setLoadingMore(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -318,8 +348,6 @@ export default function ShortsPage() {
       .catch(() => {});
   }, [items]);
 
-  const visibleItems = items.filter((i) => !notVertical.has(i.jobId));
-
   if (loading) return null;
 
   return (
@@ -340,7 +368,7 @@ export default function ShortsPage() {
           Array.from({ length: 3 }).map((_, i) => (
             <div className="shorts-skeleton" key={i}><div className="shorts-skeleton-inner" /></div>
           ))
-        ) : visibleItems.length === 0 && !hasMore ? (
+        ) : items.length === 0 && !hasMore ? (
           <div className="shorts-card-wrap">
             <div className="shorts-card">
               <div className="shorts-empty">
@@ -354,7 +382,7 @@ export default function ShortsPage() {
           </div>
         ) : (
           <>
-            {visibleItems.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} onNotVertical={markNotVertical} />)}
+            {items.map((item) => <ShortCard key={item.jobId} item={item} likeStatus={likeStatuses[item.jobId]} />)}
             {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
           </>
         )}
