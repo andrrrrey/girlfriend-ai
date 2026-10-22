@@ -1121,6 +1121,7 @@ export class ChatsController {
     const chat = await this.chatsService.getChat(chatId, req.user.id);
 
     // Soft-delete the target message and everything after it
+    // (сгенерированные фото getMessagesAfter не возвращает — они остаются)
     const after = await this.chatsService.getMessagesAfter(chatId, msgId);
     const idsToDelete = [msgId, ...after.map((m) => m.id)];
     await this.chatsService.softDeleteMessages(idsToDelete);

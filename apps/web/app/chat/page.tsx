@@ -361,10 +361,12 @@ function ChatPageInner() {
     setStreaming(true);
     setStreamContent("");
 
-    // Remove the target message and everything after it from UI
+    // Remove the target message and everything after it from UI — кроме
+    // сгенерированных фото: бэкенд их тоже не удаляет (см. getMessagesAfter).
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === msgId);
-      return idx >= 0 ? prev.slice(0, idx) : prev;
+      if (idx < 0) return prev;
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1).filter((m) => m.type === "image")];
     });
 
     abortRef.current = streamRegenerate(
@@ -404,7 +406,12 @@ function ChatPageInner() {
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === editingMsgId);
       if (idx < 0) return prev;
-      const updated = [...prev.slice(0, idx), { ...prev[idx], content }];
+      // Фото после редактируемого сообщения остаются (как и на бэкенде).
+      const updated = [
+        ...prev.slice(0, idx),
+        { ...prev[idx], content },
+        ...prev.slice(idx + 1).filter((m) => m.type === "image"),
+      ];
       return updated;
     });
 
@@ -672,6 +679,15 @@ function ChatPageInner() {
     }
     return imgs;
   }, [messages, activeChatData]);
+
+  // Индекс галереи не должен выходить за её границы: иначе после удаления
+  // сообщений (перегенерация, удаление фото) панель профиля оставалась пустой —
+  // без фото и даже без аватара — до перезагрузки страницы.
+  useEffect(() => {
+    if (galleryIndex > 0 && galleryIndex >= galleryImages.length) {
+      setGalleryIndex(Math.max(0, galleryImages.length - 1));
+    }
+  }, [galleryIndex, galleryImages.length]);
 
   const handledJobsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
