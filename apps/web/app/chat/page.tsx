@@ -819,6 +819,21 @@ function ChatPageInner() {
     if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
   };
 
+  // Круглая иконка с фото персонажа рядом с каждым его сообщением.
+  const charAvatarUrl = activeChatData?.character?.avatarUrl;
+  const charMsgAvatar = (
+    <div className="msg-char-avatar">
+      {charAvatarUrl && (
+        <img
+          src={resizedMediaUrl(charAvatarUrl, { w: 128 }) ?? charAvatarUrl}
+          alt={activeChatData?.character?.name || ""}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+    </div>
+  );
+
   // Auth gates — placed here (after all hooks) on purpose. See note above.
   if (loading) return <div className="chat-content"><p style={{ color: "#aaa", padding: 40 }}>{t("common.loading")}</p></div>;
   if (!user) return null;
@@ -866,6 +881,11 @@ function ChatPageInner() {
 .chat-profile-select select:focus { outline: none; border-color: #f95bad; }
 .chat-profile-select option { background: #1e1e1e; color: #fff; }
 .chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 10px 20px 0; overflow-y: auto; gap: 8px; }
+.message-row { display: flex; gap: 8px; align-items: flex-start; }
+.message-row.from-me-row { justify-content: flex-end; }
+.message-row.from-ai-row .message.from-ai { flex: 1 1 auto; min-width: 0; }
+.msg-char-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #313131; border: 1px solid #313131; }
+.msg-char-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
 .message { display: flex; flex-direction: column; gap: 4px; }
 .message.from-ai { align-items: flex-start; max-width: 65%; }
 .message.from-me { align-items: flex-end; align-self: flex-end; max-width: 65%; }
@@ -1133,164 +1153,172 @@ function ChatPageInner() {
 
             <div ref={scrollRef} className="chat-messages">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`message msg-bubble ${msg.role === "user" ? "from-me" : "from-ai"}`}
-                >
-                  {msg.type === "audio" && msg.role === "user" && (
-                    <div className="voice-label">{t("chat.voiceMessage")}</div>
-                  )}
+                <div key={msg.id} className={`message-row ${msg.role === "user" ? "from-me-row" : "from-ai-row"}`}>
+                  {msg.role !== "user" && charMsgAvatar}
+                  <div
+                    className={`message msg-bubble ${msg.role === "user" ? "from-me" : "from-ai"}`}
+                  >
+                    {msg.type === "audio" && msg.role === "user" && (
+                      <div className="voice-label">{t("chat.voiceMessage")}</div>
+                    )}
 
-                  {/* Inline edit mode for user messages */}
-                  {editingMsgId === msg.id ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="edit-textarea"
-                        autoFocus
-                        rows={3}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmitEdit();
-                          }
-                          if (e.key === "Escape") handleCancelEdit();
-                        }}
-                      />
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={handleSubmitEdit} className="edit-save-btn" disabled={streaming}>
-                          Сохранить
-                        </button>
-                        <button onClick={handleCancelEdit} className="edit-cancel-btn">
-                          Отмена
-                        </button>
+                    {/* Inline edit mode for user messages */}
+                    {editingMsgId === msg.id ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="edit-textarea"
+                          autoFocus
+                          rows={3}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSubmitEdit();
+                            }
+                            if (e.key === "Escape") handleCancelEdit();
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={handleSubmitEdit} className="edit-save-btn" disabled={streaming}>
+                            Сохранить
+                          </button>
+                          <button onClick={handleCancelEdit} className="edit-cancel-btn">
+                            Отмена
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : msg.type === "image" && msg.mediaUrl ? (
-                    <div className="message-bubble image-message">
-                      {/* В ленте — webp 768/q90 (хватает для 300px на ретине и
-                          грузится в разы быстрее PNG); по клику — оригинал. */}
-                      <img
-                        src={resizedMediaUrl(msg.mediaUrl, { w: 768, q: 90 }) ?? msg.mediaUrl}
-                        alt={msg.content}
-                        className="chat-gen-image"
-                        decoding="async"
-                        onClick={() => setLightboxUrl(msg.mediaUrl!)}
-                      />
-                    </div>
-                  ) : msg.type === "image" && !msg.mediaUrl ? (
-                    <div className="message-bubble generating-indicator">
-                      <div className="generating-spinner" />
-                      <span>{msg.content}</span>
-                    </div>
-                  ) : (
-                    <div className="message-bubble">{msg.content}</div>
-                  )}
+                    ) : msg.type === "image" && msg.mediaUrl ? (
+                      <div className="message-bubble image-message">
+                        {/* В ленте — webp 768/q90 (хватает для 300px на ретине и
+                            грузится в разы быстрее PNG); по клику — оригинал. */}
+                        <img
+                          src={resizedMediaUrl(msg.mediaUrl, { w: 768, q: 90 }) ?? msg.mediaUrl}
+                          alt={msg.content}
+                          className="chat-gen-image"
+                          decoding="async"
+                          onClick={() => setLightboxUrl(msg.mediaUrl!)}
+                        />
+                      </div>
+                    ) : msg.type === "image" && !msg.mediaUrl ? (
+                      <div className="message-bubble generating-indicator">
+                        <div className="generating-spinner" />
+                        <span>{msg.content}</span>
+                      </div>
+                    ) : (
+                      <div className="message-bubble">{msg.content}</div>
+                    )}
 
-                  <div className="message-actions" style={editingMsgId === msg.id ? { display: "none" } : {}}>
-                    <span className="message-time">
-                      {new Date(msg.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type === "image" && (
-                        <>
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="action-btn"
-                            title={t("common.delete")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button
-                            onClick={() => {
-                              const poseName = (msg.metadata as Record<string, unknown>)?.poseName as string;
-                              if (poseName) handleRegenerateImage(poseName);
-                            }}
-                            className="action-btn"
-                            disabled={streaming || generatingInThisChat}
-                            title={t("chat.regenerate")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                        </>
-                      )}
-                      {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type !== "image" && (
-                        <>
-                          <button
-                            onClick={() => handlePlayTTS(msg.id)}
-                            className="action-btn"
-                            disabled={loadingTTSId === msg.id}
-                            title={playingTTSId === msg.id ? t("chat.pause") : t("chat.play")}
-                          >
-                            {playingTTSId === msg.id ? (
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.5" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/><rect x="7" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/></svg>
-                            ) : (
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1.5v9l7-4.5-7-4.5z" fill="#fff"/></svg>
-                            )}
-                          </button>
-                          <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="action-btn"
-                            title={t("common.delete")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button
-                            onClick={() => handleRegenerate(msg.id)}
-                            className="action-btn"
-                            disabled={streaming}
-                            title={t("chat.regenerate")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                        </>
-                      )}
-                      {msg.role === "user" && !msg.id.startsWith("temp-") && (
-                        <>
-                          <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="action-btn"
-                            title={t("common.delete")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button
-                            onClick={() => handleStartEdit(msg)}
-                            className="action-btn"
-                            disabled={streaming}
-                            title={t("chat.edit")}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                        </>
-                      )}
+                    <div className="message-actions" style={editingMsgId === msg.id ? { display: "none" } : {}}>
+                      <span className="message-time">
+                        {new Date(msg.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type === "image" && (
+                          <>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="action-btn"
+                              title={t("common.delete")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                            <button
+                              onClick={() => {
+                                const poseName = (msg.metadata as Record<string, unknown>)?.poseName as string;
+                                if (poseName) handleRegenerateImage(poseName);
+                              }}
+                              className="action-btn"
+                              disabled={streaming || generatingInThisChat}
+                              title={t("chat.regenerate")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          </>
+                        )}
+                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type !== "image" && (
+                          <>
+                            <button
+                              onClick={() => handlePlayTTS(msg.id)}
+                              className="action-btn"
+                              disabled={loadingTTSId === msg.id}
+                              title={playingTTSId === msg.id ? t("chat.pause") : t("chat.play")}
+                            >
+                              {playingTTSId === msg.id ? (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.5" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/><rect x="7" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/></svg>
+                              ) : (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 1.5v9l7-4.5-7-4.5z" fill="#fff"/></svg>
+                              )}
+                            </button>
+                            <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="action-btn"
+                              title={t("common.delete")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                            <button
+                              onClick={() => handleRegenerate(msg.id)}
+                              className="action-btn"
+                              disabled={streaming}
+                              title={t("chat.regenerate")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2v3h3M10.5 10V7h-3" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.3 4.5A4 4 0 003 3L1.5 5M2.7 7.5A4 4 0 009 9l1.5-2" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          </>
+                        )}
+                        {msg.role === "user" && !msg.id.startsWith("temp-") && (
+                          <>
+                            <button className="action-btn" title={t("chat.copy")} onClick={() => navigator.clipboard?.writeText(msg.content)}>
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1" stroke="#fff" strokeWidth="0.8"/><path d="M8 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V7a1 1 0 001 1H4" stroke="#fff" strokeWidth="0.8"/></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="action-btn"
+                              title={t("common.delete")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                            <button
+                              onClick={() => handleStartEdit(msg)}
+                              className="action-btn"
+                              disabled={streaming}
+                              title={t("chat.edit")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5V8.5l7-7z" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
 
               {streaming && streamContent && (
-                <div className="message from-ai">
-                  <div className="message-bubble">{streamContent}</div>
-                  <span className="message-time">{t("chat.typing")}</span>
+                <div className="message-row from-ai-row">
+                  {charMsgAvatar}
+                  <div className="message from-ai">
+                    <div className="message-bubble">{streamContent}</div>
+                    <span className="message-time">{t("chat.typing")}</span>
+                  </div>
                 </div>
               )}
 
               {generatingInThisChat && (
-                <div className="message from-ai">
-                  <div className="message-bubble generating-indicator">
-                    <div className="generating-spinner" />
-                    <span>{t("chat.generatingImage")}</span>
+                <div className="message-row from-ai-row">
+                  {charMsgAvatar}
+                  <div className="message from-ai">
+                    <div className="message-bubble generating-indicator">
+                      <div className="generating-spinner" />
+                      <span>{t("chat.generatingImage")}</span>
+                    </div>
                   </div>
                 </div>
               )}
