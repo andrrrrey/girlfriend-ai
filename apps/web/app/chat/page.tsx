@@ -95,6 +95,8 @@ function ChatPageInner() {
   // Image generation state
   const [inputMode, setInputMode] = useState<"ask" | "image">("ask");
   const [showInputModeDropdown, setShowInputModeDropdown] = useState(false);
+  // Выбор чат-профиля (персоны) — селектор в поле ввода сообщения
+  const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
   const [showPoseSelector, setShowPoseSelector] = useState(false);
   const [poseOptions, setPoseOptions] = useState<PoseOptionsResponse | null>(null);
 
@@ -169,7 +171,7 @@ function ChatPageInner() {
     );
   };
 
-  // Load user's chat profiles (personas) for the header dropdown
+  // Load user's chat profiles (personas) for the input-bar selector
   useEffect(() => {
     if (!loading && user) {
       chatProfiles.list().then(setProfilesList).catch(() => setProfilesList([]));
@@ -233,6 +235,7 @@ function ChatPageInner() {
       });
       setGalleryItems([]);
       loadGallery(chatId);
+      setShowPersonaDropdown(false);
       setGalleryIndex(0);
       // Auto-focus the message input
       setTimeout(() => chatInputRef.current?.focus(), 100);
@@ -869,17 +872,12 @@ function ChatPageInner() {
 .chat-reset-btn { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s; }
 .chat-reset-btn:hover:not(:disabled) { border-color: #f95bad; }
 .chat-reset-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.chat-profile-select select {
-  appearance: none;
-  background: #1e1e1e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23848484' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
-  border: 1px solid #313131; border-radius: 6px;
-  color: #fff; font-size: 12px; font-weight: 600; font-family: inherit;
-  padding: 7px 28px 7px 12px; cursor: pointer; max-width: 220px;
-  text-overflow: ellipsis; transition: border-color 0.2s;
-}
-.chat-profile-select select:hover { border-color: #f95bad; }
-.chat-profile-select select:focus { outline: none; border-color: #f95bad; }
-.chat-profile-select option { background: #1e1e1e; color: #fff; }
+.persona-btn { max-width: 160px; }
+.persona-btn-label { overflow: hidden; text-overflow: ellipsis; }
+.persona-btn.selected { border-color: rgba(249,91,173,0.6); }
+.persona-dropdown { min-width: 180px; max-height: 260px; overflow-y: auto; }
+.persona-dropdown .input-mode-option { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; text-align: left; }
+.persona-dropdown-title { padding: 6px 12px 4px; font-size: 10px; font-weight: 500; color: #848484; }
 .chat-messages { flex: 1; display: flex; flex-direction: column; padding: 20px 10px 20px 0; overflow-y: auto; gap: 8px; }
 .message-row { display: flex; gap: 8px; align-items: flex-start; }
 .message-row.from-me-row { justify-content: flex-end; }
@@ -987,6 +985,8 @@ function ChatPageInner() {
   .chat-header { gap: 10px; }
   .chat-header-name { font-size: 18px; }
   .chat-reset-label { display: none; }
+  /* На телефоне селектор профиля — только иконка, имя видно в выпадающем списке */
+  .persona-btn-label { display: none; }
 }
       `}</style>
 
@@ -1121,18 +1121,6 @@ function ChatPageInner() {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 109.9-3.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M12.8 1.8v3.2H9.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span className="chat-reset-label">{t("chat.resetChat")}</span>
               </button>
-              <div className="chat-profile-select">
-                <select
-                  value={activeChatData?.chatProfileId ?? ""}
-                  onChange={(e) => handleProfileChange(e.target.value || null)}
-                  title={t("chat.selectChatProfile")}
-                >
-                  <option value="">{t("chat.noProfile")}</option>
-                  {profilesList.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
               {isDemo && (
                 <span className="demo-badge">{t("chat.freeBadge")}</span>
               )}
@@ -1346,10 +1334,51 @@ function ChatPageInner() {
                 </div>
               ) : (
                 <>
+                  {/* От чьего лица пишет пользователь — чат-профиль (персона) */}
+                  <div className="input-mode-dropdown-wrap">
+                    {(() => {
+                      const selectedProfile = profilesList.find((p) => p.id === activeChatData?.chatProfileId);
+                      return (
+                        <button
+                          className={`input-mode-btn persona-btn${selectedProfile ? " selected" : ""}`}
+                          onClick={() => { setShowPersonaDropdown(!showPersonaDropdown); setShowInputModeDropdown(false); }}
+                          title={t("chat.selectChatProfile")}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}><circle cx="8" cy="5.5" r="2.75" stroke="#fff" strokeWidth="1.2"/><path d="M2.75 14c0-2.9 2.35-4.75 5.25-4.75s5.25 1.85 5.25 4.75" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                          <span className="persona-btn-label">{selectedProfile ? selectedProfile.name : t("chat.noProfile")}</span>
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginLeft: 2, flexShrink: 0 }}>
+                            <path d="M2.5 4L5 6.5L7.5 4" stroke="#888" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      );
+                    })()}
+                    {showPersonaDropdown && (
+                      <div className="input-mode-dropdown persona-dropdown">
+                        <div className="persona-dropdown-title">{t("chat.selectChatProfile")}</div>
+                        <button
+                          className={`input-mode-option ${!activeChatData?.chatProfileId ? "active" : ""}`}
+                          onClick={() => { handleProfileChange(null); setShowPersonaDropdown(false); }}
+                        >
+                          {t("chat.noProfile")}
+                        </button>
+                        {profilesList.map((p) => (
+                          <button
+                            key={p.id}
+                            className={`input-mode-option ${activeChatData?.chatProfileId === p.id ? "active" : ""}`}
+                            onClick={() => { handleProfileChange(p.id); setShowPersonaDropdown(false); }}
+                            title={p.name}
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="input-mode-dropdown-wrap">
                     <button
                       className="input-mode-btn"
-                      onClick={() => setShowInputModeDropdown(!showInputModeDropdown)}
+                      onClick={() => { setShowInputModeDropdown(!showInputModeDropdown); setShowPersonaDropdown(false); }}
                     >
                       {inputMode === "ask" ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
