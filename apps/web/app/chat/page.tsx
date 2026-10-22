@@ -701,11 +701,9 @@ function ChatPageInner() {
         const poseName = (n.metadata?.poseName as string) || "image";
         saveImageMessage(chatId, n.output.url, poseName).then(() => {
           if (chatId === activeChat) {
-            chats.getMessages(chatId).then((res) => {
-              setMessages(res.items);
-              const imgCount = res.items.filter((m: Message) => m.type === "image" && m.mediaUrl).length;
-              setGalleryIndex(imgCount);
-            });
+            // Фото добавляется в галерею профиля, но главным фото (аватаром)
+            // остаётся текущее — индекс галереи не переключаем на новый кадр.
+            chats.getMessages(chatId).then((res) => setMessages(res.items));
           }
         }).catch(() => {});
       } else if (n.status === "failed") {
