@@ -41,7 +41,14 @@ export class OutboxDispatcher implements OnModuleInit {
 
   onModuleInit(): void {
     // Не exclusive: безопасность параллельной работы обеспечивает SKIP LOCKED.
-    this.scheduler.scheduleInterval("outbox-dispatch", POLL_INTERVAL_MS, () => this.dispatchBatch(), false);
+    this.scheduler.scheduleInterval(
+      "outbox-dispatch",
+      POLL_INTERVAL_MS,
+      async () => {
+        await this.dispatchBatch();
+      },
+      false,
+    );
     this.scheduler.scheduleDaily("outbox-retention", 4, () => this.purgeDelivered());
   }
 
