@@ -102,6 +102,14 @@ const EnvSchema = z.object({
   /** Хост инстанса PostHog. По умолчанию — облако EU-региона. */
   POSTHOG_HOST: z.string().default("https://eu.i.posthog.com"),
 
+  // ─── Secrets encryption ─────────────────────────────────────────────────────
+  /**
+   * Ключ AES-256-GCM для шифрования секретов в БД (токены Telegram-ботов).
+   * 32 байта в base64 или hex: `openssl rand -base64 32`. Опционален, пока
+   * нет функций, хранящих секреты.
+   */
+  SECRETS_ENC_KEY: z.string().optional(),
+
   // ─── Request Tracing ────────────────────────────────────────────────────────
   /**
    * Имя HTTP-заголовка для сквозной трассировки запросов (X-Request-ID).

@@ -2126,6 +2126,17 @@ export const reports = {
 // ─── SSE streaming helper ────────────────────────────────────
 
 /**
+ * Идемпотентный ключ сообщения: сервер не создаёт дубль, если запрос с тем же
+ * ключом придёт повторно (ретрай сети, двойная отправка).
+ */
+export function newClientMessageId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
  * Отправляет текстовое сообщение и стримит AI-ответ (POST /chats/:chatId/messages).
  *
  * Поток содержит дельты AI-ответа в формате SSE.
@@ -2144,6 +2155,7 @@ export function streamMessage(
   onDelta: (text: string) => void,
   onDone: () => void,
   onError: (err: string, code?: number, body?: any) => void,
+  clientMessageId: string = newClientMessageId(),
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -2154,7 +2166,7 @@ export function streamMessage(
       "Content-Type": "application/json",
       ...(tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
     },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, clientMessageId }),
     signal: controller.signal,
   })
     .then(async (res) => {
@@ -2376,6 +2388,7 @@ export function streamVoiceMessage(
   onDone: () => void,
   onError: (err: string, code?: number, body?: any) => void,
   language?: string,
+  clientMessageId: string = newClientMessageId(),
 ): AbortController {
   const controller = new AbortController();
   const tokens = getTokens();
@@ -2383,6 +2396,7 @@ export function streamVoiceMessage(
   const formData = new FormData();
   formData.append("audio", audioBlob, "recording.webm");
   if (language) formData.append("language", language);
+  formData.append("clientMessageId", clientMessageId);
 
   fetch(`${API_BASE}/chats/${chatId}/voice`, {
     method: "POST",

@@ -28,6 +28,8 @@ import { InternalModule } from "./internal/internal.module";
 import { ChatsModule } from "./chats/chats.module";
 import { CleanupModule } from "./cleanup/cleanup.module";
 import { QueueModule } from "./queue/queue.module";
+import { RedisModule } from "./common/redis.module";
+import { OutboxModule } from "./outbox/outbox.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { GenerationModule } from "./generation/generation.module";
 import { MediaModule } from "./media/media.module";
@@ -46,6 +48,8 @@ import { AutochatModule } from "./admin/autochat/autochat.module";
     // 300 запросов в минуту с одного IP по умолчанию
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     QueueModule,    // Глобальный модуль BullMQ-очереди (регистрирует AI_QUEUE токен)
+    RedisModule,    // Глобальный: Redis-клиент, распределённые локи, планировщик, шифрование
+    OutboxModule,   // Глобальный: outbox гарантированной доставки событий во внешние каналы
     AnalyticsModule, // Глобальный модуль серверной аналитики PostHog (no-op без POSTHOG_KEY)
     AuthModule,     // JWT-аутентификация и управление сессиями
     UsersModule,    // Операции с профилем текущего пользователя

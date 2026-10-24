@@ -356,13 +356,48 @@ model Message {
   // Фото (type=image) остаётся в галерее персонажа и после сброса чата;
   // false — только после явного удаления сообщения пользователем.
   inGallery     Boolean   @default(true) @map("in_gallery")
+  // Порядковый номер сообщения (глобальная последовательность — монотонен внутри чата).
+  // Порядок диалога определяется seq, а не createdAt (одинаковые миллисекунды).
+  seq           BigInt    @default(autoincrement())
+  // Канал, из которого пришло сообщение: web | telegram | system | proactive
+  source        String    @default("web")
+  // Внешний ID в канале (например update_id Telegram) — защита от повторной обработки.
+  externalId    String?   @map("external_id")
+  // Идемпотентный ключ клиента (веб): повторная отправка не создаёт дубль.
+  clientMessageId String? @map("client_message_id")
+  // Для ответа ассистента — ID сообщения пользователя, на которое он отвечает.
+  replyToId     String?   @map("reply_to_id") @db.Uuid
+  // pending | completed | failed (failed — ответ оборван, сохранён частично)
+  status        String    @default("completed")
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
 
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 
-  @@index([chatSessionId])
+  @@unique([chatSessionId, clientMessageId])
+  @@unique([chatSessionId, source, externalId])
+  @@index([chatSessionId, seq])
+  @@index([replyToId])
   @@map("messages")
+}
+
+// Outbox гарантированной доставки: событие пишется в той же транзакции, что и
+// изменение данных, а диспетчер доставляет его подписчикам (Telegram и др.)
+// с ретраями. dedupeKey защищает от повторной постановки одного события.
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String // message.created | ...
+  payload     Json
+  status      String    @default("pending") // pending | processing | done | failed
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now()) @map("available_at")
+  dedupeKey   String?   @unique @map("dedupe_key")
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
 }
 
 // ─── AI Jobs ─────────────────────────────────────────────────

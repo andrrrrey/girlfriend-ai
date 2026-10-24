@@ -10,6 +10,7 @@
  *
  * Providers:
  * - ChatsService — бизнес-логика работы с ChatSession и Message (Prisma ORM)
+ * - ConversationEngine + адаптеры LLM/STT/TTS — единое ядро обработки сообщений
  * - PrismaService — подключение к БД
  *
  * Imports:
@@ -28,6 +29,11 @@ import { CharactersService } from "./characters.service";
 import { PrismaService } from "../prisma.service";
 import { DemoModule } from "../demo/demo.module";
 import { S3Module } from "../s3/s3.module";
+import { ConversationEngine } from "../conversation/conversation.engine";
+import { ContextBuilder } from "../conversation/context-builder";
+import { LlmAdapter } from "../conversation/llm.adapter";
+import { SttAdapter } from "../conversation/stt.adapter";
+import { TtsAdapter } from "../conversation/tts.adapter";
 
 @Module({
   imports: [
@@ -35,9 +41,20 @@ import { S3Module } from "../s3/s3.module";
     S3Module,   // Для S3Service — скачиваем TTS-аудио по ключу через внутренний S3 endpoint
   ],
   controllers: [ChatsController, CharactersController],
-  providers: [ChatsService, CharactersService, PrismaService],
-  // CharactersService — его переиспользует AutogenModule; ChatsService —
-  // AutochatModule (автопереписка: сессии, сообщения, учёт AiJob/UsageLog).
-  exports: [CharactersService, ChatsService],
+  providers: [
+    ChatsService,
+    CharactersService,
+    PrismaService,
+    // Единое ядро сообщений (apps/api/src/conversation) — живёт в этом модуле,
+    // т.к. зависит от ChatsService, а контроллер чатов — от ядра.
+    ConversationEngine,
+    ContextBuilder,
+    LlmAdapter,
+    SttAdapter,
+    TtsAdapter,
+  ],
+  // CharactersService — его переиспользует AutogenModule; ChatsService и
+  // ConversationEngine — AutochatModule (автопереписка через общее ядро).
+  exports: [CharactersService, ChatsService, ConversationEngine],
 })
 export class ChatsModule {}

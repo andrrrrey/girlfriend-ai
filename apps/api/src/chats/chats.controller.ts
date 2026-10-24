@@ -41,6 +41,14 @@
  *  Эндпоинт /voice дополнительно отправляет первым событием:
  *    data: {"transcription": "..."}\n\n  — распознанный текст голосового сообщения
  *
+ * ─── Единое ядро ─────────────────────────────────────────────────────────────
+ *
+ *  Отправка, голос, приветствие, правка и перегенерация выполняются в
+ *  ConversationEngine (общем для сайта, Telegram и системных вызовов);
+ *  контроллер — тонкий адаптер: DTO → ядро → SSE (pipeSse).
+ *  - Параллельная операция в том же чате → HTTP 409 { error: "CHAT_BUSY" }
+ *  - Повтор отправки с тем же clientMessageId не создаёт дубль сообщения
+ *
  * ─── Ограничения demo/free пользователей ────────────────────────────────────
  *
  *  - Бесплатный тариф: не более 20 сообщений в сутки (HTTP 429 при превышении)
@@ -79,38 +87,95 @@ import { EditMessageDto } from "./dto/edit-message.dto";
 import { GreetingDto } from "./dto/greeting.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
-import { loadEnv } from "@repo/config";
+import { ConversationEngine } from "../conversation/conversation.engine";
+import { AiServiceError } from "../conversation/ai-client";
+import { TtsAdapter, TtsError, TtsResult } from "../conversation/tts.adapter";
+import type { ConversationActor, EngineEvent } from "../conversation/conversation.types";
 
-/** Загружаем переменные окружения через общий конфиг монорепы. */
-const env = loadEnv();
+/** Пользователь из JWT → участник диалога для ядра. */
+function toActor(user: any): ConversationActor {
+  return {
+    id: user.id,
+    subscription: user.subscription,
+    contentMode: user.contentMode,
+    isAdult: user.isAdult,
+  };
+}
 
 /**
- * Базовый URL внутреннего AI-сервиса.
- * AI-сервис слушает на AI_PORT и предоставляет эндпоинты:
- *   POST /ai/chat/completion — стриминг ответа LLM (SSE)
- *   POST /ai/stt             — Speech-to-Text через Whisper
- *   POST /ai/tts             — Text-to-Speech через ElevenLabs
+ * Отмена генерации при закрытии соединения клиентом (кнопка «стоп», уход со страницы).
+ * Слушаем res, а не req: у req событие close приходит уже после чтения тела запроса.
  */
-const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
+function abortOnClientClose(res: Response): AbortController {
+  const controller = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) controller.abort();
+  });
+  return controller;
+}
 
 /**
- * Извлекает количество использованных токенов из одной SSE-строки.
+ * Превращает поток событий ядра в SSE-ответ (формат не изменился):
+ *   data: {"transcription": "..."}  — только голос, первым событием
+ *   data: {"content": "..."}        — фрагменты ответа
+ *   data: {"done": true, "usage": {...}}
+ *   data: [DONE]
  *
- * Вспомогательная функция для парсинга токенов из стрима AI-сервиса.
- * Используется внутри циклов чтения SSE для финального подсчёта токенов.
+ * Заголовки SSE отправляются только с первым событием модели: до этого любую
+ * ошибку (лимит, занятый диалог, ошибка AI-сервиса) можно вернуть обычным
+ * HTTP-ответом с кодом — как и раньше.
  *
- * Формат входной строки: `data: {"usage": {"totalTokens": 123}, ...}`
- *
- * @param line — одна строка SSE-потока (например `data: {...}` или `data: [DONE]`)
- * @returns количество токенов (totalTokens) из поля usage, либо 0 если не найдено
+ * @param fallbackError — тело ответа 500 для непредвиденных ошибок до начала стрима
+ *                        (без него ошибка уходит в глобальный exception filter)
  */
-function extractUsageFromLine(line: string): number {
-  if (!line.startsWith("data: ") || line === "data: [DONE]") return 0;
+async function pipeSse(
+  res: Response,
+  events: AsyncIterable<EngineEvent>,
+  fallbackError?: (err: Error) => Record<string, unknown>,
+): Promise<void> {
+  const pending: string[] = [];
+  let started = false;
+  const write = (chunk: string) => {
+    if (!res.writableEnded && !res.destroyed) res.write(chunk);
+  };
+  const start = () => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    // Отключаем буферизацию nginx/proxy для немедленной доставки каждого чанка клиенту
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    started = true;
+    for (const chunk of pending) write(chunk);
+  };
+
   try {
-    const parsed = JSON.parse(line.slice(6));
-    return parsed.usage?.totalTokens ?? 0;
-  } catch {
-    return 0;
+    for await (const event of events) {
+      if (event.type === "transcription") {
+        const line = `data: ${JSON.stringify({ transcription: event.text })}\n\n`;
+        if (started) write(line);
+        else pending.push(line);
+        continue;
+      }
+      if (!started) start();
+      if (event.type === "llm") write(`data: ${JSON.stringify(event.data)}\n\n`);
+    }
+    if (!started) start();
+    write("data: [DONE]\n\n");
+    res.end();
+  } catch (err: any) {
+    if (!started && !res.headersSent) {
+      if (err instanceof AiServiceError) {
+        res.status(err.status).json(err.body);
+        return;
+      }
+      if (err instanceof HttpException || !fallbackError) throw err;
+      res.status(500).json(fallbackError(err));
+      return;
+    }
+    // Ошибка посреди стрима — сообщаем в потоке и закрываем.
+    write(`data: ${JSON.stringify({ error: err?.message || "Stream failed" })}\n\n`);
+    res.end();
   }
 }
 
@@ -141,6 +206,8 @@ export class ChatsController {
     private readonly demoService: DemoService,
     private readonly s3Service: S3Service,
     private readonly analytics: AnalyticsService,
+    private readonly engine: ConversationEngine,
+    private readonly tts: TtsAdapter,
   ) {}
 
   /**
@@ -319,18 +386,13 @@ export class ChatsController {
    * Отправляет текстовое сообщение и возвращает AI-ответ в виде SSE-стрима.
    * Sends a user message and streams the AI character's response via Server-Sent Events.
    *
-   * Последовательность выполнения:
-   *  1. Проверяется дневной лимит сообщений для бесплатного тарифа (DemoService → HTTP 429)
-   *  2. Создаётся запись AiJob (тип "chat") для отслеживания операции
-   *  3. Сохраняется сообщение пользователя в базе данных
-   *  4. Запрашивается история последних 20 сообщений для контекста LLM
-   *  5. Отправляется запрос к AI-сервису (POST /ai/chat/completion) с историей и characterId
-   *  6. SSE-поток AI-сервиса проксируется клиенту побайтово (минимальная задержка)
-   *  7. Во время стриминга накапливается полный текст ответа и статистика токенов
-   *  8. После завершения стрима: сохраняется ответ ассистента, обновляется AiJob, UsageLog
+   * Логика — ConversationEngine.handleUserText: проверка лимита, сохранение
+   * сообщения пользователя, запрос к модели с историей, атомарная фиксация ответа
+   * ассистента вместе с AiJob, UsageLog и событием outbox.
    *
-   * Если клиент закрыл соединение (событие 'close'), стриминг прерывается
-   * без сохранения неполного ответа ассистента.
+   * Повтор с тем же clientMessageId возвращает уже сохранённый ответ (без дубля).
+   * Если клиент закрыл соединение, генерация отменяется; частичный ответ (если
+   * успел прийти) сохраняется со статусом failed.
    *
    * SSE-формат ответа (Content-Type: text/event-stream):
    *   data: {"content": "Привет"}\n\n
@@ -341,11 +403,12 @@ export class ChatsController {
    * @param req     — req.user.id / req.user.subscription — данные JWT-пользователя
    * @param res     — объект ответа Express (используется напрямую для SSE и raw proxy)
    * @param id      — UUID чата
-   * @param dto     — тело запроса: { content: string } — текст сообщения пользователя
+   * @param dto     — тело запроса: { content: string, clientMessageId?: string }
    * @returns       SSE-поток (text/event-stream) с фрагментами ответа ассистента
    * @throws 429    если превышен дневной лимит сообщений (free tier)
    * @throws 404    если чат не найден
    * @throws 403    если чат принадлежит другому пользователю
+   * @throws 409    если в чате уже идёт генерация ответа (CHAT_BUSY)
    * @throws 502    если AI-сервис недоступен или вернул ошибку
    */
   @ApiOperation({ summary: "Send a message and get streaming AI response (SSE)" })
@@ -356,103 +419,18 @@ export class ChatsController {
     @Param("id") id: string,
     @Body() dto: SendMessageDto,
   ) {
-    // Check free-tier message limit (throws 429 if exceeded)
-    await this.demoService.checkMessageLimit(id, req.user.id, req.user.subscription);
-
-    const chat = await this.chatsService.getChat(id, req.user.id);
-
-    // Create AiJob record
-    const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
-      chatSessionId: id,
-      characterId: chat.characterId,
-    });
-
-    // Save user message
-    await this.chatsService.saveMessage(id, "user", dto.content);
-
-    this.analytics.capture(req.user.id, "message_sent", {
-      chat_id: id,
-      character_id: chat.characterId,
-    });
-
-    // Get recent history for context
-    const history = await this.chatsService.getMessageHistory(id);
-
-    // Stream from AI service
-    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: history.map((m) => ({ role: m.role, content: m.content })),
-        characterId: chat.characterId,
-        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
-        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
-          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
-          : undefined,
+    const abort = abortOnClientClose(res);
+    await pipeSse(
+      res,
+      this.engine.handleUserText({
+        chatId: id,
+        actor: toActor(req.user),
+        content: dto.content,
+        clientMessageId: dto.clientMessageId,
+        source: "web",
+        signal: abort.signal,
       }),
-    });
-
-    if (!aiRes.ok || !aiRes.body) {
-      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-      res.status(aiRes.status || 502).json(err);
-      return;
-    }
-
-    // Forward SSE stream to client
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    // Отключаем буферизацию nginx/proxy для немедленной доставки каждого чанка клиенту
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-
-    // Support client abort
-    let aborted = false;
-    req.on("close", () => { aborted = true; });
-
-    const reader = aiRes.body.getReader();
-    const decoder = new TextDecoder();
-    /** Полный текст ответа ассистента, накапливается из фрагментов SSE. */
-    let fullContent = "";
-    /** Итоговое количество токенов, извлекается из последнего SSE-события с полем usage. */
-    let tokensUsed = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || aborted) break;
-
-        const text = decoder.decode(value, { stream: true });
-        res.write(text);
-
-        // Extract content and token usage from SSE data
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.content) fullContent += parsed.content;
-              if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
-            } catch {
-              // ignore parse errors
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    // Save assistant's full response
-    if (fullContent) {
-      await this.chatsService.saveMessage(id, "assistant", fullContent);
-    }
-
-    // Record job completion and usage
-    await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
-    await this.chatsService.logUsage(req.user.id, "chat_message", tokensUsed || undefined);
-
-    res.end();
+    );
   }
 
   // ─── First greeting: character opens the conversation (streamed) ───
@@ -475,94 +453,11 @@ export class ChatsController {
     @Param("id") id: string,
     @Body() dto: GreetingDto,
   ) {
-    const chat = await this.chatsService.getChat(id, req.user.id);
-
-    // Приветствуем только пустые чаты — никогда не перезаписываем существующий диалог.
-    const history = await this.chatsService.getMessageHistory(id, 1);
-    if (history.length > 0) {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.write("data: [DONE]\n\n");
-      res.end();
-      return;
-    }
-
-    const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
-      chatSessionId: id,
-      characterId: chat.characterId,
-    });
-
-    // Скрытый kickoff: НЕ сохраняется как сообщение, лишь провоцирует приветствие.
-    // Язык реплики повторяет язык kickoff (LANGUAGE-правило системного промпта).
-    const kickoff = dto.lang === "ru"
-      ? "*заходит в чат* Поздоровайся со мной первой — коротко и в образе своего персонажа."
-      : "*enters the chat* Greet me first — keep it short and in character.";
-
-    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: kickoff }],
-        characterId: chat.characterId,
-        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
-        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
-          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
-          : undefined,
-      }),
-    });
-
-    if (!aiRes.ok || !aiRes.body) {
-      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-      res.status(aiRes.status || 502).json(err);
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-
-    let aborted = false;
-    req.on("close", () => { aborted = true; });
-
-    const reader = aiRes.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let tokensUsed = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || aborted) break;
-
-        const text = decoder.decode(value, { stream: true });
-        res.write(text);
-
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.content) fullContent += parsed.content;
-              if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
-            } catch {
-              // ignore parse errors
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    if (fullContent) {
-      await this.chatsService.saveMessage(id, "assistant", fullContent);
-    }
-
-    await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
-    await this.chatsService.logUsage(req.user.id, "chat_greeting", tokensUsed || undefined);
-
-    res.end();
+    const abort = abortOnClientClose(res);
+    await pipeSse(
+      res,
+      this.engine.greet({ chatId: id, actor: toActor(req.user), lang: dto.lang, source: "web", signal: abort.signal }),
+    );
   }
 
   // ─── Voice message: upload audio → STT → AI response (streamed) ───
@@ -623,139 +518,25 @@ export class ChatsController {
       return;
     }
 
-    try {
-      const chat = await this.chatsService.getChat(id, req.user.id);
+    const abort = abortOnClientClose(res);
+    // multipart-поля приходят строками в req.body (DTO для multipart не используется)
+    const language = typeof req.body?.language === "string" ? req.body.language : undefined;
+    const clientMessageId =
+      typeof req.body?.clientMessageId === "string" ? req.body.clientMessageId.slice(0, 100) : undefined;
 
-      // 1. Send audio to AI service for STT (Whisper)
-      const audioBuffer = Buffer.from(file.buffer);
-      const formData = new FormData();
-      formData.append(
-        "audio",
-        new Blob([audioBuffer], { type: file.mimetype }),
-        file.originalname || "audio.webm",
-      );
-      const language = req.body?.language;
-      if (language) formData.append("language", language);
-
-      const sttRes = await fetch(`${AI_BASE}/ai/stt`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!sttRes.ok) {
-        const err = await sttRes.json().catch(() => ({ error: "STT failed" }));
-        res.status(sttRes.status || 502).json(err);
-        return;
-      }
-
-      const sttResult = (await sttRes.json()) as {
-        text: string;
-        model?: string;
-        durationSec?: number | null;
-      };
-      const transcribedText = sttResult.text;
-
-      if (!transcribedText) {
-        res.status(400).json({ error: "Could not transcribe audio" });
-        return;
-      }
-
-      // 2. Save user voice message
-      await this.chatsService.saveMessage(id, "user", transcribedText, { type: "audio" });
-      await this.chatsService.logUsage(req.user.id, "stt");
-      // Учёт расходов на распознавание речи (Whisper тарифицируется по минутам).
-      await this.chatsService.recordVoiceJob(
-        req.user.id,
-        "stt",
-        sttResult.model || "whisper-1",
-        sttResult.durationSec ?? null,
-        { chatSessionId: id },
-      );
-
-      // 3. Get history and stream AI response
-      const history = await this.chatsService.getMessageHistory(id);
-
-      const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
-        chatSessionId: id,
-        characterId: chat.characterId,
-      });
-
-      const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
-          characterId: chat.characterId,
-          contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
-          userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
-            ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
-            : undefined,
-        }),
-      });
-
-      if (!aiRes.ok || !aiRes.body) {
-        const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-        res.status(aiRes.status || 502).json(err);
-        return;
-      }
-
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      res.setHeader("X-Accel-Buffering", "no");
-      res.flushHeaders();
-
-      // Send transcribed text first so frontend can display it
-      res.write(`data: ${JSON.stringify({ transcription: transcribedText })}\n\n`);
-
-      let aborted = false;
-      req.on("close", () => { aborted = true; });
-
-      const reader = aiRes.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let tokensUsed = 0;
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done || aborted) break;
-
-          const text = decoder.decode(value, { stream: true });
-          res.write(text);
-
-          const lines = text.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const parsed = JSON.parse(line.slice(6));
-                if (parsed.content) fullContent += parsed.content;
-                if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
-              } catch {
-                // ignore
-              }
-            }
-          }
-        }
-      } finally {
-        reader.releaseLock();
-      }
-
-      if (fullContent) {
-        await this.chatsService.saveMessage(id, "assistant", fullContent);
-      }
-
-      await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
-      await this.chatsService.logUsage(req.user.id, "chat_message", tokensUsed || undefined);
-
-      res.end();
-    } catch (err: any) {
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Voice processing failed", details: err.message });
-      } else {
-        res.end();
-      }
-    }
+    await pipeSse(
+      res,
+      this.engine.handleUserVoice({
+        chatId: id,
+        actor: toActor(req.user),
+        audio: file,
+        language,
+        clientMessageId,
+        source: "web",
+        signal: abort.signal,
+      }),
+      (err) => ({ error: "Voice processing failed", details: err.message }),
+    );
   }
 
   // ─── TTS: generate speech for a message via ElevenLabs → S3 ────────
@@ -800,35 +581,27 @@ export class ChatsController {
 
       const voiceId = chat.character?.voiceId || undefined;
 
-      const ttsRes = await fetch(`${AI_BASE}/ai/tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: message.content,
-          voiceId,
-        }),
-      });
-
-      if (!ttsRes.ok) {
+      let result: TtsResult;
+      try {
+        result = await this.tts.synthesize(message.content, voiceId);
+      } catch (err) {
+        if (!(err instanceof TtsError)) throw err;
         // Пробрасываем текст ошибки от AI-сервиса как есть — это видно
         // в DevTools → Network → Response и помогает диагностировать без
         // доступа к серверным логам (ElevenLabs key, quota, voiceId и т.д.).
-        const errBody = await ttsRes.text().catch(() => "");
         let parsed: any;
-        try { parsed = errBody ? JSON.parse(errBody) : null; } catch { parsed = null; }
+        try { parsed = err.rawBody ? JSON.parse(err.rawBody) : null; } catch { parsed = null; }
         // eslint-disable-next-line no-console
         console.error("[tts] ai-service error", {
           chatId, msgId, voiceId,
-          upstreamStatus: ttsRes.status,
-          upstreamBody: errBody?.slice(0, 500),
+          upstreamStatus: err.status,
+          upstreamBody: err.rawBody?.slice(0, 500),
         });
-        res.status(ttsRes.status || 502).json(
-          parsed ?? { error: "TTS failed", upstreamStatus: ttsRes.status, upstreamBody: errBody?.slice(0, 500) },
+        res.status(err.status).json(
+          parsed ?? { error: "TTS failed", upstreamStatus: err.status, upstreamBody: err.rawBody?.slice(0, 500) },
         );
         return;
       }
-
-      const contentType = ttsRes.headers.get("content-type") || "";
 
       // If AI service returned JSON with URL+key (S3 upload) — download the
       // audio via the S3 SDK using the INTERNAL endpoint (same pattern as
@@ -841,12 +614,11 @@ export class ChatsController {
       // reach S3 fine via the internal S3_ENDPOINT used by the SDK. That mismatch
       // was producing 502 Bad Gateway on TTS while images worked (images go
       // through /media/stream which already uses the SDK).
-      if (contentType.includes("application/json")) {
-        const data = await ttsRes.json() as { url: string; key: string; characters?: number; model?: string };
-        // Единицы тарификации озвучки: число символов из ответа AI-сервиса,
-        // либо длина текста сообщения как запасной вариант.
-        const ttsChars = data.characters ?? message.content.length;
-        const ttsModel = data.model || "eleven_multilingual_v2";
+      if (result.kind === "s3") {
+        const data = result;
+        // Единицы тарификации озвучки (символы) и модель — для учёта расходов.
+        const ttsChars = result.characters;
+        const ttsModel = result.model;
         try {
           const { body, contentType: s3ContentType } = await this.s3Service.getObject(data.key);
           await this.chatsService.logUsage(req.user.id, "tts");
@@ -895,15 +667,11 @@ export class ChatsController {
       }
 
       // Binary fallback (S3 not configured)
-      const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
       await this.chatsService.logUsage(req.user.id, "tts");
-      // Символы/модель для учёта расходов приходят заголовками (тело — аудио).
-      const binChars = Number(ttsRes.headers.get("x-tts-characters")) || message.content.length;
-      const binModel = ttsRes.headers.get("x-tts-model") || "eleven_multilingual_v2";
-      await this.chatsService.recordVoiceJob(req.user.id, "tts", binModel, binChars, { chatId, msgId });
+      await this.chatsService.recordVoiceJob(req.user.id, "tts", result.model, result.characters, { chatId, msgId });
       res.setHeader("Content-Type", "audio/mpeg");
-      res.setHeader("Content-Length", audioBuffer.length);
-      res.send(audioBuffer);
+      res.setHeader("Content-Length", result.buffer.length);
+      res.send(result.buffer);
     } catch (err: any) {
       // Re-throw NestJS HTTP exceptions (404, 403, etc.) so they are handled
       // by the global exception filter with the correct status code.
@@ -1014,89 +782,18 @@ export class ChatsController {
     @Param("msgId") msgId: string,
     @Body() dto: EditMessageDto,
   ) {
-    // Check free-tier message limit (editing sends a new AI request)
-    await this.demoService.checkMessageLimit(chatId, req.user.id, req.user.subscription);
-
-    const chat = await this.chatsService.getChat(chatId, req.user.id);
-
-    // Update message content and soft-delete messages after it
-    await this.chatsService.updateMessageContent(msgId, chatId, req.user.id, dto.content);
-
-    // Create AiJob record
-    const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
-      chatSessionId: chatId,
-      characterId: chat.characterId,
-    });
-
-    // Get updated history and stream new AI response
-    const history = await this.chatsService.getMessageHistory(chatId);
-
-    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: history.map((m) => ({ role: m.role, content: m.content })),
-        characterId: chat.characterId,
-        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
-        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
-          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
-          : undefined,
+    const abort = abortOnClientClose(res);
+    await pipeSse(
+      res,
+      this.engine.edit({
+        chatId,
+        actor: toActor(req.user),
+        messageId: msgId,
+        content: dto.content,
+        source: "web",
+        signal: abort.signal,
       }),
-    });
-
-    if (!aiRes.ok || !aiRes.body) {
-      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-      res.status(aiRes.status || 502).json(err);
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-
-    let aborted = false;
-    req.on("close", () => { aborted = true; });
-
-    const reader = aiRes.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let tokensUsed = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || aborted) break;
-
-        const text = decoder.decode(value, { stream: true });
-        res.write(text);
-
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.content) fullContent += parsed.content;
-              if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    if (fullContent) {
-      await this.chatsService.saveMessage(chatId, "assistant", fullContent);
-    }
-
-    await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
-    await this.chatsService.logUsage(req.user.id, "chat_message", tokensUsed || undefined);
-
-    res.end();
+    );
   }
 
   /**
@@ -1143,92 +840,11 @@ export class ChatsController {
     @Param("id") chatId: string,
     @Param("msgId") msgId: string,
   ) {
-    // Check free-tier message limit (regenerating counts as a new message)
-    await this.demoService.checkMessageLimit(chatId, req.user.id, req.user.subscription);
-
-    const chat = await this.chatsService.getChat(chatId, req.user.id);
-
-    // Soft-delete the target message and everything after it
-    // (сгенерированные фото getMessagesAfter не возвращает — они остаются)
-    const after = await this.chatsService.getMessagesAfter(chatId, msgId);
-    const idsToDelete = [msgId, ...after.map((m) => m.id)];
-    await this.chatsService.softDeleteMessages(idsToDelete);
-
-    // Get remaining history
-    const history = await this.chatsService.getMessageHistory(chatId);
-
-    const aiJob = await this.chatsService.createAiJob(req.user.id, "chat", {
-      chatSessionId: chatId,
-      characterId: chat.characterId,
-    });
-
-    // Stream new AI response
-    const aiRes = await fetch(`${AI_BASE}/ai/chat/completion`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: history.map((m) => ({ role: m.role, content: m.content })),
-        characterId: chat.characterId,
-        contentMode: req.user.isAdult === false ? "sfw" : req.user.contentMode,
-        userProfile: chat.chatProfile && !chat.chatProfile.deletedAt
-          ? `${chat.chatProfile.name}: ${chat.chatProfile.description}`
-          : undefined,
-      }),
-    });
-
-    if (!aiRes.ok || !aiRes.body) {
-      const err = await aiRes.json().catch(() => ({ error: "AI service unavailable" }));
-      res.status(aiRes.status || 502).json(err);
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-
-    let aborted = false;
-    req.on("close", () => { aborted = true; });
-
-    const reader = aiRes.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let tokensUsed = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || aborted) break;
-
-        const text = decoder.decode(value, { stream: true });
-        res.write(text);
-
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.content) fullContent += parsed.content;
-              if (parsed.usage?.totalTokens) tokensUsed = parsed.usage.totalTokens;
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    if (fullContent) {
-      await this.chatsService.saveMessage(chatId, "assistant", fullContent);
-    }
-
-    await this.chatsService.completeAiJob(aiJob.id, tokensUsed || undefined);
-    await this.chatsService.logUsage(req.user.id, "chat_message", tokensUsed || undefined);
-
-    res.end();
+    const abort = abortOnClientClose(res);
+    await pipeSse(
+      res,
+      this.engine.regenerate({ chatId, actor: toActor(req.user), messageId: msgId, source: "web", signal: abort.signal }),
+    );
   }
 
   @ApiOperation({ summary: "Save a generated image as a chat message" })

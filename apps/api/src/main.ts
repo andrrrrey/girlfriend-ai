@@ -21,6 +21,11 @@ import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { getRequestId, setResponseRequestId } from "@repo/logger";
 
+// Message.seq — BigInt; JSON.stringify не умеет BigInt и падает. Сериализуем строкой.
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function (this: bigint) {
+  return this.toString();
+};
+
 async function bootstrap() {
   // Загружаем и валидируем переменные окружения (выбросит ZodError если чего-то не хватает)
   const env = loadEnv();

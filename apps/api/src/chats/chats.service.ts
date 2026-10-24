@@ -19,19 +19,44 @@
  */
 
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
+import { OUTBOX_EVENTS, OutboxService } from "../outbox/outbox.service";
+
+/** Дополнительные поля сообщения при сохранении. */
+export interface SaveMessageOptions {
+  /** "text" | "audio" | "image" (по умолчанию "text") */
+  type?: string;
+  /** Ссылка на S3-файл (аудио, изображение) */
+  mediaUrl?: string;
+  /** JSON с дополнительными данными */
+  metadata?: Record<string, unknown>;
+  /** Канал: "web" | "telegram" | "system" | "proactive" (по умолчанию "web") */
+  source?: string;
+  /** Внешний ID в канале (update_id Telegram и т.п.) */
+  externalId?: string;
+  /** Идемпотентный ключ клиента */
+  clientMessageId?: string;
+  /** Для ответа ассистента — ID сообщения пользователя, на которое он отвечает */
+  replyToId?: string;
+  /** "completed" (по умолчанию) | "failed" | "pending" */
+  status?: string;
+}
 
 /**
  * Сервис для всех операций с чатами и сообщениями.
  */
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outbox: OutboxService,
+  ) {}
 
   // ─── Chat Sessions ──────────────────────────────────────────────────────────
 
@@ -91,7 +116,7 @@ export class ChatsService {
         },
         messages: {
           where: { deletedAt: null },
-          orderBy: { createdAt: "desc" },
+          orderBy: { seq: "desc" },
           take: 1, // Только последнее сообщение для preview
           select: { content: true, role: true, createdAt: true },
         },
@@ -229,7 +254,7 @@ export class ChatsService {
 
     const messages = await this.prisma.message.findMany({
       where: { chatSessionId: chatId, deletedAt: null },
-      orderBy: { createdAt: "desc" }, // DESC для cursor-пагинации
+      orderBy: { seq: "desc" }, // DESC для cursor-пагинации
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: {
@@ -239,6 +264,7 @@ export class ChatsService {
         type: true,
         mediaUrl: true,
         metadata: true,
+        status: true,
         createdAt: true,
       },
     });
@@ -253,41 +279,57 @@ export class ChatsService {
   }
 
   /**
-   * Сохраняет сообщение и обновляет lastMessageAt чата.
+   * Сохраняет сообщение, обновляет lastMessageAt чата и ставит событие
+   * message.created в outbox — всё в одной транзакции.
    *
    * @param chatSessionId — ID чата
    * @param role — "user" | "assistant" | "system"
    * @param content — текст сообщения
-   * @param opts — опциональные поля: type, mediaUrl, metadata
-   *   - type: "text" | "voice" | "image" (по умолчанию "text")
-   *   - mediaUrl: ссылка на S3-файл (аудио, изображение)
-   *   - metadata: JSON с дополнительными данными (например tokenUsage)
+   * @param opts — дополнительные поля (тип, медиа, источник, идемпотентные ключи, статус)
+   * @param tx — транзакционный клиент, если сохранение — часть внешней транзакции
    * @returns созданное Message
    */
   async saveMessage(
     chatSessionId: string,
     role: string,
     content: string,
-    opts?: { type?: string; mediaUrl?: string; metadata?: Record<string, unknown> },
+    opts?: SaveMessageOptions,
+    tx?: Prisma.TransactionClient,
   ) {
-    const message = await this.prisma.message.create({
-      data: {
-        chatSessionId,
-        role,
-        content,
-        type: opts?.type || "text", // По умолчанию текстовое сообщение
-        mediaUrl: opts?.mediaUrl,
-        metadata: opts?.metadata as Prisma.InputJsonValue, // Приводим к типу Prisma JSON
-      },
-    });
+    const run = async (db: Prisma.TransactionClient) => {
+      const message = await db.message.create({
+        data: {
+          chatSessionId,
+          role,
+          content,
+          type: opts?.type || "text", // По умолчанию текстовое сообщение
+          mediaUrl: opts?.mediaUrl,
+          metadata: opts?.metadata as Prisma.InputJsonValue, // Приводим к типу Prisma JSON
+          source: opts?.source || "web",
+          externalId: opts?.externalId,
+          clientMessageId: opts?.clientMessageId,
+          replyToId: opts?.replyToId,
+          status: opts?.status || "completed",
+        },
+      });
 
-    // Обновляем дату последнего сообщения для сортировки списка чатов
-    await this.prisma.chatSession.update({
-      where: { id: chatSessionId },
-      data: { lastMessageAt: new Date() },
-    });
+      // Обновляем дату последнего сообщения для сортировки списка чатов
+      await db.chatSession.update({
+        where: { id: chatSessionId },
+        data: { lastMessageAt: new Date() },
+      });
 
-    return message;
+      await this.outbox.enqueue(
+        db,
+        OUTBOX_EVENTS.MESSAGE_CREATED,
+        { messageId: message.id, chatSessionId, role, type: message.type, source: message.source },
+        `${OUTBOX_EVENTS.MESSAGE_CREATED}:${message.id}`,
+      );
+
+      return message;
+    };
+
+    return tx ? run(tx) : this.prisma.$transaction(run);
   }
 
   /**
@@ -321,7 +363,7 @@ export class ChatsService {
   async getMessageHistory(chatSessionId: string, limit = 20) {
     const messages = await this.prisma.message.findMany({
       where: { chatSessionId, deletedAt: null },
-      orderBy: { createdAt: "desc" }, // Берём последние N
+      orderBy: { seq: "desc" }, // Берём последние N
       take: limit,
       select: { role: true, content: true }, // Только данные для LLM
     });
@@ -385,7 +427,7 @@ export class ChatsService {
   }
 
   /**
-   * Возвращает все сообщения чата после указанного (по дате createdAt).
+   * Возвращает все сообщения чата после указанного (по порядковому номеру seq).
    * Используется при редактировании/перегенерации для cascade-удаления последующих.
    *
    * Сгенерированные фото (type="image") в выборку НЕ попадают: перегенерация
@@ -402,11 +444,11 @@ export class ChatsService {
     return this.prisma.message.findMany({
       where: {
         chatSessionId,
-        createdAt: { gt: msg.createdAt }, // После редактируемого сообщения
+        seq: { gt: msg.seq }, // После редактируемого сообщения
         deletedAt: null,
         type: { not: "image" }, // Фото сохраняем — их удаляют только явно
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { seq: "asc" },
     });
   }
 
@@ -445,6 +487,8 @@ export class ChatsService {
       where: { id: messageId, chatSessionId: chatId, deletedAt: null },
     });
     if (!message) throw new NotFoundException("Message not found");
+    // Редактировать можно только свои сообщения, не ответы персонажа
+    if (message.role !== "user") throw new BadRequestException("Only user messages can be edited");
 
     // Обновляем текст сообщения
     await this.prisma.message.update({
@@ -493,8 +537,9 @@ export class ChatsService {
    *
    * @param jobId — ID задания
    * @param tokensUsed — количество токенов (опционально, только для chat)
+   * @param tx — транзакционный клиент (запись вместе с ответом ассистента)
    */
-  async completeAiJob(jobId: string, tokensUsed?: number) {
+  async completeAiJob(jobId: string, tokensUsed?: number, tx?: Prisma.TransactionClient) {
     // Модель, которой отвечал чат (для учёта расходов). Зависит от выбранного
     // провайдера: OpenRouter (OPENROUTER_CHAT_MODEL) или ModelsLab
     // (MODELSLAB_CHAT_MODEL). Настройки могут отсутствовать — берём дефолты,
@@ -512,7 +557,7 @@ export class ChatsService {
         : mlSetting?.value || "llama-3.1-8b-uncensored";
     const input = { ...((job?.input as Record<string, unknown>) ?? {}), model, provider };
 
-    await this.prisma.aiJob.update({
+    await (tx ?? this.prisma).aiJob.update({
       where: { id: jobId },
       data: {
         status: "completed",
@@ -531,10 +576,24 @@ export class ChatsService {
    * @param userId — кто использовал
    * @param action — тип действия: "chat_message" | "stt" | "tts" | "generation"
    * @param tokensUsed — токены (только для chat)
+   * @param tx — транзакционный клиент (запись вместе с ответом ассистента)
    */
-  async logUsage(userId: string, action: string, tokensUsed?: number) {
-    await this.prisma.usageLog.create({
+  async logUsage(userId: string, action: string, tokensUsed?: number, tx?: Prisma.TransactionClient) {
+    await (tx ?? this.prisma).usageLog.create({
       data: { userId, action, tokensUsed },
+    });
+  }
+
+  /**
+   * Помечает AiJob как проваленный (ошибка провайдера, обрыв клиентом).
+   *
+   * @param jobId — ID задания
+   * @param error — причина (сохраняется для диагностики)
+   */
+  async failAiJob(jobId: string, error: string, tx?: Prisma.TransactionClient) {
+    await (tx ?? this.prisma).aiJob.update({
+      where: { id: jobId },
+      data: { status: "failed", error: error.slice(0, 1000), completedAt: new Date() },
     });
   }
 

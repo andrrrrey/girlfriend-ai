@@ -6,9 +6,8 @@
  * активности более INACTIVE_DAYS дней.
  *
  * Расписание:
- * - Запускается ровно в 03:00 UTC каждый день
- * - Реализовано через рекурсивный setTimeout (не cron, без сторонних зависимостей)
- * - После каждого запуска планируется следующий
+ * - Запускается ровно в 03:00 UTC каждый день через SchedulerService
+ * - Под распределённым локом: при нескольких инстансах API выполняется один раз
  *
  * Логика мягкого удаления:
  * - Устанавливает deletedAt = now и isActive = false
@@ -17,12 +16,12 @@
  *   ИЛИ lastMessageAt IS NULL AND createdAt < (now - 7 дней) (пустые чаты)
  *
  * Жизненный цикл:
- * - onModuleInit: запускает планировщик при старте модуля
- * - onModuleDestroy: отменяет таймер при остановке (graceful shutdown)
+ * - onModuleInit: регистрирует задачу в планировщике (таймеры гасит SchedulerService)
  */
 
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
+import { SchedulerService } from "../common/scheduler.service";
 
 /** Количество дней без активности до мягкого удаления чата */
 const INACTIVE_DAYS = 7;
@@ -33,56 +32,22 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /**
  * Сервис очистки неактивных чатов.
  *
- * Запускается автоматически при старте приложения.
- * Не требует ручного вызова — работает по расписанию через setTimeout.
+ * Запускается автоматически при старте приложения через SchedulerService:
+ * при нескольких инстансах API очистка выполняется только на одном (Redis-лок).
  */
 @Injectable()
-export class CleanupService implements OnModuleInit, OnModuleDestroy {
+export class CleanupService implements OnModuleInit {
   /** NestJS-логгер (выводит имя класса в лог-сообщениях) */
   private readonly logger = new Logger(CleanupService.name);
-  /** Ссылка на setTimeout для возможности отмены при остановке */
-  private timer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scheduler: SchedulerService,
+  ) {}
 
-  /**
-   * Вызывается NestJS при инициализации модуля.
-   * Запускает первое планирование задачи.
-   */
+  /** Регистрирует ежедневный запуск очистки в 03:00 UTC. */
   onModuleInit(): void {
-    this.scheduleNextRun();
-  }
-
-  /**
-   * Вызывается NestJS при остановке модуля (graceful shutdown).
-   * Отменяет запланированный таймер чтобы предотвратить утечки.
-   */
-  onModuleDestroy(): void {
-    if (this.timer) clearTimeout(this.timer);
-  }
-
-  /**
-   * Вычисляет задержку до ближайшего 03:00 UTC и планирует выполнение.
-   *
-   * Алгоритм:
-   * 1. Берём текущее время UTC
-   * 2. Устанавливаем время 03:00:00.000 UTC для сегодня
-   * 3. Если 03:00 уже прошло — берём завтра в 03:00
-   * 4. Устанавливаем setTimeout на вычисленную задержку
-   * 5. После выполнения задачи — рекурсивно планируем следующий запуск
-   */
-  private scheduleNextRun(): void {
-    const now = new Date();
-    const next3am = new Date(now);
-    next3am.setUTCHours(3, 0, 0, 0);
-    // Если 03:00 сегодня уже прошло — переносим на завтра
-    if (next3am <= now) next3am.setUTCDate(next3am.getUTCDate() + 1);
-
-    const delay = next3am.getTime() - now.getTime();
-    this.timer = setTimeout(() => {
-      // cleanupInactiveChats выполняется, затем планируется следующий запуск
-      this.cleanupInactiveChats().finally(() => this.scheduleNextRun());
-    }, delay);
+    this.scheduler.scheduleDaily("cleanup-inactive-chats", 3, () => this.cleanupInactiveChats());
   }
 
   /**
