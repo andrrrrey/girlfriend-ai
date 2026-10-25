@@ -13,6 +13,7 @@ import { PrismaService } from "../../prisma.service";
 import { IMAGE_MODELS } from "../models";
 import type { GenerationService } from "../generation.service";
 import { OptionCatalogService } from "./option-catalog.service";
+import { CharacterIdentityService } from "./character-identity.service";
 import type { GenerationSpec } from "./generation-spec";
 import {
   buildCharacterImagePrompt,
@@ -34,6 +35,7 @@ export class GenerationSpecService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly catalog: OptionCatalogService,
+    private readonly identity: CharacterIdentityService,
   ) {}
 
   /**
@@ -59,7 +61,8 @@ export class GenerationSpecService {
     if (spec.preset === "chat" || spec.characterId) {
       if (!spec.characterId) throw new BadRequestException("characterId is required for chat photos");
       const character = await this.loadCharacter(spec.characterId, userId);
-      const personality = (character.personality ?? {}) as Record<string, unknown>;
+      // Без сохранённого промпта внешности он будет получен по аватару (один раз).
+      const personality = await this.identity.ensureIdentity(character);
       // Нет своего generationStyle → дефолт "realism" (валидный ключ CIVITAI_MODELS).
       const generationStyle = (personality.generationStyle as string | undefined) || "realism";
       // Чекпоинт аватара (Civitai AIR) — иначе Civitai возьмёт случайный и фото не будет похоже.
@@ -108,7 +111,8 @@ export class GenerationSpecService {
     if (spec.preset === "chat") {
       if (!spec.characterId || !userId) throw new BadRequestException("characterId is required for chat videos");
       const character = await this.loadCharacter(spec.characterId, userId);
-      const personality = (character.personality ?? {}) as Record<string, unknown>;
+      // Без сохранённого промпта внешности он будет получен по аватару (один раз).
+      const personality = await this.identity.ensureIdentity(character);
       return {
         prompt: buildCharacterImagePrompt(personality, composeChatExtra(spec, catalog) || undefined),
         model: CHAT_VIDEO_MODEL,
@@ -141,7 +145,7 @@ export class GenerationSpecService {
     if (!UUID_RE.test(characterId)) throw new NotFoundException("Character not found");
     const character = await this.prisma.character.findFirst({
       where: { id: characterId, deletedAt: null },
-      select: { id: true, personality: true, isPublic: true, createdBy: true },
+      select: { id: true, personality: true, avatarUrl: true, isPublic: true, createdBy: true },
     });
     if (!character || (character.createdBy && character.createdBy !== userId && !character.isPublic)) {
       throw new NotFoundException("Character not found");

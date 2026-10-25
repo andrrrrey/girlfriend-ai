@@ -18,6 +18,7 @@ import {
   getPoseOptions,
   requestChatPhoto,
   confirmChatMedia,
+  regenerateChatMedia,
   CHAT_MEDIA_EVENT,
   type ChatMediaEventDetail,
   resizedMediaUrl,
@@ -806,19 +807,16 @@ function ChatPageInner() {
     }
   };
 
-  const handleRegenerateImage = (poseName: string) => {
-    if (!poseOptions) {
-      getPoseOptions().then((opts) => {
-        setPoseOptions(opts);
-        const allPoses = opts.POSE.flatMap((c) => c.options);
-        const pose = allPoses.find((o) => o.name === poseName);
-        if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
-      }).catch(() => {});
-      return;
+  /** Перегенерация фото/видео из ленты: сервер повторит ту же спецификацию. */
+  const handleRegenerateMedia = async (msgId: string) => {
+    if (!activeChat || generatingInThisChat) return;
+    try {
+      const { jobId, kind } = await regenerateChatMedia(activeChat, msgId, activeContentMode);
+      startGeneration(jobId, kind, kind, "", "chat", { chatId: activeChat, poseName: kind });
+    } catch (err: any) {
+      const popup = premiumPopupFromError(err?.body);
+      if (popup) setPremiumPopup(popup);
     }
-    const allPoses = poseOptions.POSE.flatMap((c) => c.options);
-    const pose = allPoses.find((o) => o.name === poseName);
-    if (pose) handleGenerateImage(pose.name, pose.prompt || pose.name);
   };
 
   // Круглая иконка с фото персонажа рядом с каждым его сообщением.
@@ -1238,7 +1236,7 @@ function ChatPageInner() {
                         })}
                       </span>
                       <div className="msg-actions" style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type === "image" && (
+                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && (msg.type === "image" || msg.type === "video") && (
                           <>
                             <button
                               onClick={() => handleDeleteMessage(msg.id)}
@@ -1248,10 +1246,7 @@ function ChatPageInner() {
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1.5M9 3.5l-.5 6.5a1 1 0 01-1 .9H4.5a1 1 0 01-1-.9L3 3.5" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </button>
                             <button
-                              onClick={() => {
-                                const poseName = (msg.metadata as Record<string, unknown>)?.poseName as string;
-                                if (poseName) handleRegenerateImage(poseName);
-                              }}
+                              onClick={() => handleRegenerateMedia(msg.id)}
                               className="action-btn"
                               disabled={streaming || generatingInThisChat}
                               title={t("chat.regenerate")}
@@ -1260,7 +1255,7 @@ function ChatPageInner() {
                             </button>
                           </>
                         )}
-                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type !== "image" && (
+                        {msg.role === "assistant" && !msg.id.startsWith("temp-") && msg.type !== "image" && msg.type !== "video" && (
                           <>
                             <button
                               onClick={() => handlePlayTTS(msg.id)}

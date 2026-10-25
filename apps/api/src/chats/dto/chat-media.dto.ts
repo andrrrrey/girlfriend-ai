@@ -24,6 +24,14 @@ export class ChatPhotoDto {
   spec?: Record<string, unknown>;
 }
 
+/** Тело POST /chats/:id/messages/:msgId/media-regenerate. */
+export class RegenerateMediaDto {
+  /** Режим контента из переключателя интерфейса (несовершеннолетним — всегда sfw). */
+  @IsOptional()
+  @IsIn(["nsfw", "sfw"])
+  contentMode?: "nsfw" | "sfw";
+}
+
 /** Тело POST /chats/:id/media/confirm. */
 export class ConfirmMediaDto {
   @IsString()

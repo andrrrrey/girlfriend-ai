@@ -20,7 +20,7 @@ import { ChatsService } from "../chats/chats.service";
 import { DemoService } from "../demo/demo.service";
 import { GenerationService, type ChatMediaTarget } from "../generation/generation.service";
 import { GenerationSpecService, CHAT_VIDEO_MODEL } from "../generation/prompt/generation-spec.service";
-import type { GenerationSpec } from "../generation/prompt/generation-spec";
+import { parseGenerationSpec, type GenerationSpec } from "../generation/prompt/generation-spec";
 import { PricingService } from "../billing/pricing.service";
 import { BillingConfigService } from "../billing/billing-config.service";
 import type { ConversationActor } from "./conversation.types";
@@ -88,7 +88,12 @@ export class ChatMediaService {
     spec: GenerationSpec,
     opts: { caption: string; source: string },
   ): Promise<StartedMedia> {
-    const target: ChatMediaTarget = { sessionId: chatId, caption: opts.caption, source: opts.source };
+    const target: ChatMediaTarget = {
+      sessionId: chatId,
+      caption: opts.caption,
+      source: opts.source,
+      spec: spec as unknown as Record<string, unknown>,
+    };
     if (spec.kind === "video") {
       await this.demo.checkVideoGeneration(actor.id, actor.subscription, 1);
       const job = await this.specs.toVideoJob(spec, actor.id);
@@ -157,7 +162,8 @@ export class ChatMediaService {
       await this.chats.saveMessage(chat.sessionId, "assistant", kind === "video" ? "🎬" : "📷", {
         type: kind,
         mediaUrl: mediaUrl ?? rawUrl,
-        metadata: { poseName: chat.caption, type: `generated-${kind}`, aiJobId },
+        // spec — для перегенерации того же фото/видео кнопкой в ленте.
+        metadata: { poseName: chat.caption, type: `generated-${kind}`, aiJobId, ...(chat.spec ? { spec: chat.spec } : {}) },
         source: chat.source,
         externalId: `aijob:${aiJobId}`,
       });
@@ -165,6 +171,41 @@ export class ChatMediaService {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return; // уже сохранено
       this.logger.error(`failed to save chat media for job ${aiJobId}: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Перегенерация фото/видео из ленты: та же спецификация, новый кадр.
+   * Для старых сообщений без сохранённой спецификации — по позе из подписи.
+   *
+   * @param characterId — персонаж чата (спецификация всегда для него)
+   * @param contentMode — текущий режим контента пользователя
+   * @throws 404 — сообщение не найдено или это не медиа персонажа
+   */
+  async regenerate(
+    chatId: string,
+    actor: ConversationActor,
+    messageId: string,
+    characterId: string,
+    contentMode: "nsfw" | "sfw",
+  ): Promise<StartedMedia> {
+    const msg = await this.prisma.message.findFirst({
+      where: { id: messageId, chatSessionId: chatId, deletedAt: null, role: "assistant", type: { in: ["image", "video"] } },
+      select: { type: true, metadata: true },
+    });
+    if (!msg) throw new NotFoundException("Media message not found");
+
+    const kind = msg.type === "video" ? "video" : "image";
+    const meta = (msg.metadata ?? {}) as { spec?: Record<string, unknown>; poseName?: unknown };
+    const poseName = typeof meta.poseName === "string" ? meta.poseName : undefined;
+    const base = { kind, preset: "chat", characterId, contentMode };
+    const spec = meta.spec
+      ? parseGenerationSpec({ ...meta.spec, ...base })
+      : parseGenerationSpec({
+          ...base,
+          // Подпись «photo»/«video» — не поза (фото по просьбе без сохранённой спецификации).
+          ...(poseName && poseName !== "photo" && poseName !== "video" ? { pose: { poses: [poseName] } } : {}),
+        });
+    return this.start(chatId, actor, spec, { caption: poseName || (kind === "video" ? "video" : "photo"), source: "web" });
   }
 
   /** Отмечает предложение подтверждённым (кнопка в интерфейсе скрывается). */

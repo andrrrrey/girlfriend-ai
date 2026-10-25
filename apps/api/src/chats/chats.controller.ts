@@ -34,6 +34,7 @@
  *  Media:
  *    POST   /chats/:id/photo                    — Фото персонажа (поза/детали) → генерация в диалоге
  *    POST   /chats/:id/media/confirm            — Подтвердить цену медиа, предложенного в ответ на просьбу
+ *    POST   /chats/:id/messages/:msgId/media-regenerate — Перегенерировать фото/видео из ленты
  *
  * ─── SSE-формат стриминга ────────────────────────────────────────────────────
  *
@@ -96,7 +97,7 @@ import { EditMessageDto } from "./dto/edit-message.dto";
 import { GreetingDto } from "./dto/greeting.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
-import { ChatPhotoDto, ConfirmMediaDto } from "./dto/chat-media.dto";
+import { ChatPhotoDto, ConfirmMediaDto, RegenerateMediaDto } from "./dto/chat-media.dto";
 import { ChatMediaService } from "../conversation/chat-media.service";
 import { parseGenerationSpec } from "../generation/prompt/generation-spec";
 import { ConversationEngine } from "../conversation/conversation.engine";
@@ -895,6 +896,24 @@ export class ChatsController {
       ...(dto.pose ? { pose: { ...((dto.spec?.pose as object) ?? {}), poses: [dto.pose] } } : {}),
     });
     return this.chatMedia.start(chat.id, toActor(req.user), spec, { caption: dto.pose || "photo", source: "web" });
+  }
+
+  /**
+   * Перегенерация фото/видео из ленты чата — та же спецификация, новый кадр.
+   * Новое медиасообщение сервер добавит в диалог по завершении генерации.
+   */
+  @ApiOperation({ summary: "Regenerate a chat photo/video from the same spec" })
+  @Post(":id/messages/:msgId/media-regenerate")
+  async regenerateMedia(
+    @Req() req: any,
+    @Param("id") chatId: string,
+    @Param("msgId") msgId: string,
+    @Body() dto: RegenerateMediaDto,
+  ) {
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+    const requested = dto.contentMode ?? req.user.contentMode;
+    const contentMode = req.user.isAdult === false || requested === "sfw" ? "sfw" : "nsfw";
+    return this.chatMedia.regenerate(chat.id, toActor(req.user), msgId, chat.characterId, contentMode);
   }
 
   /** Подтверждение цены медиа, предложенного в ответ на просьбу пользователя. */

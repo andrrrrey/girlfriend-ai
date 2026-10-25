@@ -967,6 +967,18 @@ export interface OptionSynonymsStatus {
   error?: string;
 }
 
+/** Прогресс описания аватаров персонажей моделью со зрением. */
+export interface CharacterIdentityStatus {
+  state: "idle" | "running" | "done" | "failed";
+  total: number;
+  processed: number;
+  updated: number;
+  failed: number;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+}
+
 /** Синонимы из поля формы «через запятую» → массив. */
 export function parseSynonymsInput(value: string): string[] {
   return value.split(/[,;\n]/).map((v) => v.trim()).filter(Boolean);
@@ -1592,6 +1604,16 @@ export const admin = {
   /** Запустить автогенерацию синонимов опций (POST /admin/option-synonyms/generate). */
   async generateOptionSynonyms(overwrite = false): Promise<OptionSynonymsStatus> {
     return apiFetch(`/admin/option-synonyms/generate`, { method: "POST", body: JSON.stringify({ overwrite }) });
+  },
+
+  /** Описать аватары персонажей без промпта внешности (POST /admin/character-identity/describe). */
+  async describeCharacterAvatars(): Promise<CharacterIdentityStatus> {
+    return apiFetch(`/admin/character-identity/describe`, { method: "POST" });
+  },
+
+  /** Прогресс описания аватаров (GET /admin/character-identity/status). */
+  async getCharacterIdentityStatus(): Promise<CharacterIdentityStatus> {
+    return apiFetch(`/admin/character-identity/status`);
   },
 
   /** Прогресс автогенерации синонимов (GET /admin/option-synonyms/status). */
@@ -2816,6 +2838,21 @@ export async function requestChatPhoto(
   return apiFetch(`/chats/${chatId}/photo`, {
     method: "POST",
     body: JSON.stringify({ pose, contentMode }),
+  });
+}
+
+/**
+ * Перегенерация фото/видео из ленты чата (POST /chats/:id/messages/:msgId/media-regenerate):
+ * та же спецификация, новый кадр; новое сообщение сервер добавит сам.
+ */
+export async function regenerateChatMedia(
+  chatId: string,
+  messageId: string,
+  contentMode?: "nsfw" | "sfw",
+): Promise<{ jobId: string; kind: "image" | "video" }> {
+  return apiFetch(`/chats/${chatId}/messages/${messageId}/media-regenerate`, {
+    method: "POST",
+    body: JSON.stringify({ contentMode }),
   });
 }
 

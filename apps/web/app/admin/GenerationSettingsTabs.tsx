@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { admin, type OptionSynonymsStatus } from "../../lib/api";
+import { admin, type CharacterIdentityStatus, type OptionSynonymsStatus } from "../../lib/api";
 
 export type GenSettingsTab = "character" | "appearance" | "pose" | "scene" | "camera";
 
@@ -100,6 +100,60 @@ function SynonymsGenerator() {
 }
 
 /**
+ * Описание аватаров персонажей без промпта внешности (avatarPrompt) моделью со
+ * зрением — чтобы фото в чате были похожи на персонажа. Фоновая задача на сервере.
+ */
+function AvatarIdentityDescriber() {
+  const [status, setStatus] = useState<CharacterIdentityStatus | null>(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    admin.getCharacterIdentityStatus().then(setStatus).catch(() => undefined);
+  }, []);
+
+  useEffect(load, [load]);
+
+  useEffect(() => {
+    if (status?.state !== "running") return;
+    const timer = setInterval(load, 3000);
+    return () => clearInterval(timer);
+  }, [status?.state, load]);
+
+  const start = async () => {
+    setError("");
+    try {
+      setStatus(await admin.describeCharacterAvatars());
+    } catch (err: any) {
+      setError(err?.body?.message || err.message);
+    }
+  };
+
+  const running = status?.state === "running";
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+      <button
+        type="button"
+        style={styles.exportBtn}
+        disabled={running}
+        onClick={start}
+        title="Для персонажей без сохранённого промпта внешности нейросеть опишет аватар — фото в чате станут похожи на персонажа"
+      >
+        {running ? "Описание аватаров..." : "Описать аватары персонажей"}
+      </button>
+      {status && status.state !== "idle" && (
+        <span style={{ color: status.state === "failed" ? "#e36466" : "#848484", fontSize: 12 }}>
+          {status.state === "running" && `Обработано ${status.processed} из ${status.total}, описано ${status.updated}`}
+          {status.state === "done" &&
+            `Готово: описано ${status.updated} из ${status.total}${status.failed ? `, не удалось: ${status.failed}` : ""}`}
+          {status.state === "failed" && `Ошибка: ${status.error}`}
+        </span>
+      )}
+      {error && <span style={{ color: "#e36466", fontSize: 12 }}>{error}</span>}
+    </div>
+  );
+}
+
+/**
  * Под-навигатор раздела «Настройки генераций».
  * Переключает пять страниц опций генерации.
  */
@@ -133,6 +187,7 @@ export function GenerationSettingsTabs({ active }: { active: GenSettingsTab }) {
       </button>
     </div>
     <SynonymsGenerator />
+    <AvatarIdentityDescriber />
     </>
   );
 }

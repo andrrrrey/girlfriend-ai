@@ -42,6 +42,8 @@ export type ChatMediaTarget = {
   caption: string;
   /** Канал, из которого пришёл запрос: web | telegram … */
   source: string;
+  /** Спецификация генерации — по ней медиа можно перегенерировать. */
+  spec?: Record<string, unknown>;
 };
 
 @Injectable()
@@ -100,6 +102,14 @@ export class GenerationService {
       imageThumbUrl: this.keyToStreamUrl(opt.imageThumbKey),
       imageFullUrl: this.keyToStreamUrl(opt.imageFullKey),
     };
+  }
+
+  /**
+   * URL изображения, доступный внешнему провайдеру (подписанный S3 URL): для
+   * img2img и для описания аватара моделью со зрением.
+   */
+  async toProviderImageUrl(url: string | undefined | null): Promise<string | undefined> {
+    return this.toPublicImageUrl(url);
   }
 
   /** URL результата генерации в том виде, в каком его получает клиент (через media-прокси). */

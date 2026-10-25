@@ -981,6 +981,94 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
   }
 });
 
+// ─── Vision: описание изображения ────────────────────────────────────────────
+
+/** Модель OpenRouter со зрением по умолчанию (настройка VISION_MODEL). */
+const DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct";
+
+interface VisionDescribeBody {
+  /** Публично доступный URL изображения (например, подписанный S3 URL). */
+  imageUrl: string;
+  /** Системная инструкция (что и в каком формате описать). */
+  system: string;
+  /** Текст запроса рядом с картинкой. */
+  prompt?: string;
+  maxTokens?: number;
+}
+
+/**
+ * POST /ai/vision/describe
+ *
+ * Описание изображения моделью со зрением через OpenRouter (VISION_MODEL,
+ * по умолчанию qwen2.5-vl). Используется, чтобы один раз получить промпт
+ * внешности персонажа по его аватару, если он не был сохранён при создании.
+ *
+ * @returns { content: string, model: string, costUsd?: number }
+ */
+app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply) => {
+  const { imageUrl, system, prompt, maxTokens } = req.body ?? ({} as VisionDescribeBody);
+  if (!imageUrl || typeof imageUrl !== "string" || !system || typeof system !== "string") {
+    return reply.status(400).send({ error: "imageUrl and system are required" });
+  }
+
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "vision_failed_to_fetch_settings");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+  const apiKey = settings.OPENROUTER_API_KEY;
+  if (!apiKey) return reply.status(503).send({ error: "openrouter API key not configured" });
+  const model = settings.VISION_MODEL || DEFAULT_VISION_MODEL;
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://virtflirt.app",
+        "X-Title": "VirtFlirt",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt || "Describe the image." },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+        max_tokens: maxTokens || 400,
+        temperature: 0.2,
+        usage: { include: true },
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      logger.error({ status: res.status, text: text.slice(0, 400), model }, "vision_http_error");
+      if (res.status === 402 || isInsufficientBalance(res.status, text)) {
+        return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "openrouter" });
+      }
+      return reply.status(502).send({ error: `OpenRouter vision error ${res.status}` });
+    }
+    const data: any = await res.json();
+    const content = String(data.choices?.[0]?.message?.content ?? "").trim();
+    if (!content) return reply.status(502).send({ error: "Empty response from vision model" });
+    const cost = Number(data.usage?.cost);
+    logger.info({ model, outputLength: content.length }, "vision_describe_done");
+    return reply.send({ content, model, ...(Number.isFinite(cost) ? { costUsd: cost } : {}) });
+  } catch (err: any) {
+    logger.error({ err, model }, "vision_describe_error");
+    return reply.status(502).send({ error: "Vision request failed", details: err?.message });
+  }
+});
+
 // ─── STT (Speech-to-Text via OpenAI Whisper) ─────────────────────────────────
 
 /**
