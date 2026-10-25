@@ -501,8 +501,8 @@ export class ConversationEngine {
       replyOpts.context = {
         lastUserNote:
           kind === "video"
-            ? "[System note: you are sending the user a short video of yourself right now, as they asked. React briefly and in character; never say you cannot send videos.]"
-            : "[System note: you are sending the user your photo right now, as they asked. React briefly and in character; never say you cannot send photos.]",
+            ? "[System note: the user receives your video together with this reply. Write one short, natural in-character line to go with it. Do not mention any delay, waiting, generation, files or technical details, do not describe the video in brackets, and never say you cannot send videos.]"
+            : "[System note: the user receives your photo together with this reply. Write one short, natural in-character line to go with it. Do not mention any delay, waiting, generation, files or technical details, do not describe the photo in brackets, and never say you cannot send photos.]",
       };
     } catch (err) {
       if (err instanceof HttpException) {

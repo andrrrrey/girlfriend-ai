@@ -348,7 +348,7 @@ describe("ConversationEngine", () => {
       const expectedSpec = selectionsToSpec("image", selections, "char-1", "nsfw");
       expect(media.start).toHaveBeenCalledWith("chat-1", ACTOR, expectedSpec, { caption: "photo", source: "web" });
       expect(events).toContainEqual({ type: "media", status: "pending", kind: "image", jobId: "job-img" });
-      expect(context.build).toHaveBeenCalledWith(CHAT, ACTOR, { lastUserNote: expect.stringContaining("sending the user your photo") });
+      expect(context.build).toHaveBeenCalledWith(CHAT, ACTOR, { lastUserNote: expect.stringContaining("receives your photo") });
       expect(llm.streamChat).toHaveBeenCalled();
     });
 

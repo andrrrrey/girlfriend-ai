@@ -92,6 +92,8 @@ export const en = {
   "chat.edit": "Edit",
   "chat.typing": "typing...",
   "chat.generatingImage": "Generating image...",
+  "chat.generatingPhoto": "Taking a photo",
+  "chat.generatingVideo": "Recording a video",
   "chat.stop": "Stop",
   "chat.send": "Send",
   "chat.modeAsk": "Ask",

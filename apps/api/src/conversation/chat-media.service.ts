@@ -153,7 +153,8 @@ export class ChatMediaService {
     const mediaUrl = await this.generation.toClientMediaUrl(rawUrl);
     const kind = job.type === "video" ? "video" : "image";
     try {
-      await this.chats.saveMessage(chat.sessionId, "assistant", `Generated ${kind}: ${chat.caption}`, {
+      // Нейтральная подпись (её видно в превью списка чатов); детали — в metadata.
+      await this.chats.saveMessage(chat.sessionId, "assistant", kind === "video" ? "🎬" : "📷", {
         type: kind,
         mediaUrl: mediaUrl ?? rawUrl,
         metadata: { poseName: chat.caption, type: `generated-${kind}`, aiJobId },

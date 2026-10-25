@@ -45,7 +45,9 @@ export class ContextBuilder {
   async build(chat: ChatWithContext, actor: ConversationActor, opts: ContextOptions = {}): Promise<LlmChatRequest> {
     const messages =
       opts.messages ??
-      (await this.chats.getMessageHistory(chat.id, opts.historyLimit ?? DEFAULT_HISTORY_LIMIT)).map((m) => ({
+      (
+        await this.chats.getMessageHistory(chat.id, opts.historyLimit ?? DEFAULT_HISTORY_LIMIT, { textOnly: true })
+      ).map((m) => ({
         role: m.role,
         content: m.content,
       }));

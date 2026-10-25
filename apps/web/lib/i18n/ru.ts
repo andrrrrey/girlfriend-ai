@@ -94,6 +94,8 @@ export const ru: Record<keyof typeof en, string> = {
   "chat.edit": "Редактировать",
   "chat.typing": "печатает...",
   "chat.generatingImage": "Генерация изображения...",
+  "chat.generatingPhoto": "Делает фото",
+  "chat.generatingVideo": "Снимает видео",
   "chat.stop": "Стоп",
   "chat.send": "Отправить",
   "chat.modeAsk": "Спросить",

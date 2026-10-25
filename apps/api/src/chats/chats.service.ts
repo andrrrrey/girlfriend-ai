@@ -358,11 +358,17 @@ export class ChatsService {
    *
    * @param chatSessionId — ID чата
    * @param limit — количество последних сообщений (по умолчанию 20)
+   * @param opts.textOnly — без фото/видео: для контекста модели (иначе модель
+   *   копирует служебные подписи медиасообщений в свои ответы)
    * @returns массив { role, content }[]
    */
-  async getMessageHistory(chatSessionId: string, limit = 20) {
+  async getMessageHistory(chatSessionId: string, limit = 20, opts?: { textOnly?: boolean }) {
     const messages = await this.prisma.message.findMany({
-      where: { chatSessionId, deletedAt: null },
+      where: {
+        chatSessionId,
+        deletedAt: null,
+        ...(opts?.textOnly ? { type: { notIn: ["image", "video"] } } : {}),
+      },
       orderBy: { seq: "desc" }, // Берём последние N
       take: limit,
       select: { role: true, content: true }, // Только данные для LLM

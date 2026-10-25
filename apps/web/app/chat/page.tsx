@@ -694,7 +694,9 @@ function ChatPageInner() {
   const activeChatData = chatList.find((c) => c.id === activeChat);
   const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
-  const generatingInThisChat = activeJobs.some((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
+  // Генерации фото/видео этого чата — по ним в ленте показываются карточки-заглушки.
+  const chatGenerations = activeJobs.filter((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
+  const generatingInThisChat = chatGenerations.length > 0;
 
   // Курсор всегда на поле ввода: возвращаем фокус, как только поле снова
   // активно (после отправки/перегенерации/генерации картинки, смены чата).
@@ -935,6 +937,18 @@ function ChatPageInner() {
 .generating-indicator { display: flex; align-items: center; gap: 8px; }
 .generating-spinner { width: 14px; height: 14px; border: 2px solid #f95bad; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.media-generating { position: relative; width: 240px; max-width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 55%, #12081f 100%); color: #f95bad; }
+.media-generating-video { aspect-ratio: 9 / 16; width: 200px; }
+.media-generating::before { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 25%, rgba(249,91,173,0.18) 45%, rgba(255,255,255,0.12) 50%, rgba(249,91,173,0.18) 55%, transparent 75%); background-size: 250% 100%; animation: media-shimmer 1.8s ease-in-out infinite; }
+.media-generating-icon { position: relative; display: flex; animation: media-pulse 1.6s ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(249,91,173,0.55)); }
+.media-generating-label { position: relative; color: #e8d6ef; font-size: 13px; font-weight: 500; }
+.media-generating-dots i { font-style: normal; animation: media-dot 1.4s infinite; opacity: 0; }
+.media-generating-dots i:nth-child(2) { animation-delay: 0.2s; }
+.media-generating-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes media-shimmer { 0% { background-position: 150% 0; } 100% { background-position: -100% 0; } }
+@keyframes media-pulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+@keyframes media-dot { 0%, 20% { opacity: 0; } 40%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .media-generating::before, .media-generating-icon, .media-generating-dots i { animation: none; opacity: 1; } }
 .right-panel { width: 256px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; overflow-y: auto; height: calc(100vh - 46px); }
 .profile-gallery { width: 100%; height: 300px; border-radius: 8px; border: 1px solid #252525; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 8px; }
 .profile-gallery .gallery-bg { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: linear-gradient(135deg, #2d1b3d 0%, #1a0a2e 50%, #0d0d1a 100%); }
@@ -1318,17 +1332,30 @@ function ChatPageInner() {
                 </div>
               )}
 
-              {generatingInThisChat && (
-                <div className="message-row from-ai-row">
+              {chatGenerations.map((job) => (
+                // Карточка-заглушка размера будущего фото/видео с анимацией,
+                // пока идёт генерация; готовое медиа сервер добавит в ленту сам.
+                <div key={job.jobId} className="message-row from-ai-row">
                   {charMsgAvatar}
                   <div className="message from-ai">
-                    <div className="message-bubble generating-indicator">
-                      <div className="generating-spinner" />
-                      <span>{t("chat.generatingImage")}</span>
+                    <div className="message-bubble image-message">
+                      <div className={`media-generating${job.type === "video" ? " media-generating-video" : ""}`}>
+                        <div className="media-generating-icon">
+                          {job.type === "video" ? (
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>
+                          ) : (
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+                          )}
+                        </div>
+                        <span className="media-generating-label">
+                          {t(job.type === "video" ? "chat.generatingVideo" : "chat.generatingPhoto")}
+                          <span className="media-generating-dots"><i>.</i><i>.</i><i>.</i></span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
 
             <div className="chat-input-bar">
