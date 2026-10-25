@@ -5,6 +5,7 @@ import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
+import type { Prisma } from "@prisma/client";
 import { IMAGE_MODELS, VIDEO_MODELS, VIDEO_MODE_DEFAULT_MODEL } from "./models";
 import { randomUUID } from "crypto";
 import { WalletService, generationReservationKey } from "../billing/wallet.service";
@@ -42,8 +43,8 @@ export type ChatMediaTarget = {
   caption: string;
   /** Канал, из которого пришёл запрос: web | telegram … */
   source: string;
-  /** Спецификация генерации — по ней медиа можно перегенерировать. */
-  spec?: Record<string, unknown>;
+  /** Спецификация генерации (JSON) — по ней медиа можно перегенерировать. */
+  spec?: Prisma.InputJsonObject;
 };
 
 @Injectable()

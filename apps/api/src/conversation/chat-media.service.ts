@@ -92,7 +92,7 @@ export class ChatMediaService {
       sessionId: chatId,
       caption: opts.caption,
       source: opts.source,
-      spec: spec as unknown as Record<string, unknown>,
+      spec: spec as unknown as Prisma.InputJsonObject,
     };
     if (spec.kind === "video") {
       await this.demo.checkVideoGeneration(actor.id, actor.subscription, 1);
