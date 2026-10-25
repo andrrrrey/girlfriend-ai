@@ -508,6 +508,8 @@ export const users = {
 // ─── Character Options ───────────────────────────────────────
 
 export interface CharacterOption {
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  synonyms?: string[];
   id: string;
   category: string;
   name: string;
@@ -681,6 +683,8 @@ export interface GenTestItem {
 // ─── Appearance Options ──────────────────────────────────────
 
 export interface AppearanceOption {
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  synonyms?: string[];
   id: string;
   categoryId: string;
   name: string;
@@ -716,6 +720,8 @@ export async function getAppearanceOptions(): Promise<AppearanceOptionsResponse>
 // ─── Pose Options ────────────────────────────────────────────
 
 export interface PoseOption {
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  synonyms?: string[];
   id: string;
   categoryId: string;
   name: string;
@@ -751,6 +757,8 @@ export async function getPoseOptions(): Promise<PoseOptionsResponse> {
 // ─── Scene Options ────────────────────────────────────────────
 
 export interface SceneOption {
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  synonyms?: string[];
   id: string;
   categoryId: string;
   name: string;
@@ -785,6 +793,8 @@ export async function getSceneOptions(): Promise<SceneOptionsResponse> {
 // ─── Camera Options ───────────────────────────────────────────
 
 export interface CameraOption {
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  synonyms?: string[];
   id: string;
   section: string;
   name: string;
@@ -944,6 +954,24 @@ export interface StoryImage {
  * Методы admin-панели.
  * Все запросы требуют роль "admin" (JWT + RolesGuard).
  */
+/** Прогресс автогенерации синонимов опций генерации. */
+export interface OptionSynonymsStatus {
+  state: "idle" | "running" | "done" | "failed";
+  total: number;
+  processed: number;
+  updated: number;
+  failedBatches: number;
+  overwrite: boolean;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+}
+
+/** Синонимы из поля формы «через запятую» → массив. */
+export function parseSynonymsInput(value: string): string[] {
+  return value.split(/[,;\n]/).map((v) => v.trim()).filter(Boolean);
+}
+
 export const admin = {
   /** Получает все AppSettings (GET /admin/settings). */
   async getSettings(): Promise<AppSetting[]> {
@@ -1346,14 +1374,14 @@ export const admin = {
     return apiFetch<CharacterOption[]>(`/admin/character-options${q}`);
   },
 
-  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean }): Promise<CharacterOption> {
+  async createCharacterOption(data: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean; synonyms?: string[] }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>("/admin/character-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean; synonyms?: string[] }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1392,14 +1420,14 @@ export const admin = {
     return apiFetch<AppearanceOption[]>(`/admin/appearance-options${q}`);
   },
 
-  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<AppearanceOption> {
+  async createAppearanceOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>("/admin/appearance-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<AppearanceOption> {
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1438,14 +1466,14 @@ export const admin = {
     return apiFetch<PoseOption[]>(`/admin/pose-options${q}`);
   },
 
-  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<PoseOption> {
+  async createPoseOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<PoseOption> {
     return apiFetch<PoseOption>("/admin/pose-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<PoseOption> {
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<PoseOption> {
     return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1484,14 +1512,14 @@ export const admin = {
     return apiFetch<SceneOption[]>(`/admin/scene-options${q}`);
   },
 
-  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<SceneOption> {
+  async createSceneOption(data: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<SceneOption> {
     return apiFetch<SceneOption>("/admin/scene-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<SceneOption> {
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<SceneOption> {
     return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1507,14 +1535,14 @@ export const admin = {
     return apiFetch<CameraOption[]>(`/admin/camera-options${q}`);
   },
 
-  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<CameraOption> {
+  async createCameraOption(data: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<CameraOption> {
     return apiFetch<CameraOption>("/admin/camera-options", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }): Promise<CameraOption> {
+  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<CameraOption> {
     return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1560,6 +1588,16 @@ export const admin = {
    * Скачивает CSV со всеми опциями генерации (название, промпт, имена картинок).
    * Возвращает Blob-файл, поэтому идём мимо apiFetch (тот парсит JSON).
    */
+
+  /** Запустить автогенерацию синонимов опций (POST /admin/option-synonyms/generate). */
+  async generateOptionSynonyms(overwrite = false): Promise<OptionSynonymsStatus> {
+    return apiFetch(`/admin/option-synonyms/generate`, { method: "POST", body: JSON.stringify({ overwrite }) });
+  },
+
+  /** Прогресс автогенерации синонимов (GET /admin/option-synonyms/status). */
+  async getOptionSynonymsStatus(): Promise<OptionSynonymsStatus> {
+    return apiFetch(`/admin/option-synonyms/status`);
+  },
   async exportGenerationOptions(): Promise<void> {
     const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
     const res = await fetch(`${API_BASE}/admin/generation-options/export`, {
@@ -2314,6 +2352,10 @@ export function streamMessage(
             try {
               const parsed = JSON.parse(line.slice(6));
               if (parsed.content) onDelta(parsed.content);
+              if (parsed.media) {
+                // Фото/видео по просьбе пользователя: чат подхватит прогресс генерации.
+                window.dispatchEvent(new CustomEvent(CHAT_MEDIA_EVENT, { detail: { chatId, ...parsed.media } }));
+              }
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
@@ -2559,6 +2601,10 @@ export function streamVoiceMessage(
               const parsed = JSON.parse(line.slice(6));
               if (parsed.transcription) onTranscription(parsed.transcription);
               if (parsed.content) onDelta(parsed.content);
+              if (parsed.media) {
+                // Фото/видео по просьбе пользователя: чат подхватит прогресс генерации.
+                window.dispatchEvent(new CustomEvent(CHAT_MEDIA_EVENT, { detail: { chatId, ...parsed.media } }));
+              }
               if (parsed.error) onError(parsed.error);
               if (parsed.done) onDone();
             } catch {
@@ -2695,6 +2741,107 @@ export async function getImageStyles() {
 /** Гендеры, разрешённые админом (ENABLED_GENDERS). Female присутствует всегда. */
 export async function getEnabledGenders() {
   return apiFetch<string[]>("/generation/genders");
+}
+
+/**
+ * Спецификация генерации — выбранные опции вместо готового промпта; промпт
+ * собирает сервер (apps/api/src/generation/prompt). Опции из БД — slug или
+ * название, значения фиксированных списков — их названия.
+ */
+export interface GenerationSpec {
+  preset?: "studio" | "chat";
+  model?: string;
+  aspectRatio?: string;
+  count?: number;
+  contentMode?: "nsfw" | "sfw";
+  characterId?: string;
+  character?: {
+    style?: string;
+    gender?: string;
+    age?: number | string;
+    humanRace?: string;
+    fantasyRace?: string;
+    eyeColor?: string;
+    eyeFeatures?: string[];
+    faceFeatures?: string[];
+    hairColor?: string;
+    hairLength?: string;
+    hairStyle?: string;
+    bodyType?: string;
+    breastSize?: string;
+    buttSize?: string;
+    height?: string;
+  };
+  appearance?: { outfits?: string[]; outfitDetails?: string[]; condition?: string[] };
+  pose?: { facialExpressions?: string[]; poses?: string[] };
+  scene?: {
+    locations?: string[];
+    timeOfDay?: string[];
+    weather?: string[];
+    particles?: string[];
+    environmentEffects?: string[];
+    props?: string;
+  };
+  camera?: { framing?: string[]; cameraAngle?: string[]; lens?: string[]; lighting?: string[] };
+  userText?: string;
+  negativeTerms?: string[];
+  video?: { mode?: "scratch" | "img2vid" | "continue"; initImageKey?: string; initVideoKey?: string };
+}
+
+/** Генерация изображений по спецификации (промпт собирает сервер). */
+export async function createImageJobFromSpec(spec: GenerationSpec) {
+  return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/image", {
+    method: "POST",
+    body: JSON.stringify({ spec }),
+  });
+}
+
+/** Генерация видео по спецификации (промпт собирает сервер). */
+export async function createVideoJobFromSpec(spec: GenerationSpec) {
+  return apiFetch<{ jobId: string; jobIds: string[]; status: string }>("/generation/video", {
+    method: "POST",
+    body: JSON.stringify({ spec }),
+  });
+}
+
+/**
+ * Фото персонажа в чате (POST /chats/:id/photo): промпт собирает сервер,
+ * медиасообщение сервер добавит в диалог сам по завершении генерации.
+ */
+export async function requestChatPhoto(
+  chatId: string,
+  pose: string,
+  contentMode?: "nsfw" | "sfw",
+): Promise<{ jobId: string; kind: "image" | "video" }> {
+  return apiFetch(`/chats/${chatId}/photo`, {
+    method: "POST",
+    body: JSON.stringify({ pose, contentMode }),
+  });
+}
+
+/** Подтверждение цены фото/видео, предложенного персонажем (POST /chats/:id/media/confirm). */
+export async function confirmChatMedia(
+  chatId: string,
+  token: string,
+): Promise<{ jobId: string; kind: "image" | "video" }> {
+  return apiFetch(`/chats/${chatId}/media/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+/** Событие окна: в SSE-ответе чата пришло событие медиа (фото/видео по просьбе). */
+export const CHAT_MEDIA_EVENT = "chat:media";
+
+/** Событие медиа из SSE-ответа чата. */
+export interface ChatMediaEventDetail {
+  chatId: string;
+  status: "pending" | "confirm" | "rejected";
+  kind: "image" | "video";
+  jobId?: string;
+  token?: string;
+  price?: number;
+  error?: Record<string, unknown>;
 }
 
 export async function createVideoJob(data: {

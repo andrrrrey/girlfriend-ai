@@ -19,6 +19,11 @@ export interface ContextOptions {
   historyLimit?: number;
   contentMode?: string;
   userProfile?: string;
+  /**
+   * Служебная пометка к последнему сообщению пользователя — только для запроса к
+   * модели, в истории не сохраняется (например: «ты отправляешь фото»).
+   */
+  lastUserNote?: string;
 }
 
 @Injectable()
@@ -44,6 +49,13 @@ export class ContextBuilder {
         role: m.role,
         content: m.content,
       }));
+
+    if (opts.lastUserNote) {
+      const lastUser = messages.map((m) => m.role).lastIndexOf("user");
+      if (lastUser >= 0) {
+        messages[lastUser] = { ...messages[lastUser], content: `${messages[lastUser].content}\n\n${opts.lastUserNote}` };
+      }
+    }
 
     return {
       messages,

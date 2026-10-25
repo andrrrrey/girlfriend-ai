@@ -19,6 +19,8 @@ import { GenerationService } from "./generation.service";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { CreateImageJobDto } from "./dto/create-image-job.dto";
 import { CreateVideoJobDto } from "./dto/create-video-job.dto";
+import { GenerationSpecService, ImageJobInput, VideoJobInput } from "./prompt/generation-spec.service";
+import { parseGenerationSpec } from "./prompt/generation-spec";
 
 @ApiTags("generation")
 @Controller("generation")
@@ -27,38 +29,49 @@ export class GenerationController {
     private readonly generationService: GenerationService,
     private readonly demoService: DemoService,
     private readonly analytics: AnalyticsService,
+    private readonly specService: GenerationSpecService,
   ) {}
+
+  /** Спецификация из тела запроса; несовершеннолетним режим контента — всегда SFW. */
+  private parseSpec(req: any, raw: Record<string, unknown>, kind: "image" | "video") {
+    return parseGenerationSpec({ ...raw, kind, ...(req.user.isAdult === false ? { contentMode: "sfw" } : {}) });
+  }
 
   @Post("image")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async createImageJob(@Req() req: any, @Body() dto: CreateImageJobDto) {
-    await this.demoService.checkImageGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
-    const contentMode = req.user.isAdult === false ? "sfw" : dto.contentMode;
-    const job = await this.generationService.createImageJob(req.user.id, {
-      prompt: dto.prompt,
-      negativePrompt: dto.negativePrompt,
-      model: dto.model,
-      aspectRatio: dto.aspectRatio,
-      provider: dto.provider,
-      generationStyle: dto.generationStyle,
-      count: dto.count,
-      initImageUrl: dto.initImageUrl,
-      characterId: dto.characterId,
-      seed: dto.seed,
-      // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
-      contentMode,
-      denoise: dto.denoise,
-      engine: dto.engine,
-      hiresFix: dto.hiresFix,
-    });
+    // Новый формат: спецификация → промпт собирает сервер. Прежний — готовый prompt.
+    const data: ImageJobInput = dto.spec
+      ? await this.specService.toImageJob(this.parseSpec(req, dto.spec, "image"), req.user.id)
+      : {
+          prompt: dto.prompt,
+          negativePrompt: dto.negativePrompt,
+          model: dto.model,
+          aspectRatio: dto.aspectRatio,
+          provider: dto.provider,
+          generationStyle: dto.generationStyle,
+          count: dto.count,
+          initImageUrl: dto.initImageUrl,
+          characterId: dto.characterId,
+          seed: dto.seed,
+          // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
+          contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
+          denoise: dto.denoise,
+          engine: dto.engine,
+          hiresFix: dto.hiresFix,
+        };
+
+    await this.demoService.checkImageGeneration(req.user.id, req.user.subscription, data.count ?? 1);
+    const job = await this.generationService.createImageJob(req.user.id, data);
     this.analytics.capture(req.user.id, "image_generation_started", {
-      count: dto.count ?? 1,
-      model: dto.model,
-      provider: dto.provider,
-      content_mode: contentMode,
-      character_id: dto.characterId,
+      count: data.count ?? 1,
+      model: data.model,
+      provider: data.provider,
+      content_mode: data.contentMode,
+      character_id: data.characterId,
       job_id: job.jobId,
+      from_spec: Boolean(dto.spec),
     });
     return job;
   }
@@ -69,27 +82,31 @@ export class GenerationController {
   async createVideoJob(@Req() req: any, @Body() dto: CreateVideoJobDto) {
     // Режим "continue" (видео-из-видео) временно отключён: формат запроса
     // video-continuation у провайдера не подтверждён, задачи падают и жгут ресурсы.
-    if (dto.mode === "continue") {
+    const mode = dto.spec ? (dto.spec.video as { mode?: string } | undefined)?.mode : dto.mode;
+    if (mode === "continue") {
       throw new HttpException(
         "Continue Existing Video is not available yet",
         HttpStatus.NOT_IMPLEMENTED,
       );
     }
-    await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription, dto.count ?? 1);
-    return this.generationService.createVideoJob(req.user.id, {
-      prompt: dto.prompt,
-      negativePrompt: dto.negativePrompt,
-      model: dto.model,
-      aspectRatio: dto.aspectRatio,
-      provider: dto.provider,
-      mode: dto.mode,
-      initImageKey: dto.initImageKey,
-      initVideoKey: dto.initVideoKey,
-      count: dto.count,
-      seed: dto.seed,
-      // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
-      contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
-    });
+    const data: VideoJobInput = dto.spec
+      ? await this.specService.toVideoJob(this.parseSpec(req, dto.spec, "video"))
+      : {
+          prompt: dto.prompt,
+          negativePrompt: dto.negativePrompt,
+          model: dto.model,
+          aspectRatio: dto.aspectRatio,
+          provider: dto.provider,
+          mode: dto.mode,
+          initImageKey: dto.initImageKey,
+          initVideoKey: dto.initVideoKey,
+          count: dto.count,
+          seed: dto.seed,
+          // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
+          contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
+        };
+    await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription, data.count ?? 1);
+    return this.generationService.createVideoJob(req.user.id, data);
   }
 
   @SkipThrottle()

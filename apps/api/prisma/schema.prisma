@@ -455,6 +455,11 @@ model CharacterOption {
   id              String   @id @default(cuid())
   category        String // STYLE | HUMAN_RACE | FANTASY_RACE | HAIR_STYLE | BODY_TYPE | BREAST_SIZE | BUTT_SIZE
   name            String
+  // Канонический идентификатор опции (не меняется при переименовании) — его
+  // используют спецификация генерации, роутер намерений и Telegram.
+  slug            String?
+  // Синонимы (ru/en) для распознавания опции в тексте пользователя
+  synonyms        String[] @default([])
   prompt          String?
   imageUrl        String?  @map("image_url")
   imageThumbKey   String?  @map("image_thumb_key")
@@ -466,6 +471,7 @@ model CharacterOption {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@index([category])
+  @@index([slug])
   @@map("character_options")
 }
 
@@ -488,6 +494,11 @@ model AppearanceOption {
   id            String   @id @default(cuid())
   categoryId    String   @map("category_id")
   name          String
+  // Канонический идентификатор опции (не меняется при переименовании) — его
+  // используют спецификация генерации, роутер намерений и Telegram.
+  slug            String?
+  // Синонимы (ru/en) для распознавания опции в тексте пользователя
+  synonyms        String[] @default([])
   prompt        String?
   imageUrl      String?  @map("image_url")
   imageThumbKey String?  @map("image_thumb_key")
@@ -501,6 +512,7 @@ model AppearanceOption {
   category AppearanceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
+  @@index([slug])
   @@map("appearance_options")
 }
 
@@ -523,6 +535,11 @@ model PoseOption {
   id            String   @id @default(cuid())
   categoryId    String   @map("category_id")
   name          String
+  // Канонический идентификатор опции (не меняется при переименовании) — его
+  // используют спецификация генерации, роутер намерений и Telegram.
+  slug            String?
+  // Синонимы (ru/en) для распознавания опции в тексте пользователя
+  synonyms        String[] @default([])
   prompt        String?
   imageUrl      String?  @map("image_url")
   imageThumbKey String?  @map("image_thumb_key")
@@ -536,6 +553,7 @@ model PoseOption {
   category PoseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
+  @@index([slug])
   @@map("pose_options")
 }
 
@@ -558,6 +576,11 @@ model SceneOption {
   id            String   @id @default(cuid())
   categoryId    String   @map("category_id")
   name          String
+  // Канонический идентификатор опции (не меняется при переименовании) — его
+  // используют спецификация генерации, роутер намерений и Telegram.
+  slug            String?
+  // Синонимы (ru/en) для распознавания опции в тексте пользователя
+  synonyms        String[] @default([])
   prompt        String?
   imageUrl      String?  @map("image_url")
   imageThumbKey String?  @map("image_thumb_key")
@@ -571,6 +594,7 @@ model SceneOption {
   category SceneCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
+  @@index([slug])
   @@map("scene_options")
 }
 
@@ -580,6 +604,11 @@ model CameraOption {
   id            String   @id @default(cuid())
   section       String // FRAMING | CAMERA_ANGLE
   name          String
+  // Канонический идентификатор опции (не меняется при переименовании) — его
+  // используют спецификация генерации, роутер намерений и Telegram.
+  slug            String?
+  // Синонимы (ru/en) для распознавания опции в тексте пользователя
+  synonyms        String[] @default([])
   prompt        String?
   imageUrl      String?  @map("image_url")
   imageThumbKey String?  @map("image_thumb_key")
@@ -590,6 +619,7 @@ model CameraOption {
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([section])
+  @@index([slug])
   @@map("camera_options")
 }
 

@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MinLength, IsArray, ArrayMaxSize, MaxLength } from "class-validator";
 
 export class CreateCameraOptionDto {
   @IsString()
@@ -33,4 +33,12 @@ export class CreateCameraOptionDto {
   @IsOptional()
   @IsBoolean()
   nsfw?: boolean;
+
+  /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  synonyms?: string[];
 }

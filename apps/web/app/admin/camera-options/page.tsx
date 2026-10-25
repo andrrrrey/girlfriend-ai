@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, streamUrlForKey, type CameraOption } from "../../../lib/api";
+import { admin, streamUrlForKey, type CameraOption, parseSynonymsInput } from "../../../lib/api";
 import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
@@ -109,6 +109,8 @@ const s: Record<string, React.CSSProperties> = {
 interface FormState {
   name: string;
   prompt: string;
+  /** Синонимы через запятую */
+  synonyms: string;
   imageThumbKey: string;
   imageFullKey: string;
   previewUrl: string;
@@ -116,7 +118,7 @@ interface FormState {
   nsfw: boolean;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", order: "0", nsfw: true };
+const emptyForm: FormState = { name: "", prompt: "", synonyms: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", order: "0", nsfw: true };
 
 export default function AdminCameraOptionsPage() {
   const { user, loading } = useAuth();
@@ -159,6 +161,7 @@ export default function AdminCameraOptionsPage() {
     setForm({
       name: opt.name,
       prompt: opt.prompt ?? "",
+      synonyms: (opt.synonyms ?? []).join(", "),
       imageThumbKey: opt.imageThumbKey ?? "",
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
@@ -178,6 +181,7 @@ export default function AdminCameraOptionsPage() {
         section: activeSection,
         name: form.name.trim(),
         prompt: form.prompt.trim() || undefined,
+        synonyms: parseSynonymsInput(form.synonyms),
         imageThumbKey: form.imageThumbKey || undefined,
         imageFullKey: form.imageFullKey || undefined,
         order: parseInt(form.order) || 0,
@@ -266,6 +270,12 @@ export default function AdminCameraOptionsPage() {
               placeholder="Prompt (e.g. close-up shot framing...)"
               value={form.prompt}
               onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+            />
+            <input
+              style={s.input}
+              placeholder="Синонимы через запятую (купальник, в бикини, swimsuit…) — как пользователь может назвать опцию в чате"
+              value={form.synonyms}
+              onChange={(e) => setForm({ ...form, synonyms: e.target.value })}
             />
             <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
               <input type="checkbox" checked={form.nsfw} onChange={(e) => setForm({ ...form, nsfw: e.target.checked })} />

@@ -85,6 +85,7 @@ export const en = {
   "chat.subscribe": "Subscribe",
   "chat.voiceMessage": "Voice message",
   "chat.regenerate": "Regenerate",
+  "chat.mediaConfirm": "Send for {price} credits",
   "chat.copy": "Copy",
   "chat.play": "Play",
   "chat.pause": "Pause",

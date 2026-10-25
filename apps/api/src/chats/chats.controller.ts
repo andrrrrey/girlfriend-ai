@@ -31,6 +31,10 @@
  *    POST   /chats/:id/messages/:msgId/copy     — Записать событие копирования сообщения (аудит)
  *    POST   /chats/:id/messages/:msgId/regenerate — Перегенерировать AI-ответ (SSE stream)
  *
+ *  Media:
+ *    POST   /chats/:id/photo                    — Фото персонажа (поза/детали) → генерация в диалоге
+ *    POST   /chats/:id/media/confirm            — Подтвердить цену медиа, предложенного в ответ на просьбу
+ *
  * ─── SSE-формат стриминга ────────────────────────────────────────────────────
  *
  *  Все SSE-эндпоинты возвращают поток в формате text/event-stream:
@@ -40,6 +44,10 @@
  *
  *  Эндпоинт /voice дополнительно отправляет первым событием:
  *    data: {"transcription": "..."}\n\n  — распознанный текст голосового сообщения
+ *
+ *  Если пользователь просит фото/видео (роутер намерений), до ответа приходит:
+ *    data: {"media": {"status": "pending"|"confirm"|"rejected", "kind": "image"|"video", ...}}\n\n
+ *  Готовое медиасообщение сервер добавляет в диалог сам по завершении генерации.
  *
  * ─── Единое ядро ─────────────────────────────────────────────────────────────
  *
@@ -88,6 +96,9 @@ import { EditMessageDto } from "./dto/edit-message.dto";
 import { GreetingDto } from "./dto/greeting.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
+import { ChatPhotoDto, ConfirmMediaDto } from "./dto/chat-media.dto";
+import { ChatMediaService } from "../conversation/chat-media.service";
+import { parseGenerationSpec } from "../generation/prompt/generation-spec";
 import { ConversationEngine } from "../conversation/conversation.engine";
 import { AiServiceError } from "../conversation/ai-client";
 import { TtsAdapter, TtsError, TtsResult } from "../conversation/tts.adapter";
@@ -161,6 +172,10 @@ async function pipeSse(
       }
       if (!started) start();
       if (event.type === "llm") write(`data: ${JSON.stringify(event.data)}\n\n`);
+      if (event.type === "media") {
+        const { type: _type, ...media } = event;
+        write(`data: ${JSON.stringify({ media })}\n\n`);
+      }
     }
     if (!started) start();
     write("data: [DONE]\n\n");
@@ -211,6 +226,7 @@ export class ChatsController {
     private readonly engine: ConversationEngine,
     private readonly tts: TtsAdapter,
     private readonly wallet: WalletService,
+    private readonly chatMedia: ChatMediaService,
   ) {}
 
   /**
@@ -857,6 +873,36 @@ export class ChatsController {
       res,
       this.engine.regenerate({ chatId, actor: toActor(req.user), messageId: msgId, source: "web", signal: abort.signal }),
     );
+  }
+
+  /**
+   * Фото персонажа в чате (пикер поз): спецификация собирается на сервере,
+   * медиасообщение сервер добавит в диалог сам по завершении генерации.
+   *
+   * @returns { jobId, kind } — для отображения прогресса
+   * @throws 402 INSUFFICIENT_CREDITS / 403 FREE_LIMIT_REACHED
+   */
+  @ApiOperation({ summary: "Generate a character photo in the chat (server-side prompt)" })
+  @Post(":id/photo")
+  async requestPhoto(@Req() req: any, @Param("id") chatId: string, @Body() dto: ChatPhotoDto) {
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+    const spec = parseGenerationSpec({
+      ...(dto.spec ?? {}),
+      kind: "image",
+      preset: "chat",
+      characterId: chat.characterId,
+      contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode ?? req.user.contentMode,
+      ...(dto.pose ? { pose: { ...((dto.spec?.pose as object) ?? {}), poses: [dto.pose] } } : {}),
+    });
+    return this.chatMedia.start(chat.id, toActor(req.user), spec, { caption: dto.pose || "photo", source: "web" });
+  }
+
+  /** Подтверждение цены медиа, предложенного в ответ на просьбу пользователя. */
+  @ApiOperation({ summary: "Confirm the price of a proposed chat photo/video" })
+  @Post(":id/media/confirm")
+  async confirmMedia(@Req() req: any, @Param("id") chatId: string, @Body() dto: ConfirmMediaDto) {
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+    return this.chatMedia.confirm(chat.id, toActor(req.user), dto.token);
   }
 
   @ApiOperation({ summary: "Save a generated image as a chat message" })

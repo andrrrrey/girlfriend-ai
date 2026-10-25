@@ -5,6 +5,7 @@ import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
+import { IMAGE_MODELS, VIDEO_MODELS, VIDEO_MODE_DEFAULT_MODEL } from "./models";
 import { randomUUID } from "crypto";
 import { WalletService, generationReservationKey } from "../billing/wallet.service";
 import type { BillableOperation } from "../billing/pricing";
@@ -20,25 +21,27 @@ const CYRILLIC_RE = /[а-яА-ЯёЁ]/;
 /** Допустимое количество элементов за одну генерацию (создаётся N заданий). */
 const ALLOWED_GEN_COUNTS = [1, 4, 8, 16];
 
-const IMAGE_MODELS = [
-  { id: "realistic-vision-v51", name: "Realistic Vision", description: "Photorealistic images" },
-  { id: "sdxl", name: "SDXL", description: "Stable Diffusion XL" },
-  { id: "juggernaut-xl", name: "Juggernaut XL", description: "Photorealistic, detailed" },
-  { id: "flux", name: "FLUX", description: "Next-gen quality" },
-  { id: "alibaba/wan-2.6/text-to-image", name: "Wan 2.6 (NSFW)", description: "Uncensored image generation", provider: "atlascloud" },
-  { id: "civitai", name: "Civitai RED", description: "Civitai Orchestration API", provider: "civitai" },
-];
+/** Параметры постановки задания генерации. */
+export interface GenerationJobOptions {
+  /** false — служебная генерация админки, без списания кредитов. */
+  billable?: boolean;
+  /**
+   * Генерация для чата: по завершении сервер сам создаёт медиасообщение
+   * в этом диалоге (см. ChatMediaService), клиенту ничего сохранять не нужно.
+   */
+  chat?: ChatMediaTarget;
+}
 
-const VIDEO_MODELS = [
-  { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
-  { id: "atlascloud/wan-2.6-spicy/image-to-video", name: "Wan 2.6 Spicy (I2V)", description: "Image-to-video, uncensored", provider: "atlascloud" },
-  { id: "alibaba/wan-2.7/image-to-video", name: "Wan 2.7 (Continue)", description: "Continue / extend existing video", provider: "atlascloud" },
-];
-
-/** Дефолтные модели видео по режиму генерации. */
-const VIDEO_MODE_DEFAULT_MODEL: Record<string, string> = {
-  img2vid: "atlascloud/wan-2.6-spicy/image-to-video",
-  continue: "alibaba/wan-2.7/image-to-video",
+/**
+ * Куда положить результат генерации в чате. Тип-алиас (не interface) — чтобы
+ * значение можно было записать в JSON-поле AiJob.input.
+ */
+export type ChatMediaTarget = {
+  sessionId: string;
+  /** Подпись медиасообщения (например, название позы). */
+  caption: string;
+  /** Канал, из которого пришёл запрос: web | telegram … */
+  source: string;
 };
 
 @Injectable()
@@ -97,6 +100,11 @@ export class GenerationService {
       imageThumbUrl: this.keyToStreamUrl(opt.imageThumbKey),
       imageFullUrl: this.keyToStreamUrl(opt.imageFullKey),
     };
+  }
+
+  /** URL результата генерации в том виде, в каком его получает клиент (через media-прокси). */
+  async toClientMediaUrl(url: string | undefined | null): Promise<string | null> {
+    return this.toSignedUrl(url);
   }
 
   /** Заменяет S3 URL на путь через media-прокси API. Внешние URL проксируются через /media/proxy. */
@@ -174,7 +182,7 @@ export class GenerationService {
   async createImageJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string; seed?: number; contentMode?: "nsfw" | "sfw"; denoise?: number; engine?: "sdxl" | "kontext"; hiresFix?: boolean },
-    opts: { billable?: boolean } = {},
+    opts: GenerationJobOptions = {},
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -238,6 +246,7 @@ export class GenerationService {
               denoise: data.denoise,
               hiresFix: data.hiresFix || undefined,
               reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
+              chat: opts.chat,
             },
           },
         });
@@ -446,7 +455,7 @@ export class GenerationService {
       contentMode?: "nsfw" | "sfw";
       characterId?: string;
     },
-    opts: { billable?: boolean } = {},
+    opts: GenerationJobOptions = {},
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -492,6 +501,7 @@ export class GenerationService {
               seed: data.seed,
               contentMode,
               reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
+              chat: opts.chat,
             },
           },
         });

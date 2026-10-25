@@ -7,12 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
-import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
+import { localizeOption } from "../../lib/optionLabel";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
 import {
-  createImageJob,
-  createVideoJob,
+  createImageJobFromSpec,
+  createVideoJobFromSpec,
+  type GenerationSpec,
   getImageStyles,
   getVideoStyles,
   getGenerationHistory,
@@ -21,7 +22,6 @@ import {
   resizedMediaUrl,
   characters as charactersApi,
 } from "../../lib/api";
-import { buildCharacterImagePrompt } from "../../lib/prompt";
 import {
   getCachedCharacterOptions,
   getCachedAppearanceOptions,
@@ -1151,238 +1151,52 @@ function GenerationPageInner() {
     return false;
   }, [selectedCharacter, characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
 
-  const buildCompositePrompt = useCallback((userPrompt: string, model: string, isVideo: boolean): string => {
-    const findPrompt = (name: string, options: Array<{ name: string; prompt?: string | null }>) =>
-      options.find((o) => o.name === name)?.prompt ?? null;
-
-    const isNsfwModel = model.toLowerCase().includes("nsfw") ||
-      model.includes("wan-2.6") || model.includes("van-2.6");
-
-    const LENS_PROMPTS: Record<string, string> = {
-      "Ultra-wide 14mm": "14mm ultra-wide lens, heavy barrel distortion",
-      "Wide 24mm": "24mm wide angle lens",
-      "Standard 35mm": "35mm lens, street photography natural perspective",
-      "Normal 50mm": "50mm lens, natural human eye perspective",
-      "Portrait 85mm": "85mm portrait lens, soft background bokeh, flattering compression",
-      "Telephoto 135mm": "135mm telephoto lens, compressed perspective, creamy bokeh",
-      "Fisheye": "fisheye lens, 180-degree spherical distortion",
-    };
-
-    const LIGHTING_PROMPTS: Record<string, string> = {
-      "Natural Light": "natural lighting",
-      "Golden Hour": "golden hour warm light",
-      "Soft Diffused": "soft diffused lighting, minimal shadows",
-      "Hard Directional": "hard directional light, sharp shadows",
-      "Studio Softbox": "studio softbox lighting, even professional light",
-      "Backlight": "backlight, silhouette, halo effect",
-      "High Key": "high-key lighting, bright airy minimal shadows",
-      "Neon": "neon lighting, pink blue green neon colors",
-      "Candlelight": "candlelight, warm flickering glow",
-      "Moonlight": "moonlight, cold silver light from moon",
-      "Spotlight": "spotlight, single bright directed beam",
-      "Window Light": "window light, soft directional natural",
-      "Ultraviolet": "UV black light, neon glowing colors fluorescent",
-    };
-
-    const TIME_PROMPTS: Record<string, string> = {
-      "Sunrise": "dawn lighting, soft pink orange and lavender gradient on horizon, sun just beginning to rise",
-      "Morning": "morning light, warm soft golden-white rays from a low angle, clean fresh atmosphere",
-      "Daylight": "moderate afternoon daylight, well-balanced natural illumination",
-      "Strong Sun": "high noon midday lighting, sun directly overhead, bright intense illumination, harsh shadows",
-      "Golden Hour": "evening golden hour, rich deep warm golden-orange light streaming horizontally",
-      "Sunset": "dramatic sunset sky, vivid bands of intense orange red pink and purple coloring clouds",
-      "Night": "full nighttime darkness, scene illuminated by artificial light sources, deep shadows",
-      "Moonlight": "moonlit night, bright full moon casting silver-blue cool-toned moonlight, ethereal luminosity",
-    };
-
-    const WEATHER_PROMPTS: Record<string, string> = {
-      "Clear sky": "perfectly clear cloudless sky, crisp defined shadows",
-      "Overcast": "completely overcast sky, soft even diffused light",
-      "Light rain": "light gentle rain, fine small raindrops, wet sheen on surfaces",
-      "Heavy rain": "heavy torrential downpour, thick sheets of rain, reduced visibility",
-      "Thunderstorm": "dramatic thunderstorm, dark storm clouds, lightning bolts, heavy rain",
-      "Light snow": "gentle light snowfall, delicate white snowflakes drifting slowly, peaceful winter atmosphere",
-      "Blizzard": "intense raging blizzard, dense snow driven by powerful winds, severely reduced visibility",
-      "Fog": "thick atmospheric fog reducing visibility, objects fading into white-grey mist",
-      "Strong wind": "strong powerful wind, hair streaming and whipping dramatically, clothing billowing",
-      "Rainbow": "vivid colorful rainbow arcing across sky, full spectrum of colors",
-      "Aurora / Northern lights": "spectacular aurora borealis dancing across dark sky in curtains of vivid green with purple and pink edges",
-      "Heat": "scorching intense heat, visible heat haze distortion shimmering above surfaces",
-      "Frost": "bitter cold frost, intricate ice crystal patterns, white frost coating surfaces, visible breath",
-    };
-
-    const PARTICLE_PROMPTS: Record<string, string> = {
-      "Sakura petals": "delicate pink and white cherry blossom petals floating and drifting through air",
-      "Falling leaves": "colorful autumn leaves gently falling and tumbling through the air",
-      "Fireflies": "tiny warm glowing fireflies floating in the air, bioluminescent dots",
-      "Flying sparks": "glowing orange embers and sparks floating upward in the air",
-      "Magic sparkles": "magical glowing sparkle particles floating in the air, shimmering light motes",
-      "Dust in light": "visible dust particles floating in beams of light, atmospheric haze",
-      "Soap bubbles": "iridescent soap bubbles floating weightlessly in the air, rainbow reflections",
-      "Ash": "grey ash particles drifting slowly through the air",
-      "Confetti": "colorful confetti pieces falling and fluttering through the air",
-      "Falling feathers": "soft white feathers gently drifting downward through the air",
-    };
-
-    const findCharPrompt = (name: string, category: string) =>
-      findPrompt(name, characterOptions.filter((o) => o.category === category));
-
-    // --- 1. Quality / Style prefix ---
-    const qualityParts: string[] = ["masterpiece", "best quality", "highres"];
-    if (isNsfwModel) {
-      qualityParts.push("nsfw", "explicit");
-    }
-    if (characterSelections.style) {
-      const p = findCharPrompt(characterSelections.style, "STYLE");
-      if (p) qualityParts.push(p);
-    }
-
-    // --- 2. Subject: gender + age + ethnicity ---
-    const subjectParts: string[] = [];
-    if (characterSelections.gender) {
-      const genderMap: Record<string, string> = {
-        Female: "woman", Male: "man", Femboy: "femboy, feminine male", "Non-binary": "androgynous person",
-      };
-      subjectParts.push(genderMap[characterSelections.gender] || toEnglishTag(characterSelections.gender));
-    }
-    if (characterSelections.age) {
-      subjectParts.push(`${characterSelections.age}-year-old`);
-    }
-    if (characterSelections.humanRace) {
-      const p = findCharPrompt(characterSelections.humanRace, "HUMAN_RACE");
-      if (p) subjectParts.push(p);
-    }
-    if (characterSelections.fantasyRace) {
-      const p = findCharPrompt(characterSelections.fantasyRace, "FANTASY_RACE");
-      if (p) subjectParts.push(p);
-    }
-
-    // --- 3. Face: eye color + eye features + face features ---
-    const faceParts: string[] = [];
-    if (characterSelections.eyeColor) {
-      faceParts.push(`${toEnglishTag(characterSelections.eyeColor)} eyes`);
-    }
-    for (const f of characterSelections.eyeFeatures) {
-      if (f !== "Normal") faceParts.push(toEnglishTag(f));
-    }
-    for (const f of characterSelections.faceFeatures) {
-      if (f !== "None") faceParts.push(toEnglishTag(f));
-    }
-
-    // --- 4. Hair: style + color + length ---
-    const hairParts: string[] = [];
-    if (characterSelections.hairColor) {
-      hairParts.push(`${toEnglishTag(characterSelections.hairColor)} hair`);
-    }
-    if (characterSelections.hairLength) {
-      hairParts.push(`${toEnglishTag(characterSelections.hairLength)} hair`);
-    }
-    if (characterSelections.hairStyle) {
-      const p = findCharPrompt(characterSelections.hairStyle, "HAIR_STYLE");
-      if (p) hairParts.push(p);
-    }
-
-    // --- 5. Body: body type + breast + butt + height ---
-    const bodyParts: string[] = [];
-    if (characterSelections.bodyType) {
-      const p = findCharPrompt(characterSelections.bodyType, "BODY_TYPE");
-      if (p) bodyParts.push(p);
-    }
-    if (characterSelections.breastSize) {
-      const p = findCharPrompt(characterSelections.breastSize, "BREAST_SIZE");
-      bodyParts.push(p || `${toEnglishTag(characterSelections.breastSize)} breasts`);
-    }
-    if (characterSelections.buttSize) {
-      const p = findCharPrompt(characterSelections.buttSize, "BUTT_SIZE");
-      bodyParts.push(p || `${toEnglishTag(characterSelections.buttSize)} butt`);
-    }
-    if (characterSelections.height) {
-      const heightMap: Record<string, string> = {
-        Short: "short height", "Below Average": "below average height", Average: "average height",
-        Tall: "tall height", "Very Tall": "very tall height",
-      };
-      bodyParts.push(heightMap[characterSelections.height] || toEnglishTag(characterSelections.height));
-    }
-
-    // --- 6. Expression ---
-    const expressionParts: string[] = [];
-    const allExpressionOpts = poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options);
-    for (const name of poseSelections.facialExpressions) {
-      const p = findPrompt(name, allExpressionOpts);
-      if (p) expressionParts.push(p);
-    }
-
-    // --- 7. Clothing (outfits + outfit details + condition) ---
-    const clothingParts: string[] = [];
-    const allAppearanceOpts = [
-      ...appearanceOptions.OUTFITS.flatMap((c) => c.options),
-      ...appearanceOptions.OUTFIT_DETAILS.flatMap((c) => c.options),
-    ];
-    for (const name of [...appearanceSelections.outfits, ...appearanceSelections.outfitDetails]) {
-      const p = findPrompt(name, allAppearanceOpts);
-      if (p) clothingParts.push(p);
-    }
-    for (const c of appearanceSelections.condition) {
-      clothingParts.push(toEnglishTag(c));
-    }
-
-    // --- 8. Pose ---
-    const poseParts: string[] = [];
-    const allPoseOpts = poseOptions.POSE.flatMap((c) => c.options);
-    for (const name of poseSelections.poses) {
-      const p = findPrompt(name, allPoseOpts);
-      if (p) poseParts.push(p);
-    }
-
-    // --- 9. Scene: location + time of day + weather + particles + effects + props ---
-    const sceneParts: string[] = [];
-    const allSceneOpts = sceneOptions.LOCATION.flatMap((c) => c.options);
-    for (const name of sceneSelections.locations) {
-      const p = findPrompt(name, allSceneOpts);
-      if (p) sceneParts.push(p);
-    }
-    for (const t of sceneSelections.timeOfDay) sceneParts.push(TIME_PROMPTS[t] || toEnglishTag(t));
-    for (const w of sceneSelections.weather) sceneParts.push(WEATHER_PROMPTS[w] || toEnglishTag(w));
-    for (const p of sceneSelections.particles) sceneParts.push(PARTICLE_PROMPTS[p] || toEnglishTag(p));
-    for (const e of sceneSelections.environmentEffects) sceneParts.push(toEnglishTag(e));
-    if (sceneSelections.props?.trim()) sceneParts.push(sceneSelections.props.trim());
-
-    // --- 10. Camera: framing + angle + lens + lighting ---
-    const cameraParts: string[] = [];
-    for (const name of cameraSelections.framing) {
-      const p = findPrompt(name, cameraOptions.FRAMING);
-      if (p) cameraParts.push(p);
-    }
-    for (const name of cameraSelections.cameraAngle) {
-      const p = findPrompt(name, cameraOptions.CAMERA_ANGLE);
-      if (p) cameraParts.push(p);
-    }
-    for (const l of cameraSelections.lens) cameraParts.push(LENS_PROMPTS[l] || toEnglishTag(l));
-    for (const l of cameraSelections.lighting) cameraParts.push(LIGHTING_PROMPTS[l] || toEnglishTag(l));
-
-    // --- Assemble in structured order ---
-    const sections = [
-      qualityParts.join(", "),
-      subjectParts.join(", "),
-      faceParts.join(", "),
-      hairParts.join(", "),
-      bodyParts.join(", "),
-      expressionParts.join(", "),
-      clothingParts.join(", "),
-      poseParts.join(", "),
-      sceneParts.join(", "),
-      cameraParts.join(", "),
-      userPrompt.trim(),
-    ].filter(Boolean);
-
-    return sections.join(", ");
-  }, [
-    characterSelections, characterOptions,
-    appearanceSelections, appearanceOptions,
-    poseSelections, poseOptions,
-    sceneSelections, sceneOptions,
-    cameraSelections, cameraOptions,
-  ]);
+  /**
+   * Спецификация генерации из выбранных опций: промпт собирает сервер
+   * (apps/api/src/generation/prompt), одинаково для сайта, Telegram и чата.
+   * Опции передаются названиями — сервер находит их в каталоге (как раньше фронт).
+   */
+  const buildSpec = useCallback((userPrompt: string, model: string): GenerationSpec => ({
+    model,
+    character: {
+      style: characterSelections.style,
+      gender: characterSelections.gender,
+      age: characterSelections.age,
+      humanRace: characterSelections.humanRace,
+      fantasyRace: characterSelections.fantasyRace,
+      eyeColor: characterSelections.eyeColor,
+      eyeFeatures: characterSelections.eyeFeatures,
+      faceFeatures: characterSelections.faceFeatures,
+      hairColor: characterSelections.hairColor,
+      hairLength: characterSelections.hairLength,
+      hairStyle: characterSelections.hairStyle,
+      bodyType: characterSelections.bodyType,
+      breastSize: characterSelections.breastSize,
+      buttSize: characterSelections.buttSize,
+      height: characterSelections.height,
+    },
+    appearance: {
+      outfits: appearanceSelections.outfits,
+      outfitDetails: appearanceSelections.outfitDetails,
+      condition: appearanceSelections.condition,
+    },
+    pose: { facialExpressions: poseSelections.facialExpressions, poses: poseSelections.poses },
+    scene: {
+      locations: sceneSelections.locations,
+      timeOfDay: sceneSelections.timeOfDay,
+      weather: sceneSelections.weather,
+      particles: sceneSelections.particles,
+      environmentEffects: sceneSelections.environmentEffects,
+      props: sceneSelections.props,
+    },
+    camera: {
+      framing: cameraSelections.framing,
+      cameraAngle: cameraSelections.cameraAngle,
+      lens: cameraSelections.lens,
+      lighting: cameraSelections.lighting,
+    },
+    userText: userPrompt,
+  }), [characterSelections, appearanceSelections, poseSelections, sceneSelections, cameraSelections]);
 
   const handleRandomize = useCallback(() => {
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -1455,7 +1269,7 @@ function GenerationPageInner() {
 
     const isVideo = activeTab === "video";
     const model = isVideo ? selectedVideoModel : selectedModel;
-    const compositePrompt = buildCompositePrompt(prompt.trim(), model, isVideo);
+    const spec = buildSpec(prompt.trim(), model);
 
     // Режимы из медиа требуют исходного изображения/видео.
     const mode = isVideo ? videoSubTab : "scratch";
@@ -1469,67 +1283,23 @@ function GenerationPageInner() {
       // Обязательный базовый negative_prompt (артефакты) добавляется глобально на
       // сервере (apps/ai, настройка NEGATIVE_PROMPT). Здесь отправляем только
       // выбранные пользователем термины — сервер их смерджит с базовым.
-      const negativePrompt = promptDetailsSelections.negativePromptTerms.length > 0
-        ? promptDetailsSelections.negativePromptTerms.join(", ")
-        : undefined;
+      spec.negativeTerms = promptDetailsSelections.negativePromptTerms;
+      spec.aspectRatio = aspectRatio;
+      spec.count = count;
+      spec.contentMode = activeContentMode;
 
       let jobIds: string[];
       if (isVideo) {
-        const result = await createVideoJob({
-          prompt: compositePrompt,
-          negativePrompt,
-          // В режимах из медиа модель определяется на бэкенде по режиму.
-          model: mode === "scratch" ? model : undefined,
-          aspectRatio,
+        spec.video = {
           mode,
           initImageKey: mode === "img2vid" ? initMediaKey ?? undefined : undefined,
           initVideoKey: mode === "continue" ? initMediaKey ?? undefined : undefined,
-          count,
-          contentMode: activeContentMode,
-        });
-        jobIds = result.jobIds;
-      } else if (selectedCharacter) {
-        // Готовый персонаж: text2img, как txt2img в admin/gentest (даёт лучший
-        // результат, чем img2img по аватару). Промпт = сохранённый промпт аватара
-        // (identity) + выбранные Appearance/Pose/Scene/Camera + кастомный текст.
-        // Внешность держат identity-промпт и тот же чекпоинт (avatarModel); seed
-        // не фиксируем — с seed аватара кадр повторял исходник.
-        // compositePrompt уже содержит quality-префикс, поэтому в хелпер его не
-        // добавляем (includeQuality=false).
-        const personality = (selectedCharacter.personality || {}) as Record<string, unknown>;
-        const personalityPart = buildCharacterImagePrompt(personality, undefined, false);
-        const finalPrompt = personalityPart ? `${personalityPart}, ${compositePrompt}` : compositePrompt;
-        // Civitai + стиль персонажа; нет своего generationStyle → дефолт "realism".
-        const charStyle = (personality.generationStyle as string | undefined) || "realism";
-        const charModel = typeof personality.avatarModel === "string" ? (personality.avatarModel as string) : undefined;
-        const result = await createImageJob({
-          prompt: finalPrompt,
-          negativePrompt,
-          ...(charModel ? { model: charModel } : {}),
-          provider: "civitai",
-          generationStyle: charStyle,
-          aspectRatio,
-          count,
-          characterId: selectedCharacter.id,
-          contentMode: activeContentMode,
-        });
-        jobIds = result.jobIds;
+        };
+        jobIds = (await createVideoJobFromSpec(spec)).jobIds;
       } else {
-        const imageProvider = imageModels.find((m) => m.id === selectedModel)?.provider;
-        const selectedStyleOption = characterOptions.find(
-          (o) => o.category === "STYLE" && o.name === characterSelections.style
-        );
-        const result = await createImageJob({
-          prompt: compositePrompt,
-          negativePrompt,
-          model,
-          provider: imageProvider,
-          generationStyle: imageProvider === "civitai" ? selectedStyleOption?.generationStyle || undefined : undefined,
-          aspectRatio,
-          count,
-          contentMode: activeContentMode,
-        });
-        jobIds = result.jobIds;
+        // Готовый персонаж: сервер добавит его внешность (avatarPrompt), чекпоинт и стиль.
+        if (selectedCharacter) spec.characterId = selectedCharacter.id;
+        jobIds = (await createImageJobFromSpec(spec)).jobIds;
       }
 
       for (const jobId of jobIds) {
@@ -1545,7 +1315,7 @@ function GenerationPageInner() {
     } finally {
       setSubmitting(false);
     }
-  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildCompositePrompt, imageModels, characterOptions, characterSelections.style, hasAnySelection, startGeneration, selectedCharacter]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildSpec, hasAnySelection, startGeneration, selectedCharacter, activeContentMode]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {

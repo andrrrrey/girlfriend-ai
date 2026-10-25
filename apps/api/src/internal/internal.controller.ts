@@ -21,6 +21,10 @@
 import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 import { WalletService, generationReservationKey } from "../billing/wallet.service";
+import { ChatMediaService } from "../conversation/chat-media.service";
+import { IntentRouter } from "../conversation/intent-router";
+import { GenerationSpecService } from "../generation/prompt/generation-spec.service";
+import { parseGenerationSpec } from "../generation/prompt/generation-spec";
 
 /**
  * Контроллер внутреннего API.
@@ -32,6 +36,9 @@ export class InternalController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly chatMedia: ChatMediaService,
+    private readonly intents: IntentRouter,
+    private readonly specs: GenerationSpecService,
   ) {}
 
   /**
@@ -128,6 +135,12 @@ export class InternalController {
       error?: string;
     },
   ) {
+    // Генерация для чата: медиасообщение создаём ДО статуса completed — клиент,
+    // увидев completed, перечитывает диалог и уже находит в нём фото.
+    if (body.status === "completed") {
+      await this.chatMedia.saveCompletedMedia(id, body.output);
+    }
+
     const job = await this.prisma.aiJob.update({
       where: { id },
       data: {
@@ -146,6 +159,34 @@ export class InternalController {
       await this.wallet.release(generationReservationKey(id), "generation_failed");
     }
     return job;
+  }
+
+  // ─── Спецификация генерации (каналы и отладка) ──────────────────────────────
+
+  /**
+   * POST /internal/chat/route-intent
+   *
+   * Роутер намерений для внешних каналов (Telegram) и проверки: тот же вызов,
+   * что делает ядро чата, — поэтому одинаковый текст даёт одинаковую спецификацию.
+   */
+  @Post("chat/route-intent")
+  async routeIntent(@Body() body: { text: string; characterId: string; contentMode?: "nsfw" | "sfw" }) {
+    return this.intents.routeToSpec(body.text, body.characterId, body.contentMode);
+  }
+
+  /**
+   * POST /internal/generation/compose
+   *
+   * Спецификация → параметры задания (промпт, модель, провайдер), без запуска.
+   */
+  @Post("generation/compose")
+  async composeGeneration(@Body() body: { spec: unknown; userId: string }) {
+    const spec = parseGenerationSpec(body.spec);
+    const job =
+      spec.kind === "video"
+        ? await this.specs.toVideoJob(spec, body.userId)
+        : await this.specs.toImageJob(spec, body.userId);
+    return { spec, job };
   }
 
   // ─── UsageLog endpoints (вызываются Worker-ом) ──────────────────────────────

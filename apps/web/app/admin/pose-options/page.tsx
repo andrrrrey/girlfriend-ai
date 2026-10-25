@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, streamUrlForKey, type PoseCategory, type PoseOption } from "../../../lib/api";
+import { admin, streamUrlForKey, type PoseCategory, type PoseOption, parseSynonymsInput } from "../../../lib/api";
 import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
@@ -128,13 +128,15 @@ interface CatForm { name: string }
 interface OptForm {
   name: string;
   prompt: string;
+  /** Синонимы через запятую */
+  synonyms: string;
   imageThumbKey: string;
   imageFullKey: string;
   previewUrl: string;
   nsfw: boolean;
 }
 const emptyCatForm: CatForm = { name: "" };
-const emptyOptForm: OptForm = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", nsfw: true };
+const emptyOptForm: OptForm = { name: "", prompt: "", synonyms: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", nsfw: true };
 
 export default function AdminPoseOptionsPage() {
   const { user, loading } = useAuth();
@@ -246,6 +248,7 @@ export default function AdminPoseOptionsPage() {
     setOptForm({
       name: opt.name,
       prompt: opt.prompt ?? "",
+      synonyms: (opt.synonyms ?? []).join(", "),
       imageThumbKey: opt.imageThumbKey ?? "",
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
@@ -265,6 +268,7 @@ export default function AdminPoseOptionsPage() {
         categoryId: showOptForm,
         name: optForm.name.trim(),
         prompt: optForm.prompt.trim() || undefined,
+        synonyms: parseSynonymsInput(optForm.synonyms),
         imageThumbKey: optForm.imageThumbKey || undefined,
         imageFullKey: optForm.imageFullKey || undefined,
         nsfw: optForm.nsfw,
@@ -407,6 +411,12 @@ export default function AdminPoseOptionsPage() {
                           placeholder="Prompt (e.g. standing with arms crossed...)"
                           value={optForm.prompt}
                           onChange={(e) => setOptForm({ ...optForm, prompt: e.target.value })}
+                        />
+                        <input
+                          style={s.input}
+                          placeholder="Синонимы через запятую (купальник, в бикини, swimsuit…) — как пользователь может назвать опцию в чате"
+                          value={optForm.synonyms}
+                          onChange={(e) => setOptForm({ ...optForm, synonyms: e.target.value })}
                         />
                         <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
                           <input type="checkbox" checked={optForm.nsfw} onChange={(e) => setOptForm({ ...optForm, nsfw: e.target.checked })} />

@@ -16,8 +16,10 @@ import {
   streamEditMessage,
   fetchTTS,
   getPoseOptions,
-  createImageJob,
-  saveImageMessage,
+  requestChatPhoto,
+  confirmChatMedia,
+  CHAT_MEDIA_EVENT,
+  type ChatMediaEventDetail,
   resizedMediaUrl,
   type ChatSession,
   type ChatGalleryImage,
@@ -32,8 +34,7 @@ import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import { showBrowserNotification } from "../../lib/browserNotify";
 import { formatTags } from "../../lib/tags";
-import { toEnglishTag, localizeOption } from "../../lib/optionLabel";
-import { buildCharacterImagePrompt } from "../../lib/prompt";
+import { localizeOption } from "../../lib/optionLabel";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -732,27 +733,20 @@ function ChatPageInner() {
       const chatId = n.metadata?.chatId as string | undefined;
       if (!chatId) continue;
 
-      if (n.status === "completed" && n.output?.url) {
+      if (n.status === "completed") {
         handledJobsRef.current.add(n.jobId);
-        const poseName = (n.metadata?.poseName as string) || "image";
-        saveImageMessage(chatId, n.output.url, poseName).then(() => {
-          if (chatId === activeChat) {
-            // Фото добавляется в галерею профиля, но главным фото (аватаром)
-            // остаётся текущее — индекс галереи не переключаем на новый кадр.
-            chats.getMessages(chatId).then((res) => setMessages(res.items));
-            loadGallery(chatId);
-          }
-        }).catch(() => {});
+        // Медиасообщение в диалог добавил сервер (ещё до статуса completed) —
+        // только перечитываем ленту и галерею. Главным фото (аватаром) остаётся
+        // текущее — индекс галереи не переключаем на новый кадр.
+        if (chatId === activeChat) {
+          chats.getMessages(chatId).then((res) => setMessages(res.items));
+          loadGallery(chatId);
+        }
       } else if (n.status === "failed") {
         handledJobsRef.current.add(n.jobId);
       }
     }
   }, [notifications, activeChat, loadGallery]);
-
-  // Поза приходит из выбранной опции (opt.prompt) — он уже на английском,
-  // но прогоняем через toEnglishTag на случай, если попал opt.name (RU).
-  const buildChatImagePrompt = (personality: Record<string, unknown>, posePrompt: string): string =>
-    buildCharacterImagePrompt(personality, posePrompt ? toEnglishTag(posePrompt) : undefined);
 
   const handleOpenPoseSelector = async () => {
     if (!poseOptions) {
@@ -764,43 +758,49 @@ function ChatPageInner() {
     setShowPoseSelector(true);
   };
 
-  const handleGenerateImage = async (poseName: string, posePrompt: string) => {
+  const handleGenerateImage = async (poseName: string, _posePrompt?: string) => {
     if (!activeChat || generatingInThisChat) return;
     setShowPoseSelector(false);
 
-    const prompt = buildChatImagePrompt(activeCharPersonality, posePrompt);
-
     try {
-      // Генерация изображений персонажа — text2img через Civitai, как txt2img в
-      // admin/gentest (лучше img2img по аватару: тот копировал исходный кадр и
-      // игнорировал позу). Внешность держат сохранённый промпт аватара (identity,
-      // см. buildCharacterImagePrompt) и тот же чекпоинт. Нет своего
-      // generationStyle → дефолт "realism" (валидный ключ CIVITAI_MODELS).
-      const charStyle = (activeCharPersonality.generationStyle as string | undefined) || "realism";
-      // Обязательный negative_prompt против артефактов добавляется глобально на
-      // сервере (apps/ai, настройка NEGATIVE_PROMPT). seed не фиксируем — с seed
-      // аватара получался тот же кадр.
-      // Чекпоинт аватара (Civitai AIR) — генерируем на той же модели, иначе Civitai
-      // возьмёт случайный чекпоинт из пула и картинка не будет похожа на аватар.
-      const charModel = typeof activeCharPersonality.avatarModel === "string"
-        ? (activeCharPersonality.avatarModel as string)
-        : undefined;
-      const jobPayload: Parameters<typeof createImageJob>[0] = {
-        prompt,
-        ...(charModel ? { model: charModel } : {}),
-        provider: "civitai",
-        generationStyle: charStyle,
-        contentMode: activeContentMode,
-      };
-      const { jobId } = await createImageJob(jobPayload);
-
-      startGeneration(jobId, "image", prompt, charStyle, "chat", {
-        chatId: activeChat,
-        poseName,
-      });
+      // Промпт (внешность персонажа + поза), чекпоинт и стиль собирает сервер;
+      // готовое фото он сам добавит в диалог (см. ChatMediaService).
+      const { jobId, kind } = await requestChatPhoto(activeChat, poseName, activeContentMode);
+      startGeneration(jobId, kind, poseName, "", "chat", { chatId: activeChat, poseName });
     } catch (err: any) {
       const popup = premiumPopupFromError(err?.body);
       if (popup) setPremiumPopup(popup);
+    }
+  };
+
+  // Фото/видео по просьбе в тексте или голосом (роутер намерений на сервере):
+  // pending — показываем прогресс; rejected — попап кредитов/лимита; confirm —
+  // предложение с ценой придёт сообщением с кнопкой.
+  useEffect(() => {
+    const onMedia = (e: Event) => {
+      const detail = (e as CustomEvent<ChatMediaEventDetail>).detail;
+      if (detail.status === "pending" && detail.jobId) {
+        startGeneration(detail.jobId, detail.kind, detail.kind, "", "chat", { chatId: detail.chatId, poseName: detail.kind });
+      } else if (detail.status === "rejected") {
+        const popup = premiumPopupFromError(detail.error);
+        if (popup) setPremiumPopup(popup);
+      }
+    };
+    window.addEventListener(CHAT_MEDIA_EVENT, onMedia);
+    return () => window.removeEventListener(CHAT_MEDIA_EVENT, onMedia);
+  }, [startGeneration]);
+
+  /** Подтверждение цены фото/видео, предложенного персонажем. */
+  const handleConfirmMedia = async (token: string) => {
+    if (!activeChat) return;
+    try {
+      const { jobId, kind } = await confirmChatMedia(activeChat, token);
+      startGeneration(jobId, kind, kind, "", "chat", { chatId: activeChat, poseName: kind });
+      chats.getMessages(activeChat).then((res) => setMessages(res.items));
+    } catch (err: any) {
+      const popup = premiumPopupFromError(err?.body);
+      if (popup) setPremiumPopup(popup);
+      else setDemoBanner({ message: err?.body?.message || err.message, subscribeCta: false });
     }
   };
 
@@ -1185,13 +1185,35 @@ function ChatPageInner() {
                           onClick={() => setLightboxUrl(msg.mediaUrl!)}
                         />
                       </div>
+                    ) : msg.type === "video" && msg.mediaUrl ? (
+                      <div className="message-bubble image-message">
+                        <video src={msg.mediaUrl} className="chat-gen-image" controls playsInline preload="metadata" />
+                      </div>
                     ) : msg.type === "image" && !msg.mediaUrl ? (
                       <div className="message-bubble generating-indicator">
                         <div className="generating-spinner" />
                         <span>{msg.content}</span>
                       </div>
                     ) : (
-                      <div className="message-bubble">{msg.content}</div>
+                      <div className="message-bubble">
+                        {msg.content}
+                        {(() => {
+                          // Предложение фото/видео с ценой — кнопка подтверждения.
+                          const offer = (msg.metadata as Record<string, any> | null)?.mediaConfirm;
+                          if (!offer?.token || offer.status !== "pending") return null;
+                          return (
+                            <div style={{ marginTop: 8 }}>
+                              <button
+                                className="edit-save-btn"
+                                disabled={streaming || generatingInThisChat}
+                                onClick={() => handleConfirmMedia(offer.token)}
+                              >
+                                {t("chat.mediaConfirm", { price: String(offer.price ?? "") })}
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     )}
 
                     <div className="message-actions" style={editingMsgId === msg.id ? { display: "none" } : {}}>

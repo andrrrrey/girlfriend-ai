@@ -24,6 +24,8 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { backfillAllCharacterSeo } from "../chats/character-seo";
+import { slugify } from "../generation/prompt/slug";
+import { normalizeSynonyms } from "../generation/prompt/synonyms";
 import { loadEnv } from "@repo/config";
 import { PROMPT_SETTING_DEFAULTS, CHAT_PROMPT_SETTING_DEFAULTS } from "@repo/types";
 
@@ -166,6 +168,14 @@ const USER_SELECT = {
  * Используется исключительно контроллером {@link AdminController},
  * доступ к которому ограничен ролью `admin`.
  */
+/**
+ * Данные обновления опции генерации: синонимы нормализуются, slug не меняется
+ * при переименовании (канонический идентификатор опции стабилен).
+ */
+function withSynonyms<T extends { name?: string; synonyms?: string[] }>(dto: T, currentName: string): T {
+  return dto.synonyms ? { ...dto, synonyms: normalizeSynonyms(dto.synonyms, dto.name ?? currentName) } : dto;
+}
+
 @Injectable()
 export class AdminService {
   /**
@@ -681,7 +691,7 @@ export class AdminService {
     });
   }
 
-  async createCharacterOption(dto: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean }) {
+  async createCharacterOption(dto: { category: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean; synonyms?: string[] }) {
     return this.prisma.characterOption.create({
       data: {
         category: dto.category,
@@ -693,14 +703,16 @@ export class AdminService {
         order: dto.order ?? 0,
         generationStyle: dto.generationStyle,
         nsfw: dto.nsfw ?? true,
+        slug: slugify(dto.name),
+        synonyms: normalizeSynonyms(dto.synonyms, dto.name),
       },
     });
   }
 
-  async updateCharacterOption(id: string, dto: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string }) {
+  async updateCharacterOption(id: string, dto: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; synonyms?: string[] }) {
     const existing = await this.prisma.characterOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CharacterOption "${id}" not found`);
-    return this.prisma.characterOption.update({ where: { id }, data: dto });
+    return this.prisma.characterOption.update({ where: { id }, data: withSynonyms(dto, existing.name) });
   }
 
   async deleteCharacterOption(id: string) {
@@ -745,7 +757,7 @@ export class AdminService {
     });
   }
 
-  async createAppearanceOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean }) {
+  async createAppearanceOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }) {
     const category = await this.prisma.appearanceCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`AppearanceCategory "${dto.categoryId}" not found`);
     return this.prisma.appearanceOption.create({
@@ -758,14 +770,16 @@ export class AdminService {
         imageFullKey: dto.imageFullKey,
         order: dto.order ?? 0,
         nsfw: dto.nsfw ?? true,
+        slug: slugify(dto.name),
+        synonyms: normalizeSynonyms(dto.synonyms, dto.name),
       },
     });
   }
 
-  async updateAppearanceOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async updateAppearanceOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const existing = await this.prisma.appearanceOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`AppearanceOption "${id}" not found`);
-    return this.prisma.appearanceOption.update({ where: { id }, data: dto });
+    return this.prisma.appearanceOption.update({ where: { id }, data: withSynonyms(dto, existing.name) });
   }
 
   async deleteAppearanceOption(id: string) {
@@ -824,16 +838,18 @@ export class AdminService {
     });
   }
 
-  async createPoseOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async createPoseOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const category = await this.prisma.poseCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`PoseCategory "${dto.categoryId}" not found`);
-    return this.prisma.poseOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+    return this.prisma.poseOption.create({
+      data: { ...dto, order: dto.order ?? 0, slug: slugify(dto.name), synonyms: normalizeSynonyms(dto.synonyms, dto.name) },
+    });
   }
 
-  async updatePoseOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async updatePoseOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const existing = await this.prisma.poseOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`PoseOption "${id}" not found`);
-    return this.prisma.poseOption.update({ where: { id }, data: dto });
+    return this.prisma.poseOption.update({ where: { id }, data: withSynonyms(dto, existing.name) });
   }
 
   async deletePoseOption(id: string) {
@@ -892,16 +908,18 @@ export class AdminService {
     });
   }
 
-  async createSceneOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async createSceneOption(dto: { categoryId: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const category = await this.prisma.sceneCategory.findUnique({ where: { id: dto.categoryId } });
     if (!category) throw new NotFoundException(`SceneCategory "${dto.categoryId}" not found`);
-    return this.prisma.sceneOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+    return this.prisma.sceneOption.create({
+      data: { ...dto, order: dto.order ?? 0, slug: slugify(dto.name), synonyms: normalizeSynonyms(dto.synonyms, dto.name) },
+    });
   }
 
-  async updateSceneOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async updateSceneOption(id: string, dto: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const existing = await this.prisma.sceneOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`SceneOption "${id}" not found`);
-    return this.prisma.sceneOption.update({ where: { id }, data: dto });
+    return this.prisma.sceneOption.update({ where: { id }, data: withSynonyms(dto, existing.name) });
   }
 
   async deleteSceneOption(id: string) {
@@ -935,14 +953,16 @@ export class AdminService {
     });
   }
 
-  async createCameraOption(dto: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
-    return this.prisma.cameraOption.create({ data: { ...dto, order: dto.order ?? 0 } });
+  async createCameraOption(dto: { section: string; name: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
+    return this.prisma.cameraOption.create({
+      data: { ...dto, order: dto.order ?? 0, slug: slugify(dto.name), synonyms: normalizeSynonyms(dto.synonyms, dto.name) },
+    });
   }
 
-  async updateCameraOption(id: string, dto: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number }) {
+  async updateCameraOption(id: string, dto: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; synonyms?: string[] }) {
     const existing = await this.prisma.cameraOption.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`CameraOption "${id}" not found`);
-    return this.prisma.cameraOption.update({ where: { id }, data: dto });
+    return this.prisma.cameraOption.update({ where: { id }, data: withSynonyms(dto, existing.name) });
   }
 
   async deleteCameraOption(id: string) {

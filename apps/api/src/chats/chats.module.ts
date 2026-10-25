@@ -34,11 +34,15 @@ import { ContextBuilder } from "../conversation/context-builder";
 import { LlmAdapter } from "../conversation/llm.adapter";
 import { SttAdapter } from "../conversation/stt.adapter";
 import { TtsAdapter } from "../conversation/tts.adapter";
+import { IntentRouter } from "../conversation/intent-router";
+import { ChatMediaService } from "../conversation/chat-media.service";
+import { GenerationModule } from "../generation/generation.module";
 
 @Module({
   imports: [
     DemoModule, // Для DemoService (проверка лимитов free-пользователей)
     S3Module,   // Для S3Service — скачиваем TTS-аудио по ключу через внутренний S3 endpoint
+    GenerationModule, // Фото/видео в чате: спецификация, каталог опций, задания генерации
   ],
   controllers: [ChatsController, CharactersController],
   providers: [
@@ -52,9 +56,12 @@ import { TtsAdapter } from "../conversation/tts.adapter";
     LlmAdapter,
     SttAdapter,
     TtsAdapter,
+    IntentRouter,
+    ChatMediaService,
   ],
   // CharactersService — его переиспользует AutogenModule; ChatsService и
   // ConversationEngine — AutochatModule (автопереписка через общее ядро).
-  exports: [CharactersService, ChatsService, ConversationEngine],
+  // ChatMediaService/IntentRouter — InternalModule (медиасообщение по завершении генерации, internal API).
+  exports: [CharactersService, ChatsService, ConversationEngine, ChatMediaService, IntentRouter],
 })
 export class ChatsModule {}

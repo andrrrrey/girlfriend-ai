@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { admin } from "../../lib/api";
+import React, { useCallback, useEffect, useState } from "react";
+import { admin, type OptionSynonymsStatus } from "../../lib/api";
 
 export type GenSettingsTab = "character" | "appearance" | "pose" | "scene" | "camera";
 
@@ -48,6 +48,58 @@ const styles: Record<string, React.CSSProperties> = {
 };
 
 /**
+ * Автогенерация синонимов опций (как пользователь может назвать опцию в чате):
+ * запуск в фоне на сервере и прогресс с опросом раз в 3 секунды.
+ */
+function SynonymsGenerator() {
+  const [status, setStatus] = useState<OptionSynonymsStatus | null>(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    admin.getOptionSynonymsStatus().then(setStatus).catch(() => undefined);
+  }, []);
+
+  useEffect(load, [load]);
+
+  useEffect(() => {
+    if (status?.state !== "running") return;
+    const timer = setInterval(load, 3000);
+    return () => clearInterval(timer);
+  }, [status?.state, load]);
+
+  const start = async (overwrite: boolean) => {
+    if (overwrite && !confirm("Перегенерировать синонимы для ВСЕХ опций? Ручные правки будут заменены.")) return;
+    setError("");
+    try {
+      setStatus(await admin.generateOptionSynonyms(overwrite));
+    } catch (err: any) {
+      setError(err?.body?.message || err.message);
+    }
+  };
+
+  const running = status?.state === "running";
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: -12, marginBottom: 20 }}>
+      <button type="button" style={styles.exportBtn} disabled={running} onClick={() => start(false)}>
+        {running ? "Генерация синонимов..." : "Сгенерировать синонимы"}
+      </button>
+      <button type="button" style={styles.tab} disabled={running} onClick={() => start(true)}>
+        Перегенерировать все
+      </button>
+      {status && status.state !== "idle" && (
+        <span style={{ color: status.state === "failed" ? "#e36466" : "#848484", fontSize: 12 }}>
+          {status.state === "running" && `Обработано ${status.processed} из ${status.total}, обновлено ${status.updated}`}
+          {status.state === "done" &&
+            `Готово: обновлено ${status.updated} из ${status.total}${status.failedBatches ? `, ошибок пачек: ${status.failedBatches}` : ""}`}
+          {status.state === "failed" && `Ошибка: ${status.error}`}
+        </span>
+      )}
+      {error && <span style={{ color: "#e36466", fontSize: 12 }}>{error}</span>}
+    </div>
+  );
+}
+
+/**
  * Под-навигатор раздела «Настройки генераций».
  * Переключает пять страниц опций генерации.
  */
@@ -66,6 +118,7 @@ export function GenerationSettingsTabs({ active }: { active: GenSettingsTab }) {
   };
 
   return (
+    <>
     <div style={styles.bar}>
       {TABS.map((t) => (
         <a key={t.id} href={t.href} style={t.id === active ? { ...styles.tab, ...styles.tabActive } : styles.tab}>
@@ -79,5 +132,7 @@ export function GenerationSettingsTabs({ active }: { active: GenSettingsTab }) {
         {exporting ? "Экспорт..." : "Экспорт CSV"}
       </button>
     </div>
+    <SynonymsGenerator />
+    </>
   );
 }

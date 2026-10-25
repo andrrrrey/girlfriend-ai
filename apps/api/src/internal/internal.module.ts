@@ -19,12 +19,15 @@
 import { Module } from "@nestjs/common";
 import { InternalController } from "./internal.controller";
 import { PrismaService } from "../prisma.service";
+import { ChatsModule } from "../chats/chats.module";
+import { GenerationModule } from "../generation/generation.module";
 
 /**
  * Модуль внутренних эндпоинтов.
  * Регистрирует InternalController без экспортов — модуль используется только внутри API.
  */
 @Module({
+  imports: [ChatsModule, GenerationModule],
   controllers: [InternalController],
   providers: [PrismaService],
 })

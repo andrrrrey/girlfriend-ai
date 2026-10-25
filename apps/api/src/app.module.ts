@@ -43,6 +43,7 @@ import { AutogenModule } from "./admin/autogen/autogen.module";
 import { GentestModule } from "./admin/gentest/gentest.module";
 import { EngagementGenModule } from "./admin/engagement-gen/engagement-gen.module";
 import { AutochatModule } from "./admin/autochat/autochat.module";
+import { OptionSynonymsModule } from "./admin/option-synonyms/option-synonyms.module";
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { AutochatModule } from "./admin/autochat/autochat.module";
     GentestModule,    // Тестовый перебор генераций (админка)
     EngagementGenModule, // Фоновая автогенерация контента для персонажей (админка)
     AutochatModule,   // Автопереписка робота с персонажами + анализ (админка, QA)
+    OptionSynonymsModule, // Автогенерация синонимов опций генерации (админка)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

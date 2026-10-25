@@ -29,6 +29,21 @@ export type EngineEvent =
   | { type: "transcription"; text: string }
   /** Событие стрима модели как есть: { content } | { done, usage } | { error }. */
   | { type: "llm"; data: Record<string, unknown> }
+  /**
+   * Медиа по просьбе пользователя: pending — генерация запущена (медиасообщение
+   * сервер добавит в диалог сам по завершении); confirm — нужно подтверждение цены
+   * (token → POST /chats/:id/media/confirm); rejected — не запущено.
+   */
+  | {
+      type: "media";
+      /** rejected — генерацию не запустили (нет кредитов, лимит); error — тело ошибки API. */
+      status: "pending" | "confirm" | "rejected";
+      kind: "image" | "video";
+      jobId?: string;
+      token?: string;
+      price?: number;
+      error?: Record<string, unknown>;
+    }
   /** Обработка завершена. messageId — сохранённый ответ ассистента (если есть). */
   | {
       type: "done";
@@ -57,6 +72,8 @@ export interface EngineBaseInput {
 /** Текстовое сообщение пользователя. */
 export interface UserTextInput extends EngineBaseInput {
   content: string;
+  /** Распознавать просьбы о фото/видео (по умолчанию true). */
+  routeIntents?: boolean;
   /** Идемпотентный ключ клиента: повтор с тем же ключом не создаёт дубль. */
   clientMessageId?: string;
   /** Внешний ID в канале (update_id Telegram): повтор не обрабатывается дважды. */
@@ -68,6 +85,8 @@ export interface UserVoiceInput extends EngineBaseInput {
   audio: { buffer: Buffer; mimetype: string; originalname?: string };
   /** Подсказка языка для распознавания. */
   language?: string;
+  /** Распознавать просьбы о фото/видео (по умолчанию true). */
+  routeIntents?: boolean;
   clientMessageId?: string;
   externalId?: string;
 }

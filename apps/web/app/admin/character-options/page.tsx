@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
-import { admin, streamUrlForKey, type CharacterOption } from "../../../lib/api";
+import { admin, streamUrlForKey, type CharacterOption, parseSynonymsInput } from "../../../lib/api";
 import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
@@ -124,6 +124,8 @@ const GENERATION_STYLES = [
 interface FormState {
   name: string;
   prompt: string;
+  /** Синонимы через запятую */
+  synonyms: string;
   imageThumbKey: string;
   imageFullKey: string;
   previewUrl: string;
@@ -131,7 +133,7 @@ interface FormState {
   nsfw: boolean;
 }
 
-const emptyForm: FormState = { name: "", prompt: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", generationStyle: "", nsfw: true };
+const emptyForm: FormState = { name: "", prompt: "", synonyms: "", imageThumbKey: "", imageFullKey: "", previewUrl: "", generationStyle: "", nsfw: true };
 
 export default function AdminCharacterOptionsPage() {
   const { user, loading } = useAuth();
@@ -174,6 +176,7 @@ export default function AdminCharacterOptionsPage() {
     setForm({
       name: opt.name,
       prompt: opt.prompt ?? "",
+      synonyms: (opt.synonyms ?? []).join(", "),
       imageThumbKey: opt.imageThumbKey ?? "",
       imageFullKey: opt.imageFullKey ?? "",
       previewUrl: streamUrlForKey(opt.imageThumbKey) ?? opt.imageUrl ?? "",
@@ -193,6 +196,7 @@ export default function AdminCharacterOptionsPage() {
         category: activeCategory,
         name: form.name.trim(),
         prompt: form.prompt.trim() || undefined,
+        synonyms: parseSynonymsInput(form.synonyms),
         imageThumbKey: form.imageThumbKey || undefined,
         imageFullKey: form.imageFullKey || undefined,
         generationStyle: activeCategory === "STYLE" ? (form.generationStyle || undefined) : undefined,
@@ -274,6 +278,12 @@ export default function AdminCharacterOptionsPage() {
               placeholder="Prompt (e.g. european caucasian ethnicity...)"
               value={form.prompt}
               onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+            />
+            <input
+              style={s.input}
+              placeholder="Синонимы через запятую (купальник, в бикини, swimsuit…) — как пользователь может назвать опцию в чате"
+              value={form.synonyms}
+              onChange={(e) => setForm({ ...form, synonyms: e.target.value })}
             />
             <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#ccc", fontSize: 13, cursor: "pointer" }}>
               <input

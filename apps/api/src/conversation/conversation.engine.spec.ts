@@ -4,6 +4,7 @@ import { BadRequestException, ConflictException, HttpException } from "@nestjs/c
 import { ConversationEngine } from "./conversation.engine";
 import { AiServiceError } from "./ai-client";
 import type { EngineEvent } from "./conversation.types";
+import { selectionsToSpec } from "./intent-router";
 
 const CHAT = {
   id: "chat-1",
@@ -38,6 +39,8 @@ describe("ConversationEngine", () => {
   let stt: any;
   let context: any;
   let wallet: any;
+  let intents: any;
+  let media: any;
   let engine: ConversationEngine;
 
   beforeEach(() => {
@@ -77,6 +80,14 @@ describe("ConversationEngine", () => {
       capture: jest.fn().mockResolvedValue(true),
       release: jest.fn().mockResolvedValue(false),
     };
+    intents = { route: jest.fn().mockResolvedValue({ intent: "reply", via: "rules" }) };
+    media = {
+      quote: jest.fn().mockResolvedValue(5),
+      needsConfirmation: jest.fn().mockResolvedValue(false),
+      start: jest.fn().mockResolvedValue({ kind: "image", jobId: "job-img" }),
+      createConfirmation: jest.fn().mockResolvedValue("tok-1"),
+      attachConfirmationMessage: jest.fn(),
+    };
     engine = new ConversationEngine(
       prisma,
       chats,
@@ -87,6 +98,8 @@ describe("ConversationEngine", () => {
       llm,
       stt,
       wallet,
+      intents,
+      media,
     );
   });
 
@@ -321,6 +334,74 @@ describe("ConversationEngine", () => {
       await drain(engine.respond({ chatId: "chat-1", actor: ACTOR, billable: false, enforceLimits: false }));
       expect(wallet.reserveOperation).not.toHaveBeenCalled();
       expect(wallet.capture).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("фото и видео по просьбе (роутер намерений)", () => {
+    const selections = { outfits: ["bikini"], poses: [], locations: ["beach"], facialExpressions: [], framing: [] };
+
+    it("просьба о фото: генерация в диалоге + ответ персонажа с пометкой", async () => {
+      intents.route.mockResolvedValue({ intent: "image", selections, via: "llm" });
+
+      const events = await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "пришли фото" }));
+
+      const expectedSpec = selectionsToSpec("image", selections, "char-1", "nsfw");
+      expect(media.start).toHaveBeenCalledWith("chat-1", ACTOR, expectedSpec, { caption: "photo", source: "web" });
+      expect(events).toContainEqual({ type: "media", status: "pending", kind: "image", jobId: "job-img" });
+      expect(context.build).toHaveBeenCalledWith(CHAT, ACTOR, { lastUserNote: expect.stringContaining("sending the user your photo") });
+      expect(llm.streamChat).toHaveBeenCalled();
+    });
+
+    it("дорогое медиа: предложение с ценой вместо генерации, модель не вызывается", async () => {
+      intents.route.mockResolvedValue({ intent: "video", selections, via: "llm" });
+      media.quote.mockResolvedValue(30);
+      media.needsConfirmation.mockResolvedValue(true);
+
+      const events = await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "скинь видео" }));
+
+      expect(media.start).not.toHaveBeenCalled();
+      expect(llm.streamChat).not.toHaveBeenCalled();
+      expect(chats.saveMessage).toHaveBeenLastCalledWith("chat-1", "assistant", "Это видео будет стоить 30 кредитов. Отправить?", {
+        source: "web",
+        replyToId: "u-1",
+        metadata: { mediaConfirm: { token: "tok-1", kind: "video", price: 30, status: "pending" } },
+      });
+      expect(events).toContainEqual({ type: "media", status: "confirm", kind: "video", token: "tok-1", price: 30 });
+      expect(media.attachConfirmationMessage).toHaveBeenCalledWith("tok-1", "a-1");
+      // ответ модели не нужен — резерв под него возвращается
+      expect(wallet.release).toHaveBeenCalledWith("res-chat_message", "not_completed");
+    });
+
+    it("нет кредитов на фото: событие rejected, но персонаж всё равно отвечает", async () => {
+      intents.route.mockResolvedValue({ intent: "image", selections, via: "llm" });
+      media.start.mockRejectedValue(new HttpException({ error: "INSUFFICIENT_CREDITS", required: 5, available: 0 }, 402));
+
+      const events = await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "пришли фото" }));
+
+      expect(events).toContainEqual({
+        type: "media",
+        status: "rejected",
+        kind: "image",
+        error: { error: "INSUFFICIENT_CREDITS", required: 5, available: 0 },
+      });
+      expect(llm.streamChat).toHaveBeenCalled();
+    });
+
+    it("неясная просьба: уточняющий вопрос без вызова модели", async () => {
+      intents.route.mockResolvedValue({ intent: "clarify", question: "Селфи или в полный рост?", via: "llm" });
+
+      const result = await ConversationEngine.collect(
+        engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "покажи себя" }),
+      );
+
+      expect(result.content).toBe("Селфи или в полный рост?");
+      expect(llm.streamChat).not.toHaveBeenCalled();
+      expect(media.start).not.toHaveBeenCalled();
+    });
+
+    it("routeIntents=false — роутер не вызывается", async () => {
+      await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "пришли фото", routeIntents: false }));
+      expect(intents.route).not.toHaveBeenCalled();
     });
   });
 });

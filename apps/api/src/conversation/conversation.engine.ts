@@ -21,7 +21,7 @@
  * исключения — адаптер канала может вернуть их обычным HTTP-ответом.
  */
 
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, HttpException, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma.service";
 import { ChatsService } from "../chats/chats.service";
@@ -34,6 +34,8 @@ import { AiServiceError } from "./ai-client";
 import { ContextBuilder, ContextOptions } from "./context-builder";
 import { LlmAdapter } from "./llm.adapter";
 import { SttAdapter } from "./stt.adapter";
+import { IntentRouter, selectionsToSpec } from "./intent-router";
+import { ChatMediaService } from "./chat-media.service";
 import type {
   ChatWithContext,
   ConversationActor,
@@ -92,6 +94,8 @@ function isAbortError(err: unknown, signal?: AbortSignal): boolean {
 
 @Injectable()
 export class ConversationEngine {
+  private readonly logger = new Logger(ConversationEngine.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly chats: ChatsService,
@@ -102,6 +106,8 @@ export class ConversationEngine {
     private readonly llm: LlmAdapter,
     private readonly stt: SttAdapter,
     private readonly wallet: WalletService,
+    private readonly intents: IntentRouter,
+    private readonly media: ChatMediaService,
   ) {}
 
   // ─── Входы ──────────────────────────────────────────────────────────────────
@@ -137,14 +143,14 @@ export class ConversationEngine {
           source,
         });
 
-        yield* this.reply({
+        yield* this.routeUserMessage({
           chat,
-          actor: input.actor,
+          input,
           source,
-          usageAction: "chat_message",
-          replyToId: userMsg.id,
-          signal: input.signal,
+          text: input.content,
+          userMessageId: userMsg.id,
           reservationKey: reservation,
+          routeIntents: input.routeIntents !== false,
         });
       } finally {
         await this.releaseIfHeld(reservation);
@@ -189,14 +195,14 @@ export class ConversationEngine {
 
         yield { type: "transcription", text: stt.text };
 
-        yield* this.reply({
+        yield* this.routeUserMessage({
           chat,
-          actor: input.actor,
+          input,
           source,
-          usageAction: "chat_message",
-          replyToId: userMsg.id,
-          signal: input.signal,
+          text: stt.text,
+          userMessageId: userMsg.id,
           reservationKey: chatReservation,
+          routeIntents: input.routeIntents !== false,
         });
       } finally {
         await this.releaseIfHeld(sttReservation, chatReservation);
@@ -416,6 +422,117 @@ export class ConversationEngine {
     } finally {
       await this.releaseIfHeld(reservation);
     }
+  }
+
+  /**
+   * Маршрут сообщения пользователя по намерению (роутер намерений):
+   * - reply — обычный ответ персонажа;
+   * - image / video — запуск генерации в диалоге и ответ персонажа с пометкой
+   *   «ты отправляешь фото»; дорогое — сначала предложение подтвердить цену;
+   * - clarify — уточняющий вопрос без вызова модели (резерв ответа возвращается).
+   */
+  private async *routeUserMessage(args: {
+    chat: ChatWithContext;
+    input: EngineBaseInput;
+    source: MessageSource;
+    text: string;
+    userMessageId: string;
+    reservationKey: string | null;
+    routeIntents: boolean;
+  }): AsyncGenerator<EngineEvent> {
+    const { chat, input, source, text, userMessageId } = args;
+    const replyOpts: ReplyOptions = {
+      chat,
+      actor: input.actor,
+      source,
+      usageAction: "chat_message",
+      replyToId: userMessageId,
+      signal: input.signal,
+      reservationKey: args.reservationKey,
+    };
+
+    const contentMode = ContextBuilder.resolveContentMode(input.actor) === "sfw" ? "sfw" : "nsfw";
+    const intent = args.routeIntents ? await this.intents.route(text, contentMode) : ({ intent: "reply" } as const);
+    const ru = /[а-яё]/i.test(text);
+
+    if (intent.intent === "clarify") {
+      yield* this.saveAssistantText(chat, source, userMessageId, intent.question, { intent: "clarify" });
+      return;
+    }
+    if (intent.intent !== "image" && intent.intent !== "video") {
+      yield* this.reply(replyOpts);
+      return;
+    }
+
+    const kind = intent.intent;
+    const spec = selectionsToSpec(kind, intent.selections, chat.characterId, contentMode, intent.extra);
+    const caption = kind === "video" ? "video" : "photo";
+
+    try {
+      const price = await this.media.quote(spec, input.actor.id);
+      if (await this.media.needsConfirmation(kind, price)) {
+        const token = await this.media.createConfirmation({
+          chatId: chat.id,
+          userId: input.actor.id,
+          spec,
+          caption,
+          source,
+          price,
+        });
+        const what = kind === "video" ? (ru ? "видео" : "video") : ru ? "фото" : "photo";
+        const offer = ru
+          ? `Это ${what} будет стоить ${price} кредитов. Отправить?`
+          : `This ${what} costs ${price} credits. Send it?`;
+        let offerId: string | undefined;
+        for await (const event of this.saveAssistantText(chat, source, userMessageId, offer, {
+          mediaConfirm: { token, kind, price, status: "pending" },
+        })) {
+          if (event.type === "done") offerId = event.messageId;
+          else yield event;
+        }
+        if (offerId) await this.media.attachConfirmationMessage(token, offerId);
+        yield { type: "media", status: "confirm", kind, token, price };
+        yield { type: "done", messageId: offerId };
+        return;
+      }
+
+      const started = await this.media.start(chat.id, input.actor, spec, { caption, source });
+      yield { type: "media", status: "pending", kind, jobId: started.jobId };
+      replyOpts.context = {
+        lastUserNote:
+          kind === "video"
+            ? "[System note: you are sending the user a short video of yourself right now, as they asked. React briefly and in character; never say you cannot send videos.]"
+            : "[System note: you are sending the user your photo right now, as they asked. React briefly and in character; never say you cannot send photos.]",
+      };
+    } catch (err) {
+      if (err instanceof HttpException) {
+        // Нет кредитов / лимит — сообщаем каналу и всё равно отвечаем персонажем.
+        const body = err.getResponse();
+        yield {
+          type: "media",
+          status: "rejected",
+          kind,
+          error: typeof body === "object" && body ? (body as Record<string, unknown>) : { error: String(body) },
+        };
+      } else {
+        // Сбой медиа не должен ломать обычный ответ.
+        this.logger.warn(`chat media failed, replying without media: ${(err as Error)?.message}`);
+      }
+    }
+    yield* this.reply(replyOpts);
+  }
+
+  /** Сохраняет готовую реплику персонажа (без вызова модели) и отдаёт её как ответ. */
+  private async *saveAssistantText(
+    chat: ChatWithContext,
+    source: MessageSource,
+    replyToId: string,
+    text: string,
+    metadata: Record<string, unknown>,
+  ): AsyncGenerator<EngineEvent> {
+    const saved = await this.chats.saveMessage(chat.id, "assistant", text, { source, replyToId, metadata });
+    yield { type: "llm", data: { content: text } };
+    yield { type: "done", messageId: saved.id };
   }
 
   /** Резервирует кредиты под операцию; null — бесплатная операция или служебный вызов. */

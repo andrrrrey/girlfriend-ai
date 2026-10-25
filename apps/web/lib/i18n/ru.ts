@@ -87,6 +87,7 @@ export const ru: Record<keyof typeof en, string> = {
   "chat.subscribe": "Оформить подписку",
   "chat.voiceMessage": "Голосовое сообщение",
   "chat.regenerate": "Перегенерировать",
+  "chat.mediaConfirm": "Отправить за {price} кредитов",
   "chat.copy": "Копировать",
   "chat.play": "Озвучить",
   "chat.pause": "Пауза",

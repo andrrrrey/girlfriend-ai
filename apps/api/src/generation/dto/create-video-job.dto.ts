@@ -1,4 +1,4 @@
-import { IsString, MinLength, IsOptional, IsIn, IsInt } from "class-validator";
+import { IsString, MinLength, IsOptional, IsIn, IsInt, ValidateIf, IsObject } from "class-validator";
 
 const ALLOWED_VIDEO_MODELS = [
   "atlascloud/van-2.6/text-to-video",
@@ -15,9 +15,23 @@ const ALLOWED_MODES = ["scratch", "img2vid", "continue"] as const;
 const ALLOWED_COUNTS = [1, 4, 8, 16] as const;
 
 export class CreateVideoJobDto {
+  /**
+   * Готовый промпт (прежний формат). Не нужен, если передана spec — тогда
+   * промпт собирает сервер.
+   */
+  @ValidateIf((o) => !o.spec)
   @IsString()
   @MinLength(1)
   prompt!: string;
+
+  /**
+   * Спецификация генерации (см. generation/prompt/generation-spec.ts): выбранные
+   * опции, модель, персонаж, текст. Если передана — остальные поля тела, кроме
+   * prompt, игнорируются, а промпт собирает сервер.
+   */
+  @IsOptional()
+  @IsObject()
+  spec?: Record<string, unknown>;
 
   @IsOptional()
   @IsString()
