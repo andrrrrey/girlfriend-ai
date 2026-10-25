@@ -1,6 +1,6 @@
 jest.mock("@repo/config", () => ({ loadEnv: () => ({ AI_HOST: "ai", AI_PORT: 8081 }) }));
 
-import { BadRequestException, ConflictException } from "@nestjs/common";
+import { BadRequestException, ConflictException, HttpException } from "@nestjs/common";
 import { ConversationEngine } from "./conversation.engine";
 import { AiServiceError } from "./ai-client";
 import type { EngineEvent } from "./conversation.types";
@@ -37,6 +37,7 @@ describe("ConversationEngine", () => {
   let llm: any;
   let stt: any;
   let context: any;
+  let wallet: any;
   let engine: ConversationEngine;
 
   beforeEach(() => {
@@ -71,6 +72,11 @@ describe("ConversationEngine", () => {
     };
     stt = { transcribe: jest.fn().mockResolvedValue({ text: "голос", model: "whisper-1", durationSec: 3 }) };
     context = { build: jest.fn().mockResolvedValue({ messages: [], characterId: "char-1" }) };
+    wallet = {
+      reserveOperation: jest.fn(async (_u: string, op: { kind: string }) => ({ operationKey: `res-${op.kind}`, amount: 1 })),
+      capture: jest.fn().mockResolvedValue(true),
+      release: jest.fn().mockResolvedValue(false),
+    };
     engine = new ConversationEngine(
       prisma,
       chats,
@@ -80,6 +86,7 @@ describe("ConversationEngine", () => {
       context,
       llm,
       stt,
+      wallet,
     );
   });
 
@@ -261,6 +268,59 @@ describe("ConversationEngine", () => {
         expect.objectContaining({ replyToId: "u-1" }),
         tx,
       );
+    });
+  });
+
+  describe("биллинг", () => {
+    it("резерв до сообщения, списание в транзакции ответа", async () => {
+      await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "hi" }));
+
+      expect(wallet.reserveOperation).toHaveBeenCalledWith("user-1", { kind: "chat_message" }, expect.stringMatching(/^chat_message:/));
+      expect(wallet.reserveOperation.mock.invocationCallOrder[0]).toBeLessThan(chats.saveMessage.mock.invocationCallOrder[0]);
+      expect(wallet.capture).toHaveBeenCalledWith("res-chat_message", undefined, tx);
+    });
+
+    it("нет кредитов → 402, сообщение не сохраняется, модель не вызывается", async () => {
+      wallet.reserveOperation.mockRejectedValue(new HttpException({ error: "INSUFFICIENT_CREDITS" }, 402));
+
+      await expect(drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "hi" }))).rejects.toBeInstanceOf(
+        HttpException,
+      );
+      expect(chats.saveMessage).not.toHaveBeenCalled();
+      expect(llm.streamChat).not.toHaveBeenCalled();
+      expect(locks.release).toHaveBeenCalled();
+    });
+
+    it("ответа нет (ошибка AI-сервиса) → резерв возвращается, не списывается", async () => {
+      llm.streamChat.mockImplementation(llmStream([], new AiServiceError(502, { error: "down" })));
+
+      await expect(drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "hi" }))).rejects.toBeInstanceOf(
+        AiServiceError,
+      );
+      expect(wallet.capture).not.toHaveBeenCalled();
+      expect(wallet.release).toHaveBeenCalledWith("res-chat_message", "not_completed");
+    });
+
+    it("голос: распознавание списывается после STT, ответ — с ответом", async () => {
+      await drain(
+        engine.handleUserVoice({ chatId: "chat-1", actor: ACTOR, audio: { buffer: Buffer.from("x"), mimetype: "audio/webm" } }),
+      );
+      expect(wallet.capture).toHaveBeenCalledWith("res-stt");
+      expect(wallet.capture).toHaveBeenCalledWith("res-chat_message", undefined, tx);
+    });
+
+    it("повтор с сохранённым ответом ничего не резервирует", async () => {
+      prisma.message.findFirst
+        .mockResolvedValueOnce({ id: "u-1", deletedAt: null })
+        .mockResolvedValueOnce({ id: "a-1", content: "ok" });
+      await drain(engine.handleUserText({ chatId: "chat-1", actor: ACTOR, content: "hi", clientMessageId: "c-1" }));
+      expect(wallet.reserveOperation).not.toHaveBeenCalled();
+    });
+
+    it("billable=false (служебные вызовы) не трогает кошелёк", async () => {
+      await drain(engine.respond({ chatId: "chat-1", actor: ACTOR, billable: false, enforceLimits: false }));
+      expect(wallet.reserveOperation).not.toHaveBeenCalled();
+      expect(wallet.capture).not.toHaveBeenCalled();
     });
   });
 });

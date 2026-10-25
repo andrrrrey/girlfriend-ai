@@ -9,7 +9,9 @@ export type PremiumLimitType =
   | "chatSessions"
   | "messagesPerChat"
   | "imageGenerations"
-  | "videoGenerations";
+  | "videoGenerations"
+  /** Недостаточно кредитов (402 INSUFFICIENT_CREDITS): used = доступно, limit = нужно. */
+  | "credits";
 
 interface Props {
   limitType: PremiumLimitType;
@@ -18,12 +20,29 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * Данные попапа из тела ошибки API: лимит бесплатного тарифа (FREE_LIMIT_REACHED)
+ * или нехватка кредитов (402 INSUFFICIENT_CREDITS). null — ошибка другого типа.
+ */
+export function premiumPopupFromError(
+  body: any,
+): { limitType: PremiumLimitType; limit: number; used: number } | null {
+  if (body?.error === "FREE_LIMIT_REACHED") {
+    return { limitType: body.limitType as PremiumLimitType, limit: body.limit, used: body.used };
+  }
+  if (body?.error === "INSUFFICIENT_CREDITS") {
+    return { limitType: "credits", limit: body.required, used: body.available };
+  }
+  return null;
+}
+
 const LIMIT_KEYS: Record<PremiumLimitType, { title: TKey; description: TKey }> = {
   characters: { title: "premium.charactersTitle", description: "premium.charactersDesc" },
   chatSessions: { title: "premium.chatSessionsTitle", description: "premium.chatSessionsDesc" },
   messagesPerChat: { title: "premium.messagesTitle", description: "premium.messagesDesc" },
   imageGenerations: { title: "premium.imageTitle", description: "premium.imageDesc" },
   videoGenerations: { title: "premium.videoTitle", description: "premium.videoDesc" },
+  credits: { title: "premium.creditsTitle", description: "premium.creditsDesc" },
 };
 
 export default function PremiumPopup({ limitType, limit, used, onClose }: Props) {

@@ -46,6 +46,7 @@ model User {
   reports          Report[]
   following        Follow[]           @relation("follower")
   followers        Follow[]           @relation("followee")
+  wallet           Wallet?
 
   @@map("users")
 }
@@ -681,4 +682,94 @@ model Report {
   @@index([userId])
   @@index([createdAt])
   @@map("reports")
+}
+
+// ─── Billing: кошелёк кредитов ───────────────────────────────
+
+// Кошелёк во внутренних кредитах. available = balance - reserved.
+// balance меняется только записями журнала (LedgerEntry), reserved — резервами.
+model Wallet {
+  id          String   @id @default(uuid()) @db.Uuid
+  ownerUserId String   @unique @map("owner_user_id") @db.Uuid
+  balance     Int      @default(0)
+  reserved    Int      @default(0)
+  // Счётчик изменений (оптимистичная версия, для аудита и отладки гонок)
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner        User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  entries      LedgerEntry[]
+  reservations CreditReservation[]
+
+  @@map("wallets")
+}
+
+// Журнал операций кошелька (append-only). Сумма balanceDelta = Wallet.balance,
+// сумма reservedDelta = Wallet.reserved — это проверяет сверка (reconcile).
+model LedgerEntry {
+  id            String   @id @default(uuid()) @db.Uuid
+  walletId      String   @map("wallet_id") @db.Uuid
+  // bonus | topup | adjust | reserve | capture | release | refund
+  type          String
+  balanceDelta  Int      @default(0) @map("balance_delta")
+  reservedDelta Int      @default(0) @map("reserved_delta")
+  balanceAfter  Int      @map("balance_after")
+  reservedAfter Int      @map("reserved_after")
+  // Идемпотентный ключ: повтор операции с тем же ключом не создаёт вторую запись
+  operationKey  String   @unique @map("operation_key")
+  // Ключ резерва, к которому относится запись (reserve/capture/release/refund)
+  reservationKey String? @map("reservation_key")
+  aiJobId       String?  @map("ai_job_id") @db.Uuid
+  // Кто инициировал (админ при начислении; владелец бота в reseller-режиме)
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  // Конечный пользователь (участник Telegram-бота) — для reseller-режима
+  endUserId     String?  @map("end_user_id")
+  reason        String?
+  meta          Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@index([reservationKey])
+  @@map("ledger_entries")
+}
+
+// Резерв кредитов под AI-операцию: берётся до запуска, затем списывается
+// по факту (captured) или возвращается (released). Списанное можно вернуть (refunded).
+model CreditReservation {
+  id             String    @id @default(uuid()) @db.Uuid
+  walletId       String    @map("wallet_id") @db.Uuid
+  operationKey   String    @unique @map("operation_key")
+  // chat_message | chat_greeting | stt | tts | image | video
+  operation      String
+  amount         Int
+  capturedAmount Int?      @map("captured_amount")
+  // held | captured | released | refunded
+  status         String    @default("held")
+  aiJobId        String?   @map("ai_job_id") @db.Uuid
+  priceVersion   Int?      @map("price_version")
+  expiresAt      DateTime  @map("expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  settledAt      DateTime? @map("settled_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
+  @@index([aiJobId])
+  @@map("credit_reservations")
+}
+
+// Версионируемая таблица цен операций в кредитах. Действует последняя версия
+// с effectiveFrom <= now; старые версии остаются для аудита списаний.
+model PriceTable {
+  id            String   @id @default(uuid()) @db.Uuid
+  version       Int      @unique
+  items         Json
+  effectiveFrom DateTime @default(now()) @map("effective_from")
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("price_tables")
 }

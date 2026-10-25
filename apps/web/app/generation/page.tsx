@@ -36,7 +36,7 @@ import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/Pose
 import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
 import { DEFAULT_CAMERA_SELECTIONS, type CameraSelections } from "../components/CameraModal";
 import { DEFAULT_PROMPT_DETAILS_SELECTIONS, type PromptDetailsSelections } from "../components/PromptDetailsModal";
-import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import PremiumPopup, { premiumPopupFromError, type PremiumLimitType } from "../components/PremiumPopup";
 import { ApiError } from "../../lib/api";
 
 const CharacterModal = dynamic(() => import("../components/CharacterModal"), { ssr: false });
@@ -1537,12 +1537,8 @@ function GenerationPageInner() {
       }
       setPrompt("");
     } catch (err: any) {
-      if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
-        setPremiumPopup({
-          limitType: err.body.limitType as PremiumLimitType,
-          limit: err.body.limit,
-          used: err.body.used,
-        });
+      if (err instanceof ApiError && premiumPopupFromError(err.body)) {
+        setPremiumPopup(premiumPopupFromError(err.body)!);
       } else {
         setError(err.message || tr("gp.errStartGen"));
       }

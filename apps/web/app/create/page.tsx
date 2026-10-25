@@ -10,7 +10,7 @@ import {
   getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
   type AppearanceOptionsResponse, type PoseOptionsResponse, type SceneOptionsResponse, type CameraOptionsResponse,
 } from "../../lib/api";
-import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import PremiumPopup, { premiumPopupFromError, type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
@@ -54,6 +54,8 @@ let avatarGenerated = false;
 let lastAvatarJobId: string | null = null;
 
 let generationContextStartFn: ((jobId: string, type: "image" | "video", prompt: string, model: string, source?: string) => void) | null = null;
+/** Мост к попапу лимитов/кредитов компонента (генерация аватара — вне React). */
+let premiumPopupFn: ((p: { limitType: PremiumLimitType; limit: number; used: number }) => void) | null = null;
 
 // Текущий режим контента (nsfw|sfw) из контекста — мост к module-scope функциям
 // генерации аватара. В SFW аватар генерируется как безопасный контент.
@@ -1259,7 +1261,19 @@ async function startAvatarGeneration() {
       jobPayload.provider = "civitai";
       jobPayload.generationStyle = data.generationStyle;
     }
-    const job = await createImageJob(jobPayload);
+    let job: Awaited<ReturnType<typeof createImageJob>>;
+    try {
+      job = await createImageJob(jobPayload);
+    } catch (err) {
+      // Генерация не запущена (лимит, нет кредитов): снимаем спиннер, даём повторить.
+      avatarGenerated = false;
+      const spinner = document.getElementById("s9-avatar-spinner");
+      if (spinner) spinner.style.display = "none";
+      document.getElementById("s9-regen-btn")?.removeAttribute("disabled");
+      const popup = err instanceof ApiError ? premiumPopupFromError(err.body) : null;
+      if (popup && premiumPopupFn) premiumPopupFn(popup);
+      return;
+    }
     lastAvatarJobId = job.jobId;
     if (generationContextStartFn) {
       generationContextStartFn(job.jobId, "image", prompt, data.generationStyle || "default", "character-creation");
@@ -1789,12 +1803,8 @@ export default function CreateCharacterPage() {
       } catch (err: unknown) {
         submitBtn.classList.remove("disabled");
         submitBtn.textContent = tr("create.bringToLife");
-        if (err instanceof ApiError && err.body?.error === "FREE_LIMIT_REACHED") {
-          premiumPopupRef.current({
-            limitType: err.body.limitType as PremiumLimitType,
-            limit: err.body.limit,
-            used: err.body.used,
-          });
+        if (err instanceof ApiError && premiumPopupFromError(err.body)) {
+          premiumPopupRef.current(premiumPopupFromError(err.body)!);
         } else {
           const msg = err instanceof Error ? err.message : tr("create.errCreate");
           alert(msg);
@@ -1811,6 +1821,7 @@ export default function CreateCharacterPage() {
 
     // Bridge GenerationContext to module-level functions
     generationContextStartFn = startGenRef.current;
+    premiumPopupFn = (p) => premiumPopupRef.current(p);
     // Глобальные слушатели регистрируем один раз — переживают перестройку разметки
     registerGlobalListeners();
     // Сначала узнаём разрешённые гендеры, затем строим разметку — чтобы dropdown,
@@ -1824,6 +1835,7 @@ export default function CreateCharacterPage() {
         previewPollInterval = null;
       }
       generationContextStartFn = null;
+      premiumPopupFn = null;
     };
   }, [user]);
 

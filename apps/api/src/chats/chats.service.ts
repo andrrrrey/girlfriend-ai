@@ -538,8 +538,14 @@ export class ChatsService {
    * @param jobId — ID задания
    * @param tokensUsed — количество токенов (опционально, только для chat)
    * @param tx — транзакционный клиент (запись вместе с ответом ассистента)
+   * @param extraInput — доп. поля в input (например providerCostUsd — стоимость у провайдера)
    */
-  async completeAiJob(jobId: string, tokensUsed?: number, tx?: Prisma.TransactionClient) {
+  async completeAiJob(
+    jobId: string,
+    tokensUsed?: number,
+    tx?: Prisma.TransactionClient,
+    extraInput?: Record<string, unknown>,
+  ) {
     // Модель, которой отвечал чат (для учёта расходов). Зависит от выбранного
     // провайдера: OpenRouter (OPENROUTER_CHAT_MODEL) или ModelsLab
     // (MODELSLAB_CHAT_MODEL). Настройки могут отсутствовать — берём дефолты,
@@ -555,7 +561,7 @@ export class ChatsService {
       provider === "openrouter"
         ? orSetting?.value || "minimax/minimax-m2-her"
         : mlSetting?.value || "llama-3.1-8b-uncensored";
-    const input = { ...((job?.input as Record<string, unknown>) ?? {}), model, provider };
+    const input = { ...((job?.input as Record<string, unknown>) ?? {}), model, provider, ...(extraInput ?? {}) };
 
     await (tx ?? this.prisma).aiJob.update({
       where: { id: jobId },

@@ -12,6 +12,9 @@
  *   записываются одной транзакцией.
  * - Обрыв: при отмене клиентом или ошибке модели частичный ответ сохраняется
  *   со статусом failed, AiJob помечается проваленным.
+ * - Биллинг: перед вызовом модели резервируются кредиты (402 INSUFFICIENT_CREDITS,
+ *   если не хватает); списание — в той же транзакции, что и ответ; если ответа
+ *   нет — резерв возвращается.
  *
  * Каждая операция — async-генератор EngineEvent. Ошибки ДО первого события
  * (нет доступа, лимит, занятый диалог, ошибка AI-сервиса) выбрасываются как
@@ -19,11 +22,14 @@
  */
 
 import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma.service";
 import { ChatsService } from "../chats/chats.service";
 import { DemoService } from "../demo/demo.service";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { RedisLockService } from "../common/redis-lock.service";
+import { WalletService } from "../billing/wallet.service";
+import type { BillableOperation } from "../billing/pricing";
 import { AiServiceError } from "./ai-client";
 import { ContextBuilder, ContextOptions } from "./context-builder";
 import { LlmAdapter } from "./llm.adapter";
@@ -32,6 +38,7 @@ import type {
   ChatWithContext,
   ConversationActor,
   EditInput,
+  EngineBaseInput,
   EngineEvent,
   GreetingInput,
   MessageSource,
@@ -63,6 +70,8 @@ interface ReplyOptions {
   context?: ContextOptions;
   jobInput?: Record<string, unknown>;
   replyMetadata?: Record<string, unknown>;
+  /** Резерв кредитов под ответ: списывается вместе с сохранением ответа. */
+  reservationKey?: string | null;
 }
 
 /** Итог потока ядра, собранный целиком (для каналов без стриминга). */
@@ -92,6 +101,7 @@ export class ConversationEngine {
     private readonly context: ContextBuilder,
     private readonly llm: LlmAdapter,
     private readonly stt: SttAdapter,
+    private readonly wallet: WalletService,
   ) {}
 
   // ─── Входы ──────────────────────────────────────────────────────────────────
@@ -104,7 +114,7 @@ export class ConversationEngine {
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       const existing = await this.findDuplicate(chat.id, source, input.clientMessageId, input.externalId);
       if (existing) {
-        yield* this.resumeDuplicate(existing, { chat, actor: input.actor, source, usageAction: "chat_message", signal: input.signal });
+        yield* this.resumeDuplicate(existing, input, { chat, actor: input.actor, source, usageAction: "chat_message", signal: input.signal });
         return;
       }
 
@@ -112,26 +122,33 @@ export class ConversationEngine {
         await this.demo.checkMessageLimit(chat.id, input.actor.id, input.actor.subscription);
       }
 
-      const userMsg = await this.chats.saveMessage(chat.id, "user", input.content, {
-        source,
-        clientMessageId: input.clientMessageId,
-        externalId: input.externalId,
-      });
+      // Резерв — до сохранения сообщения: без кредитов сообщение не принимается.
+      const reservation = await this.reserve(input, { kind: "chat_message" });
+      try {
+        const userMsg = await this.chats.saveMessage(chat.id, "user", input.content, {
+          source,
+          clientMessageId: input.clientMessageId,
+          externalId: input.externalId,
+        });
 
-      this.analytics.capture(input.actor.id, "message_sent", {
-        chat_id: chat.id,
-        character_id: chat.characterId,
-        source,
-      });
+        this.analytics.capture(input.actor.id, "message_sent", {
+          chat_id: chat.id,
+          character_id: chat.characterId,
+          source,
+        });
 
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_message",
-        replyToId: userMsg.id,
-        signal: input.signal,
-      });
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_message",
+          replyToId: userMsg.id,
+          signal: input.signal,
+          reservationKey: reservation,
+        });
+      } finally {
+        await this.releaseIfHeld(reservation);
+      }
     });
   }
 
@@ -144,35 +161,46 @@ export class ConversationEngine {
       const existing = await this.findDuplicate(chat.id, source, input.clientMessageId, input.externalId);
       if (existing) {
         yield { type: "transcription", text: existing.content };
-        yield* this.resumeDuplicate(existing, { chat, actor: input.actor, source, usageAction: "chat_message", signal: input.signal });
+        yield* this.resumeDuplicate(existing, input, { chat, actor: input.actor, source, usageAction: "chat_message", signal: input.signal });
         return;
       }
 
-      const stt = await this.stt.transcribe(input.audio, input.language);
-      if (!stt.text) throw new BadRequestException({ error: "Could not transcribe audio" });
+      // Резервируем и распознавание, и ответ заранее: без кредитов аудио не отправляется в STT.
+      const sttReservation = await this.reserve(input, { kind: "stt" });
+      let chatReservation: string | null = null;
+      try {
+        chatReservation = await this.reserve(input, { kind: "chat_message" });
 
-      const userMsg = await this.chats.saveMessage(chat.id, "user", stt.text, {
-        type: "audio",
-        source,
-        clientMessageId: input.clientMessageId,
-        externalId: input.externalId,
-      });
-      await this.chats.logUsage(input.actor.id, "stt");
-      // Учёт расходов на распознавание речи (Whisper тарифицируется по минутам).
-      await this.chats.recordVoiceJob(input.actor.id, "stt", stt.model || "whisper-1", stt.durationSec ?? null, {
-        chatSessionId: chat.id,
-      });
+        const stt = await this.stt.transcribe(input.audio, input.language);
+        if (!stt.text) throw new BadRequestException({ error: "Could not transcribe audio" });
+        if (sttReservation) await this.wallet.capture(sttReservation);
 
-      yield { type: "transcription", text: stt.text };
+        const userMsg = await this.chats.saveMessage(chat.id, "user", stt.text, {
+          type: "audio",
+          source,
+          clientMessageId: input.clientMessageId,
+          externalId: input.externalId,
+        });
+        await this.chats.logUsage(input.actor.id, "stt");
+        // Учёт расходов на распознавание речи (Whisper тарифицируется по минутам).
+        await this.chats.recordVoiceJob(input.actor.id, "stt", stt.model || "whisper-1", stt.durationSec ?? null, {
+          chatSessionId: chat.id,
+        });
 
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_message",
-        replyToId: userMsg.id,
-        signal: input.signal,
-      });
+        yield { type: "transcription", text: stt.text };
+
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_message",
+          replyToId: userMsg.id,
+          signal: input.signal,
+          reservationKey: chatReservation,
+        });
+      } finally {
+        await this.releaseIfHeld(sttReservation, chatReservation);
+      }
     });
   }
 
@@ -192,14 +220,20 @@ export class ConversationEngine {
       }
 
       const kickoff = GREETING_KICKOFF[input.lang === "ru" ? "ru" : "en"];
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_greeting",
-        signal: input.signal,
-        context: { messages: [{ role: "user", content: kickoff }] },
-      });
+      const reservation = await this.reserve(input, { kind: "chat_greeting" });
+      try {
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_greeting",
+          signal: input.signal,
+          context: { messages: [{ role: "user", content: kickoff }] },
+          reservationKey: reservation,
+        });
+      } finally {
+        await this.releaseIfHeld(reservation);
+      }
     });
   }
 
@@ -212,17 +246,23 @@ export class ConversationEngine {
       if (input.enforceLimits !== false) {
         await this.demo.checkMessageLimit(chat.id, input.actor.id, input.actor.subscription);
       }
-      // Проверяет, что сообщение — пользовательское; каскадно удаляет последующие (кроме фото).
-      await this.chats.updateMessageContent(input.messageId, chat.id, input.actor.id, input.content);
+      const reservation = await this.reserve(input, { kind: "chat_message" });
+      try {
+        // Проверяет, что сообщение — пользовательское; каскадно удаляет последующие (кроме фото).
+        await this.chats.updateMessageContent(input.messageId, chat.id, input.actor.id, input.content);
 
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_message",
-        replyToId: input.messageId,
-        signal: input.signal,
-      });
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_message",
+          replyToId: input.messageId,
+          signal: input.signal,
+          reservationKey: reservation,
+        });
+      } finally {
+        await this.releaseIfHeld(reservation);
+      }
     });
   }
 
@@ -241,17 +281,23 @@ export class ConversationEngine {
         throw new BadRequestException("Only assistant text replies can be regenerated");
       }
 
-      const after = await this.chats.getMessagesAfter(chat.id, target.id);
-      await this.chats.softDeleteMessages([target.id, ...after.map((m) => m.id)]);
+      const reservation = await this.reserve(input, { kind: "chat_message" });
+      try {
+        const after = await this.chats.getMessagesAfter(chat.id, target.id);
+        await this.chats.softDeleteMessages([target.id, ...after.map((m) => m.id)]);
 
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_message",
-        replyToId: target.replyToId ?? undefined,
-        signal: input.signal,
-      });
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_message",
+          replyToId: target.replyToId ?? undefined,
+          signal: input.signal,
+          reservationKey: reservation,
+        });
+      } finally {
+        await this.releaseIfHeld(reservation);
+      }
     });
   }
 
@@ -267,16 +313,22 @@ export class ConversationEngine {
       if (input.enforceLimits !== false) {
         await this.demo.checkMessageLimit(chat.id, input.actor.id, input.actor.subscription);
       }
-      yield* this.reply({
-        chat,
-        actor: input.actor,
-        source,
-        usageAction: "chat_message",
-        signal: input.signal,
-        context: { historyLimit: input.historyLimit, contentMode: input.contentMode, userProfile: input.userProfile },
-        jobInput: input.jobInput,
-        replyMetadata: input.replyMetadata,
-      });
+      const reservation = await this.reserve(input, { kind: "chat_message" });
+      try {
+        yield* this.reply({
+          chat,
+          actor: input.actor,
+          source,
+          usageAction: "chat_message",
+          signal: input.signal,
+          context: { historyLimit: input.historyLimit, contentMode: input.contentMode, userProfile: input.userProfile },
+          jobInput: input.jobInput,
+          replyMetadata: input.replyMetadata,
+          reservationKey: reservation,
+        });
+      } finally {
+        await this.releaseIfHeld(reservation);
+      }
     });
   }
 
@@ -341,7 +393,8 @@ export class ConversationEngine {
    */
   private async *resumeDuplicate(
     existing: { id: string; deletedAt: Date | null },
-    opts: Omit<ReplyOptions, "replyToId">,
+    input: EngineBaseInput,
+    opts: Omit<ReplyOptions, "replyToId" | "reservationKey">,
   ): AsyncGenerator<EngineEvent> {
     const saved = await this.prisma.message.findFirst({
       where: { chatSessionId: opts.chat.id, replyToId: existing.id, deletedAt: null, status: "completed" },
@@ -357,7 +410,26 @@ export class ConversationEngine {
       yield { type: "done", replayed: true };
       return;
     }
-    yield* this.reply({ ...opts, replyToId: existing.id });
+    const reservation = await this.reserve(input, { kind: "chat_message" });
+    try {
+      yield* this.reply({ ...opts, replyToId: existing.id, reservationKey: reservation });
+    } finally {
+      await this.releaseIfHeld(reservation);
+    }
+  }
+
+  /** Резервирует кредиты под операцию; null — бесплатная операция или служебный вызов. */
+  private async reserve(input: EngineBaseInput, op: BillableOperation): Promise<string | null> {
+    if (input.billable === false) return null;
+    const handle = await this.wallet.reserveOperation(input.actor.id, op, `${op.kind}:${randomUUID()}`);
+    return handle?.operationKey ?? null;
+  }
+
+  /** Возвращает резервы, не дошедшие до списания (после списания — ничего не делает). */
+  private async releaseIfHeld(...keys: (string | null)[]): Promise<void> {
+    for (const key of keys) {
+      if (key) await this.wallet.release(key, "not_completed").catch(() => false);
+    }
   }
 
   /** Генерирует ответ ассистента, стримит события модели и атомарно фиксирует результат. */
@@ -366,6 +438,7 @@ export class ConversationEngine {
     const aiJob = await this.chats.createAiJob(actor.id, "chat", {
       chatSessionId: chat.id,
       characterId: chat.characterId,
+      ...(opts.reservationKey ? { reservationKey: opts.reservationKey } : {}),
       ...(opts.jobInput ?? {}),
     });
 
@@ -373,13 +446,16 @@ export class ConversationEngine {
 
     let content = "";
     let tokens = 0;
+    // Фактическая стоимость у провайдера (OpenRouter) — для сверки маржи.
+    let providerCostUsd: number | undefined;
     let error: string | undefined;
 
     try {
       for await (const data of this.llm.streamChat(request, opts.signal)) {
         if (typeof data.content === "string") content += data.content;
-        const usageTokens = (data.usage as { totalTokens?: number } | undefined)?.totalTokens;
-        if (usageTokens) tokens = usageTokens;
+        const usage = data.usage as { totalTokens?: number; costUsd?: number } | undefined;
+        if (usage?.totalTokens) tokens = usage.totalTokens;
+        if (typeof usage?.costUsd === "number") providerCostUsd = usage.costUsd;
         if (data.error) error = String(data.error);
         yield { type: "llm", data };
       }
@@ -413,11 +489,18 @@ export class ConversationEngine {
           tx,
         );
         messageId = saved.id;
+        // Ответ получен (пусть и частично) — списываем резерв в той же транзакции.
+        if (opts.reservationKey) await this.wallet.capture(opts.reservationKey, undefined, tx);
       }
       if (failed && !content) {
         await this.chats.failAiJob(aiJob.id, error!, tx);
       } else {
-        await this.chats.completeAiJob(aiJob.id, tokens || undefined, tx);
+        await this.chats.completeAiJob(
+          aiJob.id,
+          tokens || undefined,
+          tx,
+          providerCostUsd !== undefined ? { providerCostUsd } : undefined,
+        );
         await this.chats.logUsage(actor.id, opts.usageAction, tokens || undefined, tx);
       }
     });

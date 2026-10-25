@@ -75,6 +75,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { randomUUID } from "crypto";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -91,6 +92,7 @@ import { ConversationEngine } from "../conversation/conversation.engine";
 import { AiServiceError } from "../conversation/ai-client";
 import { TtsAdapter, TtsError, TtsResult } from "../conversation/tts.adapter";
 import type { ConversationActor, EngineEvent } from "../conversation/conversation.types";
+import { WalletService } from "../billing/wallet.service";
 
 /** Пользователь из JWT → участник диалога для ядра. */
 function toActor(user: any): ConversationActor {
@@ -208,6 +210,7 @@ export class ChatsController {
     private readonly analytics: AnalyticsService,
     private readonly engine: ConversationEngine,
     private readonly tts: TtsAdapter,
+    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -581,10 +584,18 @@ export class ChatsController {
 
       const voiceId = chat.character?.voiceId || undefined;
 
+      // Резерв кредитов под озвучку (по числу символов); списание — после успешного синтеза.
+      const reservation = await this.wallet.reserveOperation(
+        req.user.id,
+        { kind: "tts", characters: message.content.length },
+        `tts:${randomUUID()}`,
+      );
+
       let result: TtsResult;
       try {
         result = await this.tts.synthesize(message.content, voiceId);
       } catch (err) {
+        if (reservation) await this.wallet.release(reservation.operationKey, "tts_failed").catch(() => false);
         if (!(err instanceof TtsError)) throw err;
         // Пробрасываем текст ошибки от AI-сервиса как есть — это видно
         // в DevTools → Network → Response и помогает диагностировать без
@@ -602,6 +613,7 @@ export class ChatsController {
         );
         return;
       }
+      if (reservation) await this.wallet.capture(reservation.operationKey);
 
       // If AI service returned JSON with URL+key (S3 upload) — download the
       // audio via the S3 SDK using the INTERNAL endpoint (same pattern as

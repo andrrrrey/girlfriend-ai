@@ -373,7 +373,7 @@ export class AutogenService implements OnModuleInit {
       payload.generationStyle = generationStyle;
     }
 
-    const { jobId } = await this.generation.createImageJob(adminId, payload);
+    const { jobId } = await this.generation.createImageJob(adminId, payload, { billable: false });
 
     for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
       const status = await this.generation.getJobStatus(jobId, adminId);

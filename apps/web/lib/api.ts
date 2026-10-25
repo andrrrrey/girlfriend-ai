@@ -1253,6 +1253,59 @@ export const admin = {
     return apiFetch<AdminUserDetailedStats>(`/admin/users/${id}/stats`);
   },
 
+  /** Кошелёк пользователя и последние операции (GET /admin/users/:id/wallet). */
+  async getUserWallet(id: string): Promise<WalletSummary & { ledger: LedgerEntry[] }> {
+    return apiFetch(`/admin/users/${id}/wallet`);
+  },
+
+  /**
+   * Начисление (+) или корректировка (−) кредитов (POST /admin/users/:id/credits).
+   * idempotencyKey защищает от двойного начисления при повторной отправке.
+   */
+  async creditUser(
+    id: string,
+    amount: number,
+    reason: string,
+    idempotencyKey: string,
+  ): Promise<{ entry: LedgerEntry; wallet: WalletSummary }> {
+    return apiFetch(`/admin/users/${id}/credits`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ amount, reason }),
+    });
+  },
+
+  /** Действующие цены, история версий и флаги биллинга (GET /admin/billing/prices). */
+  async getBillingPrices(): Promise<{
+    active: { version: number; items: PriceItems; effectiveFrom: string | null };
+    versions: { id: string; version: number; items: PriceItems; effectiveFrom: string; createdAt: string }[];
+    enforced: boolean;
+    welcomeBonus: number;
+  }> {
+    return apiFetch(`/admin/billing/prices`);
+  },
+
+  /** Сохраняет новую версию цен (PUT /admin/billing/prices). */
+  async setBillingPrices(items: PriceItems): Promise<{ version: number; items: PriceItems }> {
+    return apiFetch(`/admin/billing/prices`, { method: "PUT", body: JSON.stringify({ items }) });
+  },
+
+  /** Сверка кошельков с журналом (GET /admin/billing/reconcile). */
+  async reconcileBilling(): Promise<{
+    checked: number;
+    mismatches: {
+      walletId: string;
+      ownerUserId: string;
+      balance: number;
+      reserved: number;
+      ledgerBalance: number;
+      ledgerReserved: number;
+      heldReserved: number;
+    }[];
+  }> {
+    return apiFetch(`/admin/billing/reconcile`);
+  },
+
   /**
    * Список жалоб с фильтрами и пагинацией (GET /admin/reports).
    */
@@ -1882,7 +1935,9 @@ export function streamEditMessage(
       if (err.name !== "AbortError") {
         onError(err.message);
       }
-    });
+    })
+    // Ответ мог списать кредиты — обновляем баланс в хедере.
+    .finally(notifyWalletChanged);
 
   return controller;
 }
@@ -2123,6 +2178,71 @@ export const reports = {
   },
 };
 
+// ─── Billing API ──────────────────────────────────────────────
+
+/** Баланс кредитов. available = balance − reserved (резерв под идущие операции). */
+export interface WalletSummary {
+  balance: number;
+  reserved: number;
+  available: number;
+  /** true — при нехватке кредитов операции блокируются (402 INSUFFICIENT_CREDITS). */
+  enforced: boolean;
+}
+
+/** Запись журнала кошелька. */
+export interface LedgerEntry {
+  id: string;
+  type: "bonus" | "topup" | "adjust" | "reserve" | "capture" | "release" | "refund";
+  balanceDelta: number;
+  reservedDelta: number;
+  balanceAfter: number;
+  reservedAfter: number;
+  reason: string | null;
+  aiJobId: string | null;
+  actorUserId: string | null;
+  reservationKey: string | null;
+  createdAt: string;
+}
+
+/** Цены операций в кредитах (см. apps/api/src/billing/pricing.ts). */
+export interface PriceItems {
+  chat_message: number;
+  chat_greeting: number;
+  stt_message: number;
+  tts_per_1k_chars: number;
+  image: number;
+  image_hires_extra: number;
+  video: number;
+  image_models: Record<string, number>;
+  video_models: Record<string, number>;
+}
+
+/** Событие окна: баланс мог измениться — TopNav перечитывает кошелёк. */
+export const WALLET_CHANGED_EVENT = "wallet:changed";
+
+/** Сообщает интерфейсу, что баланс мог измениться (после сообщения, генерации и т.п.). */
+export function notifyWalletChanged(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
+}
+
+export const billing = {
+  /** Баланс текущего пользователя (GET /billing/wallet). */
+  async getWallet(): Promise<WalletSummary> {
+    return apiFetch(`/billing/wallet`);
+  },
+
+  /** Журнал операций (GET /billing/ledger). */
+  async getLedger(cursor?: string): Promise<{ items: LedgerEntry[]; nextCursor: string | null }> {
+    const q = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return apiFetch(`/billing/ledger${q}`);
+  },
+
+  /** Действующие цены (GET /billing/prices). */
+  async getPrices(): Promise<{ version: number; items: PriceItems }> {
+    return apiFetch(`/billing/prices`);
+  },
+};
+
 // ─── SSE streaming helper ────────────────────────────────────
 
 /**
@@ -2208,7 +2328,9 @@ export function streamMessage(
       if (err.name !== "AbortError") {
         onError(err.message);
       }
-    });
+    })
+    // Ответ мог списать кредиты — обновляем баланс в хедере.
+    .finally(notifyWalletChanged);
 
   return controller;
 }
@@ -2281,7 +2403,9 @@ export function streamGreeting(
       if (err.name !== "AbortError") {
         onError(err.message);
       }
-    });
+    })
+    // Ответ мог списать кредиты — обновляем баланс в хедере.
+    .finally(notifyWalletChanged);
 
   return controller;
 }
@@ -2356,7 +2480,9 @@ export function streamRegenerate(
       if (err.name !== "AbortError") {
         onError(err.message);
       }
-    });
+    })
+    // Ответ мог списать кредиты — обновляем баланс в хедере.
+    .finally(notifyWalletChanged);
 
   return controller;
 }
@@ -2447,7 +2573,9 @@ export function streamVoiceMessage(
       if (err.name !== "AbortError") {
         onError(err.message);
       }
-    });
+    })
+    // Ответ мог списать кредиты — обновляем баланс в хедере.
+    .finally(notifyWalletChanged);
 
   return controller;
 }
@@ -2478,10 +2606,13 @@ export async function fetchTTS(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "TTS failed" }));
-    throw new Error(err.error || "TTS failed");
+    // ApiError сохраняет статус и тело: 402 INSUFFICIENT_CREDITS показывает попап кредитов.
+    throw new ApiError(res.status, err.error || "TTS failed", err);
   }
 
-  return res.arrayBuffer();
+  const audio = await res.arrayBuffer();
+  notifyWalletChanged();
+  return audio;
 }
 
 // ─── Generation API ─────────────────────────────────────────────────────────

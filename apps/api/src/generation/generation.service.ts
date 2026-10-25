@@ -5,6 +5,9 @@ import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
+import { randomUUID } from "crypto";
+import { WalletService, generationReservationKey } from "../billing/wallet.service";
+import type { BillableOperation } from "../billing/pricing";
 import type { ImageJobData, VideoJobData } from "../queue/queue.types";
 import { loadEnv } from "@repo/config";
 import { resolveEnabledGenders } from "../common/genders";
@@ -46,7 +49,38 @@ export class GenerationService {
     private readonly prisma: PrismaService,
     @Inject(AI_QUEUE) private readonly queue: Queue,
     private readonly s3: S3Service,
+    private readonly wallet: WalletService,
   ) {}
+
+  /**
+   * Резервирует кредиты под N заданий генерации до постановки в очередь.
+   * id заданий генерируются заранее — по ним строятся ключи резервов, а воркер
+   * потом списывает/возвращает кредиты по id AiJob. Если на k-м задании не хватило
+   * кредитов — уже взятые резервы возвращаются, задания не создаются.
+   *
+   * @param billable — false для служебных генераций админки (без списаний)
+   * @returns заранее сгенерированные id заданий
+   */
+  private async reserveJobs(userId: string, op: BillableOperation, count: number, billable: boolean): Promise<string[]> {
+    const ids = Array.from({ length: count }, () => randomUUID());
+    if (!billable) return ids;
+    const reserved: string[] = [];
+    try {
+      for (const id of ids) {
+        const handle = await this.wallet.reserveOperation(userId, op, generationReservationKey(id), id);
+        if (handle) reserved.push(handle.operationKey);
+      }
+    } catch (err) {
+      for (const key of reserved) await this.wallet.release(key, "batch_rejected").catch(() => false);
+      throw err;
+    }
+    return ids;
+  }
+
+  /** Возвращает резерв задания, которое не удалось создать или поставить в очередь. */
+  private async releaseJob(jobId: string): Promise<void> {
+    await this.wallet.release(generationReservationKey(jobId), "enqueue_failed").catch(() => false);
+  }
 
   /** Возвращает публичный URL объекта S3 через /media/stream. */
   private keyToStreamUrl(key: string | null | undefined): string | null {
@@ -140,6 +174,7 @@ export class GenerationService {
   async createImageJob(
     userId: string,
     data: { prompt: string; negativePrompt?: string; model?: string; aspectRatio?: string; provider?: string; generationStyle?: string; count?: number; initImageUrl?: string; characterId?: string; seed?: number; contentMode?: "nsfw" | "sfw"; denoise?: number; engine?: "sdxl" | "kontext"; hiresFix?: boolean },
+    opts: { billable?: boolean } = {},
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -168,54 +203,70 @@ export class GenerationService {
       referenceImageUrl = await this.toPublicImageUrl(character?.avatarUrl);
     }
 
+    // Резерв кредитов под все N изображений — до создания заданий.
+    const plannedIds = await this.reserveJobs(
+      userId,
+      { kind: "image", model: data.model, hiresFix: data.hiresFix },
+      count,
+      opts.billable !== false,
+    );
+
     // Создаём N отдельных заданий (1 job → 1 изображение).
     const jobIds: string[] = [];
     for (let i = 0; i < count; i++) {
-      const aiJob = await this.prisma.aiJob.create({
-        data: {
-          userId,
-          type: "image",
-          status: "pending",
-          characterId: data.characterId || null,
-          nsfw: contentMode !== "sfw",
-          input: {
-            prompt,
-            originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
-            negativePrompt: data.negativePrompt,
-            model: data.model,
-            aspectRatio: data.aspectRatio,
-            provider: resolvedProvider,
-            generationStyle: data.generationStyle,
-            img2img: initImageUrl ? true : undefined,
-            avatarReference: referenceImageUrl ? true : undefined,
-            seed: data.seed,
-            contentMode,
-            denoise: data.denoise,
-            hiresFix: data.hiresFix || undefined,
+      try {
+        const aiJob = await this.prisma.aiJob.create({
+          data: {
+            id: plannedIds[i],
+            userId,
+            type: "image",
+            status: "pending",
+            characterId: data.characterId || null,
+            nsfw: contentMode !== "sfw",
+            input: {
+              prompt,
+              originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
+              negativePrompt: data.negativePrompt,
+              model: data.model,
+              aspectRatio: data.aspectRatio,
+              provider: resolvedProvider,
+              generationStyle: data.generationStyle,
+              img2img: initImageUrl ? true : undefined,
+              avatarReference: referenceImageUrl ? true : undefined,
+              seed: data.seed,
+              contentMode,
+              denoise: data.denoise,
+              hiresFix: data.hiresFix || undefined,
+              reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
+            },
           },
-        },
-      });
+        });
 
-      const jobData: ImageJobData = {
-        jobId: aiJob.id,
-        userId,
-        prompt,
-        negativePrompt: data.negativePrompt,
-        aspectRatio: data.aspectRatio,
-        model: data.model,
-        provider: resolvedProvider,
-        generationStyle: data.generationStyle,
-        initImageUrl,
-        referenceImageUrl,
-        seed: data.seed,
-        contentMode,
-        denoise: data.denoise,
-        engine: data.engine,
-        hiresFix: data.hiresFix,
-      };
+        const jobData: ImageJobData = {
+          jobId: aiJob.id,
+          userId,
+          prompt,
+          negativePrompt: data.negativePrompt,
+          aspectRatio: data.aspectRatio,
+          model: data.model,
+          provider: resolvedProvider,
+          generationStyle: data.generationStyle,
+          initImageUrl,
+          referenceImageUrl,
+          seed: data.seed,
+          contentMode,
+          denoise: data.denoise,
+          engine: data.engine,
+          hiresFix: data.hiresFix,
+        };
 
-      await this.queue.add(JOB_NAMES.IMAGE, jobData);
-      jobIds.push(aiJob.id);
+        await this.queue.add(JOB_NAMES.IMAGE, jobData);
+        jobIds.push(aiJob.id);
+      } catch (err) {
+        // Это и оставшиеся задания не созданы — возвращаем их резервы.
+        for (const id of plannedIds.slice(i)) await this.releaseJob(id);
+        throw err;
+      }
     }
 
     return { jobId: jobIds[0], jobIds, status: "pending" };
@@ -395,6 +446,7 @@ export class GenerationService {
       contentMode?: "nsfw" | "sfw";
       characterId?: string;
     },
+    opts: { billable?: boolean } = {},
   ) {
     let prompt = data.prompt;
     const originalPrompt = data.prompt;
@@ -413,48 +465,59 @@ export class GenerationService {
     const provider = data.provider || VIDEO_MODELS.find((m) => m.id === model)?.provider || "modelslab";
     const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
 
+    // Резерв кредитов под все N видео — до создания заданий.
+    const plannedIds = await this.reserveJobs(userId, { kind: "video", model }, count, opts.billable !== false);
+
     const jobIds: string[] = [];
     for (let i = 0; i < count; i++) {
-      const aiJob = await this.prisma.aiJob.create({
-        data: {
-          userId,
-          type: "video",
-          status: "pending",
-          characterId: data.characterId || null,
-          nsfw: contentMode !== "sfw",
-          input: {
-            prompt,
-            originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
-            negativePrompt: data.negativePrompt,
-            model,
-            aspectRatio: data.aspectRatio,
-            provider,
-            mode,
-            initImageKey: data.initImageKey,
-            initVideoKey: data.initVideoKey,
-            seed: data.seed,
-            contentMode,
+      try {
+        const aiJob = await this.prisma.aiJob.create({
+          data: {
+            id: plannedIds[i],
+            userId,
+            type: "video",
+            status: "pending",
+            characterId: data.characterId || null,
+            nsfw: contentMode !== "sfw",
+            input: {
+              prompt,
+              originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
+              negativePrompt: data.negativePrompt,
+              model,
+              aspectRatio: data.aspectRatio,
+              provider,
+              mode,
+              initImageKey: data.initImageKey,
+              initVideoKey: data.initVideoKey,
+              seed: data.seed,
+              contentMode,
+              reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
+            },
           },
-        },
-      });
+        });
 
-      const jobData: VideoJobData = {
-        jobId: aiJob.id,
-        userId,
-        prompt,
-        negativePrompt: data.negativePrompt,
-        aspectRatio: data.aspectRatio,
-        model,
-        provider,
-        mode,
-        initImageKey: data.initImageKey,
-        initVideoKey: data.initVideoKey,
-        seed: data.seed,
-        contentMode,
-      };
+        const jobData: VideoJobData = {
+          jobId: aiJob.id,
+          userId,
+          prompt,
+          negativePrompt: data.negativePrompt,
+          aspectRatio: data.aspectRatio,
+          model,
+          provider,
+          mode,
+          initImageKey: data.initImageKey,
+          initVideoKey: data.initVideoKey,
+          seed: data.seed,
+          contentMode,
+        };
 
-      await this.queue.add(JOB_NAMES.VIDEO, jobData);
-      jobIds.push(aiJob.id);
+        await this.queue.add(JOB_NAMES.VIDEO, jobData);
+        jobIds.push(aiJob.id);
+      } catch (err) {
+        // Это и оставшиеся задания не созданы — возвращаем их резервы.
+        for (const id of plannedIds.slice(i)) await this.releaseJob(id);
+        throw err;
+      }
     }
 
     return { jobId: jobIds[0], jobIds, status: "pending" };

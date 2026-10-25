@@ -356,6 +356,29 @@ img.media-broken {
 }
 
 /* Переключатель режима контента SFW / NSFW в хедере */
+/* Баланс кредитов в хедере */
+.topnav-credits {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #313131;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.topnav-credits svg {
+  color: #f95bad;
+  flex-shrink: 0;
+}
+.topnav-credits-negative {
+  color: #e36466;
+}
+
 .content-mode-toggle {
   display: inline-flex;
   align-items: center;

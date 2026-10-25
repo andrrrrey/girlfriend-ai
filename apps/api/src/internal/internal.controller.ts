@@ -20,6 +20,7 @@
 
 import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
+import { WalletService, generationReservationKey } from "../billing/wallet.service";
 
 /**
  * Контроллер внутреннего API.
@@ -28,7 +29,10 @@ import { PrismaService } from "../prisma.service";
  */
 @Controller("internal")
 export class InternalController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly wallet: WalletService,
+  ) {}
 
   /**
    * GET /internal/settings
@@ -107,6 +111,11 @@ export class InternalController {
    * Логика completedAt:
    * - Устанавливается автоматически при status="completed" или "failed"
    * - undefined при других статусах (например "processing")
+   *
+   * Биллинг (резерв gen:<id>, взятый при создании генерации):
+   * - completed → кредиты списываются; failed → резерв возвращается.
+   * - Повторные вызовы безопасны: списание/возврат идемпотентны; успех после
+   *   возврата (ретрай воркера) списывает кредиты без резерва.
    */
   @Patch("ai-jobs/:id")
   async updateAiJob(
@@ -119,7 +128,7 @@ export class InternalController {
       error?: string;
     },
   ) {
-    return this.prisma.aiJob.update({
+    const job = await this.prisma.aiJob.update({
       where: { id },
       data: {
         status: body.status,
@@ -130,6 +139,13 @@ export class InternalController {
         completedAt: ["completed", "failed"].includes(body.status) ? new Date() : undefined,
       },
     });
+
+    if (body.status === "completed") {
+      await this.wallet.capture(generationReservationKey(id));
+    } else if (body.status === "failed") {
+      await this.wallet.release(generationReservationKey(id), "generation_failed");
+    }
+    return job;
   }
 
   // ─── UsageLog endpoints (вызываются Worker-ом) ──────────────────────────────

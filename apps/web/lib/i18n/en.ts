@@ -47,6 +47,7 @@ export const en = {
   "topnav.createAccount": "Create Free Account",
   "topnav.login": "Log in",
   "topnav.logout": "Log out",
+  "topnav.credits": "Credits",
 
   // Notifications (bell / toasts)
   "notif.character": "Character",
@@ -208,6 +209,8 @@ export const en = {
   "premium.imageDesc": "You've used all your free image generations.",
   "premium.videoTitle": "Video generation limit",
   "premium.videoDesc": "You've used all your free video generations.",
+  "premium.creditsTitle": "Not enough credits",
+  "premium.creditsDesc": "This action costs more credits than you have available.",
   "premium.getPremium": "Get Premium",
   "premium.hint": "Unlimited characters, chats, generations and voice features",
 

@@ -385,7 +385,7 @@ export class GentestService implements OnModuleInit {
         if (ctx.engine) payload.engine = ctx.engine;
       }
 
-      const { jobId } = await this.generation.createImageJob(ctx.adminId, payload);
+      const { jobId } = await this.generation.createImageJob(ctx.adminId, payload, { billable: false });
       await this.prisma.genTestItem.update({ where: { id: itemId }, data: { jobId } });
 
       for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {

@@ -37,6 +37,7 @@ import type { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard, Roles } from "../auth/guards/roles.guard";
 import { AdminService } from "./admin.service";
+import { BillingConfigService } from "../billing/billing-config.service";
 import { CommentGenService } from "./comment-gen/comment-gen.service";
 import { UpsertSettingsDto } from "./dto/upsert-settings.dto";
 import { CreateCharacterDto } from "./dto/create-character.dto";
@@ -77,6 +78,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly commentGen: CommentGenService,
+    private readonly billingConfig: BillingConfigService,
   ) {}
 
   // ─── Settings ──────────────────────────────────────────────
@@ -111,7 +113,10 @@ export class AdminController {
    */
   @Put("settings")
   async upsertSettings(@Body() dto: UpsertSettingsDto) {
-    return this.adminService.upsertSettings(dto.settings);
+    const result = await this.adminService.upsertSettings(dto.settings);
+    // BILLING_ENFORCED / WELCOME_BONUS_CREDITS должны действовать сразу, без ожидания кэша
+    this.billingConfig.invalidate();
+    return result;
   }
 
   // ─── Characters ────────────────────────────────────────────

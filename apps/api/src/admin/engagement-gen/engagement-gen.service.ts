@@ -281,7 +281,8 @@ export class EngagementGenService implements OnModuleInit {
         seed,
         contentMode,
       };
-      ({ jobId } = await this.generation.createImageJob(adminId, payload));
+      // Служебная генерация контента админкой — без списания кредитов.
+      ({ jobId } = await this.generation.createImageJob(adminId, payload, { billable: false }));
     } else {
       ({ jobId } = await this.generation.createVideoJob(adminId, {
         prompt,
@@ -292,7 +293,7 @@ export class EngagementGenService implements OnModuleInit {
         characterId: character.id,
         seed,
         contentMode,
-      }));
+      }, { billable: false }));
     }
 
     return this.pollJob(jobId, adminId);

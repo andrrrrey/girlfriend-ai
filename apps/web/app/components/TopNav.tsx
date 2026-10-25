@@ -7,6 +7,7 @@ import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
 import Logo from "./Logo";
+import { billing, WALLET_CHANGED_EVENT } from "../../lib/api";
 
 /**
  * Сегментный переключатель режима контента SFW / NSFW в хедере.
@@ -35,6 +36,43 @@ function ContentModeToggle() {
         NSFW
       </button>
     </div>
+  );
+}
+
+/**
+ * Баланс кредитов в хедере. Перечитывается при монтировании, по событию
+ * WALLET_CHANGED_EVENT (после сообщения/озвучки/генерации) и когда меняется
+ * число активных генераций (генерация завершилась — кредиты списаны или возвращены).
+ */
+function WalletBadge({ activeJobsCount }: { activeJobsCount: number }) {
+  const { t } = useT();
+  const [available, setAvailable] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      billing
+        .getWallet()
+        .then((w) => { if (!cancelled) setAvailable(w.available); })
+        .catch(() => undefined);
+    };
+    load();
+    window.addEventListener(WALLET_CHANGED_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(WALLET_CHANGED_EVENT, load);
+    };
+  }, [activeJobsCount]);
+
+  if (available === null) return null;
+  return (
+    <span className="topnav-credits" title={t("topnav.credits")}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5V8M12 16v1.5" />
+      </svg>
+      <span className={available < 0 ? "topnav-credits-negative" : undefined}>{available}</span>
+    </span>
   );
 }
 
@@ -127,6 +165,7 @@ export default function TopNav({ onMenuToggle }: { onMenuToggle?: () => void }) 
         <button className="topnav-search-icon-btn" aria-label={t("topnav.search")}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/><path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/></svg>
         </button>
+        {user && <WalletBadge activeJobsCount={activeJobs.length} />}
         {user && (
           <div className="topnav-bell-wrap" ref={bellRef}>
             <button

@@ -49,6 +49,7 @@ export const ru: Record<keyof typeof en, string> = {
   "topnav.createAccount": "Создать бесплатный аккаунт",
   "topnav.login": "Войти",
   "topnav.logout": "Выйти",
+  "topnav.credits": "Кредиты",
 
   // Notifications (bell / toasts)
   "notif.character": "Персонаж",
@@ -210,6 +211,8 @@ export const ru: Record<keyof typeof en, string> = {
   "premium.imageDesc": "Вы использовали все бесплатные генерации изображений.",
   "premium.videoTitle": "Лимит генераций видео",
   "premium.videoDesc": "Вы использовали все бесплатные генерации видео.",
+  "premium.creditsTitle": "Недостаточно кредитов",
+  "premium.creditsDesc": "Для этого действия не хватает кредитов на балансе.",
   "premium.getPremium": "Получить Premium",
   "premium.hint": "Безлимитные персонажи, чаты, генерации и голосовые функции",
 

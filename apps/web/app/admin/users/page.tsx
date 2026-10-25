@@ -6,6 +6,7 @@ import { useAuth } from "../../../context/auth";
 import { admin, type AdminUser, type AdminUserDetailedStats } from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
+import { UserWalletPanel } from "./UserWalletPanel";
 
 const pageStyles: Record<string, React.CSSProperties> = {
   badge: {
@@ -397,9 +398,9 @@ export default function AdminUsersPage() {
                                 }
                               }}
                               style={{ ...pageStyles.btn, ...pageStyles.btnGhost }}
-                              title="Показать использованные модели"
+                              title="Кошелёк кредитов и использованные модели"
                             >
-                              {expandedUser === u.id ? "Скрыть" : "Модели"}
+                              {expandedUser === u.id ? "Скрыть" : "Детали"}
                             </button>
                           </div>
                         </td>
@@ -407,6 +408,7 @@ export default function AdminUsersPage() {
                       {expandedUser === u.id && (
                         <tr style={{ borderBottom: "1px solid #1e1e1e" }}>
                           <td colSpan={9} style={{ padding: "12px 20px", background: "#111" }}>
+                            <UserWalletPanel userId={u.id} />
                             {loadingStats ? (
                               <span style={{ color: "#888", fontSize: 12 }}>Загрузка...</span>
                             ) : detailedStats && detailedStats.modelsUsed.length > 0 ? (

@@ -455,8 +455,18 @@ process.on("SIGTERM", async () => {
 });
 
 worker.on("failed", async (job, err) => {
-  // Обработчик вызывается после последней неудачной попытки
+  // BullMQ вызывает "failed" после КАЖДОЙ неудачной попытки. Пока впереди ретрай,
+  // AiJob не помечаем проваленным: иначе резерв кредитов вернётся, а следующая
+  // попытка может завершиться успешно.
   if (!job) return;
+  const maxAttempts = job.opts.attempts ?? 1;
+  if (job.attemptsMade < maxAttempts) {
+    logger.warn(
+      { job_id: job.id, name: job.name, attempt: job.attemptsMade, maxAttempts, err: err.message },
+      "job_attempt_failed",
+    );
+    return;
+  }
   logger.error({ job_id: job.id, name: job.name, err: err.message }, "job_failed");
 
   // Обновляем статус AiJob в БД через internal API

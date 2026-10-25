@@ -26,7 +26,7 @@ import {
   type PoseOptionsResponse,
 } from "../../lib/api";
 import ChatPoseModal from "../components/ChatPoseModal";
-import PremiumPopup, { type PremiumLimitType } from "../components/PremiumPopup";
+import PremiumPopup, { premiumPopupFromError, type PremiumLimitType } from "../components/PremiumPopup";
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
@@ -304,12 +304,9 @@ function ChatPageInner() {
   // applied right before the final JSX return instead.
 
   const handleDemoError = (err: string, code?: number, body?: any) => {
-    if ((code === 429 || code === 403) && body?.error === "FREE_LIMIT_REACHED") {
-      setPremiumPopup({
-        limitType: body.limitType as PremiumLimitType,
-        limit: body.limit,
-        used: body.used,
-      });
+    const popup = code === 429 || code === 403 || code === 402 ? premiumPopupFromError(body) : null;
+    if (popup) {
+      setPremiumPopup(popup);
     } else if (code === 403 && body?.error === "DEMO_FEATURE_BLOCKED") {
       setDemoBanner({ message: t("chat.voiceSubOnly"), subscribeCta: true });
     } else if (code === 503) {
@@ -476,13 +473,8 @@ function ChatPageInner() {
       await loadChats();
       setActiveChat(chat.id);
     } catch (err: any) {
-      if (err?.status === 403 && err?.body?.error === "FREE_LIMIT_REACHED") {
-        setPremiumPopup({
-          limitType: err.body.limitType as PremiumLimitType,
-          limit: err.body.limit,
-          used: err.body.used,
-        });
-      }
+      const popup = premiumPopupFromError(err?.body);
+      if (popup) setPremiumPopup(popup);
     }
   };
 
@@ -685,8 +677,10 @@ function ChatPageInner() {
       setLoadingTTSId(null);
       setPlayingTTSId(msgId);
       audio.play();
-    } catch {
+    } catch (err: any) {
       setLoadingTTSId(null);
+      const popup = premiumPopupFromError(err?.body);
+      if (popup) setPremiumPopup(popup);
     }
   };
 
@@ -804,7 +798,10 @@ function ChatPageInner() {
         chatId: activeChat,
         poseName,
       });
-    } catch {}
+    } catch (err: any) {
+      const popup = premiumPopupFromError(err?.body);
+      if (popup) setPremiumPopup(popup);
+    }
   };
 
   const handleRegenerateImage = (poseName: string) => {

@@ -365,7 +365,7 @@ async function callOpenRouter(params: {
   temperature: number;
   penalties: boolean;
   signal: AbortSignal;
-}): Promise<{ output: string; totalTokens: number }> {
+}): Promise<{ output: string; totalTokens: number; costUsd?: number }> {
   const { apiKey, model, system, messages, maxTokens, temperature, penalties, signal } = params;
   // Если system передан отдельно — ставим его первым и убираем system-роль из
   // messages. Если нет — messages уже содержат system-сообщение (как в чат-эндпоинте),
@@ -392,6 +392,8 @@ async function callOpenRouter(params: {
       ...(penalties
         ? { frequency_penalty: 0.7, presence_penalty: 0.5 }
         : { frequency_penalty: 0.3 }),
+      // Учёт стоимости: OpenRouter вернёт usage.cost (в USD) — для сверки маржи биллинга.
+      usage: { include: true },
     }),
     signal,
   });
@@ -413,7 +415,8 @@ async function callOpenRouter(params: {
   const totalTokens =
     data.usage?.total_tokens ??
     Math.ceil((orMessages.reduce((n: number, m: any) => n + (m.content?.length ?? 0), 0) + output.length) / 4);
-  return { output, totalTokens };
+  const cost = Number(data.usage?.cost);
+  return { output, totalTokens, costUsd: Number.isFinite(cost) ? cost : undefined };
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
@@ -618,11 +621,11 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       });
       reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
       reply.raw.write(
-        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens }, model })}\n\n`,
+        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, costUsd: or.costUsd }, model })}\n\n`,
       );
       reply.raw.write("data: [DONE]\n\n");
       reply.raw.end();
-      logger.info({ model, outputLength: output.length, totalTokens }, "openrouter_chat_done");
+      logger.info({ model, outputLength: output.length, totalTokens, costUsd: or.costUsd }, "openrouter_chat_done");
       return;
     } catch (err: any) {
       if (err.name === "AbortError" || abortController.signal.aborted) {

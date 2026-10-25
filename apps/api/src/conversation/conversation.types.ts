@@ -50,6 +50,8 @@ export interface EngineBaseInput {
   signal?: AbortSignal;
   /** Проверять лимиты бесплатного тарифа (по умолчанию true; false — системные вызовы). */
   enforceLimits?: boolean;
+  /** Списывать кредиты с кошелька владельца (по умолчанию true; false — служебные вызовы админки). */
+  billable?: boolean;
 }
 
 /** Текстовое сообщение пользователя. */

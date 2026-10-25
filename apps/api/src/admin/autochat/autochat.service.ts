@@ -454,6 +454,8 @@ export class AutochatService implements OnModuleInit {
           actor: { id: adminId, subscription: "paid" },
           source: "system",
           enforceLimits: false,
+          // Расходы автопереписки учитываются в AiJob/UsageLog, но не списываются с кошелька админа
+          billable: false,
           historyLimit: HISTORY_LIMIT,
           contentMode,
           userProfile,
