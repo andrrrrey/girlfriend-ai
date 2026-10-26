@@ -974,6 +974,8 @@ export interface CharacterIdentityStatus {
   processed: number;
   updated: number;
   failed: number;
+  /** Частые причины неудач с количеством. */
+  errors?: { reason: string; count: number }[];
   startedAt?: string;
   finishedAt?: string;
   error?: string;

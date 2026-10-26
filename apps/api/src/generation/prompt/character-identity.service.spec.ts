@@ -65,4 +65,14 @@ describe("CharacterIdentityService.ensureIdentity", () => {
     expect(prisma.character.update).not.toHaveBeenCalled();
     expect(locks.release).toHaveBeenCalled();
   });
+
+  it("ошибка AI-сервиса или отказ модели — исходная personality, без записи", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({ error: "OpenRouter vision error 400" }) });
+    const personality = { age: 43 };
+    expect(await service.ensureIdentity({ id: "c", personality, avatarUrl: "/a.png" })).toBe(personality);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ content: "Sorry, I can't describe this image.", model: "m" }) });
+    expect(await service.ensureIdentity({ id: "c", personality, avatarUrl: "/a.png" })).toBe(personality);
+    expect(prisma.character.update).not.toHaveBeenCalled();
+  });
 });

@@ -53,9 +53,24 @@ export interface IdentityBatchStatus {
   processed: number;
   updated: number;
   failed: number;
+  /** Причины неудач с количеством (самые частые первыми) — для диагностики. */
+  errors?: { reason: string; count: number }[];
   startedAt?: string;
   finishedAt?: string;
   error?: string;
+}
+
+/** Результат описания аватара: personality с промптом или причина неудачи. */
+type DescribeResult = { personality: Record<string, unknown> } | { reason: string };
+
+/** Добавляет причину неудачи в статус (не больше 5 разных причин). */
+function addFailureReason(status: IdentityBatchStatus, reason: string): void {
+  const errors = status.errors ?? [];
+  const existing = errors.find((e) => e.reason === reason);
+  if (existing) existing.count++;
+  else if (errors.length < 5) errors.push({ reason, count: 1 });
+  errors.sort((a, b) => b.count - a.count);
+  status.errors = errors;
 }
 
 /**
@@ -104,7 +119,10 @@ export class CharacterIdentityService {
     const lock = await this.locks.acquire(`character-identity:${character.id}`, LOCK_TTL_MS).catch(() => null);
     if (!lock) return personality; // описание уже идёт параллельно — сейчас обходимся без него
     try {
-      return (await this.describeAndSave(character)) ?? personality;
+      const result = await this.describeAndSave(character);
+      if ("personality" in result) return result.personality;
+      this.logger.warn(`identity for character ${character.id} failed: ${result.reason}`);
+      return personality;
     } catch (err: any) {
       this.logger.warn(`identity for character ${character.id} failed: ${err?.message}`);
       return personality;
@@ -147,12 +165,18 @@ export class CharacterIdentityService {
     const stop = this.locks.keepAlive(lock, LOCK_TTL_MS);
     void (async () => {
       for (const character of candidates) {
+        let reason: string | null = null;
         try {
-          if (await this.describeAndSave(character)) status.updated++;
-          else status.failed++;
+          const result = await this.describeAndSave(character);
+          if ("personality" in result) status.updated++;
+          else reason = result.reason;
         } catch (err: any) {
+          reason = String(err?.message ?? err);
+        }
+        if (reason) {
           status.failed++;
-          this.logger.warn(`identity for character ${character.id} failed: ${err?.message}`);
+          addFailureReason(status, reason);
+          this.logger.warn(`identity for character ${character.id} failed: ${reason}`);
         }
         status.processed++;
         await this.saveStatus(status);
@@ -176,11 +200,11 @@ export class CharacterIdentityService {
   /**
    * Описывает аватар и сохраняет avatarPrompt (personality перечитывается перед
    * записью, чтобы не затереть параллельные правки).
-   * @returns обновлённая personality или null, если описание не получилось
+   * @returns обновлённая personality или причина неудачи
    */
-  private async describeAndSave(character: IdentityCharacter): Promise<Record<string, unknown> | null> {
+  private async describeAndSave(character: IdentityCharacter): Promise<DescribeResult> {
     const imageUrl = await this.generation.toProviderImageUrl(character.avatarUrl);
-    if (!imageUrl) return null;
+    if (!imageUrl) return { reason: `не удалось получить ссылку на аватар (${String(character.avatarUrl).slice(0, 80)})` };
 
     const res = await fetch(`${AI_BASE}/ai/vision/describe`, {
       method: "POST",
@@ -188,21 +212,26 @@ export class CharacterIdentityService {
       body: JSON.stringify({ imageUrl, system: IDENTITY_SYSTEM, prompt: "List the appearance tags.", maxTokens: 200 }),
       signal: AbortSignal.timeout(100_000),
     });
-    if (!res.ok) throw new Error(`vision HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string; details?: string };
+      return { reason: `AI-сервис ${res.status}: ${[body.error, body.details].filter(Boolean).join(" — ").slice(0, 200)}` };
+    }
     const data = (await res.json()) as { content?: string; model?: string };
     const avatarPrompt = sanitizeIdentityPrompt(data.content ?? "");
-    if (!avatarPrompt) return null;
+    if (!avatarPrompt) {
+      return { reason: `модель не дала описание (${data.model ?? "?"}): «${(data.content ?? "").slice(0, 80)}»` };
+    }
 
     const fresh = await this.prisma.character.findUnique({ where: { id: character.id }, select: { personality: true } });
     const current = (fresh?.personality ?? {}) as Record<string, unknown>;
-    if (this.hasIdentity(current)) return current; // успели сохранить параллельно
+    if (this.hasIdentity(current)) return { personality: current }; // успели сохранить параллельно
     const personality = { ...current, avatarPrompt, avatarPromptSource: "vision", avatarPromptModel: data.model };
     await this.prisma.character.update({
       where: { id: character.id },
       data: { personality: personality as Prisma.InputJsonValue },
     });
     this.logger.log(`character ${character.id}: avatarPrompt described from avatar`);
-    return personality;
+    return { personality };
   }
 
   private async saveStatus(status: IdentityBatchStatus): Promise<void> {

@@ -986,8 +986,15 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
 /** Модель OpenRouter со зрением по умолчанию (настройка VISION_MODEL). */
 const DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct";
 
+/** Максимальная сторона картинки, отправляемой модели (экономия токенов и трафика). */
+const VISION_MAX_SIDE = 1024;
+
 interface VisionDescribeBody {
-  /** Публично доступный URL изображения (например, подписанный S3 URL). */
+  /**
+   * URL изображения, доступный AI-сервису (в т.ч. внутренний адрес S3/MinIO):
+   * сервис сам скачивает картинку и передаёт её модели байтами (data URL),
+   * поэтому OpenRouter не нужен доступ к нашему хранилищу.
+   */
   imageUrl: string;
   /** Системная инструкция (что и в каком формате описать). */
   system: string;
@@ -1022,6 +1029,21 @@ app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply)
   if (!apiKey) return reply.status(503).send({ error: "openrouter API key not configured" });
   const model = settings.VISION_MODEL || DEFAULT_VISION_MODEL;
 
+  // Картинку скачиваем сами (внутренний адрес хранилища OpenRouter недоступен),
+  // ужимаем до VISION_MAX_SIDE и отправляем как data URL.
+  let dataUrl: string;
+  try {
+    const original = await downloadImage(imageUrl);
+    const jpeg = await sharp(original)
+      .resize({ width: VISION_MAX_SIDE, height: VISION_MAX_SIDE, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+    dataUrl = `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+  } catch (err: any) {
+    logger.error({ err: err?.message, imageUrl: imageUrl.slice(0, 200) }, "vision_image_download_error");
+    return reply.status(422).send({ error: "Image download failed", details: err?.message });
+  }
+
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -1039,7 +1061,7 @@ app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply)
             role: "user",
             content: [
               { type: "text", text: prompt || "Describe the image." },
-              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "image_url", image_url: { url: dataUrl } },
             ],
           },
         ],
@@ -1055,7 +1077,7 @@ app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply)
       if (res.status === 402 || isInsufficientBalance(res.status, text)) {
         return reply.status(402).send({ error: "INSUFFICIENT_BALANCE", provider: "openrouter" });
       }
-      return reply.status(502).send({ error: `OpenRouter vision error ${res.status}` });
+      return reply.status(502).send({ error: `OpenRouter vision error ${res.status}`, details: text.slice(0, 300) });
     }
     const data: any = await res.json();
     const content = String(data.choices?.[0]?.message?.content ?? "").trim();

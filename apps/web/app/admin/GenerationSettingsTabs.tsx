@@ -149,6 +149,15 @@ function AvatarIdentityDescriber() {
         </span>
       )}
       {error && <span style={{ color: "#e36466", fontSize: 12 }}>{error}</span>}
+      {status?.errors && status.errors.length > 0 && (
+        <div style={{ width: "100%", color: "#e36466", fontSize: 12 }}>
+          {status.errors.map((e) => (
+            <div key={e.reason}>
+              {e.count} × {e.reason}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
