@@ -52,6 +52,7 @@ export const ru: Record<keyof typeof en, string> = {
   "tg.confirmDisconnect": "Отключить бота? Переписка останется на сайте.",
   "tg.statusError": "Ошибка настройки",
   "tg.retry": "Повторить настройку",
+  "tg.reconfigure": "Обновить подключение",
 
   // Top navigation bar
   "topnav.search": "Поиск",

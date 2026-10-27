@@ -1,6 +1,5 @@
-jest.mock("@repo/config", () => ({
-  loadEnv: () => ({ AI_HOST: "ai", AI_PORT: 8081, WEB_URL: "https://site.test", TELEGRAM_POLLING: "false" }),
-}));
+const mockEnv: Record<string, unknown> = { AI_HOST: "ai", AI_PORT: 8081, WEB_URL: "https://site.test", TELEGRAM_POLLING: "false" };
+jest.mock("@repo/config", () => ({ loadEnv: () => mockEnv }));
 
 import { ConflictException, HttpException } from "@nestjs/common";
 import { TelegramApi, TelegramApiError } from "./telegram-api";
@@ -44,6 +43,15 @@ describe("delivery helpers", () => {
 
   it("webhook по умолчанию идёт через Next-прокси сайта", () => {
     expect(webhookUrl("bot-1")).toBe("https://site.test/api-proxy/telegram/webhook/bot-1");
+  });
+
+  it("завершающий слэш в адресе не даёт «//» (сервер отвечал редиректом 308)", () => {
+    mockEnv.WEB_URL = "https://site.test/";
+    expect(webhookUrl("bot-1")).toBe("https://site.test/api-proxy/telegram/webhook/bot-1");
+    mockEnv.TELEGRAM_WEBHOOK_BASE_URL = " https://staging.site.test/api-proxy/ ";
+    expect(webhookUrl("bot-1")).toBe("https://staging.site.test/api-proxy/telegram/webhook/bot-1");
+    mockEnv.WEB_URL = "https://site.test";
+    delete mockEnv.TELEGRAM_WEBHOOK_BASE_URL;
   });
 });
 

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
-import { chats, telegram, type ChatSession, type TelegramBotInfo } from "../../lib/api";
+import { chats, resizedMediaUrl, telegram, type ChatSession, type TelegramBotInfo } from "../../lib/api";
 
 const PAGE_CSS = `
   .tg-page { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 20px; }
@@ -121,7 +121,11 @@ export default function TelegramPage() {
         <div key={bot.id} className="tg-card">
           <div className="tg-bot-head">
             {bot.character.avatarUrl ? (
-              <img className="tg-avatar" src={bot.character.avatarUrl} alt={bot.character.name} />
+              <img
+                className="tg-avatar"
+                src={resizedMediaUrl(bot.character.avatarUrl, { w: 128 }) ?? bot.character.avatarUrl}
+                alt={bot.character.name}
+              />
             ) : (
               <div className="tg-avatar" />
             )}
@@ -164,11 +168,10 @@ export default function TelegramPage() {
             <a className="tg-btn tg-btn-ghost" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }} href={`https://t.me/${bot.username}`} target="_blank" rel="noopener noreferrer">
               {t("tg.open")}
             </a>
-            {bot.status === "error" && (
-              <button className="tg-btn tg-btn-ghost" disabled={busy !== null} onClick={() => run(`retry-${bot.id}`, () => telegram.reconfigure(bot.id))}>
-                {t("tg.retry")}
-              </button>
-            )}
+            {/* Заново регистрирует webhook и команды — после смены домена/настроек сервера. */}
+            <button className="tg-btn tg-btn-ghost" disabled={busy !== null} onClick={() => run(`retry-${bot.id}`, () => telegram.reconfigure(bot.id))}>
+              {bot.status === "error" ? t("tg.retry") : t("tg.reconfigure")}
+            </button>
             <button
               className="tg-btn tg-btn-danger"
               disabled={busy !== null}

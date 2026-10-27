@@ -56,7 +56,13 @@ export function isPollingMode(): boolean {
 /** Публичный URL webhook бота. */
 export function webhookUrl(botId: string): string {
   const env = loadEnv();
-  const base = (env.TELEGRAM_WEBHOOK_BASE_URL || `${env.WEB_URL}/api-proxy`).replace(/\/+$/, "");
+  // Завершающие слэши убираем у обоих вариантов: «https://site.ai/» + «/api-proxy»
+  // давало «//api-proxy», а сервер отвечал на такой адрес редиректом 308 —
+  // редиректы Telegram не выполняет, и обновления не доходили.
+  const trim = (url: string) => url.trim().replace(/\/+$/, "");
+  const base = env.TELEGRAM_WEBHOOK_BASE_URL?.trim()
+    ? trim(env.TELEGRAM_WEBHOOK_BASE_URL)
+    : `${trim(env.WEB_URL)}/api-proxy`;
   return `${base}/telegram/webhook/${botId}`;
 }
 

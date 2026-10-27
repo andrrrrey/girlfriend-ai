@@ -50,6 +50,7 @@ export const en = {
   "tg.confirmDisconnect": "Disconnect the bot? The conversation stays on the website.",
   "tg.statusError": "Setup error",
   "tg.retry": "Retry setup",
+  "tg.reconfigure": "Update connection",
 
   // Top navigation bar
   "topnav.search": "Search",
