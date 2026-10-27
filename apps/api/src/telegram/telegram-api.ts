@@ -180,7 +180,8 @@ export class TelegramApi {
     const form = new FormData();
     form.append("chat_id", chatId);
     if (caption) form.append("caption", caption);
-    form.append(field, new Blob([file.bytes], { type: file.contentType }), file.filename);
+    // Копия в Uint8Array: Blob не принимает Buffer, у которого под капотом может быть SharedArrayBuffer.
+    form.append(field, new Blob([new Uint8Array(file.bytes)], { type: file.contentType }), file.filename);
     const res = await fetch(`${API_BASE}/bot${this.token}/${method}`, {
       method: "POST",
       body: form,
