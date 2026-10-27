@@ -46,6 +46,7 @@ import { EngagementGenModule } from "./admin/engagement-gen/engagement-gen.modul
 import { AutochatModule } from "./admin/autochat/autochat.module";
 import { OptionSynonymsModule } from "./admin/option-synonyms/option-synonyms.module";
 import { CharacterIdentityModule } from "./admin/character-identity/character-identity.module";
+import { MediaCacheAdminModule } from "./admin/media-cache/media-cache-admin.module";
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { CharacterIdentityModule } from "./admin/character-identity/character-id
     AutochatModule,   // Автопереписка робота с персонажами + анализ (админка, QA)
     OptionSynonymsModule, // Автогенерация синонимов опций генерации (админка)
     CharacterIdentityModule, // Описание аватаров персонажей моделью со зрением (админка)
+    MediaCacheAdminModule, // Общий кэш фото/видео чата: статистика и модерация (админка)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

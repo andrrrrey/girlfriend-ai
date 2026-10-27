@@ -986,6 +986,30 @@ export function parseSynonymsInput(value: string): string[] {
   return value.split(/[,;\n]/).map((v) => v.trim()).filter(Boolean);
 }
 
+/** Статистика общего кэша медиа (админка). */
+export interface MediaCacheStats {
+  days: number;
+  deliveries: { generated: number; cache: number; coalesced: number; total: number };
+  hitRate: number;
+  savedGenerations: number;
+  assets: number;
+  blocked: number;
+  pendingGenerations: number;
+}
+
+/** Вариант в пуле общего кэша медиа. */
+export interface MediaCacheAsset {
+  id: string;
+  kind: "image" | "video";
+  url: string;
+  scope: "PUBLIC" | "OWNER";
+  moderation: "ok" | "blocked";
+  characterId: string | null;
+  prompt: string | null;
+  deliveries: number;
+  createdAt: string;
+}
+
 export const admin = {
   /** Получает все AppSettings (GET /admin/settings). */
   async getSettings(): Promise<AppSetting[]> {
@@ -1333,6 +1357,27 @@ export const admin = {
   },
 
   /** Сверка кошельков с журналом (GET /admin/billing/reconcile). */
+  async getMediaCacheStats(days = 30): Promise<MediaCacheStats> {
+    return apiFetch(`/admin/media-cache/stats?days=${days}`);
+  },
+
+  async getMediaCacheAssets(params: { page?: number; moderation?: "ok" | "blocked"; kind?: "image" | "video" } = {}): Promise<{
+    total: number;
+    page: number;
+    limit: number;
+    items: MediaCacheAsset[];
+  }> {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.moderation) q.set("moderation", params.moderation);
+    if (params.kind) q.set("kind", params.kind);
+    return apiFetch(`/admin/media-cache/assets?${q.toString()}`);
+  },
+
+  async setMediaCacheModeration(id: string, moderation: "ok" | "blocked"): Promise<{ id: string; moderation: string }> {
+    return apiFetch(`/admin/media-cache/assets/${id}`, { method: "PATCH", body: JSON.stringify({ moderation }) });
+  },
+
   async reconcileBilling(): Promise<{
     checked: number;
     mismatches: {

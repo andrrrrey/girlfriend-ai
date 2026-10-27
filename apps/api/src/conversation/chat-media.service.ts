@@ -7,7 +7,9 @@
  * - дорогие операции (видео; всё дороже MEDIA_CONFIRM_ABOVE_CREDITS) сначала
  *   требуют подтверждения цены: одноразовый токен в Redis → confirm();
  * - saveCompletedMedia(): по завершении задания сервер сам создаёт медиасообщение
- *   в диалоге (раньше это делал браузер — и фото терялось, если вкладку закрыли).
+ *   в диалоге (раньше это делал браузер — и фото терялось, если вкладку закрыли);
+ * - общий кэш медиа (MediaCacheService): повтор того же запроса получает готовый
+ *   вариант из пула или ждёт идущую генерацию другого пользователя.
  */
 
 import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
@@ -19,6 +21,7 @@ import { REDIS } from "../common/redis.constants";
 import { ChatsService } from "../chats/chats.service";
 import { DemoService } from "../demo/demo.service";
 import { GenerationService, type ChatMediaTarget } from "../generation/generation.service";
+import { MediaCacheService } from "../generation/media-cache.service";
 import { GenerationSpecService, CHAT_VIDEO_MODEL } from "../generation/prompt/generation-spec.service";
 import { parseGenerationSpec, type GenerationSpec } from "../generation/prompt/generation-spec";
 import { PricingService } from "../billing/pricing.service";
@@ -45,6 +48,8 @@ interface PendingConfirmation {
 export interface StartedMedia {
   kind: "image" | "video";
   jobId: string;
+  /** cache — выдано из пула (сообщение уже в диалоге), coalesced — ждёт чужую генерацию. */
+  via?: "generated" | "cache" | "coalesced" | "uncached";
 }
 
 @Injectable()
@@ -59,6 +64,7 @@ export class ChatMediaService {
     private readonly specs: GenerationSpecService,
     private readonly pricing: PricingService,
     private readonly billingConfig: BillingConfigService,
+    private readonly mediaCache: MediaCacheService,
     @Inject(REDIS) private readonly redis: Redis,
   ) {}
 
@@ -94,16 +100,22 @@ export class ChatMediaService {
       source: opts.source,
       spec: spec as unknown as Prisma.InputJsonObject,
     };
-    if (spec.kind === "video") {
-      await this.demo.checkVideoGeneration(actor.id, actor.subscription, 1);
-      const job = await this.specs.toVideoJob(spec, actor.id);
-      const { jobId } = await this.generation.createVideoJob(actor.id, job, { chat: target });
-      return { kind: "video", jobId };
-    }
-    await this.demo.checkImageGeneration(actor.id, actor.subscription, 1);
-    const job = await this.specs.toImageJob(spec, actor.id);
-    const { jobId } = await this.generation.createImageJob(actor.id, job, { chat: target });
-    return { kind: "image", jobId };
+    const kind = spec.kind === "video" ? "video" : "image";
+    if (kind === "video") await this.demo.checkVideoGeneration(actor.id, actor.subscription, 1);
+    else await this.demo.checkImageGeneration(actor.id, actor.subscription, 1);
+    const job = kind === "video" ? await this.specs.toVideoJob(spec, actor.id) : await this.specs.toImageJob(spec, actor.id);
+
+    const res = await this.mediaCache.request({
+      kind,
+      userId: actor.id,
+      characterId: spec.characterId,
+      hasUserText: Boolean(spec.userText?.trim()),
+      job,
+      chat: target,
+    });
+    // Вариант из пула: задание уже завершено — медиасообщение создаём сразу.
+    if (res.hit) await this.saveCompletedMedia(res.jobId, res.hit.output, res.hit.assetId);
+    return { kind, jobId: res.jobId, via: res.via };
   }
 
   /** Сохраняет отложенную операцию и возвращает одноразовый токен подтверждения. */
@@ -149,7 +161,7 @@ export class ChatMediaService {
    * PATCH /internal/ai-jobs/:id со статусом completed). Повтор — без дубля
    * (externalId = aijob:<id>).
    */
-  async saveCompletedMedia(aiJobId: string, output: unknown): Promise<void> {
+  async saveCompletedMedia(aiJobId: string, output: unknown, assetId?: string | null): Promise<void> {
     const job = await this.prisma.aiJob.findUnique({ where: { id: aiJobId }, select: { type: true, input: true } });
     const chat = (job?.input as { chat?: ChatMediaTarget } | null)?.chat;
     const rawUrl = (output as { url?: unknown } | null)?.url;
@@ -163,7 +175,14 @@ export class ChatMediaService {
         type: kind,
         mediaUrl: mediaUrl ?? rawUrl,
         // spec — для перегенерации того же фото/видео кнопкой в ленте.
-        metadata: { poseName: chat.caption, type: `generated-${kind}`, aiJobId, ...(chat.spec ? { spec: chat.spec } : {}) },
+        // assetId — вариант общего кэша (Telegram переотправляет его по file_id).
+        metadata: {
+          poseName: chat.caption,
+          type: `generated-${kind}`,
+          aiJobId,
+          ...(chat.spec ? { spec: chat.spec } : {}),
+          ...(assetId ? { assetId } : {}),
+        },
         source: chat.source,
         externalId: `aijob:${aiJobId}`,
       });
@@ -171,6 +190,30 @@ export class ChatMediaService {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return; // уже сохранено
       this.logger.error(`failed to save chat media for job ${aiJobId}: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Задание генерации завершено: вариант попадает в общий кэш, медиасообщения
+   * создаются и у запустившего, и у всех, кто ждал эту же генерацию.
+   */
+  async onJobCompleted(aiJobId: string, output: unknown): Promise<void> {
+    let assetId: string | null = null;
+    try {
+      ({ assetId } = await this.mediaCache.onJobCompleted(aiJobId, output, (followerId, followerAssetId) =>
+        this.saveCompletedMedia(followerId, output, followerAssetId),
+      ));
+    } catch (err) {
+      // Сбой кэша не должен лишить пользователя его фото.
+      this.logger.error(`media cache completion failed for job ${aiJobId}: ${(err as Error).message}`);
+    }
+    await this.saveCompletedMedia(aiJobId, output, assetId);
+  }
+
+  /** Задание генерации не удалось: ожидавшие его задания тоже завершаются ошибкой. */
+  async onJobFailed(aiJobId: string, error?: string): Promise<void> {
+    await this.mediaCache.onJobFailed(aiJobId, error).catch((err) => {
+      this.logger.error(`media cache failure handling failed for job ${aiJobId}: ${(err as Error).message}`);
+    });
   }
 
   /**

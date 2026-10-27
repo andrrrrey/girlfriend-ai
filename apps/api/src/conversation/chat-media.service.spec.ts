@@ -58,3 +58,61 @@ describe("ChatMediaService.regenerate", () => {
     expect(start).not.toHaveBeenCalled();
   });
 });
+
+describe("ChatMediaService + общий кэш", () => {
+  const actor = { id: "u", subscription: "paid", contentMode: "nsfw", isAdult: true };
+  const spec = { kind: "image" as const, preset: "chat" as const, characterId: "char-1", contentMode: "nsfw" as const };
+  let chats: any;
+  let mediaCache: any;
+  let service: ChatMediaService;
+  let prisma: any;
+
+  beforeEach(() => {
+    chats = { saveMessage: jest.fn() };
+    prisma = {
+      aiJob: {
+        findUnique: jest.fn(async ({ where }: any) => ({
+          type: "image",
+          input: { chat: { sessionId: `chat-of-${where.id}`, caption: "photo", source: "web" } },
+        })),
+      },
+    };
+    mediaCache = { request: jest.fn(), onJobCompleted: jest.fn() };
+    const demo = { checkImageGeneration: jest.fn(), checkVideoGeneration: jest.fn() };
+    const specs = { toImageJob: jest.fn().mockResolvedValue({ prompt: "p" }) };
+    const generation = { toClientMediaUrl: jest.fn(async (u: string) => `/proxy/${u}`) };
+    service = new ChatMediaService(prisma, chats, demo as any, generation as any, specs as any, {} as any, {} as any, mediaCache, {} as any);
+  });
+
+  it("вариант из кэша сразу появляется сообщением в диалоге (с assetId)", async () => {
+    mediaCache.request.mockResolvedValue({ jobId: "job-c", via: "cache", hit: { assetId: "asset-1", output: { url: "s3/a.png" } } });
+
+    await expect(service.start("chat-1", actor, spec, { caption: "photo", source: "web" })).resolves.toEqual({
+      kind: "image",
+      jobId: "job-c",
+      via: "cache",
+    });
+    expect(chats.saveMessage).toHaveBeenCalledWith(
+      "chat-of-job-c",
+      "assistant",
+      "📷",
+      expect.objectContaining({ mediaUrl: "/proxy/s3/a.png", metadata: expect.objectContaining({ assetId: "asset-1" }), externalId: "aijob:job-c" }),
+    );
+  });
+
+  it("свободный текст пользователя передаётся в кэш (scope владельца)", async () => {
+    mediaCache.request.mockResolvedValue({ jobId: "job-1", via: "generated" });
+    await service.start("chat-1", actor, { ...spec, userText: "в красном платье" }, { caption: "photo", source: "web" });
+    expect(mediaCache.request).toHaveBeenCalledWith(expect.objectContaining({ hasUserText: true, characterId: "char-1", userId: "u" }));
+    expect(chats.saveMessage).not.toHaveBeenCalled();
+  });
+
+  it("завершение генерации: сообщение получают и запустивший, и ожидавшие", async () => {
+    mediaCache.onJobCompleted.mockImplementation(async (_id: string, _out: unknown, cb: any) => {
+      await cb("follower-1", "asset-1");
+      return { assetId: "asset-1", followerJobIds: ["follower-1"] };
+    });
+    await service.onJobCompleted("leader-1", { url: "s3/a.png" });
+    expect(chats.saveMessage.mock.calls.map((c: any[]) => c[0])).toEqual(["chat-of-follower-1", "chat-of-leader-1"]);
+  });
+});

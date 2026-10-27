@@ -2,6 +2,7 @@ const mockEnv: Record<string, unknown> = { AI_HOST: "ai", AI_PORT: 8081, WEB_URL
 jest.mock("@repo/config", () => ({ loadEnv: () => mockEnv }));
 
 import { ConflictException, HttpException } from "@nestjs/common";
+import { Readable } from "stream";
 import { TelegramApi, TelegramApiError } from "./telegram-api";
 import { TelegramDeliveryService, mediaKeyFromUrl, splitTelegramText } from "./telegram-delivery.service";
 import { RetryLaterError, TelegramHandlerService } from "./telegram-handler.service";
@@ -115,6 +116,38 @@ describe("TelegramDeliveryService", () => {
       service.deliver({ messageId: "m", chatSessionId: "c", role: "assistant", type: "text", source: "telegram" }),
     ).resolves.toBeUndefined();
     expect(prisma.telegramBotUser.update).toHaveBeenCalledWith({ where: { id: "bu-1" }, data: { blockedAt: expect.any(Date) } });
+  });
+
+  it("вариант общего кэша уже загружен в этого бота — отправка по file_id, без скачивания", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      role: "assistant", content: "📷", type: "image", mediaUrl: "/api-proxy/media/stream?key=a.png", deletedAt: null, chatSessionId: "c",
+      metadata: { assetId: "asset-1" },
+    });
+    prisma.telegramFileCache = { findUnique: jest.fn().mockResolvedValue({ fileId: "FILE-1" }), createMany: jest.fn(), deleteMany: jest.fn() };
+    await service.deliver({ messageId: "m", chatSessionId: "c", role: "assistant", type: "image", source: "web" });
+    expect(prisma.telegramFileCache.findUnique).toHaveBeenCalledWith({
+      where: { botId_assetId: { botId: "b", assetId: "asset-1" } },
+      select: { fileId: true },
+    });
+    expect(api.sendPhoto).toHaveBeenCalledWith("555", "FILE-1");
+  });
+
+  it("первая отправка варианта — загрузка байтами и сохранение file_id", async () => {
+    const s3 = { getObject: jest.fn().mockResolvedValue({ body: Readable.from([Buffer.from("png")]), contentType: "image/png" }) };
+    service = new TelegramDeliveryService(prisma, { registerHandler: jest.fn() } as any, { apiFor: () => api } as any, s3 as any);
+    prisma.message.findUnique.mockResolvedValue({
+      role: "assistant", content: "📷", type: "image", mediaUrl: "/api-proxy/media/stream?key=a.png", deletedAt: null, chatSessionId: "c",
+      metadata: { assetId: "asset-1" },
+    });
+    prisma.telegramFileCache = { findUnique: jest.fn().mockResolvedValue(null), createMany: jest.fn().mockResolvedValue({ count: 1 }) };
+    api.sendPhoto.mockResolvedValue({ message_id: 1, photo: [{ file_id: "small" }, { file_id: "big" }] });
+
+    await service.deliver({ messageId: "m", chatSessionId: "c", role: "assistant", type: "image", source: "web" });
+    expect(s3.getObject).toHaveBeenCalledWith("a.png");
+    expect(prisma.telegramFileCache.createMany).toHaveBeenCalledWith({
+      data: [{ botId: "b", assetId: "asset-1", fileId: "big" }],
+      skipDuplicates: true,
+    });
   });
 
   it("429 — исключение, outbox повторит позже", async () => {

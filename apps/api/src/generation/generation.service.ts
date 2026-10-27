@@ -31,6 +31,36 @@ export interface GenerationJobOptions {
    * в этом диалоге (см. ChatMediaService), клиенту ничего сохранять не нужно.
    */
   chat?: ChatMediaTarget;
+  /** Генерация под общий кэш медиа: результат станет вариантом в пуле (см. MediaCacheService). */
+  cache?: MediaCacheTag;
+}
+
+/**
+ * Пометка задания для общего кэша медиа (JSON в AiJob.input.cache).
+ * role: leader — реальная генерация; follower — ждёт генерацию leaderJobId;
+ * hit — выдано из кэша (assetId).
+ */
+export type MediaCacheTag = {
+  key: string;
+  scope: "PUBLIC" | "OWNER";
+  role: "leader" | "follower" | "hit";
+  leaderJobId?: string;
+  assetId?: string;
+};
+
+/** Задание без обращения к провайдеру: выдача из кэша или ожидание идущей генерации. */
+export interface DerivedJobParams {
+  kind: "image" | "video";
+  /** Операция для резерва кредитов (цена — как у обычной генерации). */
+  op: BillableOperation;
+  contentMode: "nsfw" | "sfw";
+  characterId?: string;
+  /** Поля AiJob.input (промпт, модель…) — как у исходного задания. */
+  input: Prisma.InputJsonObject;
+  /** Готовый результат: задание сразу completed, кредиты списываются. Без него — pending. */
+  output?: Prisma.InputJsonObject;
+  /** Задание, чей результат копируется (в публичные ленты копия не попадает). */
+  cachedFrom: string;
 }
 
 /**
@@ -258,6 +288,7 @@ export class GenerationService {
               hiresFix: data.hiresFix || undefined,
               reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
               chat: opts.chat,
+              cache: opts.cache,
             },
           },
         });
@@ -290,6 +321,40 @@ export class GenerationService {
     }
 
     return { jobId: jobIds[0], jobIds, status: "pending" };
+  }
+
+  /**
+   * Создаёт задание без постановки в очередь провайдера (общий кэш медиа):
+   * с output — сразу завершённое (выдача из кэша, кредиты списываются полностью),
+   * без output — ожидающее чужую идущую генерацию (резерв, списание по её завершении).
+   *
+   * @returns id задания
+   * @throws InsufficientCreditsException — до создания задания
+   */
+  async createDerivedJob(userId: string, params: DerivedJobParams, opts: GenerationJobOptions = {}): Promise<string> {
+    const billable = opts.billable !== false;
+    const [id] = await this.reserveJobs(userId, params.op, 1, billable);
+    const reservationKey = billable ? generationReservationKey(id) : undefined;
+    try {
+      await this.prisma.aiJob.create({
+        data: {
+          id,
+          userId,
+          type: params.kind,
+          status: params.output ? "completed" : "pending",
+          characterId: params.characterId || null,
+          nsfw: params.contentMode !== "sfw",
+          cachedFrom: params.cachedFrom,
+          input: { ...params.input, contentMode: params.contentMode, reservationKey, chat: opts.chat, cache: opts.cache },
+          ...(params.output ? { output: params.output, completedAt: new Date() } : {}),
+        },
+      });
+    } catch (err) {
+      await this.releaseJob(id);
+      throw err;
+    }
+    if (params.output && reservationKey) await this.wallet.capture(reservationKey);
+    return id;
   }
 
   async getJobStatus(jobId: string, userId: string) {
@@ -513,6 +578,7 @@ export class GenerationService {
               contentMode,
               reservationKey: opts.billable !== false ? generationReservationKey(plannedIds[i]) : undefined,
               chat: opts.chat,
+              cache: opts.cache,
             },
           },
         });
@@ -606,6 +672,9 @@ export class GenerationService {
     };
     if (userId) {
       where["userId"] = userId;
+    } else {
+      // Копии из общего кэша медиа — тот же кадр, что у исходного задания: без дублей в ленте.
+      where["cachedFrom"] = null;
     }
     // Режим контента задаёт класс: SFW → только nsfw=false, NSFW → только
     // nsfw=true; без режима не фильтруем.
@@ -664,7 +733,7 @@ export class GenerationService {
     // Фиксированный словарь тегов; считаем, сколько свежих работ под каждый
     // подходит, и отдаём только непустые (по убыванию популярности).
     const jobs = await this.prisma.aiJob.findMany({
-      where: { status: "completed", type: { in: ["image", "video"] } },
+      where: { status: "completed", type: { in: ["image", "video"] }, cachedFrom: null },
       select: { input: true },
       take: 1000,
       orderBy: { createdAt: "desc" },
