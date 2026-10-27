@@ -109,8 +109,8 @@ describe("MediaCacheService", () => {
   let db: ReturnType<typeof fakeDb>;
   let service: MediaCacheService;
 
-  const request = (userId: string, characterId = "pub", extra: Record<string, unknown> = {}) =>
-    service.request({ kind: "image", userId, characterId, job: { ...job, ...extra }, chat: { ...chat, sessionId: `chat-${userId}` } });
+  const request = (userId: string, characterId = "pub") =>
+    service.request({ kind: "image", userId, characterId, job, chat: { ...chat, sessionId: `chat-${userId}` } });
 
   /** Воркер сообщает об успехе генерации. */
   const complete = (jobId: string, url = `s3://media/${jobId}.png`) => service.onJobCompleted(jobId, { url });
