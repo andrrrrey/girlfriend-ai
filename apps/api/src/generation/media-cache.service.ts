@@ -28,7 +28,7 @@ import { GenerationService, type ChatMediaTarget, type MediaCacheTag } from "./g
 import type { ImageJobInput, VideoJobInput } from "./prompt/generation-spec.service";
 
 /** Версия схемы ключа: смена состава/формата ключа → старые ассеты не выдаются. */
-export const MEDIA_CACHE_KEY_VERSION = 1;
+export const MEDIA_CACHE_KEY_VERSION = 2;
 
 const LOCK_TTL_MS = 15_000;
 const LOCK_WAIT_MS = 150;
@@ -58,14 +58,30 @@ export interface CachedMediaResult {
 
 type CacheScope = MediaCacheTag["scope"];
 
-/** Промпт для ключа: без различий в регистре, пробелах и пунктуации в конце фраз. */
+/** Служебные слова, которые не меняют картинку: «on the beach» = «at the beach». */
+const PROMPT_STOPWORDS = new Set([
+  "a", "an", "the", "on", "at", "in", "into", "inside", "with", "of", "to", "by", "and",
+  "her", "she", "is", "while", "wearing",
+]);
+
+/**
+ * Промпт для ключа: фразы между запятыми без регистра, пунктуации и служебных
+ * слов, без повторов и в отсортированном порядке — детали от классификатора
+ * («on the beach» / «beach, at the beach») не должны давать разные ключи.
+ */
 export function normalizePrompt(prompt: string): string {
-  return prompt
+  const parts = prompt
     .toLowerCase()
-    .replace(/[.!;]+(\s|$)/g, "$1")
-    .replace(/\s*,\s*/g, ", ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .split(/[,;\n]+/)
+    .map((part) =>
+      part
+        .replace(/[.!?"]+/g, " ")
+        .split(/\s+/)
+        .filter((w) => w && !PROMPT_STOPWORDS.has(w))
+        .join(" "),
+    )
+    .filter(Boolean);
+  return [...new Set(parts)].sort().join(", ");
 }
 
 /** Ключ кэша по параметрам задания или null, если запрос не кэшируется. */

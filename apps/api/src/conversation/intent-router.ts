@@ -12,10 +12,16 @@
  *    ключевым словам, опции по совпадению названий/синонимов в тексте).
  *
  * Один и тот же текст даёт одинаковую спецификацию для сайта, Telegram и
- * внутреннего API — все они вызывают route().
+ * внутреннего API — все они вызывают route(). Ответ классификатора запоминается
+ * в Redis по нормализованному тексту: LLM даже при temperature 0 иногда отвечает
+ * по-разному («on the beach» / «at the beach»), и одинаковые просьбы разных
+ * пользователей получали разный промпт — мимо общего кэша медиа.
  */
 
-import { Injectable, Logger } from "@nestjs/common";
+import { createHash } from "crypto";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
+import type Redis from "ioredis";
+import { REDIS } from "../common/redis.constants";
 import { AI_BASE } from "./ai-client";
 import { PrismaService } from "../prisma.service";
 import { OptionCatalogService } from "../generation/prompt/option-catalog.service";
@@ -53,6 +59,18 @@ const CLASSIFIER_TIMEOUT_MS = 15_000;
  */
 const INTENT_MODEL_SETTING = "INTENT_MODEL";
 const SETTING_CACHE_TTL_MS = 60_000;
+/** Сколько помним ответ классификатора на один и тот же текст. */
+const ROUTE_MEMO_TTL_SECONDS = 30 * 24 * 3600;
+const ROUTE_MEMO_VERSION = 1;
+
+/** Текст просьбы без регистра, пунктуации и лишних пробелов — для запоминания ответа классификатора. */
+export function normalizeRequestText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
 
 type Group = keyof MediaSelections;
 
@@ -180,6 +198,7 @@ export class IntentRouter {
   constructor(
     private readonly catalog: OptionCatalogService,
     private readonly prisma: PrismaService,
+    @Optional() @Inject(REDIS) private readonly redis?: Redis,
   ) {}
 
   /** Модель классификатора из настроек (кэш SETTING_CACHE_TTL_MS). */
@@ -201,23 +220,51 @@ export class IntentRouter {
     if (!hasMediaHint(text)) return { intent: "reply", via: "rules" };
 
     const catalog = await this.catalog.get(contentMode);
+    const memoKey = this.memoKey(text, contentMode, await this.getIntentModel());
+    const memo = await this.readMemo(memoKey);
+    if (memo) return memo;
     try {
       const raw = await this.callClassifier(text, catalog);
       const parsed = parseClassifierOutput(raw, catalog);
       if (parsed) {
-        // Явное слово в сообщении важнее мнения модели: «скинь картинку» — это фото,
-        // даже если классификатор ответил video (так и случилось на «картинку в душе»).
-        const kind = explicitMediaKind(text);
-        if (kind && (parsed.intent === "image" || parsed.intent === "video") && parsed.intent !== kind) {
-          return { ...parsed, intent: kind };
-        }
-        return parsed;
+        const result = this.withExplicitKind(text, parsed);
+        await this.redis?.set(memoKey, JSON.stringify(result), "EX", ROUTE_MEMO_TTL_SECONDS).catch(() => undefined);
+        return result;
       }
       this.logger.warn("intent classifier returned invalid JSON, falling back to rules");
     } catch (err: any) {
       this.logger.warn(`intent classifier failed, falling back to rules: ${err?.message}`);
     }
     return classifyByRules(text, catalog);
+  }
+
+  private memoKey(text: string, contentMode: string | undefined, model: string | undefined): string {
+    const hash = createHash("sha256")
+      .update(JSON.stringify([ROUTE_MEMO_VERSION, normalizeRequestText(text), contentMode ?? "", model ?? ""]))
+      .digest("hex");
+    return `intent:memo:${hash}`;
+  }
+
+  private async readMemo(key: string): Promise<ChatIntent | null> {
+    const raw = await this.redis?.get(key).catch(() => null);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ChatIntent;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Явное слово в сообщении важнее мнения модели: «скинь картинку» — это фото,
+   * даже если классификатор ответил video (так и случилось на «картинку в душе»).
+   */
+  private withExplicitKind(text: string, parsed: ChatIntent): ChatIntent {
+    const kind = explicitMediaKind(text);
+    if (kind && (parsed.intent === "image" || parsed.intent === "video") && parsed.intent !== kind) {
+      return { ...parsed, intent: kind };
+    }
+    return parsed;
   }
 
   /** Намерение и спецификация медиа для персонажа (общая точка для сайта, Telegram и internal API). */

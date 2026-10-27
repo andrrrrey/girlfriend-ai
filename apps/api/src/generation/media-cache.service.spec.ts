@@ -191,7 +191,14 @@ describe("MediaCacheService", () => {
     expect(mediaCacheKey("image", { ...job, prompt: "1girl,  beach, bikini " }, "PUBLIC", "u1")).toBe(
       mediaCacheKey("image", job, "PUBLIC", "u1"),
     );
-    expect(normalizePrompt("1girl,beach , In The Shower.")).toBe("1girl, beach, in the shower");
+    expect(normalizePrompt("1girl,beach , In The Shower.")).toBe("1girl, beach, shower");
+    // Разные формулировки деталей от классификатора — один ключ.
+    expect(mediaCacheKey("image", { ...job, prompt: "1girl, beach, bikini, on the beach" }, "PUBLIC", "u1")).toBe(
+      mediaCacheKey("image", { ...job, prompt: "1girl, bikini, beach, at the beach." }, "PUBLIC", "u2"),
+    );
+    expect(mediaCacheKey("image", { ...job, prompt: "1girl, beach" }, "PUBLIC", "u1")).not.toBe(
+      mediaCacheKey("image", { ...job, prompt: "1girl, shower" }, "PUBLIC", "u1"),
+    );
     expect(mediaCacheKey("image", { ...job, prompt: "1girl, Beach, bikini." }, "PUBLIC", "u1")).toBe(
       mediaCacheKey("image", job, "PUBLIC", "u1"),
     );

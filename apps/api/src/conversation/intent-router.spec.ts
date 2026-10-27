@@ -92,4 +92,23 @@ describe("intent router", () => {
     await router.route("пришли фото");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ model: "openai/gpt-4o-mini" });
   });
+
+  it("одинаковый текст (разный регистр и пунктуация) — один ответ классификатора для всех", async () => {
+    const store = new Map<string, string>();
+    const redis = { get: async (k: string) => store.get(k) ?? null, set: async (k: string, v: string) => store.set(k, v) };
+    router = new IntentRouter({ get: jest.fn().mockResolvedValue(CATALOG) } as any, prisma, redis as any);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ content: '{"intent":"image","locations":["beach"],"extra":"on the beach"}' }),
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ content: '{"intent":"image","locations":["beach"],"extra":"sunny beach day"}' }),
+    });
+
+    const first = await router.route("скинь фотку на пляже");
+    const second = await router.route("Скинь фотку на пляже!");
+    expect(second).toEqual(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
