@@ -137,8 +137,10 @@ export class InternalController {
   ) {
     // Генерация для чата: медиасообщение создаём ДО статуса completed — клиент,
     // увидев completed, перечитывает диалог и уже находит в нём фото.
+    // Общий кэш: результат становится вариантом пула, ждавшие эту генерацию
+    // задания других пользователей завершаются тем же результатом.
     if (body.status === "completed") {
-      await this.chatMedia.saveCompletedMedia(id, body.output);
+      await this.chatMedia.onJobCompleted(id, body.output);
     }
 
     const job = await this.prisma.aiJob.update({
@@ -157,6 +159,7 @@ export class InternalController {
       await this.wallet.capture(generationReservationKey(id));
     } else if (body.status === "failed") {
       await this.wallet.release(generationReservationKey(id), "generation_failed");
+      await this.chatMedia.onJobFailed(id, body.error);
     }
     return job;
   }

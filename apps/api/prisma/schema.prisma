@@ -423,6 +423,9 @@ model AiJob {
   boostLikes  Int       @default(0) @map("boost_likes")
   tokensUsed  Int?      @map("tokens_used")
   error       String?
+  // Копия чужого результата из общего кэша медиа (выдача из пула или ожидание
+  // идущей генерации): id исходного задания. Такие копии не попадают в публичные ленты.
+  cachedFrom  String?   @map("cached_from") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
@@ -836,6 +839,7 @@ model TelegramBot {
   users     TelegramBotUser[]
   updates   TelegramUpdate[]
   links     TelegramLinkToken[]
+  fileCache TelegramFileCache[]
 
   @@index([ownerUserId])
   @@map("telegram_bots")
@@ -904,4 +908,82 @@ model TelegramLinkToken {
   bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@map("telegram_link_tokens")
+}
+
+// ─── Общий кэш медиа ─────────────────────────────────────────
+
+// Готовое фото/видео, которое можно отдать повторно вместо новой генерации.
+// Для одного cacheKey копится пул вариантов: пользователь получает вариант,
+// которого ещё не видел; увидел все — генерируется новый.
+model MediaAsset {
+  id          String   @id @default(uuid()) @db.Uuid
+  // sha256 канонических параметров генерации (+ владелец для scope=OWNER)
+  cacheKey    String   @map("cache_key")
+  kind        String // image | video
+  // URL результата в нашем хранилище (как AiJob.output.url)
+  url         String
+  // PUBLIC — переиспользуется всеми пользователями; OWNER — только владельцем
+  scope       String
+  ownerUserId String?  @map("owner_user_id") @db.Uuid
+  characterId String?  @map("character_id") @db.Uuid
+  // Задание, которое сгенерировало ассет (одно задание — один ассет)
+  sourceJobId String   @unique @map("source_job_id") @db.Uuid
+  prompt      String?
+  // ok | blocked (заблокированный в админке ассет больше не выдаётся)
+  moderation  String   @default("ok")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  deliveries    MediaDelivery[]
+  telegramFiles TelegramFileCache[]
+
+  @@index([cacheKey, moderation])
+  @@map("media_assets")
+}
+
+// Кому какой вариант уже выдан (чтобы не повторять) и как: generated | cache | coalesced.
+model MediaDelivery {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @map("asset_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  aiJobId   String?  @map("ai_job_id") @db.Uuid
+  via       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, userId])
+  @@index([createdAt])
+  @@map("media_deliveries")
+}
+
+// Идущая генерация по cacheKey: параллельные одинаковые запросы не запускают
+// вторую генерацию, а ждут эту (их задания ссылаются на leaderJobId).
+model GenerationRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  cacheKey    String   @map("cache_key")
+  leaderJobId String   @unique @map("leader_job_id") @db.Uuid
+  // pending | ready | failed
+  status      String   @default("pending")
+  assetId     String?  @map("asset_id") @db.Uuid
+  // После этого времени зависшая генерация не принимает новых ожидающих
+  leaseUntil  DateTime @map("lease_until")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([cacheKey, status])
+  @@map("generation_requests")
+}
+
+// file_id Telegram для ассета в конкретном боте: повторная отправка без загрузки файла.
+model TelegramFileCache {
+  id        String   @id @default(uuid()) @db.Uuid
+  botId     String   @map("bot_id") @db.Uuid
+  assetId   String   @map("asset_id") @db.Uuid
+  fileId    String   @map("file_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bot   TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  asset MediaAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, assetId])
+  @@map("telegram_file_cache")
 }

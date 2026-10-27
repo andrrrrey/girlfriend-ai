@@ -9,6 +9,9 @@
  *   «💬 Вы на сайте: …» (бот не может писать от имени пользователя);
  * - сообщения, написанные в самом Telegram, повторно не отправляются.
  *
+ * Медиа из общего кэша (metadata.assetId) загружается в бота один раз: дальше
+ * отправляется по сохранённому file_id (TelegramFileCache) без скачивания из S3.
+ *
  * Ошибки: 403 (бот заблокирован) — пользователь помечается blockedAt, событие
  * считается доставленным; 429/5xx — исключение, outbox повторит с задержкой;
  * прочие 4xx — в лог, без повтора.
@@ -20,7 +23,7 @@ import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { OUTBOX_EVENTS, OutboxService } from "../outbox/outbox.service";
 import { TelegramBotsService } from "./telegram-bots.service";
-import { TelegramApi, TelegramApiError, type InlineKeyboard } from "./telegram-api";
+import { TelegramApi, TelegramApiError, type InlineKeyboard, type TgInputFile } from "./telegram-api";
 import { MEDIA_CONFIRM_CALLBACK } from "./telegram-handler.service";
 
 /** Лимит длины текста сообщения Telegram. */
@@ -60,6 +63,14 @@ export function splitTelegramText(text: string, limit = TG_TEXT_LIMIT): string[]
   }
   if (rest) parts.push(rest);
   return parts;
+}
+
+/** file_id отправленного фото (самый большой размер) или видео. */
+export function telegramFileId(sent: unknown): string | null {
+  const msg = sent as { photo?: { file_id: string }[]; video?: { file_id: string } } | null;
+  if (msg?.video?.file_id) return msg.video.file_id;
+  const photos = msg?.photo;
+  return photos?.length ? photos[photos.length - 1].file_id : null;
 }
 
 /** S3-ключ из URL медиа в формате media-прокси (/api-proxy/media/stream?key=...). */
@@ -109,7 +120,7 @@ export class TelegramDeliveryService implements OnModuleInit {
 
     for (const recipient of recipients) {
       try {
-        await this.send(this.bots.apiFor(recipient.bot), recipient.chatId, message);
+        await this.send(this.bots.apiFor(recipient.bot), recipient.bot.id, recipient.chatId, message);
       } catch (err) {
         if (err instanceof TelegramApiError && err.code === 403) {
           // Пользователь заблокировал бота — больше не пишем, пока он не вернётся.
@@ -127,13 +138,12 @@ export class TelegramDeliveryService implements OnModuleInit {
 
   private async send(
     api: TelegramApi,
+    botId: string,
     chatId: string,
     message: { content: string; type: string; mediaUrl: string | null; metadata: unknown },
   ): Promise<void> {
     if ((message.type === "image" || message.type === "video") && message.mediaUrl) {
-      const file = await this.loadMedia(message.mediaUrl, message.type);
-      if (message.type === "video") await api.sendVideo(chatId, file);
-      else await api.sendPhoto(chatId, file);
+      await this.sendMedia(api, botId, chatId, message.type, message.mediaUrl, message.metadata);
       return;
     }
 
@@ -148,6 +158,47 @@ export class TelegramDeliveryService implements OnModuleInit {
     for (let i = 0; i < parts.length; i++) {
       // Кнопка — под последней частью.
       await api.sendMessage(chatId, parts[i], i === parts.length - 1 ? keyboard : undefined);
+    }
+  }
+
+  /**
+   * Фото/видео: вариант общего кэша — по file_id, если бот его уже загружал;
+   * иначе загрузка байтами и сохранение полученного file_id.
+   */
+  private async sendMedia(
+    api: TelegramApi,
+    botId: string,
+    chatId: string,
+    type: string,
+    mediaUrl: string,
+    metadata: unknown,
+  ): Promise<void> {
+    const assetId = (metadata as { assetId?: unknown } | null)?.assetId;
+    const send = (file: TgInputFile) => (type === "video" ? api.sendVideo(chatId, file) : api.sendPhoto(chatId, file));
+
+    if (typeof assetId === "string") {
+      const cached = await this.prisma.telegramFileCache.findUnique({
+        where: { botId_assetId: { botId, assetId } },
+        select: { fileId: true },
+      });
+      if (cached) {
+        try {
+          await send(cached.fileId);
+          return;
+        } catch (err) {
+          // file_id больше не принимается — забываем его и загружаем заново.
+          if (!(err instanceof TelegramApiError) || err.code !== 400) throw err;
+          await this.prisma.telegramFileCache.deleteMany({ where: { botId, assetId } });
+        }
+      }
+    }
+
+    const sent = await send(await this.loadMedia(mediaUrl, type));
+    const fileId = telegramFileId(sent);
+    if (typeof assetId === "string" && fileId) {
+      await this.prisma.telegramFileCache
+        .createMany({ data: [{ botId, assetId, fileId }], skipDuplicates: true })
+        .catch((err) => this.logger.warn(`telegram file cache save failed: ${err?.message}`));
     }
   }
 
