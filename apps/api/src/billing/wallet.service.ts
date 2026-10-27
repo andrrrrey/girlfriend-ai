@@ -23,6 +23,7 @@ import { SchedulerService } from "../common/scheduler.service";
 import { BillingConfigService } from "./billing-config.service";
 import { PricingService } from "./pricing.service";
 import type { BillableOperation } from "./pricing";
+import { currentBillingContext } from "./billing-context";
 
 /** TTL резерва: после него незавершённый резерв возвращается автоматически. */
 const RESERVATION_TTL_MS: Record<string, number> = {
@@ -96,6 +97,8 @@ interface ReservationRow {
   capturedAmount: number | null;
   status: string;
   aiJobId: string | null;
+  actorUserId: string | null;
+  endUserId: string | null;
 }
 
 /** Нарушение уникальности Prisma (идемпотентный повтор). */
@@ -218,6 +221,9 @@ export class WalletService implements OnModuleInit {
 
     await this.ensureWallet(params.userId);
     const enforced = await this.config.isEnforced();
+    // Бот для клиентов: неприкосновенный остаток владельца и атрибуция (billing-context.ts).
+    const ctx = currentBillingContext();
+    const keep = Math.max(0, Math.round(ctx?.keepBalance ?? 0));
     const ttlMs = params.ttlMs ?? RESERVATION_TTL_MS[params.operation] ?? RESERVATION_TTL_MS.default;
 
     try {
@@ -230,12 +236,12 @@ export class WalletService implements OnModuleInit {
           UPDATE "wallets"
           SET "reserved" = "reserved" + ${amount}, "version" = "version" + 1, "updated_at" = ${now}
           WHERE "owner_user_id" = ${params.userId}::uuid
-            AND (${!enforced} OR "balance" - "reserved" >= ${amount})
+            AND (${!enforced} OR "balance" - "reserved" - ${keep} >= ${amount})
           RETURNING "id", "balance", "reserved"`;
 
         if (rows.length === 0) {
           const wallet = await tx.wallet.findUniqueOrThrow({ where: { ownerUserId: params.userId } });
-          throw new InsufficientCreditsException(amount, wallet.balance - wallet.reserved);
+          throw new InsufficientCreditsException(amount, Math.max(0, wallet.balance - wallet.reserved - keep));
         }
         const wallet = rows[0];
 
@@ -248,6 +254,8 @@ export class WalletService implements OnModuleInit {
             aiJobId: params.aiJobId,
             priceVersion: params.priceVersion,
             expiresAt: new Date(now.getTime() + ttlMs),
+            actorUserId: ctx?.actorUserId,
+            endUserId: ctx?.endUserId,
           },
         });
         await tx.ledgerEntry.create({
@@ -260,6 +268,8 @@ export class WalletService implements OnModuleInit {
             operationKey: `reserve:${params.operationKey}`,
             reservationKey: params.operationKey,
             aiJobId: params.aiJobId,
+            actorUserId: ctx?.actorUserId,
+            endUserId: ctx?.endUserId,
             meta: { operation: params.operation, priceVersion: params.priceVersion ?? null },
           },
         });
@@ -313,6 +323,8 @@ export class WalletService implements OnModuleInit {
           operationKey: `capture:${operationKey}`,
           reservationKey: operationKey,
           aiJobId: res.aiJobId,
+          actorUserId: res.actorUserId,
+          endUserId: res.endUserId,
           meta: res.status === "released" ? { lateCapture: true } : undefined,
         },
       });
@@ -344,6 +356,8 @@ export class WalletService implements OnModuleInit {
           operationKey: `release:${operationKey}`,
           reservationKey: operationKey,
           aiJobId: res.aiJobId,
+          actorUserId: res.actorUserId,
+          endUserId: res.endUserId,
           reason,
         },
       });
@@ -373,7 +387,8 @@ export class WalletService implements OnModuleInit {
           operationKey: `refund:${operationKey}`,
           reservationKey: operationKey,
           aiJobId: res.aiJobId,
-          actorUserId,
+          actorUserId: actorUserId ?? res.actorUserId,
+          endUserId: res.endUserId,
           reason,
         },
       });
@@ -494,7 +509,8 @@ export class WalletService implements OnModuleInit {
   private async lockReservation(db: Db, operationKey: string): Promise<ReservationRow | null> {
     const rows = await db.$queryRaw<ReservationRow[]>`
       SELECT "id", "wallet_id" AS "walletId", "amount", "captured_amount" AS "capturedAmount",
-             "status", "ai_job_id" AS "aiJobId"
+             "status", "ai_job_id" AS "aiJobId",
+             "actor_user_id" AS "actorUserId", "end_user_id" AS "endUserId"
       FROM "credit_reservations"
       WHERE "operation_key" = ${operationKey}
       FOR UPDATE`;

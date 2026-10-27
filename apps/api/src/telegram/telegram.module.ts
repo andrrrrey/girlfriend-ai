@@ -13,11 +13,12 @@ import { TelegramBotsService } from "./telegram-bots.service";
 import { TelegramUpdatesService } from "./telegram-updates.service";
 import { TelegramHandlerService } from "./telegram-handler.service";
 import { TelegramDeliveryService } from "./telegram-delivery.service";
+import { TelegramResellerService } from "./telegram-reseller.service";
 
 @Module({
   imports: [ChatsModule, S3Module],
   controllers: [TelegramBotsController, TelegramWebhookController],
-  providers: [PrismaService, TelegramBotsService, TelegramUpdatesService, TelegramHandlerService, TelegramDeliveryService],
+  providers: [PrismaService, TelegramBotsService, TelegramUpdatesService, TelegramHandlerService, TelegramDeliveryService, TelegramResellerService],
   exports: [TelegramBotsService],
 })
 export class TelegramModule {}

@@ -215,7 +215,7 @@ export class CharactersController {
           mediaUrl: { not: null },
           inGallery: true, // фото остаются и после сброса чата
           createdAt: { gte: since },
-          chatSession: { deletedAt: null },
+          chatSession: { deletedAt: null, hiddenFromOwner: false },
         },
         select: {
           createdAt: true,
@@ -228,6 +228,7 @@ export class CharactersController {
           type: "image",
           status: "completed",
           characterId: { not: null },
+          endUserId: null, // медиа клиентов бота владельца (RESELLER) не показываем
           createdAt: { gte: since },
         },
         select: { createdAt: true, characterId: true },
@@ -313,7 +314,7 @@ export class CharactersController {
           mediaUrl: { not: null },
           inGallery: true, // фото остаются и после сброса чата
           createdAt: { gte: since },
-          chatSession: { characterId: id, deletedAt: null },
+          chatSession: { characterId: id, deletedAt: null, hiddenFromOwner: false },
         },
         select: { id: true, mediaUrl: true, content: true, createdAt: true },
         orderBy: { createdAt: "asc" },
@@ -323,6 +324,7 @@ export class CharactersController {
           type: "image",
           status: "completed",
           characterId: id,
+          endUserId: null, // медиа клиентов бота владельца (RESELLER) не показываем
           createdAt: { gte: since },
         },
         select: { id: true, output: true, createdAt: true },
@@ -354,12 +356,13 @@ export class CharactersController {
       type: "image",
       mediaUrl: { not: null },
       inGallery: true, // фото остаются и после сброса чата
-      chatSession: { characterId: id, deletedAt: null },
+      chatSession: { characterId: id, deletedAt: null, hiddenFromOwner: false },
     } as const;
     const jobWhere = {
       type: "image",
       status: "completed",
       characterId: id,
+      endUserId: null, // медиа клиентов бота владельца (RESELLER) не показываем
     } as const;
 
     // Считаем и берём последние картинки из обоих источников: чаты (Message) и

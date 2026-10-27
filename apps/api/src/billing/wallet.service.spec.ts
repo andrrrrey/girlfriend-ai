@@ -1,4 +1,5 @@
 import { InsufficientCreditsException, WalletService } from "./wallet.service";
+import { runWithBillingContext } from "./billing-context";
 
 /** Текст SQL из tagged-template вызова $queryRaw. */
 function sqlOf(call: unknown[]): string {
@@ -84,6 +85,44 @@ describe("WalletService", () => {
       expect(prisma.wallet.create).toHaveBeenCalledWith({ data: { ownerUserId: "u" } });
       expect(prisma.ledgerEntry.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ type: "bonus", balanceDelta: 100, operationKey: "bonus:welcome:u" }),
+      });
+    });
+  });
+
+  describe("бот для клиентов (контекст списаний)", () => {
+    const ctx = { actorUserId: "owner", endUserId: "bu-1", keepBalance: 30 };
+
+    it("резерв и запись журнала помечаются владельцем и клиентом", async () => {
+      await runWithBillingContext(ctx, () => wallet.reserve({ userId: "owner", operationKey: "k", operation: "chat_message", amount: 2 }));
+      expect(prisma.creditReservation.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ actorUserId: "owner", endUserId: "bu-1" }),
+      });
+      expect(prisma.ledgerEntry.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ type: "reserve", actorUserId: "owner", endUserId: "bu-1" }),
+      });
+    });
+
+    it("неприкосновенный остаток участвует в проверке баланса", async () => {
+      await runWithBillingContext(ctx, () => wallet.reserve({ userId: "owner", operationKey: "k", operation: "image", amount: 5 }));
+      const update = prisma.$queryRaw.mock.calls.find((c: unknown[]) => sqlOf(c).includes('UPDATE "wallets"'));
+      expect(sqlOf(update)).toContain('"balance" - "reserved" - ? >= ?');
+      expect(update.slice(1)).toEqual(expect.arrayContaining([30, 5]));
+    });
+
+    it("вне контекста остаток не удерживается", async () => {
+      await wallet.reserve({ userId: "u", operationKey: "k", operation: "image", amount: 5 });
+      const update = prisma.$queryRaw.mock.calls.find((c: unknown[]) => sqlOf(c).includes('UPDATE "wallets"'));
+      expect(update.slice(1)).toEqual(expect.arrayContaining([0, 5]));
+      expect(prisma.creditReservation.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ actorUserId: undefined, endUserId: undefined }),
+      });
+    });
+
+    it("списание переносит владельца и клиента из резерва в журнал", async () => {
+      reservationRow = { id: "r", walletId: "w-1", amount: 2, capturedAmount: null, status: "held", aiJobId: null, actorUserId: "owner", endUserId: "bu-1" };
+      await wallet.capture("k");
+      expect(prisma.ledgerEntry.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ type: "capture", actorUserId: "owner", endUserId: "bu-1" }),
       });
     });
   });

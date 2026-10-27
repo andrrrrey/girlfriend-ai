@@ -116,7 +116,7 @@ export class ConversationEngine {
   /** Текстовое сообщение пользователя → ответ персонажа. */
   async *handleUserText(input: UserTextInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "web";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       const existing = await this.findDuplicate(chat.id, source, input.clientMessageId, input.externalId);
@@ -162,7 +162,7 @@ export class ConversationEngine {
   /** Голосовое сообщение: распознавание → сообщение пользователя → ответ персонажа. */
   async *handleUserVoice(input: UserVoiceInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "web";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       const existing = await this.findDuplicate(chat.id, source, input.clientMessageId, input.externalId);
@@ -217,7 +217,7 @@ export class ConversationEngine {
    */
   async *greet(input: GreetingInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "web";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       const history = await this.chats.getMessageHistory(chat.id, 1);
@@ -247,7 +247,7 @@ export class ConversationEngine {
   /** Правка сообщения пользователя: новый текст, последующие ответы удаляются, ответ генерируется заново. */
   async *edit(input: EditInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "web";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       if (input.enforceLimits !== false) {
@@ -276,7 +276,7 @@ export class ConversationEngine {
   /** Перегенерация ответа ассистента: он и всё после него (кроме фото) удаляются, ответ генерируется заново. */
   async *regenerate(input: RegenerateInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "web";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       if (input.enforceLimits !== false) {
@@ -314,7 +314,7 @@ export class ConversationEngine {
    */
   async *respond(input: RespondInput): AsyncGenerator<EngineEvent> {
     const source = input.source ?? "system";
-    const chat = await this.chats.getChat(input.chatId, input.actor.id);
+    const chat = await this.chats.getChat(input.chatId, input.actor.id, { includeHidden: source !== "web" });
 
     yield* this.withChatLock(chat.id, async function* (this: ConversationEngine) {
       if (input.enforceLimits !== false) {

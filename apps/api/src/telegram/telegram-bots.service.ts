@@ -27,13 +27,27 @@ const LINK_TOKEN_TTL_MS = 15 * 60_000;
 const BOT_TOKEN_RE = /^\d{5,}:[A-Za-z0-9_-]{30,}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Команды бота (меню Telegram). */
+/** Команды личного бота (меню Telegram). */
 export const BOT_COMMANDS = [
   { command: "start", description: "Начать / привязать аккаунт" },
   { command: "help", description: "Помощь" },
   { command: "newchat", description: "Начать диалог заново" },
   { command: "mute", description: "Вкл/выкл сообщения от персонажа первой" },
 ];
+
+/** Команды бота для клиентов (RESELLER). */
+export const RESELLER_BOT_COMMANDS = [
+  { command: "start", description: "Начать" },
+  { command: "help", description: "Помощь" },
+  { command: "newchat", description: "Начать диалог заново" },
+  { command: "mute", description: "Вкл/выкл сообщения первой" },
+  { command: "mydata", description: "Выгрузить мои данные" },
+  { command: "deletemydata", description: "Удалить мои данные" },
+];
+
+/** Режимы бота: личный (только владелец) или для клиентов. */
+export const BOT_MODES = ["PERSONAL", "RESELLER"] as const;
+export type BotMode = (typeof BOT_MODES)[number];
 
 /** Бот в виде для интерфейса (без токена и секрета). */
 export interface TelegramBotView {
@@ -106,7 +120,7 @@ export class TelegramBotsService {
    * Подключает бота по токену от @BotFather.
    * @throws 400 — неверный токен/персонаж, 409 — бот уже подключён к другому аккаунту
    */
-  async connect(userId: string, token: string, characterId: string): Promise<TelegramBotView> {
+  async connect(userId: string, token: string, characterId: string, mode: BotMode = "PERSONAL"): Promise<TelegramBotView> {
     token = token.trim();
     if (!BOT_TOKEN_RE.test(token)) throw new BadRequestException({ error: "INVALID_BOT_TOKEN", message: "Неверный формат токена" });
     await this.assertCharacter(characterId, userId);
@@ -130,6 +144,7 @@ export class TelegramBotsService {
 
     const data = {
       ownerUserId: userId,
+      mode,
       characterId,
       tokenEnc: this.crypto.encrypt(token),
       username: me.username ?? botTgId,
@@ -144,9 +159,13 @@ export class TelegramBotsService {
     }
     const bot = existing
       ? await this.prisma.telegramBot.update({ where: { id: existing.id }, data })
-      : await this.prisma.telegramBot.create({ data: { ...data, botTgId, mode: "PERSONAL" } });
+      : await this.prisma.telegramBot.create({ data: { ...data, botTgId } });
+    if (existing && existing.mode !== mode) {
+      // Смена режима: прежние диалоги бота не переносим (у клиентов — свои скрытые).
+      await this.prisma.telegramBotUser.updateMany({ where: { botId: bot.id }, data: { chatSessionId: null, linkedUserId: null } });
+    }
 
-    await this.configureBot(bot.id, api, bot.webhookSecret);
+    await this.configureBot(bot.id, api, bot.webhookSecret, mode);
     return (await this.list(userId)).find((b) => b.id === bot.id)!;
   }
 
@@ -173,7 +192,7 @@ export class TelegramBotsService {
   /** Повторно настраивает webhook и команды (после смены домена, ошибки и т.п.). */
   async reconfigure(userId: string, botId: string): Promise<TelegramBotView> {
     const bot = await this.ownedBot(userId, botId);
-    await this.configureBot(bot.id, this.apiFor(bot), bot.webhookSecret);
+    await this.configureBot(bot.id, this.apiFor(bot), bot.webhookSecret, bot.mode);
     return (await this.list(userId)).find((b) => b.id === bot.id)!;
   }
 
@@ -222,11 +241,11 @@ export class TelegramBotsService {
   }
 
   /** webhook (или polling) и команды бота; ошибка сохраняется в lastError. */
-  private async configureBot(botId: string, api: TelegramApi, secret: string): Promise<void> {
+  private async configureBot(botId: string, api: TelegramApi, secret: string, mode: string): Promise<void> {
     try {
       if (isPollingMode()) await api.deleteWebhook();
       else await api.setWebhook(webhookUrl(botId), secret);
-      await api.setMyCommands(BOT_COMMANDS);
+      await api.setMyCommands(mode === "RESELLER" ? RESELLER_BOT_COMMANDS : BOT_COMMANDS);
       await this.prisma.telegramBot.update({ where: { id: botId }, data: { status: "active", lastError: null } });
     } catch (err: any) {
       const message = String(err?.message ?? err).slice(0, 500);

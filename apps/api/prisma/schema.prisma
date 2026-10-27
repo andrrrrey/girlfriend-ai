@@ -336,15 +336,22 @@ model ChatSession {
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
+  // Диалог клиента бота владельца (RESELLER): владелец не видит его на сайте —
+  // ни в списке чатов, ни в галерее; доступен только из Telegram.
+  hiddenFromOwner Boolean @default(false) @map("hidden_from_owner")
+  // Клиент бота (TelegramBotUser), чей это диалог
+  endUserId     String?   @map("end_user_id") @db.Uuid
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   character   Character    @relation(fields: [characterId], references: [id])
   chatProfile ChatProfile? @relation(fields: [chatProfileId], references: [id], onDelete: SetNull)
   messages    Message[]
-  telegramBotUsers TelegramBotUser[]
+  telegramBotUsers TelegramBotUser[] @relation("TelegramBotUserChat")
+  endUser     TelegramBotUser? @relation("ChatSessionEndUser", fields: [endUserId], references: [id], onDelete: SetNull)
 
   // Составной индекс для листа чатов: фильтр по userId + deletedAt, сортировка по lastMessageAt DESC
   @@index([userId, deletedAt, lastMessageAt(sort: Desc)])
+  @@index([endUserId])
   @@index([characterId])
   @@map("chat_sessions")
 }
@@ -426,6 +433,9 @@ model AiJob {
   // Копия чужого результата из общего кэша медиа (выдача из пула или ожидание
   // идущей генерации): id исходного задания. Такие копии не попадают в публичные ленты.
   cachedFrom  String?   @map("cached_from") @db.Uuid
+  // Клиент бота владельца (RESELLER), для которого сделано медиа: такие задания
+  // не попадают ни в галерею владельца, ни в публичные ленты.
+  endUserId   String?   @map("end_user_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
@@ -435,6 +445,7 @@ model AiJob {
   @@index([userId])
   @@index([status])
   @@index([characterId])
+  @@index([endUserId])
   @@map("ai_jobs")
 }
 
@@ -769,6 +780,7 @@ model LedgerEntry {
 
   @@index([walletId, createdAt])
   @@index([reservationKey])
+  @@index([endUserId])
   @@map("ledger_entries")
 }
 
@@ -786,6 +798,10 @@ model CreditReservation {
   status         String    @default("held")
   aiJobId        String?   @map("ai_job_id") @db.Uuid
   priceVersion   Int?      @map("price_version")
+  // Кто тратит (владелец бота в RESELLER-режиме) и для кого (TelegramBotUser.id) —
+  // переносятся во все записи журнала по этому резерву
+  actorUserId    String?   @map("actor_user_id") @db.Uuid
+  endUserId      String?   @map("end_user_id")
   expiresAt      DateTime  @map("expires_at")
   createdAt      DateTime  @default(now()) @map("created_at")
   settledAt      DateTime? @map("settled_at")
@@ -840,6 +856,7 @@ model TelegramBot {
   updates   TelegramUpdate[]
   links     TelegramLinkToken[]
   fileCache TelegramFileCache[]
+  limits    BotLimits?
 
   @@index([ownerUserId])
   @@map("telegram_bots")
@@ -866,11 +883,29 @@ model TelegramBotUser {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   bot         TelegramBot  @relation(fields: [botId], references: [id], onDelete: Cascade)
-  chatSession ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: SetNull)
+  chatSession ChatSession? @relation("TelegramBotUserChat", fields: [chatSessionId], references: [id], onDelete: SetNull)
+  // Диалоги клиента бота (RESELLER): текущий и прежние (после /newchat)
+  endUserChats ChatSession[] @relation("ChatSessionEndUser")
 
   @@unique([botId, tgUserId])
   @@index([chatSessionId])
   @@map("telegram_bot_users")
+}
+
+// Лимиты бота для клиентов (RESELLER). null — без ограничения. Сутки — по UTC.
+model BotLimits {
+  botId           String   @id @map("bot_id") @db.Uuid
+  messagesPerDay  Int?     @map("messages_per_day")
+  messagesPerUser Int?     @map("messages_per_user")
+  mediaPerDay     Int?     @map("media_per_day")
+  mediaPerUser    Int?     @map("media_per_user")
+  // Неприкосновенный остаток кошелька владельца: клиенты бота не тратят его
+  keepBalance     Int      @default(0) @map("keep_balance")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("bot_limits")
 }
 
 // Входящие обновления Telegram: журнал идемпотентности и очередь обработки.
