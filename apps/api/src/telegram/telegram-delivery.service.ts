@@ -112,8 +112,9 @@ export class TelegramDeliveryService implements OnModuleInit {
       where: {
         chatSessionId: message.chatSessionId,
         blockedAt: null,
-        linkedUserId: { not: null },
         bot: { deletedAt: null },
+        // Личный бот — только привязанный владелец; бот для клиентов — каждый клиент в своём диалоге.
+        OR: [{ linkedUserId: { not: null } }, { bot: { mode: "RESELLER" } }],
       },
       include: { bot: { select: { id: true, tokenEnc: true } } },
     });

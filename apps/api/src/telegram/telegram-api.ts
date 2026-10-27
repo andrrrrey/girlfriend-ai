@@ -163,6 +163,11 @@ export class TelegramApi {
     return this.sendFile<TgMessage & { video?: { file_id: string } }>("sendVideo", "video", chatId, video, caption);
   }
 
+  /** Документ (файл): байтами (multipart) или по file_id. */
+  sendDocument(chatId: string, document: TgInputFile, caption?: string) {
+    return this.sendFile<TgMessage>("sendDocument", "document", chatId, document, caption);
+  }
+
   /** Путь к файлу на серверах Telegram (для скачивания голосовых). */
   getFile(fileId: string) {
     return this.call<{ file_id: string; file_path?: string; file_size?: number }>("getFile", { file_id: fileId });

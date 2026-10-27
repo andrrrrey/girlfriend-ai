@@ -2301,6 +2301,38 @@ export interface TelegramBotInfo {
   createdAt: string;
 }
 
+/** Режим бота: личный (владелец) или для клиентов. */
+export type TelegramBotMode = "PERSONAL" | "RESELLER";
+
+/** Лимиты бота для клиентов; null — без ограничения. */
+export interface TelegramBotLimits {
+  messagesPerDay: number | null;
+  messagesPerUser: number | null;
+  mediaPerDay: number | null;
+  mediaPerUser: number | null;
+  keepBalance: number;
+}
+
+/** Статистика бота для клиентов по дням (UTC), без переписки. */
+export interface TelegramBotStats {
+  totalUsers: number;
+  days: { date: string; newUsers: number; activeUsers: number; messages: number; media: number; credits: number }[];
+  totals: { messages: number; media: number; credits: number };
+  limits: TelegramBotLimits;
+}
+
+/** Клиент бота (без переписки). */
+export interface TelegramBotClient {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  createdAt: string;
+  blockedAt: string | null;
+  lastMessageAt: string | null;
+  messages: number;
+  credits: number;
+}
+
 /** Диагностика бота: webhook глазами Telegram и последние входящие обновления. */
 export interface TelegramBotDiagnostics {
   pollingMode: boolean;
@@ -2324,8 +2356,28 @@ export const telegram = {
   },
 
   /** Подключить бота по токену @BotFather (POST /telegram/bots). */
-  async connectBot(token: string, characterId: string): Promise<TelegramBotInfo> {
-    return apiFetch(`/telegram/bots`, { method: "POST", body: JSON.stringify({ token, characterId }) });
+  async connectBot(token: string, characterId: string, mode: TelegramBotMode = "PERSONAL"): Promise<TelegramBotInfo> {
+    return apiFetch(`/telegram/bots`, { method: "POST", body: JSON.stringify({ token, characterId, mode }) });
+  },
+
+  /** Статистика бота для клиентов (GET /telegram/bots/:id/stats). */
+  async stats(botId: string, days = 30): Promise<TelegramBotStats> {
+    return apiFetch(`/telegram/bots/${botId}/stats?days=${days}`);
+  },
+
+  /** Клиенты бота (GET /telegram/bots/:id/users). */
+  async clients(botId: string, page = 1): Promise<{ total: number; items: TelegramBotClient[] }> {
+    return apiFetch(`/telegram/bots/${botId}/users?page=${page}`);
+  },
+
+  /** Удалить данные клиента (DELETE /telegram/bots/:id/users/:userId). */
+  async deleteClient(botId: string, userId: string): Promise<void> {
+    return apiFetch(`/telegram/bots/${botId}/users/${userId}`, { method: "DELETE" });
+  },
+
+  /** Изменить лимиты бота (PUT /telegram/bots/:id/limits). */
+  async setLimits(botId: string, limits: Partial<TelegramBotLimits>): Promise<TelegramBotLimits> {
+    return apiFetch(`/telegram/bots/${botId}/limits`, { method: "PUT", body: JSON.stringify(limits) });
   },
 
   /** Сменить персонажа бота (PATCH /telegram/bots/:id). */

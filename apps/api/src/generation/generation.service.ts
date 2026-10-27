@@ -13,6 +13,7 @@ import type { BillableOperation } from "../billing/pricing";
 import type { ImageJobData, VideoJobData } from "../queue/queue.types";
 import { loadEnv } from "@repo/config";
 import { resolveEnabledGenders } from "../common/genders";
+import { currentBillingContext } from "../billing/billing-context";
 
 const env = loadEnv();
 const AI_BASE = `http://${env.AI_HOST}:${env.AI_PORT}`;
@@ -272,6 +273,7 @@ export class GenerationService {
             status: "pending",
             characterId: data.characterId || null,
             nsfw: contentMode !== "sfw",
+            endUserId: currentBillingContext()?.endUserId,
             input: {
               prompt,
               originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
@@ -345,6 +347,7 @@ export class GenerationService {
           characterId: params.characterId || null,
           nsfw: params.contentMode !== "sfw",
           cachedFrom: params.cachedFrom,
+          endUserId: currentBillingContext()?.endUserId,
           input: { ...params.input, contentMode: params.contentMode, reservationKey, chat: opts.chat, cache: opts.cache },
           ...(params.output ? { output: params.output, completedAt: new Date() } : {}),
         },
@@ -564,6 +567,7 @@ export class GenerationService {
             status: "pending",
             characterId: data.characterId || null,
             nsfw: contentMode !== "sfw",
+            endUserId: currentBillingContext()?.endUserId,
             input: {
               prompt,
               originalPrompt: originalPrompt !== prompt ? originalPrompt : undefined,
@@ -669,6 +673,8 @@ export class GenerationService {
     const where: Record<string, unknown> = {
       status: "completed" as const,
       type: typeFilter,
+      // Медиа клиентов бота владельца (RESELLER) не показываются ни владельцу, ни в ленте.
+      endUserId: null,
     };
     if (userId) {
       where["userId"] = userId;
@@ -733,7 +739,7 @@ export class GenerationService {
     // Фиксированный словарь тегов; считаем, сколько свежих работ под каждый
     // подходит, и отдаём только непустые (по убыванию популярности).
     const jobs = await this.prisma.aiJob.findMany({
-      where: { status: "completed", type: { in: ["image", "video"] }, cachedFrom: null },
+      where: { status: "completed", type: { in: ["image", "video"] }, cachedFrom: null, endUserId: null },
       select: { input: true },
       take: 1000,
       orderBy: { createdAt: "desc" },

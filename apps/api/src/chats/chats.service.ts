@@ -106,7 +106,8 @@ export class ChatsService {
   async getUserChats(userId: string, cursor?: string, limit = 20) {
     // Запрашиваем limit+1 чтобы определить есть ли следующая страница
     const chats = await this.prisma.chatSession.findMany({
-      where: { userId, deletedAt: null }, // Только активные (не мягко удалённые)
+      // Только активные (не мягко удалённые); диалоги клиентов бота владельца (RESELLER) скрыты.
+      where: { userId, deletedAt: null, hiddenFromOwner: false },
       orderBy: { lastMessageAt: { sort: "desc", nulls: "last" } },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}), // Cursor-based pagination
@@ -162,8 +163,10 @@ export class ChatsService {
    * @returns ChatSession с включённым character (включая systemPrompt и voiceId)
    * @throws NotFoundException — чат не найден или удалён
    * @throws ForbiddenException — чат принадлежит другому пользователю
+   * @param opts.includeHidden — открыть и скрытый диалог клиента бота (RESELLER):
+   *   только для ядра в канале Telegram; на сайте такие чаты — 404
    */
-  async getChat(chatId: string, userId: string) {
+  async getChat(chatId: string, userId: string, opts: { includeHidden?: boolean } = {}) {
     const chat = await this.prisma.chatSession.findFirst({
       where: { id: chatId, deletedAt: null },
       include: {
@@ -177,7 +180,7 @@ export class ChatsService {
         },
       },
     });
-    if (!chat) throw new NotFoundException("Chat not found");
+    if (!chat || (chat.hiddenFromOwner && !opts.includeHidden)) throw new NotFoundException("Chat not found");
     // Защита от IDOR — проверяем что запрашивает именно владелец
     if (chat.userId !== userId) throw new ForbiddenException();
     return chat;

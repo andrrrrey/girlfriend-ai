@@ -10,6 +10,13 @@
  *   GET    /telegram/bots/:id/diagnostics    — состояние webhook и последние обновления
  *   DELETE /telegram/bots/:id                — отключить
  *
+ *   Бот для клиентов (mode=RESELLER):
+ *   GET    /telegram/bots/:id/stats?days=30  — клиенты, активность и расход по дням
+ *   GET    /telegram/bots/:id/users?page=1   — клиенты бота (без переписки)
+ *   DELETE /telegram/bots/:id/users/:userId  — удалить данные клиента
+ *   GET    /telegram/bots/:id/limits         — лимиты бота
+ *   PUT    /telegram/bots/:id/limits         — изменить лимиты
+ *
  *   POST   /telegram/webhook/:botId          — webhook Telegram (проверка секретного заголовка)
  */
 
@@ -25,16 +32,19 @@ import {
   Param,
   Patch,
   Post,
+  Put,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { IsString, MaxLength, MinLength } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 import { timingSafeEqual } from "crypto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
-import { TelegramBotsService } from "./telegram-bots.service";
+import { BOT_MODES, type BotMode, TelegramBotsService } from "./telegram-bots.service";
+import { TelegramResellerService } from "./telegram-reseller.service";
 import { TelegramUpdatesService } from "./telegram-updates.service";
 import type { TgUpdate } from "./telegram-api";
 
@@ -49,6 +59,21 @@ export class ConnectBotDto {
   /** Персонаж, с которым общается бот. */
   @IsString()
   characterId!: string;
+
+  /** PERSONAL — личный бот владельца, RESELLER — бот для клиентов. */
+  @IsOptional()
+  @IsIn(BOT_MODES)
+  mode?: BotMode;
+}
+
+/** Тело PUT /telegram/bots/:id/limits. null или отсутствие — без ограничения. */
+export class BotLimitsDto {
+  @IsOptional() @IsInt() @Min(0) messagesPerDay?: number | null;
+  @IsOptional() @IsInt() @Min(0) messagesPerUser?: number | null;
+  @IsOptional() @IsInt() @Min(0) mediaPerDay?: number | null;
+  @IsOptional() @IsInt() @Min(0) mediaPerUser?: number | null;
+  /** Неприкосновенный остаток кошелька владельца (кредиты). */
+  @IsOptional() @IsInt() @Min(0) keepBalance?: number | null;
 }
 
 /** Тело PATCH /telegram/bots/:id. */
@@ -70,7 +95,10 @@ function secretsEqual(a: string | undefined, b: string): boolean {
 @Controller("telegram/bots")
 @UseGuards(JwtAuthGuard)
 export class TelegramBotsController {
-  constructor(private readonly bots: TelegramBotsService) {}
+  constructor(
+    private readonly bots: TelegramBotsService,
+    private readonly reseller: TelegramResellerService,
+  ) {}
 
   @ApiOperation({ summary: "My Telegram bots" })
   @Get()
@@ -78,10 +106,10 @@ export class TelegramBotsController {
     return this.bots.list(req.user.id);
   }
 
-  @ApiOperation({ summary: "Connect a personal Telegram bot by @BotFather token" })
+  @ApiOperation({ summary: "Connect a Telegram bot (personal or for clients) by @BotFather token" })
   @Post()
   async connect(@Req() req: any, @Body() dto: ConnectBotDto) {
-    return this.bots.connect(req.user.id, dto.token, dto.characterId);
+    return this.bots.connect(req.user.id, dto.token, dto.characterId, dto.mode ?? "PERSONAL");
   }
 
   @ApiOperation({ summary: "Change the bot's character" })
@@ -106,6 +134,37 @@ export class TelegramBotsController {
   @Get(":id/diagnostics")
   async diagnostics(@Req() req: any, @Param("id") id: string) {
     return this.bots.diagnostics(req.user.id, id);
+  }
+
+  @ApiOperation({ summary: "Client bot stats by day (no conversations)" })
+  @Get(":id/stats")
+  async stats(@Req() req: any, @Param("id") id: string, @Query("days") days?: string) {
+    return this.reseller.stats(req.user.id, id, Number(days) || 30);
+  }
+
+  @ApiOperation({ summary: "Client bot users (no conversations)" })
+  @Get(":id/users")
+  async users(@Req() req: any, @Param("id") id: string, @Query("page") page?: string) {
+    return this.reseller.listEndUsers(req.user.id, id, Number(page) || 1);
+  }
+
+  @ApiOperation({ summary: "Delete a client's data" })
+  @Delete(":id/users/:userId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUser(@Req() req: any, @Param("id") id: string, @Param("userId") userId: string) {
+    await this.reseller.deleteEndUserByOwner(req.user.id, id, userId);
+  }
+
+  @ApiOperation({ summary: "Client bot limits" })
+  @Get(":id/limits")
+  async limits(@Req() req: any, @Param("id") id: string) {
+    return this.reseller.ownedLimits(req.user.id, id);
+  }
+
+  @ApiOperation({ summary: "Update client bot limits (null = unlimited)" })
+  @Put(":id/limits")
+  async setLimits(@Req() req: any, @Param("id") id: string, @Body() dto: BotLimitsDto) {
+    return this.reseller.setLimits(req.user.id, id, { ...dto });
   }
 
   @ApiOperation({ summary: "Disconnect the bot" })
