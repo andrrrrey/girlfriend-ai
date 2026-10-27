@@ -109,7 +109,9 @@ export class ChatMediaService {
       kind,
       userId: actor.id,
       characterId: spec.characterId,
-      hasUserText: Boolean(spec.userText?.trim()),
+      // В чате userText — короткое английское описание деталей от роутера намерений
+      // («in the shower»), а не текст пользователя: такие запросы кэш делит между всеми.
+      hasUserText: spec.preset !== "chat" && Boolean(spec.userText?.trim()),
       job,
       chat: target,
     });

@@ -16,6 +16,11 @@ export interface LlmChatRequest {
   /** "nsfw" | "sfw"; не задан — AI-сервис берёт режим по умолчанию. */
   contentMode?: string;
   userProfile?: string;
+  /**
+   * Язык ответа (например "Russian") — AI-сервис ставит требование в конец
+   * системного промпта: одной пометки у сообщения модели иногда не хватает.
+   */
+  replyLanguage?: string;
 }
 
 @Injectable()

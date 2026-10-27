@@ -1,6 +1,6 @@
 jest.mock("@repo/config", () => ({ loadEnv: () => ({ AI_HOST: "ai", AI_PORT: 8081 }) }));
 
-import { MediaCacheService, mediaCacheKey } from "./media-cache.service";
+import { MediaCacheService, mediaCacheKey, normalizePrompt } from "./media-cache.service";
 
 /** In-memory хранилище с нужным сервису подмножеством Prisma. */
 function fakeDb() {
@@ -189,6 +189,10 @@ describe("MediaCacheService", () => {
     expect(mediaCacheKey("image", job, "PUBLIC", "u1")).toBe(mediaCacheKey("image", job, "PUBLIC", "u2"));
     expect(mediaCacheKey("image", job, "OWNER", "u1")).not.toBe(mediaCacheKey("image", job, "OWNER", "u2"));
     expect(mediaCacheKey("image", { ...job, prompt: "1girl,  beach, bikini " }, "PUBLIC", "u1")).toBe(
+      mediaCacheKey("image", job, "PUBLIC", "u1"),
+    );
+    expect(normalizePrompt("1girl,beach , In The Shower.")).toBe("1girl, beach, in the shower");
+    expect(mediaCacheKey("image", { ...job, prompt: "1girl, Beach, bikini." }, "PUBLIC", "u1")).toBe(
       mediaCacheKey("image", job, "PUBLIC", "u1"),
     );
     expect(mediaCacheKey("image", { ...job, initImageUrl: "https://x/a.png" }, "PUBLIC", "u1")).toBeNull();

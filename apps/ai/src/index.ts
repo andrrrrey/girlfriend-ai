@@ -468,6 +468,8 @@ interface ChatCompletionBody {
   userProfile?: string;
   /** Режим контента: "nsfw" | "sfw". В SFW модель держится безопасного тона. */
   contentMode?: "nsfw" | "sfw";
+  /** Язык ответа (например "Russian") — требование в конце системного промпта. */
+  replyLanguage?: string;
 }
 
 /**
@@ -553,7 +555,13 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
   // Длинный список правил «съедает» бюджет токенов у ModelsLab
   // (max_tokens у них = input + output, а не output).
   const rulesText = (settings.CHAT_RULES ?? DEFAULT_CHAT_RULES).trim();
-  const behaviorPostamble = rulesText ? "\n\n--- RULES (follow strictly) ---\n" + rulesText : "";
+  // Язык ответа — последним: история на другом языке (англ. приветствие) и
+  // английский промпт персонажа иначе перетягивают ответ на английский.
+  const replyLanguage = typeof req.body.replyLanguage === "string" ? req.body.replyLanguage.trim().slice(0, 40) : "";
+  const languageRule = replyLanguage
+    ? `\n\n--- LANGUAGE ---\nThe user writes in ${replyLanguage}. Reply ONLY in ${replyLanguage}, even if earlier messages were in another language.`
+    : "";
+  const behaviorPostamble = (rulesText ? "\n\n--- RULES (follow strictly) ---\n" + rulesText : "") + languageRule;
 
   // Контекст о собеседнике (чат-профиль/персона пользователя). Вставляется ПОСЛЕ
   // промпта персонажа. Это ФАКТЫ О ПОЛЬЗОВАТЕЛЕ — модель должна отвечать по ним на

@@ -454,6 +454,10 @@ export class ConversationEngine {
 
     const contentMode = ContextBuilder.resolveContentMode(input.actor) === "sfw" ? "sfw" : "nsfw";
     const intent = args.routeIntents ? await this.intents.route(text, contentMode) : ({ intent: "reply" } as const);
+    if (args.routeIntents) {
+      // Видно в логах api, почему на просьбу о фото пришёл только текст.
+      this.logger.log(`intent ${intent.intent} (${"via" in intent ? intent.via : "-"}) chat=${chat.id}: "${text.slice(0, 120)}"`);
+    }
     const ru = /[а-яё]/i.test(text);
 
     if (intent.intent === "clarify") {
