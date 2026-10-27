@@ -29,6 +29,14 @@ export function languageNote(text: string): string | null {
     : "[Reply only in the same language as this message.]";
 }
 
+/**
+ * Язык ответа для системного промпта: русский — если сообщение в основном
+ * кириллицей; иначе null (модель отвечает на языке сообщения).
+ */
+export function replyLanguage(text: string): string | null {
+  return languageNote(text) === "[Reply in Russian only.]" ? "Russian" : null;
+}
+
 /** Параметры сборки контекста. */
 export interface ContextOptions {
   /** Готовые сообщения вместо истории из БД (скрытый kickoff приветствия). */
@@ -71,6 +79,7 @@ export class ContextBuilder {
 
     // Служебные пометки — только в запросе к модели, в историю не сохраняются.
     const lastUser = messages.map((m) => m.role).lastIndexOf("user");
+    const language = lastUser >= 0 ? replyLanguage(messages[lastUser].content) : null;
     if (lastUser >= 0) {
       const notes = [opts.lastUserNote, languageNote(messages[lastUser].content)].filter(Boolean);
       if (notes.length) {
@@ -83,6 +92,7 @@ export class ContextBuilder {
       characterId: chat.characterId,
       contentMode: opts.contentMode ?? ContextBuilder.resolveContentMode(actor),
       userProfile: opts.userProfile ?? ContextBuilder.resolveUserProfile(chat),
+      ...(language ? { replyLanguage: language } : {}),
     };
   }
 }

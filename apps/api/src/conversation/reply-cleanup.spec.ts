@@ -1,5 +1,5 @@
 import { cleanAssistantReply } from "./reply-cleanup";
-import { languageNote } from "./context-builder";
+import { languageNote, replyLanguage } from "./context-builder";
 
 describe("cleanAssistantReply", () => {
   it("убирает подпись медиа и пометку о задержке, которые модель копировала из истории", () => {
@@ -25,5 +25,10 @@ describe("languageNote", () => {
     expect(languageNote("привет")).toBe("[Reply in Russian only.]");
     expect(languageNote("hola, ¿qué tal?")).toBe("[Reply only in the same language as this message.]");
     expect(languageNote("🙂 123")).toBeNull();
+  });
+
+  it("русское сообщение — требование русского и в системном промпте", () => {
+    expect(replyLanguage("скинь фото в бикини")).toBe("Russian");
+    expect(replyLanguage("send a pic")).toBeNull();
   });
 });

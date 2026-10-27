@@ -100,11 +100,17 @@ describe("ChatMediaService + общий кэш", () => {
     );
   });
 
-  it("свободный текст пользователя передаётся в кэш (scope владельца)", async () => {
+  it("описание деталей от роутера в чате («in the shower») не делает кэш личным", async () => {
     mediaCache.request.mockResolvedValue({ jobId: "job-1", via: "generated" });
-    await service.start("chat-1", actor, { ...spec, userText: "в красном платье" }, { caption: "photo", source: "web" });
-    expect(mediaCache.request).toHaveBeenCalledWith(expect.objectContaining({ hasUserText: true, characterId: "char-1", userId: "u" }));
+    await service.start("chat-1", actor, { ...spec, userText: "in the shower" }, { caption: "photo", source: "web" });
+    expect(mediaCache.request).toHaveBeenCalledWith(expect.objectContaining({ hasUserText: false, characterId: "char-1", userId: "u" }));
     expect(chats.saveMessage).not.toHaveBeenCalled();
+  });
+
+  it("свободный текст вне чата — кэш только для владельца", async () => {
+    mediaCache.request.mockResolvedValue({ jobId: "job-1", via: "generated" });
+    await service.start("chat-1", actor, { ...spec, preset: "studio", userText: "red dress" }, { caption: "photo", source: "web" });
+    expect(mediaCache.request).toHaveBeenCalledWith(expect.objectContaining({ hasUserText: true }));
   });
 
   it("завершение генерации: сообщение получают и запустивший, и ожидавшие", async () => {

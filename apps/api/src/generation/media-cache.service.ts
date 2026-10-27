@@ -58,6 +58,16 @@ export interface CachedMediaResult {
 
 type CacheScope = MediaCacheTag["scope"];
 
+/** Промпт для ключа: без различий в регистре, пробелах и пунктуации в конце фраз. */
+export function normalizePrompt(prompt: string): string {
+  return prompt
+    .toLowerCase()
+    .replace(/[.!;]+(\s|$)/g, "$1")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Ключ кэша по параметрам задания или null, если запрос не кэшируется. */
 export function mediaCacheKey(
   kind: "image" | "video",
@@ -74,7 +84,8 @@ export function mediaCacheKey(
   const canonical = {
     v: MEDIA_CACHE_KEY_VERSION,
     kind,
-    prompt: (j.prompt ?? "").trim().replace(/\s+/g, " "),
+    // Регистр, пробелы и точки не меняют картинку — не дробим из-за них пул.
+    prompt: normalizePrompt(j.prompt ?? ""),
     negativePrompt: j.negativePrompt?.trim() || null,
     model: j.model ?? null,
     provider: j.provider ?? null,
@@ -118,6 +129,10 @@ export class MediaCacheService {
   async request(req: CachedMediaRequest): Promise<CachedMediaResult> {
     const scope = await this.scopeFor(req);
     const result = await this.requestWithScope(req, scope);
+    // Видно в логах api: почему фото сгенерировано заново, а не взято из кэша.
+    this.logger.log(
+      `chat media ${result.via}: user=${req.userId} scope=${scope} key=${mediaCacheKey(req.kind, req.job, scope, req.userId)?.slice(0, 12) ?? "-"} prompt="${(req.job.prompt ?? "").slice(0, 160)}"`,
+    );
     // hit/miss/coalesced — для метрик кэша в продуктовой аналитике.
     this.analytics.capture(req.userId, "chat_media_cache", { kind: req.kind, via: result.via, scope, source: req.chat.source });
     return result;
