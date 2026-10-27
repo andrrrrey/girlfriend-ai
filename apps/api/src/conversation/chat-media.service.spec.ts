@@ -11,7 +11,7 @@ describe("ChatMediaService.regenerate", () => {
 
   beforeEach(() => {
     prisma = { message: { findFirst: jest.fn() } };
-    service = new ChatMediaService(prisma, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    service = new ChatMediaService(prisma, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
     start = jest.spyOn(service, "start").mockResolvedValue({ kind: "image", jobId: "job-2" });
   });
 
