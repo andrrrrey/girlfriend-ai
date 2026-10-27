@@ -3,6 +3,7 @@ jest.mock("@repo/config", () => ({ loadEnv: () => ({ AI_HOST: "ai", AI_PORT: 808
 import {
   IntentRouter,
   classifyByRules,
+  explicitMediaKind,
   hasMediaHint,
   parseClassifierOutput,
   selectionsToSpec,
@@ -12,11 +13,13 @@ import { CATALOG } from "../generation/prompt/catalog.fixture";
 describe("intent router", () => {
   const fetchMock = jest.fn();
   let router: IntentRouter;
+  let prisma: any;
 
   beforeEach(() => {
     fetchMock.mockReset();
     (global as any).fetch = fetchMock;
-    router = new IntentRouter({ get: jest.fn().mockResolvedValue(CATALOG) } as any);
+    prisma = { appSetting: { findUnique: jest.fn().mockResolvedValue(null) } };
+    router = new IntentRouter({ get: jest.fn().mockResolvedValue(CATALOG) } as any, prisma);
   });
 
   it("быстрые правила: без медийных слов — обычный ответ без вызова модели", async () => {
@@ -73,5 +76,20 @@ describe("intent router", () => {
       ),
     );
     expect(a.spec).toMatchObject({ kind: "image", preset: "chat", characterId: "char-1", appearance: { outfits: ["bikini"] } });
+  });
+
+  it("«картинку» — это фото, даже если классификатор ответил video", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ content: '{"intent":"video"}' }) });
+    const result = await router.route("скинь картинку в душе");
+    expect(result.intent).toBe("image");
+    expect(explicitMediaKind("пришли видео")).toBe("video");
+    expect(explicitMediaKind("скинь фото и видео")).toBeNull();
+  });
+
+  it("модель классификатора берётся из настройки INTENT_MODEL", async () => {
+    prisma.appSetting.findUnique.mockResolvedValue({ key: "INTENT_MODEL", value: "openai/gpt-4o-mini" });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ content: '{"intent":"image"}' }) });
+    await router.route("пришли фото");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ model: "openai/gpt-4o-mini" });
   });
 });
