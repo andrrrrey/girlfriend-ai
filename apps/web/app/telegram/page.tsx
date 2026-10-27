@@ -4,7 +4,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
-import { chats, resizedMediaUrl, telegram, type ChatSession, type TelegramBotInfo } from "../../lib/api";
+import {
+  chats,
+  resizedMediaUrl,
+  telegram,
+  type ChatSession,
+  type TelegramBotDiagnostics,
+  type TelegramBotInfo,
+} from "../../lib/api";
 
 const PAGE_CSS = `
   .tg-page { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 20px; }
@@ -28,7 +35,82 @@ const PAGE_CSS = `
   .tg-badge-error { background: rgba(227,100,102,0.12); color: #e36466; }
   .tg-error { color: #e36466; font-size: 13px; }
   .tg-hint { color: #848484; font-size: 12px; }
+  .tg-diag { border-top: 1px solid #252525; padding-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #bdbdbd; word-break: break-all; }
+  .tg-diag-row { display: flex; gap: 8px; }
+  .tg-diag-key { color: #848484; flex-shrink: 0; }
+  .tg-diag-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tg-diag-table td { padding: 4px 8px 4px 0; vertical-align: top; color: #bdbdbd; }
+  .tg-diag-bad { color: #e36466; }
 `;
+
+/**
+ * Диагностика бота: куда Telegram шлёт сообщения, последняя ошибка доставки
+ * и последние входящие обновления с результатом обработки.
+ */
+function BotDiagnostics({ botId }: { botId: string }) {
+  const { t } = useT();
+  const [data, setData] = useState<TelegramBotDiagnostics | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    telegram.diagnostics(botId).then(setData).catch((err) => setError(err?.body?.message || err.message));
+  }, [botId]);
+
+  if (error) return <div className="tg-diag tg-diag-bad">{error}</div>;
+  if (!data) return <div className="tg-diag">…</div>;
+  const urlMismatch = data.expectedWebhookUrl && data.webhook && data.webhook.url !== data.expectedWebhookUrl;
+  return (
+    <div className="tg-diag">
+      {data.pollingMode && <div>TELEGRAM_POLLING=true</div>}
+      {data.webhookError && <div className="tg-diag-bad">{data.webhookError}</div>}
+      {data.webhook && (
+        <>
+          <div className="tg-diag-row">
+            <span className="tg-diag-key">{t("tg.diagWebhook")}:</span>
+            <span className={urlMismatch || !data.webhook.url ? "tg-diag-bad" : undefined}>{data.webhook.url || "—"}</span>
+          </div>
+          {urlMismatch && (
+            <div className="tg-diag-row">
+              <span className="tg-diag-key">{t("tg.diagExpected")}:</span>
+              <span>{data.expectedWebhookUrl}</span>
+            </div>
+          )}
+          <div className="tg-diag-row">
+            <span className="tg-diag-key">{t("tg.diagPending")}:</span>
+            <span className={data.webhook.pendingUpdateCount > 0 ? "tg-diag-bad" : undefined}>{data.webhook.pendingUpdateCount}</span>
+          </div>
+          {data.webhook.lastErrorMessage && (
+            <div className="tg-diag-row">
+              <span className="tg-diag-key">{t("tg.diagLastError")}:</span>
+              <span className="tg-diag-bad">
+                {data.webhook.lastErrorMessage}
+                {data.webhook.lastErrorAt ? ` (${new Date(data.webhook.lastErrorAt).toLocaleString()})` : ""}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+      <div className="tg-diag-key" style={{ marginTop: 6 }}>{t("tg.diagUpdates")}:</div>
+      {data.updates.length === 0 ? (
+        <div>{t("tg.diagEmpty")}</div>
+      ) : (
+        <table className="tg-diag-table">
+          <tbody>
+            {data.updates.map((u) => (
+              <tr key={u.updateId}>
+                <td>{new Date(u.createdAt).toLocaleTimeString()}</td>
+                <td className={u.status === "done" ? undefined : "tg-diag-bad"}>
+                  {u.status} ×{u.attempts}
+                </td>
+                <td className="tg-diag-bad">{u.lastError ?? ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
 
 /**
  * Личный Telegram-бот: подключение по токену @BotFather, привязка Telegram-
@@ -43,6 +125,7 @@ export default function TelegramPage() {
   const [token, setToken] = useState("");
   const [characterId, setCharacterId] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [diagFor, setDiagFor] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   // Персонажи, с которыми у пользователя есть чаты (без повторов).
@@ -173,6 +256,12 @@ export default function TelegramPage() {
               {bot.status === "error" ? t("tg.retry") : t("tg.reconfigure")}
             </button>
             <button
+              className="tg-btn tg-btn-ghost"
+              onClick={() => setDiagFor(diagFor === bot.id ? null : bot.id)}
+            >
+              {t("tg.diagnostics")}
+            </button>
+            <button
               className="tg-btn tg-btn-danger"
               disabled={busy !== null}
               onClick={() => confirm(t("tg.confirmDisconnect")) && run(`off-${bot.id}`, () => telegram.disconnect(bot.id))}
@@ -181,6 +270,7 @@ export default function TelegramPage() {
             </button>
           </div>
           {!bot.linked && <div className="tg-hint">{t("tg.linkHint")}</div>}
+          {diagFor === bot.id && <BotDiagnostics key={busy ?? "idle"} botId={bot.id} />}
         </div>
       ))}
 

@@ -177,6 +177,41 @@ export class TelegramBotsService {
     return (await this.list(userId)).find((b) => b.id === bot.id)!;
   }
 
+  /**
+   * Диагностика бота: состояние webhook у Telegram (куда он шлёт сообщения и
+   * последняя ошибка доставки), ожидаемый адрес и последние входящие обновления
+   * с результатом обработки — чтобы видеть причину без доступа к логам.
+   */
+  async diagnostics(userId: string, botId: string) {
+    const bot = await this.ownedBot(userId, botId);
+    let webhook: Record<string, unknown> | null = null;
+    let webhookError: string | null = null;
+    try {
+      const info = await this.apiFor(bot).getWebhookInfo();
+      webhook = {
+        url: info.url,
+        pendingUpdateCount: info.pending_update_count,
+        lastErrorMessage: info.last_error_message ?? null,
+        lastErrorAt: info.last_error_date ? new Date(info.last_error_date * 1000) : null,
+      };
+    } catch (err: any) {
+      webhookError = String(err?.message ?? err);
+    }
+    const updates = await this.prisma.telegramUpdate.findMany({
+      where: { botId: bot.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: { updateId: true, status: true, attempts: true, lastError: true, createdAt: true, processedAt: true },
+    });
+    return {
+      pollingMode: isPollingMode(),
+      expectedWebhookUrl: isPollingMode() ? null : webhookUrl(bot.id),
+      webhook,
+      webhookError,
+      updates: updates.map((u) => ({ ...u, updateId: u.updateId.toString() })),
+    };
+  }
+
   /** Одноразовая ссылка привязки Telegram-аккаунта (deep-link /start <token>). */
   async createLink(userId: string, botId: string): Promise<{ url: string; expiresAt: Date }> {
     const bot = await this.ownedBot(userId, botId);

@@ -2256,6 +2256,22 @@ export interface TelegramBotInfo {
   createdAt: string;
 }
 
+/** Диагностика бота: webhook глазами Telegram и последние входящие обновления. */
+export interface TelegramBotDiagnostics {
+  pollingMode: boolean;
+  expectedWebhookUrl: string | null;
+  webhook: { url: string; pendingUpdateCount: number; lastErrorMessage: string | null; lastErrorAt: string | null } | null;
+  webhookError: string | null;
+  updates: {
+    updateId: string;
+    status: string;
+    attempts: number;
+    lastError: string | null;
+    createdAt: string;
+    processedAt: string | null;
+  }[];
+}
+
 export const telegram = {
   /** Мои боты (GET /telegram/bots). */
   async listBots(): Promise<TelegramBotInfo[]> {
@@ -2280,6 +2296,11 @@ export const telegram = {
   /** Одноразовая ссылка привязки Telegram-аккаунта (POST /telegram/bots/:id/link). */
   async createLink(botId: string): Promise<{ url: string; expiresAt: string }> {
     return apiFetch(`/telegram/bots/${botId}/link`, { method: "POST" });
+  },
+
+  /** Диагностика бота (GET /telegram/bots/:id/diagnostics). */
+  async diagnostics(botId: string): Promise<TelegramBotDiagnostics> {
+    return apiFetch(`/telegram/bots/${botId}/diagnostics`);
   },
 
   /** Отключить бота (DELETE /telegram/bots/:id). */

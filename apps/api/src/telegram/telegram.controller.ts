@@ -7,6 +7,7 @@
  *   PATCH  /telegram/bots/:id                — сменить персонажа { characterId }
  *   POST   /telegram/bots/:id/reconfigure    — заново настроить webhook и команды
  *   POST   /telegram/bots/:id/link           — ссылка привязки Telegram-аккаунта (deep-link)
+ *   GET    /telegram/bots/:id/diagnostics    — состояние webhook и последние обновления
  *   DELETE /telegram/bots/:id                — отключить
  *
  *   POST   /telegram/webhook/:botId          — webhook Telegram (проверка секретного заголовка)
@@ -99,6 +100,12 @@ export class TelegramBotsController {
   @Post(":id/link")
   async link(@Req() req: any, @Param("id") id: string) {
     return this.bots.createLink(req.user.id, id);
+  }
+
+  @ApiOperation({ summary: "Webhook state and recent updates (diagnostics)" })
+  @Get(":id/diagnostics")
+  async diagnostics(@Req() req: any, @Param("id") id: string) {
+    return this.bots.diagnostics(req.user.id, id);
   }
 
   @ApiOperation({ summary: "Disconnect the bot" })

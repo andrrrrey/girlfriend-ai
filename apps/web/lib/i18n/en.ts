@@ -51,6 +51,13 @@ export const en = {
   "tg.statusError": "Setup error",
   "tg.retry": "Retry setup",
   "tg.reconfigure": "Update connection",
+  "tg.diagnostics": "Diagnostics",
+  "tg.diagWebhook": "Telegram sends messages to",
+  "tg.diagExpected": "Expected address",
+  "tg.diagPending": "Waiting in Telegram",
+  "tg.diagLastError": "Last delivery error",
+  "tg.diagUpdates": "Recent incoming messages",
+  "tg.diagEmpty": "No messages from Telegram have reached the server yet.",
 
   // Top navigation bar
   "topnav.search": "Search",

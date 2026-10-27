@@ -53,6 +53,13 @@ export const ru: Record<keyof typeof en, string> = {
   "tg.statusError": "Ошибка настройки",
   "tg.retry": "Повторить настройку",
   "tg.reconfigure": "Обновить подключение",
+  "tg.diagnostics": "Диагностика",
+  "tg.diagWebhook": "Telegram отправляет сообщения на",
+  "tg.diagExpected": "Ожидаемый адрес",
+  "tg.diagPending": "Ждут отправки в Telegram",
+  "tg.diagLastError": "Последняя ошибка доставки",
+  "tg.diagUpdates": "Последние входящие сообщения",
+  "tg.diagEmpty": "Сообщения из Telegram до сервера пока не доходили.",
 
   // Top navigation bar
   "topnav.search": "Поиск",

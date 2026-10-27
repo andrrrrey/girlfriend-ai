@@ -100,6 +100,16 @@ export class TelegramApi {
     });
   }
 
+  /** Состояние webhook глазами Telegram: адрес, очередь, последняя ошибка доставки. */
+  getWebhookInfo() {
+    return this.call<{
+      url: string;
+      pending_update_count: number;
+      last_error_date?: number;
+      last_error_message?: string;
+    }>("getWebhookInfo");
+  }
+
   deleteWebhook() {
     return this.call<boolean>("deleteWebhook", { drop_pending_updates: false });
   }

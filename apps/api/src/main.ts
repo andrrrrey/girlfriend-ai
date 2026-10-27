@@ -3,7 +3,7 @@
  * @description Точка входа NestJS API-сервиса.
  *
  * Инициализирует приложение со следующей конфигурацией:
- * - Логгер: Pino JSON (через @repo/logger), встроенный NestJS-логгер отключён
+ * - Логгер: Pino JSON (через @repo/logger); логи Nest-сервисов идут туда же (PinoNestLogger)
  * - Middleware: X-Request-ID трассировка + HTTP-лог каждого запроса
  * - CORS: разрешён для всех origins (credentials: true) — для dev; в prod сужать
  * - ValidationPipe: whitelist=true (удаляет неизвестные поля), forbidNonWhitelisted=true (ошибка на лишние поля)
@@ -17,6 +17,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { PinoNestLogger } from "./common/pino-nest-logger";
 import { loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { getRequestId, setResponseRequestId } from "@repo/logger";
@@ -39,13 +40,14 @@ async function bootstrap() {
   const logger = createLogger({ service: "api", env: env.ENV, level: env.LOG_LEVEL });
 
   const app = await NestFactory.create(AppModule, {
-    // bufferLogs: буферизует логи до подключения кастомного логгера
+    // bufferLogs: логи старта буферизуются до подключения Pino-логгера (useLogger ниже)
     bufferLogs: true,
-    // logger: false — отключает встроенный NestJS-логгер (используем Pino напрямую)
-    logger: false,
     // abortOnError: false — пробрасывает ошибки инициализации в .catch() вместо тихого process.exit(1)
     abortOnError: false,
   });
+
+  // Логи сервисов (new Logger(...)) — в тот же JSON-лог, что и HTTP-запросы.
+  app.useLogger(new PinoNestLogger(logger));
 
   // ─── Middleware: X-Request-ID + HTTP access log ─────────────────────────────
   // Выполняется для каждого входящего запроса ДО роутинга NestJS.
