@@ -22,6 +22,6 @@ describe("ContextBuilder", () => {
       ]),
     };
     const req = await new ContextBuilder(chats as any).build(chat, actor, { lastUserNote: "[note]" });
-    expect(req.messages.map((m) => m.content)).toEqual(["a", "b", "пришли фото\n\n[note]"]);
+    expect(req.messages.map((m) => m.content)).toEqual(["a", "b", "пришли фото\n\n[note]\n[Reply in Russian only.]"]);
   });
 });

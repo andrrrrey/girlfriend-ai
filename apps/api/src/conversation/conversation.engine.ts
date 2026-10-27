@@ -35,6 +35,7 @@ import { ContextBuilder, ContextOptions } from "./context-builder";
 import { LlmAdapter } from "./llm.adapter";
 import { SttAdapter } from "./stt.adapter";
 import { IntentRouter, selectionsToSpec } from "./intent-router";
+import { cleanAssistantReply } from "./reply-cleanup";
 import { ChatMediaService } from "./chat-media.service";
 import type {
   ChatWithContext,
@@ -568,7 +569,9 @@ export class ConversationEngine {
     let error: string | undefined;
 
     try {
-      for await (const data of this.llm.streamChat(request, opts.signal)) {
+      for await (const raw of this.llm.streamChat(request, opts.signal)) {
+        // Ответ приходит одним чанком — служебные фрагменты чистим до показа и сохранения.
+        const data = typeof raw.content === "string" ? { ...raw, content: cleanAssistantReply(raw.content) } : raw;
         if (typeof data.content === "string") content += data.content;
         const usage = data.usage as { totalTokens?: number; costUsd?: number } | undefined;
         if (usage?.totalTokens) tokens = usage.totalTokens;

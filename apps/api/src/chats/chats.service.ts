@@ -367,7 +367,11 @@ export class ChatsService {
       where: {
         chatSessionId,
         deletedAt: null,
-        ...(opts?.textOnly ? { type: { notIn: ["image", "video"] } } : {}),
+        // Для модели: без фото/видео и без старых ответов, скопировавших их служебную
+        // подпись («Generated image: …») — иначе модель продолжает её повторять.
+        ...(opts?.textOnly
+          ? { type: { notIn: ["image", "video"] }, NOT: { content: { startsWith: "Generated " } } }
+          : {}),
       },
       orderBy: { seq: "desc" }, // Берём последние N
       take: limit,

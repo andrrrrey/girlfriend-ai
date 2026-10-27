@@ -84,6 +84,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID } from "crypto";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { Response } from "express";
@@ -99,6 +100,7 @@ import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
 import { ChatPhotoDto, ConfirmMediaDto, RegenerateMediaDto } from "./dto/chat-media.dto";
 import { ChatMediaService } from "../conversation/chat-media.service";
+import { ChatEventsService } from "./chat-events.service";
 import { parseGenerationSpec } from "../generation/prompt/generation-spec";
 import { ConversationEngine } from "../conversation/conversation.engine";
 import { AiServiceError } from "../conversation/ai-client";
@@ -228,7 +230,39 @@ export class ChatsController {
     private readonly tts: TtsAdapter,
     private readonly wallet: WalletService,
     private readonly chatMedia: ChatMediaService,
+    private readonly chatEvents: ChatEventsService,
   ) {}
+
+  /**
+   * События чата в реальном времени (SSE): новое сообщение в диалоге — из
+   * Telegram, готовое фото/видео, ответ персонажа. Клиент по событию перечитывает
+   * ленту. Раз в 25 секунд — комментарий-heartbeat, чтобы прокси не рвали соединение.
+   *
+   *   data: {"type":"message","messageId":"…","role":"assistant","messageType":"text","source":"telegram"}
+   */
+  @ApiOperation({ summary: "Realtime chat events (SSE)" })
+  @SkipThrottle()
+  @Get(":id/events")
+  async events(@Req() req: any, @Res() res: Response, @Param("id") chatId: string) {
+    const chat = await this.chatsService.getChat(chatId, req.user.id);
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    res.write(": connected\n\n");
+
+    const unsubscribe = this.chatEvents.subscribe(chat.id, (event) => {
+      if (!res.writableEnded) res.write(`data: ${JSON.stringify(event)}\n\n`);
+    });
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) res.write(": ping\n\n");
+    }, 25_000);
+    res.on("close", () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+    });
+  }
 
   /**
    * Создаёт новую сессию чата с указанным персонажем.

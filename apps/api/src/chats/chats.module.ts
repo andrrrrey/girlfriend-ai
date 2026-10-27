@@ -36,6 +36,7 @@ import { SttAdapter } from "../conversation/stt.adapter";
 import { TtsAdapter } from "../conversation/tts.adapter";
 import { IntentRouter } from "../conversation/intent-router";
 import { ChatMediaService } from "../conversation/chat-media.service";
+import { ChatEventsService } from "./chat-events.service";
 import { GenerationModule } from "../generation/generation.module";
 
 @Module({
@@ -58,6 +59,7 @@ import { GenerationModule } from "../generation/generation.module";
     TtsAdapter,
     IntentRouter,
     ChatMediaService,
+    ChatEventsService,
   ],
   // CharactersService — его переиспользует AutogenModule; ChatsService и
   // ConversationEngine — AutochatModule (автопереписка через общее ядро).

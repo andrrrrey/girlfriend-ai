@@ -19,6 +19,7 @@ import {
   requestChatPhoto,
   confirmChatMedia,
   regenerateChatMedia,
+  subscribeChatEvents,
   CHAT_MEDIA_EVENT,
   type ChatMediaEventDetail,
   resizedMediaUrl,
@@ -792,6 +793,30 @@ function ChatPageInner() {
     window.addEventListener(CHAT_MEDIA_EVENT, onMedia);
     return () => window.removeEventListener(CHAT_MEDIA_EVENT, onMedia);
   }, [startGeneration]);
+
+  // События чата в реальном времени: сообщения из Telegram, ответы персонажа и
+  // готовые фото появляются без перезагрузки страницы. Пачку событий
+  // схлопываем в одно перечитывание ленты.
+  useEffect(() => {
+    if (!activeChat) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let galleryChanged = false;
+    const unsubscribe = subscribeChatEvents(activeChat, (event) => {
+      if (event.messageType === "image" || event.messageType === "video") galleryChanged = true;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        chats.getMessages(activeChat).then((res) => setMessages(res.items)).catch(() => undefined);
+        loadChats();
+        if (galleryChanged) loadGallery(activeChat);
+        galleryChanged = false;
+      }, 300);
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat]);
 
   /** Подтверждение цены фото/видео, предложенного персонажем. */
   const handleConfirmMedia = async (token: string) => {

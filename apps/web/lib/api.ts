@@ -2938,6 +2938,80 @@ export async function confirmChatMedia(
   });
 }
 
+/** Событие чата в реальном времени (GET /chats/:id/events). */
+export interface ChatRealtimeEvent {
+  type: "message";
+  messageId: string;
+  role: string;
+  messageType: string;
+  /** web | telegram | system | proactive */
+  source: string;
+}
+
+/**
+ * Подписка на события чата в реальном времени (SSE): новые сообщения из Telegram,
+ * готовые фото/видео, ответы персонажа. Переподключается при обрыве (через 3 с),
+ * при 401 обновляет токен.
+ *
+ * @returns функция отписки
+ */
+export function subscribeChatEvents(chatId: string, onEvent: (event: ChatRealtimeEvent) => void): () => void {
+  let stopped = false;
+  let controller: AbortController | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const connect = async () => {
+    if (stopped) return;
+    controller = new AbortController();
+    try {
+      let token = getTokens()?.accessToken;
+      let res = await fetch(`${API_BASE}/chats/${chatId}/events`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: controller.signal,
+      });
+      if (res.status === 401) {
+        token = (await refreshAccessToken()) ?? undefined;
+        if (token) {
+          res = await fetch(`${API_BASE}/chats/${chatId}/events`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          });
+        }
+      }
+      if (!res.ok || !res.body) throw new Error(`events ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (!stopped) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            onEvent(JSON.parse(line.slice(6)) as ChatRealtimeEvent);
+          } catch {
+            // некорректная строка — пропускаем
+          }
+        }
+      }
+    } catch {
+      // обрыв/ошибка — переподключимся ниже
+    }
+    if (!stopped) retryTimer = setTimeout(connect, 3000);
+  };
+
+  void connect();
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    controller?.abort();
+  };
+}
+
 /** Событие окна: в SSE-ответе чата пришло событие медиа (фото/видео по просьбе). */
 export const CHAT_MEDIA_EVENT = "chat:media";
 

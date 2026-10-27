@@ -12,6 +12,23 @@ import type { ChatWithContext, ConversationActor } from "./conversation.types";
 /** Сколько последних сообщений по умолчанию идёт в контекст модели. */
 export const DEFAULT_HISTORY_LIMIT = 20;
 
+/**
+ * Подсказка языка ответа по последнему сообщению пользователя. Правило «отвечай
+ * на языке пользователя» есть в системном промпте, но модели его часто
+ * игнорируют (на «привет» отвечали «hi…») — явная пометка рядом с сообщением
+ * работает надёжнее.
+ *
+ * @returns пометка или null, если в тексте нет букв
+ */
+export function languageNote(text: string): string | null {
+  const letters = text.replace(/[^\p{L}]/gu, "");
+  if (!letters) return null;
+  const cyrillic = (letters.match(/[\u0400-\u04FF]/g) ?? []).length;
+  return cyrillic / letters.length >= 0.5
+    ? "[Reply in Russian only.]"
+    : "[Reply only in the same language as this message.]";
+}
+
 /** Параметры сборки контекста. */
 export interface ContextOptions {
   /** Готовые сообщения вместо истории из БД (скрытый kickoff приветствия). */
@@ -52,10 +69,12 @@ export class ContextBuilder {
         content: m.content,
       }));
 
-    if (opts.lastUserNote) {
-      const lastUser = messages.map((m) => m.role).lastIndexOf("user");
-      if (lastUser >= 0) {
-        messages[lastUser] = { ...messages[lastUser], content: `${messages[lastUser].content}\n\n${opts.lastUserNote}` };
+    // Служебные пометки — только в запросе к модели, в историю не сохраняются.
+    const lastUser = messages.map((m) => m.role).lastIndexOf("user");
+    if (lastUser >= 0) {
+      const notes = [opts.lastUserNote, languageNote(messages[lastUser].content)].filter(Boolean);
+      if (notes.length) {
+        messages[lastUser] = { ...messages[lastUser], content: `${messages[lastUser].content}\n\n${notes.join("\n")}` };
       }
     }
 
