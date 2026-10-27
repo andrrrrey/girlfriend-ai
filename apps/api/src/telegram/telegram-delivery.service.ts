@@ -1,11 +1,13 @@
 /**
  * @file telegram-delivery.service.ts
- * @description Доставка сообщений персонажа в Telegram — подписчик outbox
- * (событие message.created).
+ * @description Доставка сообщений диалога в Telegram — подписчик outbox
+ * (событие message.created). Диалог одинаковый на сайте и в Telegram:
  *
- * Доставляются только ответы ассистента на сообщения из Telegram (source =
- * telegram): ответ модели, уточняющий вопрос, предложение цены (с кнопкой) и
- * готовые фото/видео. Сообщения, написанные на сайте, в Telegram не дублируются.
+ * - сообщения персонажа (ответы, уточнения, предложение цены с кнопкой, фото,
+ *   видео) уходят в Telegram независимо от того, где начат разговор;
+ * - реплики пользователя, написанные на сайте, приходят цитатой
+ *   «💬 Вы на сайте: …» (бот не может писать от имени пользователя);
+ * - сообщения, написанные в самом Telegram, повторно не отправляются.
  *
  * Ошибки: 403 (бот заблокирован) — пользователь помечается blockedAt, событие
  * считается доставленным; 429/5xx — исключение, outbox повторит с задержкой;
@@ -31,6 +33,18 @@ interface MessageCreatedPayload {
   role: string;
   type: string;
   source: string;
+}
+
+/** Нужно ли дублировать сообщение в Telegram (см. описание файла). */
+export function shouldMirrorToTelegram(payload: { role: string; source: string }): boolean {
+  if (payload.role === "assistant") return true;
+  if (payload.role === "user") return payload.source !== "telegram";
+  return false;
+}
+
+/** Реплика пользователя с сайта в виде цитаты для Telegram. */
+export function siteUserQuote(content: string, type: string): string {
+  return type === "audio" ? `🎤 Вы на сайте (голосовое): ${content}` : `💬 Вы на сайте: ${content}`;
 }
 
 /** Делит длинный текст на части по лимиту Telegram (по возможности по абзацам). */
@@ -73,13 +87,15 @@ export class TelegramDeliveryService implements OnModuleInit {
 
   /** Доставляет сообщение всем привязанным пользователям ботов этого диалога. */
   async deliver(payload: MessageCreatedPayload): Promise<void> {
-    if (payload.source !== "telegram" || payload.role !== "assistant") return;
+    if (!shouldMirrorToTelegram(payload)) return;
 
-    const message = await this.prisma.message.findUnique({
+    const found = await this.prisma.message.findUnique({
       where: { id: payload.messageId },
-      select: { content: true, type: true, mediaUrl: true, metadata: true, deletedAt: true, chatSessionId: true },
+      select: { role: true, content: true, type: true, mediaUrl: true, metadata: true, deletedAt: true, chatSessionId: true },
     });
-    if (!message || message.deletedAt) return;
+    if (!found || found.deletedAt) return;
+    const message =
+      found.role === "user" ? { ...found, content: siteUserQuote(found.content, found.type), type: "text" } : found;
 
     const recipients = await this.prisma.telegramBotUser.findMany({
       where: {

@@ -72,10 +72,25 @@ describe("TelegramDeliveryService", () => {
     service = new TelegramDeliveryService(prisma, { registerHandler: jest.fn() } as any, { apiFor: () => api } as any, {} as any);
   });
 
-  it("сообщения с сайта и реплики пользователя в Telegram не дублируются", async () => {
-    await service.deliver({ messageId: "m", chatSessionId: "c", role: "assistant", type: "text", source: "web" });
+  it("реплики пользователя из самого Telegram повторно не отправляются", async () => {
     await service.deliver({ messageId: "m", chatSessionId: "c", role: "user", type: "text", source: "telegram" });
     expect(prisma.message.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("ответ персонажа на сообщение с сайта тоже уходит в Telegram", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      role: "assistant", content: "хорошо, а у тебя?", type: "text", mediaUrl: null, deletedAt: null, chatSessionId: "c", metadata: null,
+    });
+    await service.deliver({ messageId: "m", chatSessionId: "c", role: "assistant", type: "text", source: "web" });
+    expect(api.sendMessage).toHaveBeenCalledWith("555", "хорошо, а у тебя?", undefined);
+  });
+
+  it("реплика пользователя с сайта приходит в Telegram цитатой", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      role: "user", content: "как дела?", type: "text", mediaUrl: null, deletedAt: null, chatSessionId: "c", metadata: null,
+    });
+    await service.deliver({ messageId: "m", chatSessionId: "c", role: "user", type: "text", source: "web" });
+    expect(api.sendMessage).toHaveBeenCalledWith("555", "💬 Вы на сайте: как дела?", undefined);
   });
 
   it("ответ на сообщение из Telegram отправляется; предложение цены — с кнопкой", async () => {
