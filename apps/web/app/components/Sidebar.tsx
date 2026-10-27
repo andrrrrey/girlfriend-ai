@@ -8,7 +8,7 @@ import { useT } from "../../context/language";
 import { chats } from "../../lib/api";
 import Logo from "./Logo";
 
-type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "admin" | "profile";
+type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "telegram" | "admin" | "profile";
 
 export default function Sidebar({
   activePage,
@@ -123,6 +123,10 @@ export default function Sidebar({
         <Link href="/my-ai" className={navLinkClass("my-ai")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           <span className="label">{t("nav.myAi")}</span>
+        </Link>
+        <Link href="/telegram" className={navLinkClass("telegram")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M21.5 4.5L2.5 11.8l6.3 2.2 2.4 6.5 3.4-4.3 4.9 3.6z"/><path d="M8.8 14l12.7-9.5"/></svg>
+          <span className="label">{t("nav.telegram")}</span>
         </Link>
         {/* Ссылки из верхнего меню — чтобы на мобиле они были доступны в гамбургере
             (topnav-links скрыт на узких экранах). */}

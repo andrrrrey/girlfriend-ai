@@ -2240,6 +2240,54 @@ export const reports = {
   },
 };
 
+// ─── Telegram API ─────────────────────────────────────────────
+
+/** Личный Telegram-бот пользователя. */
+export interface TelegramBotInfo {
+  id: string;
+  username: string;
+  mode: string;
+  /** active | error | disabled */
+  status: string;
+  lastError: string | null;
+  character: { id: string; name: string; avatarUrl: string | null };
+  /** Telegram-аккаунт владельца привязан к боту. */
+  linked: boolean;
+  createdAt: string;
+}
+
+export const telegram = {
+  /** Мои боты (GET /telegram/bots). */
+  async listBots(): Promise<TelegramBotInfo[]> {
+    return apiFetch(`/telegram/bots`);
+  },
+
+  /** Подключить бота по токену @BotFather (POST /telegram/bots). */
+  async connectBot(token: string, characterId: string): Promise<TelegramBotInfo> {
+    return apiFetch(`/telegram/bots`, { method: "POST", body: JSON.stringify({ token, characterId }) });
+  },
+
+  /** Сменить персонажа бота (PATCH /telegram/bots/:id). */
+  async setCharacter(botId: string, characterId: string): Promise<TelegramBotInfo> {
+    return apiFetch(`/telegram/bots/${botId}`, { method: "PATCH", body: JSON.stringify({ characterId }) });
+  },
+
+  /** Заново настроить webhook и команды (POST /telegram/bots/:id/reconfigure). */
+  async reconfigure(botId: string): Promise<TelegramBotInfo> {
+    return apiFetch(`/telegram/bots/${botId}/reconfigure`, { method: "POST" });
+  },
+
+  /** Одноразовая ссылка привязки Telegram-аккаунта (POST /telegram/bots/:id/link). */
+  async createLink(botId: string): Promise<{ url: string; expiresAt: string }> {
+    return apiFetch(`/telegram/bots/${botId}/link`, { method: "POST" });
+  },
+
+  /** Отключить бота (DELETE /telegram/bots/:id). */
+  async disconnect(botId: string): Promise<void> {
+    return apiFetch(`/telegram/bots/${botId}`, { method: "DELETE" });
+  },
+};
+
 // ─── Billing API ──────────────────────────────────────────────
 
 /** Баланс кредитов. available = balance − reserved (резерв под идущие операции). */

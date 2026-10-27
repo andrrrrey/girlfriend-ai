@@ -31,6 +31,7 @@ import { QueueModule } from "./queue/queue.module";
 import { RedisModule } from "./common/redis.module";
 import { OutboxModule } from "./outbox/outbox.module";
 import { BillingModule } from "./billing/billing.module";
+import { TelegramModule } from "./telegram/telegram.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { GenerationModule } from "./generation/generation.module";
 import { MediaModule } from "./media/media.module";
@@ -61,6 +62,7 @@ import { CharacterIdentityModule } from "./admin/character-identity/character-id
     AdminModule,    // Административные операции (защищены ролью "admin")
     InternalModule, // Внутренние API для ai-сервиса и worker-а (без аутентификации!)
     ChatsModule,      // Чаты, сообщения, SSE, STT, TTS
+    TelegramModule,   // Личные Telegram-боты: webhook/polling, общий диалог с сайтом
     GenerationModule, // Генерация изображений (ModelsLab API)
     MediaModule,      // Presigned URL эндпоинты для медиафайлов (R2/S3)
     CleanupModule,    // Фоновая задача: мягкое удаление неактивных чатов

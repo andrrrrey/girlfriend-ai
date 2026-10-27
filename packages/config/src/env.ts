@@ -110,6 +110,19 @@ const EnvSchema = z.object({
    */
   SECRETS_ENC_KEY: z.string().optional(),
 
+  // ─── Telegram ───────────────────────────────────────────────────────────────
+  /**
+   * Публичный базовый URL API для webhook Telegram (без завершающего слэша).
+   * По умолчанию — `${WEB_URL}/api-proxy` (Next-прокси пересылает запрос в API).
+   * Telegram требует HTTPS.
+   */
+  TELEGRAM_WEBHOOK_BASE_URL: z.string().optional(),
+  /**
+   * "true" — получать обновления через getUpdates (polling) вместо webhook:
+   * для локальной разработки без публичного HTTPS.
+   */
+  TELEGRAM_POLLING: z.string().optional(),
+
   // ─── Request Tracing ────────────────────────────────────────────────────────
   /**
    * Имя HTTP-заголовка для сквозной трассировки запросов (X-Request-ID).
