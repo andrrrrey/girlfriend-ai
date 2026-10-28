@@ -91,6 +91,15 @@ export const en = {
   "tg.confirmDeleteClient": "Delete this client's conversation and data? This cannot be undone.",
   "tg.prev": "Back",
   "tg.next": "Next",
+  "tg.pickTitle": "Choose a character",
+  "tg.pickRecent": "Chatted with",
+  "tg.pickMy": "My characters",
+  "tg.pickAll": "All characters",
+  "tg.pickSearch": "Search by name",
+  "tg.pickEmpty": "No characters here yet.",
+  "tg.pickMore": "Show more",
+  "tg.pickNone": "Character not selected",
+  "tg.pickChange": "Choose",
 
   // Top navigation bar
   "topnav.search": "Search",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import {
+  characters as charactersApi,
   chats,
   resizedMediaUrl,
   telegram,
@@ -60,7 +61,184 @@ const PAGE_CSS = `
   .tg-chip { height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid #313131; background: transparent; color: #bdbdbd; font-size: 12px; cursor: pointer; font-family: inherit; }
   .tg-chip-active { border-color: #f95bad; color: #fff; }
   .tg-mode { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tg-pick { display: flex; align-items: center; gap: 10px; width: 100%; background: #1e1e1e; border: 1px solid #313131; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 14px; cursor: pointer; font-family: inherit; text-align: left; }
+  .tg-pick:hover { border-color: #f95bad; }
+  .tg-pick:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tg-pick-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #252525; flex-shrink: 0; }
+  .tg-pick-change { margin-left: auto; color: #f95bad; font-size: 12px; }
+  .tg-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .tg-modal { background: #141414; border: 1px solid #252525; border-radius: 14px; width: 100%; max-width: 640px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+  .tg-modal-head { padding: 16px 16px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #252525; }
+  .tg-modal-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 16px; }
+  .tg-modal-close { background: none; border: none; color: #969696; font-size: 22px; cursor: pointer; line-height: 1; }
+  .tg-modal-body { padding: 14px 16px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+  .tg-cell { background: none; border: 2px solid transparent; border-radius: 10px; padding: 0; cursor: pointer; color: #fff; font-family: inherit; text-align: center; overflow: hidden; }
+  .tg-cell:hover { border-color: #f95bad; }
+  .tg-cell-selected { border-color: #f95bad; }
+  .tg-cell-img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; background: #252525; border-radius: 8px; }
+  .tg-cell-name { font-size: 12px; padding: 4px 2px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
+
+/** Персонаж для выбора: id, имя и аватар. */
+type PickedCharacter = { id: string; name: string; avatarUrl: string | null };
+
+const PICKER_PAGE_SIZE = 30;
+
+/**
+ * Попап выбора персонажа бота: «С кем общались» (чаты), «Мои» (созданные
+ * пользователем) и «Все» — публичный каталог сайта с поиском.
+ */
+function CharacterPicker({
+  recent,
+  selectedId,
+  onPick,
+  onClose,
+}: {
+  recent: PickedCharacter[];
+  selectedId?: string;
+  onPick: (c: PickedCharacter) => void;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const [tab, setTab] = useState<"recent" | "my" | "all">(recent.length ? "recent" : "all");
+  const [my, setMy] = useState<PickedCharacter[] | null>(null);
+  const [all, setAll] = useState<PickedCharacter[]>([]);
+  const [allTotal, setAllTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [loadingList, setLoadingList] = useState(false);
+  const [error, setError] = useState("");
+
+  const toPicked = (c: { id: string; name: string; avatarUrl: string | null }): PickedCharacter => ({
+    id: c.id,
+    name: c.name,
+    avatarUrl: c.avatarUrl,
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (tab !== "my" || my) return;
+    charactersApi
+      .listMy()
+      .then((list) => setMy(list.map(toPicked)))
+      .catch((err) => setError(err?.body?.message || err.message));
+  }, [tab, my]);
+
+  // Поиск с задержкой: запрос уходит, когда пользователь перестал печатать.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = search.trim();
+      if (next === query) return;
+      setQuery(next);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search, query]);
+
+  useEffect(() => {
+    if (tab !== "all") return;
+    let cancelled = false;
+    setLoadingList(true);
+    charactersApi
+      .listPublic({ search: query || undefined, page, limit: PICKER_PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        const items = res.items.map(toPicked);
+        setAll((prev) => (page === 1 ? items : [...prev, ...items]));
+        setAllTotal(res.total);
+      })
+      .catch((err) => !cancelled && setError(err?.body?.message || err.message))
+      .finally(() => !cancelled && setLoadingList(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, query, page]);
+
+  const list = tab === "recent" ? recent : tab === "my" ? my ?? [] : all;
+  const tabs: { key: typeof tab; label: TKey }[] = [
+    { key: "recent", label: "tg.pickRecent" },
+    { key: "my", label: "tg.pickMy" },
+    { key: "all", label: "tg.pickAll" },
+  ];
+
+  return (
+    <div className="tg-modal-bg" onClick={onClose}>
+      <div className="tg-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="tg-modal-head">
+          <div className="tg-modal-title">
+            <span>{t("tg.pickTitle")}</span>
+            <button className="tg-modal-close" aria-label="Close" onClick={onClose}>×</button>
+          </div>
+          <div className="tg-mode">
+            {tabs.map((x) => (
+              <button key={x.key} className={`tg-chip${tab === x.key ? " tg-chip-active" : ""}`} onClick={() => setTab(x.key)}>
+                {t(x.label)}
+              </button>
+            ))}
+          </div>
+          {tab === "all" && (
+            <input
+              className="tg-input"
+              placeholder={t("tg.pickSearch")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+            />
+          )}
+        </div>
+        <div className="tg-modal-body">
+          {error && <div className="tg-error">{error}</div>}
+          {list.length === 0 && !loadingList && <div className="tg-hint">{t("tg.pickEmpty")}</div>}
+          <div className="tg-grid">
+            {list.map((c) => (
+              <button
+                key={c.id}
+                className={`tg-cell${c.id === selectedId ? " tg-cell-selected" : ""}`}
+                onClick={() => onPick(c)}
+                title={c.name}
+              >
+                {c.avatarUrl ? (
+                  <img className="tg-cell-img" src={resizedMediaUrl(c.avatarUrl, { w: 192 }) ?? c.avatarUrl} alt={c.name} loading="lazy" />
+                ) : (
+                  <div className="tg-cell-img" />
+                )}
+                <div className="tg-cell-name">{c.name}</div>
+              </button>
+            ))}
+          </div>
+          {tab === "all" && all.length < allTotal && (
+            <button className="tg-btn tg-btn-ghost" disabled={loadingList} onClick={() => setPage(page + 1)}>
+              {loadingList ? "…" : t("tg.pickMore")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Кнопка с выбранным персонажем, открывающая попап выбора. */
+function CharacterButton({ character, disabled, onClick }: { character: PickedCharacter | null; disabled?: boolean; onClick: () => void }) {
+  const { t } = useT();
+  return (
+    <button type="button" className="tg-pick" disabled={disabled} onClick={onClick}>
+      {character?.avatarUrl ? (
+        <img className="tg-pick-avatar" src={resizedMediaUrl(character.avatarUrl, { w: 64 }) ?? character.avatarUrl} alt="" />
+      ) : (
+        <div className="tg-pick-avatar" />
+      )}
+      <span>{character?.name ?? t("tg.pickNone")}</span>
+      <span className="tg-pick-change">{t("tg.pickChange")}</span>
+    </button>
+  );
+}
 
 const LIMIT_FIELDS: { key: keyof TelegramBotLimits; label: TKey }[] = [
   { key: "messagesPerDay", label: "tg.limitMessagesPerDay" },
@@ -354,7 +532,9 @@ export default function TelegramPage() {
   const [bots, setBots] = useState<TelegramBotInfo[] | null>(null);
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [token, setToken] = useState("");
-  const [characterId, setCharacterId] = useState("");
+  const [picked, setPicked] = useState<PickedCharacter | null>(null);
+  /** Для чего открыт попап выбора персонажа: новый бот ("new") или id бота. */
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [mode, setMode] = useState<TelegramBotMode>("PERSONAL");
   const [busy, setBusy] = useState<string | null>(null);
   const [diagFor, setDiagFor] = useState<string | null>(null);
@@ -362,7 +542,7 @@ export default function TelegramPage() {
 
   // Персонажи, с которыми у пользователя есть чаты (без повторов).
   const characterOptions = useMemo(() => {
-    const seen = new Map<string, { id: string; name: string }>();
+    const seen = new Map<string, PickedCharacter>();
     for (const c of chatList) if (!seen.has(c.character.id)) seen.set(c.character.id, c.character);
     return [...seen.values()];
   }, [chatList]);
@@ -382,8 +562,8 @@ export default function TelegramPage() {
   }, [loading, user, load]);
 
   useEffect(() => {
-    if (!characterId && characterOptions.length) setCharacterId(characterOptions[0].id);
-  }, [characterOptions, characterId]);
+    if (!picked && characterOptions.length) setPicked(characterOptions[0]);
+  }, [characterOptions, picked]);
 
   const run = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -400,7 +580,7 @@ export default function TelegramPage() {
 
   const connect = () =>
     run("connect", async () => {
-      await telegram.connectBot(token.trim(), characterId, mode);
+      await telegram.connectBot(token.trim(), picked!.id, mode);
       setToken("");
     });
 
@@ -461,21 +641,7 @@ export default function TelegramPage() {
 
           <div>
             <label className="tg-label">{t("tg.character")}</label>
-            <select
-              className="tg-select"
-              value={bot.character.id}
-              disabled={busy !== null}
-              onChange={(e) => run(`char-${bot.id}`, () => telegram.setCharacter(bot.id, e.target.value))}
-            >
-              {!characterOptions.some((c) => c.id === bot.character.id) && (
-                <option value={bot.character.id}>{bot.character.name}</option>
-              )}
-              {characterOptions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <CharacterButton character={bot.character} disabled={busy !== null} onClick={() => setPickerFor(bot.id)} />
           </div>
 
           <div className="tg-row">
@@ -540,26 +706,28 @@ export default function TelegramPage() {
           </div>
           <div>
             <label className="tg-label">{t("tg.character")}</label>
-            {characterOptions.length ? (
-              <select className="tg-select" value={characterId} onChange={(e) => setCharacterId(e.target.value)}>
-                {characterOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="tg-hint">
-                {t("tg.noChats")} <Link href="/characters" style={{ color: "#f95bad" }}>→</Link>
-              </div>
-            )}
+            <CharacterButton character={picked} onClick={() => setPickerFor("new")} />
           </div>
           <div className="tg-row">
-            <button className="tg-btn" disabled={busy !== null || !token.trim() || !characterId} onClick={connect}>
+            <button className="tg-btn" disabled={busy !== null || !token.trim() || !picked} onClick={connect}>
               {busy === "connect" ? t("tg.connecting") : t("tg.connect")}
             </button>
           </div>
         </div>
+      )}
+
+      {pickerFor && (
+        <CharacterPicker
+          recent={characterOptions}
+          selectedId={pickerFor === "new" ? picked?.id : bots?.find((b) => b.id === pickerFor)?.character.id}
+          onClose={() => setPickerFor(null)}
+          onPick={(c) => {
+            const target = pickerFor;
+            setPickerFor(null);
+            if (target === "new") setPicked(c);
+            else run(`char-${target}`, () => telegram.setCharacter(target, c.id));
+          }}
+        />
       )}
     </div>
   );
