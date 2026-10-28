@@ -6,7 +6,7 @@
  *   PUT /admin/proactive         — изменить политику (частично)
  */
 
-import { Body, Controller, Get, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Logger, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { Roles, RolesGuard } from "../../auth/guards/roles.guard";
@@ -18,13 +18,21 @@ import { ProactiveService } from "../../conversation/proactive.service";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles("admin")
 export class ProactiveAdminController {
+  private readonly logger = new Logger(ProactiveAdminController.name);
+
   constructor(private readonly proactive: ProactiveService) {}
 
   @ApiOperation({ summary: "Proactive messages: policy and A/B stats" })
   @Get()
   async get(@Query("days") days?: string) {
-    const [policy, stats] = await Promise.all([this.proactive.getPolicy(), this.proactive.stats(Number(days) || 30)]);
-    return { policy, stats };
+    const policy = await this.proactive.getPolicy();
+    // Сбой статистики не должен закрывать настройки политики.
+    try {
+      return { policy, stats: await this.proactive.stats(Number(days) || 30), statsError: null };
+    } catch (err: any) {
+      this.logger.error(`proactive stats failed: ${err?.message}`);
+      return { policy, stats: null, statsError: String(err?.message ?? err).slice(0, 500) };
+    }
   }
 
   @ApiOperation({ summary: "Update proactive messages policy" })

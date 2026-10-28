@@ -1035,7 +1035,7 @@ export type ProactiveOverride = Partial<Pick<ProactivePolicy, "enabled" | "delay
 
 export const admin = {
   /** Инициативные сообщения: политика и статистика (GET /admin/proactive). */
-  async getProactive(days = 30): Promise<{ policy: ProactivePolicy; stats: ProactiveStats }> {
+  async getProactive(days = 30): Promise<{ policy: ProactivePolicy; stats: ProactiveStats | null; statsError?: string | null }> {
     return apiFetch(`/admin/proactive?days=${days}`);
   },
 
