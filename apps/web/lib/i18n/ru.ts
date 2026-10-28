@@ -93,6 +93,15 @@ export const ru: Record<keyof typeof en, string> = {
   "tg.confirmDeleteClient": "Удалить переписку и данные этого клиента? Это нельзя отменить.",
   "tg.prev": "Назад",
   "tg.next": "Вперёд",
+  "tg.pickTitle": "Выберите персонажа",
+  "tg.pickRecent": "С кем общались",
+  "tg.pickMy": "Мои персонажи",
+  "tg.pickAll": "Все персонажи",
+  "tg.pickSearch": "Поиск по имени",
+  "tg.pickEmpty": "Здесь пока нет персонажей.",
+  "tg.pickMore": "Показать ещё",
+  "tg.pickNone": "Персонаж не выбран",
+  "tg.pickChange": "Выбрать",
 
   // Top navigation bar
   "topnav.search": "Поиск",
