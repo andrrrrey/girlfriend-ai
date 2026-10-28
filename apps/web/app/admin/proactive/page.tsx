@@ -66,7 +66,7 @@ export default function AdminProactivePage() {
       const res = await admin.getProactive(days);
       setForm((prev) => prev ?? toForm(res.policy));
       setStats(res.stats);
-      setError("");
+      setError(res.statsError ? `Статистика недоступна: ${res.statsError}` : "");
     } catch (err: any) {
       setError(err.message);
     }

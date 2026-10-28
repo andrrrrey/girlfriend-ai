@@ -38,7 +38,7 @@ const TICK_INTERVAL_MS = 60_000;
 const TICK_BATCH = 20;
 const POLICY_CACHE_TTL_MS = 60_000;
 const HOUR_MS = 3_600_000;
-/** Ответ после инициативного сообщения засчитывается в течение этого времени. */
+/** Ответ после инициативного сообщения засчитывается в течение этого времени (в SQL stats — interval '24 hours'). */
 export const REPLY_WINDOW_HOURS = 24;
 
 /** Вариант A/B: множитель задержек и подсказка модели. */
@@ -457,7 +457,7 @@ export class ProactiveService implements OnModuleInit {
              count(*) FILTER (WHERE EXISTS (
                SELECT 1 FROM "messages" r
                WHERE r."chat_session_id" = m."chat_session_id" AND r."role" = 'user'
-                 AND r."seq" > m."seq" AND r."created_at" <= m."created_at" + make_interval(hours => ${REPLY_WINDOW_HOURS})
+                 AND r."seq" > m."seq" AND r."created_at" <= m."created_at" + interval '24 hours'
              )) AS "replied"
       FROM "messages" m
       WHERE m."source" = 'proactive' AND m."role" = 'assistant' AND m."created_at" >= ${since}
