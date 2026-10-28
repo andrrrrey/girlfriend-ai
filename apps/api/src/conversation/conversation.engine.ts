@@ -328,7 +328,12 @@ export class ConversationEngine {
           source,
           usageAction: "chat_message",
           signal: input.signal,
-          context: { historyLimit: input.historyLimit, contentMode: input.contentMode, userProfile: input.userProfile },
+          context: {
+            historyLimit: input.historyLimit,
+            contentMode: input.contentMode,
+            userProfile: input.userProfile,
+            trailingNote: input.trailingNote,
+          },
           jobInput: input.jobInput,
           replyMetadata: input.replyMetadata,
           reservationKey: reservation,

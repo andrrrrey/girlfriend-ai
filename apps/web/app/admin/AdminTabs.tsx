@@ -13,6 +13,7 @@ export type AdminTab =
   | "costs"
   | "billing"
   | "media-cache"
+  | "proactive"
   | "blog"
   | "voices"
   | "engagement"
@@ -32,6 +33,7 @@ const TABS: { id: AdminTab; label: string; href: string }[] = [
   { id: "costs", label: "Расходы", href: "/admin/costs" },
   { id: "billing", label: "Биллинг", href: "/admin/billing" },
   { id: "media-cache", label: "Кэш", href: "/admin/media-cache" },
+  { id: "proactive", label: "Пишет первой", href: "/admin/proactive" },
   { id: "blog", label: "Записи блога", href: "/admin/blog" },
   { id: "voices", label: "Голоса", href: "/admin/voices" },
   { id: "engagement", label: "Вовлечённость", href: "/admin/engagement" },

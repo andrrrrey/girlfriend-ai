@@ -21,6 +21,8 @@ export interface LlmChatRequest {
    * системного промпта: одной пометки у сообщения модели иногда не хватает.
    */
   replyLanguage?: string;
+  /** Краткое содержание ранней части диалога (долговременная память). */
+  memory?: string;
 }
 
 @Injectable()

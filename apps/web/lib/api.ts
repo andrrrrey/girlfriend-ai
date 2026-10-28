@@ -399,6 +399,8 @@ export interface UserProfile {
   lang: string;          // "en" | "ru"
   contentMode: string;   // "nsfw" | "sfw"
   isAdult: boolean;      // подтверждение 18+ при регистрации
+  /** Часовой пояс IANA (тихие часы инициативных сообщений). */
+  timezone?: string | null;
   createdAt: string;     // ISO 8601
   socialLinks: { provider: string; url: string }[];
 }
@@ -430,7 +432,7 @@ export const users = {
    * @param data - Поля для обновления: nickname, avatarUrl, lang, aboutMe
    */
   async updateProfile(
-    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe" | "contentMode">>,
+    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe" | "contentMode">> & { timezone?: string },
   ): Promise<UserProfile> {
     return apiFetch<UserProfile>("/users/me", {
       method: "PATCH",
@@ -1010,7 +1012,38 @@ export interface MediaCacheAsset {
   createdAt: string;
 }
 
+/** Политика инициативных сообщений (AppSetting PROACTIVE_POLICY). */
+export interface ProactivePolicy {
+  enabled: boolean;
+  delaysHours: number[];
+  maxUnanswered: number;
+  quietStart: number;
+  quietEnd: number;
+  dailyBudgetCredits: number;
+  variants: { name: string; delayFactor: number; prompt: string }[];
+}
+
+/** Статистика инициативных сообщений по вариантам A/B. */
+export interface ProactiveStats {
+  days: number;
+  scheduled: number;
+  variants: { variant: string; sent: number; replied: number; replyRate: number }[];
+}
+
+/** Переопределение политики для клиентов бота (пустое поле — как в общей политике). */
+export type ProactiveOverride = Partial<Pick<ProactivePolicy, "enabled" | "delaysHours" | "maxUnanswered" | "quietStart" | "quietEnd">>;
+
 export const admin = {
+  /** Инициативные сообщения: политика и статистика (GET /admin/proactive). */
+  async getProactive(days = 30): Promise<{ policy: ProactivePolicy; stats: ProactiveStats }> {
+    return apiFetch(`/admin/proactive?days=${days}`);
+  },
+
+  /** Изменить политику инициативных сообщений (PUT /admin/proactive). */
+  async setProactive(policy: Partial<ProactivePolicy>): Promise<ProactivePolicy> {
+    return apiFetch(`/admin/proactive`, { method: "PUT", body: JSON.stringify(policy) });
+  },
+
   /** Получает все AppSettings (GET /admin/settings). */
   async getSettings(): Promise<AppSetting[]> {
     return apiFetch<AppSetting[]>("/admin/settings");
@@ -1816,6 +1849,10 @@ export interface ChatSession {
   chatProfileId?: string | null;
   /** Всего сообщений ассистента в чате (для бейджа непрочитанных на клиенте). */
   assistantCount?: number;
+  /** Непрочитанные сообщения персонажа (сервер; сбрасывается chats.markRead). */
+  unreadCount?: number;
+  /** Может ли персонаж писать первым в этом чате. */
+  proactiveEnabled?: boolean;
 }
 
 /** Чат-профиль (персона) пользователя. */
@@ -1898,6 +1935,16 @@ export const chats = {
   async list(cursor?: string): Promise<{ items: ChatSession[]; nextCursor: string | null }> {
     const params = cursor ? `?cursor=${cursor}` : "";
     return apiFetch(`/chats${params}`);
+  },
+
+  /** Отметить чат прочитанным (POST /chats/:id/read). */
+  async markRead(chatId: string): Promise<void> {
+    return apiFetch(`/chats/${chatId}/read`, { method: "POST" });
+  },
+
+  /** Вкл/выкл сообщения персонажа первой (POST /chats/:id/proactive). */
+  async setProactive(chatId: string, enabled: boolean): Promise<void> {
+    return apiFetch(`/chats/${chatId}/proactive`, { method: "POST", body: JSON.stringify({ enabled }) });
   },
 
   /** Данные одного чата (GET /chats/:id). Проверяет владельца (IDOR protection). */
@@ -2406,6 +2453,16 @@ export const telegram = {
   /** Удалить данные клиента (DELETE /telegram/bots/:id/users/:userId). */
   async deleteClient(botId: string, userId: string): Promise<void> {
     return apiFetch(`/telegram/bots/${botId}/users/${userId}`, { method: "DELETE" });
+  },
+
+  /** Инициативные сообщения клиентам бота (GET /telegram/bots/:id/proactive). */
+  async getProactive(botId: string): Promise<ProactiveOverride> {
+    return apiFetch(`/telegram/bots/${botId}/proactive`);
+  },
+
+  /** Изменить переопределение (PUT /telegram/bots/:id/proactive). */
+  async setProactive(botId: string, body: ProactiveOverride): Promise<ProactiveOverride> {
+    return apiFetch(`/telegram/bots/${botId}/proactive`, { method: "PUT", body: JSON.stringify(body) });
   },
 
   /** Оплата Stars: настройки, тарифы, платежи (GET /telegram/bots/:id/stars). */

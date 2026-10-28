@@ -114,6 +114,21 @@ function ChatPageInner() {
   // Фото персонажа, сгенерированные в чате (переживают сброс чата и перегенерацию)
   const [galleryItems, setGalleryItems] = useState<ChatGalleryImage[]>([]);
 
+  /** Последняя отметка «прочитано» (чат + время новейшего сообщения) — без повторных запросов. */
+  const readMarkRef = useRef<string | null>(null);
+
+  /** Вкл/выкл сообщения персонажа первой в открытом чате. */
+  const toggleProactive = async () => {
+    if (!activeChat) return;
+    const current = chatList.find((c) => c.id === activeChat)?.proactiveEnabled !== false;
+    try {
+      await chats.setProactive(activeChat, !current);
+      setChatList((prev) => prev.map((c) => (c.id === activeChat ? { ...c, proactiveEnabled: !current } : c)));
+    } catch {
+      // не критично: переключатель останется в прежнем состоянии
+    }
+  };
+
   // Load chat list
   const loadChats = useCallback(async () => {
     try {
@@ -268,6 +283,18 @@ function ChatPageInner() {
     // непрочитанных в списке чатов (unread = assistantCount − это значение).
     if (chat && typeof chat.assistantCount === "number") {
       localStorage.setItem(`chat-read-acount-${activeChat}`, String(chat.assistantCount));
+    }
+    // Серверный счётчик непрочитанных: открытый чат прочитан (в т.ч. новые
+    // сообщения персонажа, пришедшие, пока он открыт).
+    if (readMarkRef.current !== `${activeChat}:${newest}`) {
+      readMarkRef.current = `${activeChat}:${newest}`;
+      chats
+        .markRead(activeChat)
+        .then(() => {
+          setChatList((prev) => prev.map((c) => (c.id === activeChat && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
+          window.dispatchEvent(new Event("chat-read"));
+        })
+        .catch(() => undefined);
     }
     window.dispatchEvent(new Event("chat-read"));
   }, [activeChat, chatList, messages]);
@@ -1107,7 +1134,8 @@ function ChatPageInner() {
               {(() => {
                 if (c.id === activeChat) return null;
                 const readAcount = Number(localStorage.getItem(`chat-read-acount-${c.id}`) || "0");
-                const unread = Math.max(0, (c.assistantCount ?? 0) - readAcount);
+                const unread =
+                  typeof c.unreadCount === "number" ? c.unreadCount : Math.max(0, (c.assistantCount ?? 0) - readAcount);
                 if (unread <= 0) return null;
                 return <span className="chat-item-unread">{unread > 99 ? "99+" : unread}</span>;
               })()}
@@ -1155,6 +1183,19 @@ function ChatPageInner() {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 109.9-3.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M12.8 1.8v3.2H9.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span className="chat-reset-label">{t("chat.resetChat")}</span>
               </button>
+              {activeChatData && (
+                <button
+                  className="chat-reset-btn"
+                  onClick={toggleProactive}
+                  title={t("chat.proactiveHint")}
+                  style={activeChatData.proactiveEnabled === false ? { opacity: 0.55 } : undefined}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2.5a3.5 3.5 0 00-3.5 3.5v2.3L3 10.5h10l-1.5-2.2V6A3.5 3.5 0 008 2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M6.5 12.5a1.5 1.5 0 003 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                  <span className="chat-reset-label">
+                    {activeChatData.proactiveEnabled === false ? t("chat.proactiveOff") : t("chat.proactiveOn")}
+                  </span>
+                </button>
+              )}
               {isDemo && (
                 <span className="demo-badge">{t("chat.freeBadge")}</span>
               )}

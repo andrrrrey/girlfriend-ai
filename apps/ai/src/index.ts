@@ -470,6 +470,8 @@ interface ChatCompletionBody {
   contentMode?: "nsfw" | "sfw";
   /** Язык ответа (например "Russian") — требование в конце системного промпта. */
   replyLanguage?: string;
+  /** Краткое содержание ранней части диалога (долговременная память). */
+  memory?: string;
 }
 
 /**
@@ -576,10 +578,17 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       "Never present these traits as your own; you always stay your own character."
     : "";
 
+  // Память о ранней части диалога (её сообщений уже нет в истории запроса).
+  const memory = typeof req.body.memory === "string" ? req.body.memory.trim().slice(0, 4000) : "";
+  const memoryContext = memory
+    ? "\n\n--- MEMORY (summary of your earlier conversation with this user) ---\n" + memory +
+      "\nUse these facts naturally; do not retell the summary."
+    : "";
+
   if (finalSystemPrompt) {
-    finalSystemPrompt = uncensoredPreamble + finalSystemPrompt + userContext + behaviorPostamble;
+    finalSystemPrompt = uncensoredPreamble + finalSystemPrompt + userContext + memoryContext + behaviorPostamble;
   } else {
-    finalSystemPrompt = uncensoredPreamble + userContext + behaviorPostamble;
+    finalSystemPrompt = uncensoredPreamble + userContext + memoryContext + behaviorPostamble;
   }
 
   // Фильтруем системные сообщения из пользовательской истории

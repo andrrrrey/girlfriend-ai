@@ -16,6 +16,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
+import type { ProactiveOverride } from "../conversation/proactive.service";
 
 /** Лимиты бота; null — без ограничения. */
 export interface BotLimitsView {
@@ -144,6 +145,38 @@ export class TelegramResellerService {
         AND m."created_at" >= ${since}
         AND ${filter}`;
     return Number(rows[0]?.n ?? 0);
+  }
+
+  // ─── Инициативные сообщения ─────────────────────────────────────────────────
+
+  /** Переопределение политики инициативных сообщений для клиентов бота. */
+  async getProactive(ownerUserId: string, botId: string): Promise<ProactiveOverride> {
+    await this.ownedBot(ownerUserId, botId);
+    const bot = await this.prisma.telegramBot.findUnique({ where: { id: botId }, select: { proactive: true } });
+    return (bot?.proactive as ProactiveOverride | null) ?? {};
+  }
+
+  /** Сохраняет переопределение (пустое поле — как в общей политике платформы). */
+  async setProactive(ownerUserId: string, botId: string, body: ProactiveOverride): Promise<ProactiveOverride> {
+    await this.ownedBot(ownerUserId, botId);
+    const hour = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23 ? (v as number) : undefined);
+    const delays = Array.isArray(body.delaysHours)
+      ? body.delaysHours.map(Number).filter((h) => Number.isFinite(h) && h > 0).slice(0, 10)
+      : undefined;
+    const override: ProactiveOverride = {
+      ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
+      ...(Number.isInteger(body.maxUnanswered) && body.maxUnanswered! >= 0 && body.maxUnanswered! <= 20
+        ? { maxUnanswered: body.maxUnanswered }
+        : {}),
+      ...(delays?.length ? { delaysHours: delays } : {}),
+      ...(hour(body.quietStart) !== undefined ? { quietStart: hour(body.quietStart) } : {}),
+      ...(hour(body.quietEnd) !== undefined ? { quietEnd: hour(body.quietEnd) } : {}),
+    };
+    await this.prisma.telegramBot.update({
+      where: { id: botId },
+      data: { proactive: Object.keys(override).length ? (override as Prisma.InputJsonObject) : Prisma.DbNull },
+    });
+    return override;
   }
 
   // ─── Диалог клиента ─────────────────────────────────────────────────────────

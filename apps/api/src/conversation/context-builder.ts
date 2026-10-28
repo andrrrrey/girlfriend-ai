@@ -49,6 +49,11 @@ export interface ContextOptions {
    * модели, в истории не сохраняется (например: «ты отправляешь фото»).
    */
   lastUserNote?: string;
+  /**
+   * Служебная реплика в конце запроса (только для модели, в историю не
+   * сохраняется) — например, «пользователь давно молчит, напиши первой».
+   */
+  trailingNote?: string;
 }
 
 @Injectable()
@@ -87,9 +92,17 @@ export class ContextBuilder {
       }
     }
 
+    // Инициативное сообщение: история кончается репликой персонажа — добавляем
+    // служебную реплику, иначе часть моделей не отвечает.
+    if (opts.trailingNote) {
+      const lang = language ? ` Write in ${language}.` : "";
+      messages.push({ role: "user", content: `${opts.trailingNote}${lang}` });
+    }
+
     return {
       messages,
       characterId: chat.characterId,
+      ...(chat.summary ? { memory: chat.summary } : {}),
       contentMode: opts.contentMode ?? ContextBuilder.resolveContentMode(actor),
       userProfile: opts.userProfile ?? ContextBuilder.resolveUserProfile(chat),
       ...(language ? { replyLanguage: language } : {}),

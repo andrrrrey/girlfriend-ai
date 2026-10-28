@@ -98,6 +98,7 @@ import { EditMessageDto } from "./dto/edit-message.dto";
 import { GreetingDto } from "./dto/greeting.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { UpdateChatDto } from "./dto/update-chat.dto";
+import { ProactiveToggleDto } from "./dto/proactive-toggle.dto";
 import { ChatPhotoDto, ConfirmMediaDto, RegenerateMediaDto } from "./dto/chat-media.dto";
 import { ChatMediaService } from "../conversation/chat-media.service";
 import { ChatEventsService } from "./chat-events.service";
@@ -383,6 +384,22 @@ export class ChatsController {
    * @throws 404    если чат не найден
    * @throws 403    если чат принадлежит другому пользователю
    */
+  /** Отмечает чат прочитанным (сбрасывает бейдж непрочитанных). */
+  @ApiOperation({ summary: "Mark chat as read" })
+  @Post(":id/read")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async markRead(@Req() req: any, @Param("id") id: string) {
+    await this.chatsService.markRead(id, req.user.id);
+  }
+
+  /** Вкл/выкл сообщения персонажа первой в этом чате. Тело: { enabled: boolean }. */
+  @ApiOperation({ summary: "Enable/disable proactive messages in the chat" })
+  @Post(":id/proactive")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setProactive(@Req() req: any, @Param("id") id: string, @Body() dto: ProactiveToggleDto) {
+    await this.chatsService.setProactive(id, req.user.id, dto.enabled);
+  }
+
   @ApiOperation({ summary: "Reset chat: clear message history, keep the chat" })
   @Post(":id/reset")
   @HttpCode(HttpStatus.NO_CONTENT)

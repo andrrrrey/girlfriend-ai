@@ -17,6 +17,9 @@
  *   GET    /telegram/bots/:id/limits         — лимиты бота
  *   PUT    /telegram/bots/:id/limits         — изменить лимиты
  *
+ *   GET    /telegram/bots/:id/proactive      — переопределение инициативных сообщений
+ *   PUT    /telegram/bots/:id/proactive      — { enabled?, maxUnanswered?, delaysHours?, quietStart?, quietEnd? }
+ *
  *   Оплата Telegram Stars (бот для клиентов):
  *   GET    /telegram/bots/:id/stars                         — настройки, тарифы, платежи
  *   PUT    /telegram/bots/:id/stars                         — { enabled?, termsText?, supportText? }
@@ -46,7 +49,20 @@ import {
 } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { timingSafeEqual } from "crypto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
@@ -82,6 +98,15 @@ export class BotLimitsDto {
   @IsOptional() @IsInt() @Min(0) mediaPerUser?: number | null;
   /** Неприкосновенный остаток кошелька владельца (кредиты). */
   @IsOptional() @IsInt() @Min(0) keepBalance?: number | null;
+}
+
+/** Тело PUT /telegram/bots/:id/proactive. Отсутствующее поле — как в общей политике. */
+export class BotProactiveDto {
+  @IsOptional() @IsBoolean() enabled?: boolean;
+  @IsOptional() @IsInt() @Min(0) @Max(20) maxUnanswered?: number;
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @IsNumber({}, { each: true }) @Min(0.1, { each: true }) delaysHours?: number[];
+  @IsOptional() @IsInt() @Min(0) @Max(23) quietStart?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(23) quietEnd?: number;
 }
 
 /** Тело PUT /telegram/bots/:id/stars. */
@@ -188,6 +213,18 @@ export class TelegramBotsController {
   @Put(":id/limits")
   async setLimits(@Req() req: any, @Param("id") id: string, @Body() dto: BotLimitsDto) {
     return this.reseller.setLimits(req.user.id, id, { ...dto });
+  }
+
+  @ApiOperation({ summary: "Client bot: proactive messages override" })
+  @Get(":id/proactive")
+  async proactive(@Req() req: any, @Param("id") id: string) {
+    return this.reseller.getProactive(req.user.id, id);
+  }
+
+  @ApiOperation({ summary: "Client bot: update proactive messages override" })
+  @Put(":id/proactive")
+  async setProactive(@Req() req: any, @Param("id") id: string, @Body() dto: BotProactiveDto) {
+    return this.reseller.setProactive(req.user.id, id, { ...dto });
   }
 
   @ApiOperation({ summary: "Telegram Stars: settings, plans, recent payments" })

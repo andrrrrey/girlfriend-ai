@@ -17,6 +17,7 @@ import {
   type TelegramBotMode,
   type TelegramBotStats,
   type TelegramStarsOverview,
+  type ProactiveOverride,
 } from "../../lib/api";
 import type { TKey } from "../../lib/i18n";
 
@@ -248,6 +249,99 @@ const LIMIT_FIELDS: { key: keyof TelegramBotLimits; label: TKey }[] = [
   { key: "mediaPerUser", label: "tg.limitMediaPerUser" },
   { key: "keepBalance", label: "tg.keepBalance" },
 ];
+
+/**
+ * Инициативные сообщения клиентам бота: переопределение общей политики
+ * платформы (пустое поле — как в общей политике).
+ */
+function ProactivePanel({ botId }: { botId: string }) {
+  const { t } = useT();
+  const [form, setForm] = useState<{ enabled: "" | "on" | "off"; maxUnanswered: string; delaysHours: string; quietStart: string; quietEnd: string } | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    telegram
+      .getProactive(botId)
+      .then((o) =>
+        setForm({
+          enabled: o.enabled === undefined ? "" : o.enabled ? "on" : "off",
+          maxUnanswered: o.maxUnanswered?.toString() ?? "",
+          delaysHours: o.delaysHours?.join(", ") ?? "",
+          quietStart: o.quietStart?.toString() ?? "",
+          quietEnd: o.quietEnd?.toString() ?? "",
+        }),
+      )
+      .catch((err) => setError(err?.body?.message || err.message));
+  }, [botId]);
+
+  if (!form) return error ? <div className="tg-error">{error}</div> : null;
+
+  const save = async () => {
+    setError("");
+    setSaved(false);
+    const num = (v: string) => (v.trim() === "" ? undefined : Math.floor(Number(v)));
+    const delays = form.delaysHours.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0);
+    const body: ProactiveOverride = {
+      ...(form.enabled ? { enabled: form.enabled === "on" } : {}),
+      ...(num(form.maxUnanswered) !== undefined ? { maxUnanswered: num(form.maxUnanswered) } : {}),
+      ...(delays.length ? { delaysHours: delays } : {}),
+      ...(num(form.quietStart) !== undefined ? { quietStart: num(form.quietStart) } : {}),
+      ...(num(form.quietEnd) !== undefined ? { quietEnd: num(form.quietEnd) } : {}),
+    };
+    try {
+      await telegram.setProactive(botId, body);
+      setSaved(true);
+    } catch (err: any) {
+      setError(err?.body?.message || err.message);
+    }
+  };
+  const field = (key: "maxUnanswered" | "delaysHours" | "quietStart" | "quietEnd", label: TKey) => (
+    <div>
+      <label className="tg-label">{t(label)}</label>
+      <input
+        className="tg-input"
+        value={form[key]}
+        onChange={(e) => {
+          setSaved(false);
+          setForm({ ...form, [key]: e.target.value });
+        }}
+      />
+    </div>
+  );
+
+  return (
+    <div className="tg-section">
+      <div className="tg-section-title">{t("tg.proactive")}</div>
+      <div className="tg-hint">{t("tg.proactiveHint")}</div>
+      {error && <div className="tg-error">{error}</div>}
+      <div className="tg-mode">
+        {(["", "on", "off"] as const).map((v) => (
+          <button
+            key={v || "default"}
+            className={`tg-chip${form.enabled === v ? " tg-chip-active" : ""}`}
+            onClick={() => {
+              setSaved(false);
+              setForm({ ...form, enabled: v });
+            }}
+          >
+            {v === "" ? t("tg.proactiveDefault") : v === "on" ? t("tg.starsOn") : t("tg.starsOff")}
+          </button>
+        ))}
+      </div>
+      <div className="tg-limits">
+        {field("delaysHours", "tg.proactiveDelays")}
+        {field("maxUnanswered", "tg.proactiveMax")}
+        {field("quietStart", "tg.proactiveQuietStart")}
+        {field("quietEnd", "tg.proactiveQuietEnd")}
+      </div>
+      <div className="tg-row">
+        <button className="tg-btn tg-btn-ghost" onClick={save}>{t("tg.save")}</button>
+        {saved && <span className="tg-hint">{t("tg.saved")}</span>}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Оплата доступа в Telegram Stars: включение, тарифы, тексты /terms и /support,
@@ -863,6 +957,7 @@ export default function TelegramPage() {
           {bot.mode !== "RESELLER" && !bot.linked && <div className="tg-hint">{t("tg.linkHint")}</div>}
           {diagFor === bot.id && <BotDiagnostics key={busy ?? "idle"} botId={bot.id} />}
           {bot.mode === "RESELLER" && <ResellerPanel botId={bot.id} />}
+          {bot.mode === "RESELLER" && <ProactivePanel botId={bot.id} />}
           {bot.mode === "RESELLER" && <StarsPanel botId={bot.id} />}
         </div>
       ))}
