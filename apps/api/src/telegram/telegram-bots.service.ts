@@ -43,6 +43,10 @@ export const RESELLER_BOT_COMMANDS = [
   { command: "mute", description: "Вкл/выкл сообщения первой" },
   { command: "mydata", description: "Выгрузить мои данные" },
   { command: "deletemydata", description: "Удалить мои данные" },
+  { command: "subscription", description: "Мой доступ" },
+  { command: "terms", description: "Условия" },
+  { command: "support", description: "Поддержка" },
+  { command: "paysupport", description: "Вопросы по оплате" },
 ];
 
 /** Режимы бота: личный (только владелец) или для клиентов. */

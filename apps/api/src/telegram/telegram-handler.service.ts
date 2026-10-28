@@ -13,6 +13,8 @@
  * Бот для клиентов (mode=RESELLER) — handleReseller: привязка не нужна, у каждого
  * клиента свой скрытый от владельца диалог, кредиты списываются с владельца в
  * контексте клиента, действуют лимиты бота; /mydata и /deletemydata.
+ * Оплата Stars (TelegramStarsService): без активной подписки клиент получает
+ * счета; /subscription, /terms, /support, /paysupport доступны всегда.
  */
 
 import { HttpException, Injectable, Logger } from "@nestjs/common";
@@ -25,6 +27,7 @@ import { hasMediaHint } from "../conversation/intent-router";
 import { runWithBillingContext } from "../billing/billing-context";
 import { TelegramBotsService } from "./telegram-bots.service";
 import { TelegramResellerService } from "./telegram-reseller.service";
+import { SUBSCRIPTION_CALLBACK, TelegramStarsService } from "./telegram-stars.service";
 import { TelegramApi, TgCallbackQuery, TgUpdate } from "./telegram-api";
 
 /** Обработку нужно повторить позже, не считая попытку (например, диалог занят). */
@@ -70,7 +73,8 @@ const CLIENT_TEXTS = {
     "Пишите сообщения или отправляйте голосовые — я отвечу.\n" +
     "Можно попросить фото или видео словами («пришли фото на пляже»).\n\n" +
     "/newchat — начать диалог заново\n/mute — вкл/выкл мои сообщения первой\n" +
-    "/mydata — выгрузить мои данные\n/deletemydata — удалить мои данные",
+    "/mydata — выгрузить мои данные\n/deletemydata — удалить мои данные\n" +
+    "/subscription — мой доступ\n/terms — условия\n/support — поддержка",
   newChat: "Начали диалог заново.",
   unavailable: "Бот сейчас недоступен. Попробуйте позже.",
   messagesLimit: "На сегодня лимит сообщений исчерпан. Возвращайтесь завтра!",
@@ -91,6 +95,9 @@ interface ResellerBot {
   ownerUserId: string;
   characterId: string;
   character: { name: string };
+  starsEnabled: boolean;
+  termsText: string | null;
+  supportText: string | null;
 }
 
 @Injectable()
@@ -104,6 +111,7 @@ export class TelegramHandlerService {
     private readonly media: ChatMediaService,
     private readonly bots: TelegramBotsService,
     private readonly reseller: TelegramResellerService,
+    private readonly stars: TelegramStarsService,
   ) {}
 
   /** Обрабатывает одно обновление бота. */
@@ -115,6 +123,10 @@ export class TelegramHandlerService {
     if (!bot) return; // бот отключён — обновления игнорируем
     const api = this.bots.apiFor(bot);
 
+    if (update.pre_checkout_query) {
+      await this.stars.answerPreCheckout(bot, api, update.pre_checkout_query);
+      return;
+    }
     if (update.callback_query) {
       await this.handleCallback(bot, api, update.callback_query);
       return;
@@ -377,12 +389,43 @@ export class TelegramHandlerService {
   private async handleReseller(
     bot: ResellerBot,
     api: TelegramApi,
-    botUser: { id: string; chatId: string; chatSessionId: string | null; muted: boolean },
+    botUser: { id: string; tgUserId: string; chatId: string; chatSessionId: string | null; muted: boolean },
     update: TgUpdate,
     text: string,
   ): Promise<void> {
     const chatId = botUser.chatId;
     const message = update.message!;
+
+    if (message.successful_payment) {
+      const paid = await this.stars.onSuccessfulPayment(api, bot.id, botUser.tgUserId, chatId, message.successful_payment);
+      // Первая оплата нового клиента — персонаж здоровается.
+      if (paid.fresh && !botUser.chatSessionId) {
+        const chatSessionId = await this.reseller.ensureEndUserSession(bot, botUser);
+        const allowance = await this.reseller.allowance(bot.id, botUser.id);
+        const actor = await this.actorFor(bot.ownerUserId);
+        await runWithBillingContext(
+          { actorUserId: bot.ownerUserId, endUserId: botUser.id, keepBalance: allowance.keepBalance },
+          () => this.run(api, chatId, this.engine.greet({ chatId: chatSessionId, actor, lang: "ru", source: "telegram", enforceLimits: false }), (b) => this.clientErrorText(b)),
+        );
+      }
+      return;
+    }
+    if (message.refunded_payment) {
+      await this.stars.onRefundedPayment(api, bot.id, chatId, message.refunded_payment);
+      return;
+    }
+    if (text === "/terms") {
+      await this.stars.terms(api, bot, chatId);
+      return;
+    }
+    if (text === "/support" || text === "/paysupport") {
+      await this.stars.support(api, bot, chatId);
+      return;
+    }
+    if (text === "/subscription") {
+      await this.stars.subscriptionStatus(api, bot.id, botUser.tgUserId, chatId);
+      return;
+    }
 
     if (text === "/help") {
       await api.sendMessage(chatId, CLIENT_TEXTS.help);
@@ -411,6 +454,12 @@ export class TelegramHandlerService {
         { bytes: Buffer.from(dump, "utf8"), filename: "my-data.txt", contentType: "text/plain; charset=utf-8" },
         CLIENT_TEXTS.exportCaption,
       );
+      return;
+    }
+
+    // Платный доступ: без активной подписки вместо ответа — счета на тарифы.
+    if ((await this.stars.paywallActive(bot)) && !(await this.stars.activeSubscription(bot.id, botUser.tgUserId))) {
+      await this.stars.sendPlans(api, bot.id, chatId);
       return;
     }
 
@@ -477,6 +526,12 @@ export class TelegramHandlerService {
       if (query.message) await api.editMessageReplyMarkup(botUser.chatId, query.message.message_id).catch(() => undefined);
     };
 
+    if (data === SUBSCRIPTION_CALLBACK.cancel || data === SUBSCRIPTION_CALLBACK.resume) {
+      await api.answerCallbackQuery(query.id).catch(() => undefined);
+      await clearButtons();
+      await this.stars.setAutoRenew(api, bot.id, botUser.tgUserId, botUser.chatId, data === SUBSCRIPTION_CALLBACK.resume);
+      return;
+    }
     if (data === DELETE_DATA_CALLBACK.yes || data === DELETE_DATA_CALLBACK.no) {
       await api.answerCallbackQuery(query.id).catch(() => undefined);
       await clearButtons();

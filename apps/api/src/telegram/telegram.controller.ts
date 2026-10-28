@@ -17,6 +17,13 @@
  *   GET    /telegram/bots/:id/limits         — лимиты бота
  *   PUT    /telegram/bots/:id/limits         — изменить лимиты
  *
+ *   Оплата Telegram Stars (бот для клиентов):
+ *   GET    /telegram/bots/:id/stars                         — настройки, тарифы, платежи
+ *   PUT    /telegram/bots/:id/stars                         — { enabled?, termsText?, supportText? }
+ *   POST   /telegram/bots/:id/stars/plans                   — { title, priceStars, periodDays }
+ *   DELETE /telegram/bots/:id/stars/plans/:planId           — снять тариф с продажи
+ *   POST   /telegram/bots/:id/stars/payments/:paymentId/refund — вернуть платёж
+ *
  *   POST   /telegram/webhook/:botId          — webhook Telegram (проверка секретного заголовка)
  */
 
@@ -39,12 +46,13 @@ import {
 } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 import { timingSafeEqual } from "crypto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PrismaService } from "../prisma.service";
 import { BOT_MODES, type BotMode, TelegramBotsService } from "./telegram-bots.service";
 import { TelegramResellerService } from "./telegram-reseller.service";
+import { TelegramStarsService } from "./telegram-stars.service";
 import { TelegramUpdatesService } from "./telegram-updates.service";
 import type { TgUpdate } from "./telegram-api";
 
@@ -76,6 +84,20 @@ export class BotLimitsDto {
   @IsOptional() @IsInt() @Min(0) keepBalance?: number | null;
 }
 
+/** Тело PUT /telegram/bots/:id/stars. */
+export class StarsSettingsDto {
+  @IsOptional() @IsBoolean() enabled?: boolean;
+  @IsOptional() @IsString() @MaxLength(4000) termsText?: string | null;
+  @IsOptional() @IsString() @MaxLength(4000) supportText?: string | null;
+}
+
+/** Тело POST /telegram/bots/:id/stars/plans. */
+export class BotPlanDto {
+  @IsString() @MinLength(1) @MaxLength(32) title!: string;
+  @IsInt() @Min(1) @Max(10_000) priceStars!: number;
+  @IsInt() @Min(1) @Max(3_650) periodDays!: number;
+}
+
 /** Тело PATCH /telegram/bots/:id. */
 export class UpdateBotDto {
   @IsString()
@@ -98,6 +120,7 @@ export class TelegramBotsController {
   constructor(
     private readonly bots: TelegramBotsService,
     private readonly reseller: TelegramResellerService,
+    private readonly stars: TelegramStarsService,
   ) {}
 
   @ApiOperation({ summary: "My Telegram bots" })
@@ -165,6 +188,37 @@ export class TelegramBotsController {
   @Put(":id/limits")
   async setLimits(@Req() req: any, @Param("id") id: string, @Body() dto: BotLimitsDto) {
     return this.reseller.setLimits(req.user.id, id, { ...dto });
+  }
+
+  @ApiOperation({ summary: "Telegram Stars: settings, plans, recent payments" })
+  @Get(":id/stars")
+  async starsOverview(@Req() req: any, @Param("id") id: string) {
+    return this.stars.overview(req.user.id, id);
+  }
+
+  @ApiOperation({ summary: "Telegram Stars: enable/disable, /terms and /support texts" })
+  @Put(":id/stars")
+  async starsSettings(@Req() req: any, @Param("id") id: string, @Body() dto: StarsSettingsDto) {
+    return this.stars.updateSettings(req.user.id, id, dto);
+  }
+
+  @ApiOperation({ summary: "Telegram Stars: add a plan" })
+  @Post(":id/stars/plans")
+  async createPlan(@Req() req: any, @Param("id") id: string, @Body() dto: BotPlanDto) {
+    return this.stars.createPlan(req.user.id, id, dto);
+  }
+
+  @ApiOperation({ summary: "Telegram Stars: archive a plan" })
+  @Delete(":id/stars/plans/:planId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async archivePlan(@Req() req: any, @Param("id") id: string, @Param("planId") planId: string) {
+    await this.stars.archivePlan(req.user.id, id, planId);
+  }
+
+  @ApiOperation({ summary: "Telegram Stars: refund a payment" })
+  @Post(":id/stars/payments/:paymentId/refund")
+  async refund(@Req() req: any, @Param("id") id: string, @Param("paymentId") paymentId: string) {
+    return this.stars.refund(req.user.id, id, paymentId);
   }
 
   @ApiOperation({ summary: "Disconnect the bot" })

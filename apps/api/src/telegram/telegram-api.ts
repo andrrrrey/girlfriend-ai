@@ -9,6 +9,8 @@
 
 const API_BASE = "https://api.telegram.org";
 const REQUEST_TIMEOUT_MS = 60_000;
+/** Обновления, которые получает бот (pre_checkout_query — для оплаты Stars). */
+const ALLOWED_UPDATES = ["message", "callback_query", "pre_checkout_query"];
 
 /** Ошибка вызова Bot API. */
 export class TelegramApiError extends Error {
@@ -51,6 +53,50 @@ export interface TgMessage {
   text?: string;
   voice?: { file_id: string; duration: number; mime_type?: string };
   audio?: { file_id: string; duration: number; mime_type?: string; file_name?: string };
+  /** Оплата прошла (Stars). */
+  successful_payment?: TgSuccessfulPayment;
+  /** Платёж возвращён (Stars). */
+  refunded_payment?: TgRefundedPayment;
+}
+
+/** Успешный платёж (Bot API SuccessfulPayment). */
+export interface TgSuccessfulPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id?: string;
+  /** Unix time окончания оплаченного периода подписки. */
+  subscription_expiration_date?: number;
+  is_recurring?: boolean;
+  is_first_recurring?: boolean;
+}
+
+/** Возврат платежа (Bot API RefundedPayment). */
+export interface TgRefundedPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  telegram_payment_charge_id: string;
+}
+
+/** Запрос подтверждения перед списанием (Bot API PreCheckoutQuery). */
+export interface TgPreCheckoutQuery {
+  id: string;
+  from: TgUser;
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+}
+
+/** Транзакция Stars бота (Bot API StarTransaction). */
+export interface TgStarTransaction {
+  /** Для входящего платежа совпадает с telegram_payment_charge_id, для возврата — с id исходного платежа. */
+  id: string;
+  amount: number;
+  date: number;
+  source?: { type: string; user?: TgUser; invoice_payload?: string; subscription_period?: number };
+  receiver?: { type: string; user?: TgUser; invoice_payload?: string };
 }
 
 export interface TgCallbackQuery {
@@ -64,6 +110,7 @@ export interface TgUpdate {
   update_id: number;
   message?: TgMessage;
   callback_query?: TgCallbackQuery;
+  pre_checkout_query?: TgPreCheckoutQuery;
 }
 
 export interface InlineKeyboard {
@@ -95,7 +142,7 @@ export class TelegramApi {
     return this.call<boolean>("setWebhook", {
       url,
       secret_token: secretToken,
-      allowed_updates: ["message", "callback_query"],
+      allowed_updates: ALLOWED_UPDATES,
       drop_pending_updates: false,
     });
   }
@@ -118,7 +165,7 @@ export class TelegramApi {
     return this.call<TgUpdate[]>("getUpdates", {
       ...(offset !== undefined ? { offset } : {}),
       timeout: timeoutSec,
-      allowed_updates: ["message", "callback_query"],
+      allowed_updates: ALLOWED_UPDATES,
     });
   }
 
@@ -166,6 +213,56 @@ export class TelegramApi {
   /** Документ (файл): байтами (multipart) или по file_id. */
   sendDocument(chatId: string, document: TgInputFile, caption?: string) {
     return this.sendFile<TgMessage>("sendDocument", "document", chatId, document, caption);
+  }
+
+  /**
+   * Ссылка на счёт в Stars (currency XTR, provider_token не нужен).
+   * subscriptionPeriodSec — подписка с автопродлением (Telegram допускает только 30 дней).
+   */
+  createInvoiceLink(params: {
+    title: string;
+    description: string;
+    payload: string;
+    amount: number;
+    label: string;
+    subscriptionPeriodSec?: number;
+  }) {
+    return this.call<string>("createInvoiceLink", {
+      title: params.title,
+      description: params.description,
+      payload: params.payload,
+      currency: "XTR",
+      prices: [{ label: params.label, amount: params.amount }],
+      ...(params.subscriptionPeriodSec ? { subscription_period: params.subscriptionPeriodSec } : {}),
+    });
+  }
+
+  /** Ответ на pre_checkout_query (обязателен в течение 10 секунд). */
+  answerPreCheckoutQuery(queryId: string, ok: boolean, errorMessage?: string) {
+    return this.call<boolean>("answerPreCheckoutQuery", {
+      pre_checkout_query_id: queryId,
+      ok,
+      ...(ok ? {} : { error_message: errorMessage ?? "Payment unavailable" }),
+    });
+  }
+
+  /** Возврат платежа в Stars. */
+  refundStarPayment(userId: string, chargeId: string) {
+    return this.call<boolean>("refundStarPayment", { user_id: Number(userId), telegram_payment_charge_id: chargeId });
+  }
+
+  /** Отмена (или возобновление) автопродления подписки Stars. */
+  editUserStarSubscription(userId: string, chargeId: string, isCanceled: boolean) {
+    return this.call<boolean>("editUserStarSubscription", {
+      user_id: Number(userId),
+      telegram_payment_charge_id: chargeId,
+      is_canceled: isCanceled,
+    });
+  }
+
+  /** Транзакции Stars бота (новые первыми не гарантируются — сортировка по дате на стороне Telegram). */
+  getStarTransactions(offset = 0, limit = 100) {
+    return this.call<{ transactions: TgStarTransaction[] }>("getStarTransactions", { offset, limit });
   }
 
   /** Путь к файлу на серверах Telegram (для скачивания голосовых). */

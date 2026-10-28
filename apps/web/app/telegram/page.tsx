@@ -16,6 +16,7 @@ import {
   type TelegramBotLimits,
   type TelegramBotMode,
   type TelegramBotStats,
+  type TelegramStarsOverview,
 } from "../../lib/api";
 import type { TKey } from "../../lib/i18n";
 
@@ -247,6 +248,194 @@ const LIMIT_FIELDS: { key: keyof TelegramBotLimits; label: TKey }[] = [
   { key: "mediaPerUser", label: "tg.limitMediaPerUser" },
   { key: "keepBalance", label: "tg.keepBalance" },
 ];
+
+/**
+ * Оплата доступа в Telegram Stars: включение, тарифы, тексты /terms и /support,
+ * последние платежи с возвратом.
+ */
+function StarsPanel({ botId }: { botId: string }) {
+  const { t } = useT();
+  const [data, setData] = useState<TelegramStarsOverview | null>(null);
+  const [terms, setTerms] = useState("");
+  const [support, setSupport] = useState("");
+  const [plan, setPlan] = useState({ title: "", priceStars: "", periodDays: "30" });
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const apply = (o: TelegramStarsOverview) => {
+    setData(o);
+    setTerms(o.termsText ?? "");
+    setSupport(o.supportText ?? "");
+  };
+
+  const load = useCallback(() => {
+    telegram.starsOverview(botId).then(apply).catch((err) => setError(err?.body?.message || err.message));
+  }, [botId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const act = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError("");
+    setSaved(false);
+    try {
+      await fn();
+      return true;
+    } catch (err: any) {
+      setError(err?.body?.message || err.message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!data) return error ? <div className="tg-error">{error}</div> : null;
+
+  return (
+    <div className="tg-section">
+      <div className="tg-section-title">
+        {t("tg.stars")}
+        <span className={`tg-badge${data.enabled ? "" : " tg-badge-error"}`}>{data.enabled ? t("tg.starsOn") : t("tg.starsOff")}</span>
+      </div>
+      <div className="tg-hint">{t("tg.starsHint")}</div>
+      {error && <div className="tg-error">{error}</div>}
+
+      <div className="tg-tiles">
+        <div className="tg-tile">
+          <div className="tg-tile-label">{t("tg.starsSubscribers")}</div>
+          <div className="tg-tile-value">{data.activeSubscribers}</div>
+        </div>
+        <div className="tg-tile">
+          <div className="tg-tile-label">{t("tg.starsRevenue")}</div>
+          <div className="tg-tile-value">{data.revenueStars}</div>
+        </div>
+      </div>
+
+      <div className="tg-label">{t("tg.plans")}</div>
+      {data.plans.length === 0 && <div className="tg-hint">{t("tg.plansEmpty")}</div>}
+      {data.plans.map((p) => (
+        <div key={p.id} className="tg-row">
+          <span style={{ flex: 1 }}>
+            {p.title} — {p.priceStars} ⭐ / {p.periodDays} {t("tg.days")}
+          </span>
+          <button className="tg-chip" disabled={busy} onClick={() => act(() => telegram.archivePlan(botId, p.id)).then(load)}>
+            {t("tg.planRemove")}
+          </button>
+        </div>
+      ))}
+      <div className="tg-limits">
+        <div>
+          <label className="tg-label">{t("tg.planTitle")}</label>
+          <input className="tg-input" maxLength={32} value={plan.title} onChange={(e) => setPlan({ ...plan, title: e.target.value })} />
+        </div>
+        <div>
+          <label className="tg-label">{t("tg.planPrice")}</label>
+          <input className="tg-input" type="number" min={1} value={plan.priceStars} onChange={(e) => setPlan({ ...plan, priceStars: e.target.value })} />
+        </div>
+        <div>
+          <label className="tg-label">{t("tg.planDays")}</label>
+          <input className="tg-input" type="number" min={1} value={plan.periodDays} onChange={(e) => setPlan({ ...plan, periodDays: e.target.value })} />
+        </div>
+      </div>
+      <div className="tg-row">
+        <button
+          className="tg-btn tg-btn-ghost"
+          disabled={busy || !plan.title.trim() || !(Number(plan.priceStars) >= 1) || !(Number(plan.periodDays) >= 1)}
+          onClick={async () => {
+            const ok = await act(() =>
+              telegram.createPlan(botId, {
+                title: plan.title.trim(),
+                priceStars: Math.floor(Number(plan.priceStars)),
+                periodDays: Math.floor(Number(plan.periodDays)),
+              }),
+            );
+            if (ok) {
+              setPlan({ title: "", priceStars: "", periodDays: "30" });
+              load();
+            }
+          }}
+        >
+          {t("tg.planAdd")}
+        </button>
+      </div>
+
+      <div>
+        <label className="tg-label">{t("tg.terms")}</label>
+        <textarea className="tg-input" rows={3} value={terms} onChange={(e) => setTerms(e.target.value)} />
+      </div>
+      <div>
+        <label className="tg-label">{t("tg.support")}</label>
+        <textarea className="tg-input" rows={2} value={support} onChange={(e) => setSupport(e.target.value)} />
+      </div>
+      <div className="tg-row">
+        <button
+          className="tg-btn tg-btn-ghost"
+          disabled={busy}
+          onClick={async () => {
+            const ok = await act(async () => apply(await telegram.starsSettings(botId, { termsText: terms, supportText: support })));
+            setSaved(ok);
+          }}
+        >
+          {t("tg.save")}
+        </button>
+        <button
+          className="tg-btn"
+          disabled={busy}
+          onClick={() => act(async () => apply(await telegram.starsSettings(botId, { enabled: !data.enabled, termsText: terms, supportText: support })))}
+        >
+          {data.enabled ? t("tg.starsDisable") : t("tg.starsEnable")}
+        </button>
+        {saved && <span className="tg-hint">{t("tg.saved")}</span>}
+      </div>
+
+      <div className="tg-label">{t("tg.payments")}</div>
+      {data.payments.length === 0 ? (
+        <div className="tg-hint">{t("tg.paymentsEmpty")}</div>
+      ) : (
+        <div className="tg-table-wrap">
+          <table className="tg-table">
+            <thead>
+              <tr>
+                <th>{t("tg.statsDate")}</th>
+                <th>{t("tg.paymentUser")}</th>
+                <th>{t("tg.paymentAmount")}</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {data.payments.map((p) => (
+                <tr key={p.id}>
+                  <td>{new Date(p.createdAt).toLocaleString()}</td>
+                  <td>{p.tgUserId}</td>
+                  <td>
+                    {p.amount}
+                    {p.isRecurring ? " ↻" : ""}
+                  </td>
+                  <td>
+                    {p.status === "refunded" ? (
+                      <span className="tg-hint">{t("tg.paymentRefunded")}</span>
+                    ) : (
+                      <button
+                        className="tg-chip"
+                        disabled={busy}
+                        onClick={() => confirm(t("tg.confirmRefund")) && act(() => telegram.refundPayment(botId, p.id)).then(load)}
+                      >
+                        {t("tg.paymentRefund")}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Бот для клиентов: статистика по дням, лимиты и клиенты. Переписка клиентов
@@ -674,6 +863,7 @@ export default function TelegramPage() {
           {bot.mode !== "RESELLER" && !bot.linked && <div className="tg-hint">{t("tg.linkHint")}</div>}
           {diagFor === bot.id && <BotDiagnostics key={busy ?? "idle"} botId={bot.id} />}
           {bot.mode === "RESELLER" && <ResellerPanel botId={bot.id} />}
+          {bot.mode === "RESELLER" && <StarsPanel botId={bot.id} />}
         </div>
       ))}
 
