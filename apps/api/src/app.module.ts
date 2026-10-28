@@ -47,6 +47,7 @@ import { AutochatModule } from "./admin/autochat/autochat.module";
 import { OptionSynonymsModule } from "./admin/option-synonyms/option-synonyms.module";
 import { CharacterIdentityModule } from "./admin/character-identity/character-identity.module";
 import { MediaCacheAdminModule } from "./admin/media-cache/media-cache-admin.module";
+import { ProactiveAdminModule } from "./admin/proactive/proactive-admin.module";
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { MediaCacheAdminModule } from "./admin/media-cache/media-cache-admin.mod
     OptionSynonymsModule, // Автогенерация синонимов опций генерации (админка)
     CharacterIdentityModule, // Описание аватаров персонажей моделью со зрением (админка)
     MediaCacheAdminModule, // Общий кэш фото/видео чата: статистика и модерация (админка)
+    ProactiveAdminModule, // Инициативные сообщения: политика и A/B-статистика (админка)
   ],
   controllers: [HealthController], // GET /health — для Docker healthcheck и readiness probe
   providers: [

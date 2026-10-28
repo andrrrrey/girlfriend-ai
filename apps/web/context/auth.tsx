@@ -136,6 +136,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * Часовой пояс браузера → профиль (тихие часы инициативных сообщений).
+   * Отправляется, только если отличается от сохранённого.
+   */
+  useEffect(() => {
+    if (!user) return;
+    let tz: string | undefined;
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      tz = undefined;
+    }
+    if (!tz || tz === user.timezone) return;
+    users
+      .updateProfile({ timezone: tz })
+      .then(() => setUser((prev) => (prev ? { ...prev, timezone: tz } : prev)))
+      .catch(() => undefined);
+  }, [user]);
+
+  /**
    * Эффект инициализации: проверяет авторизацию при монтировании.
    * - Если accessToken в localStorage есть → загружает профиль
    * - Если нет → сразу снимает loading

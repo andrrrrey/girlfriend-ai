@@ -38,6 +38,8 @@ import { IntentRouter } from "../conversation/intent-router";
 import { ChatMediaService } from "../conversation/chat-media.service";
 import { ChatEventsService } from "./chat-events.service";
 import { GenerationModule } from "../generation/generation.module";
+import { ChatMemoryService } from "../conversation/chat-memory.service";
+import { ProactiveService } from "../conversation/proactive.service";
 
 @Module({
   imports: [
@@ -60,10 +62,12 @@ import { GenerationModule } from "../generation/generation.module";
     IntentRouter,
     ChatMediaService,
     ChatEventsService,
+    ChatMemoryService,
+    ProactiveService,
   ],
   // CharactersService — его переиспользует AutogenModule; ChatsService и
   // ConversationEngine — AutochatModule (автопереписка через общее ядро).
   // ChatMediaService/IntentRouter — InternalModule (медиасообщение по завершении генерации, internal API).
-  exports: [CharactersService, ChatsService, ConversationEngine, ChatMediaService, IntentRouter],
+  exports: [CharactersService, ChatsService, ConversationEngine, ChatMediaService, IntentRouter, ProactiveService],
 })
 export class ChatsModule {}

@@ -22,6 +22,8 @@ model User {
   lang                        String    @default("en")
   // Предпочтительный режим контента: nsfw | sfw. Влияет на фиды и промпты.
   contentMode                 String    @default("nsfw") @map("content_mode")
+  // Часовой пояс (IANA, из браузера) — тихие часы инициативных сообщений
+  timezone                    String?
   // Подтверждение 18+ при регистрации. Если false — режим форсится в sfw.
   isAdult                     Boolean   @default(true) @map("is_adult")
   emailVerified               Boolean   @default(false) @map("email_verified")
@@ -341,6 +343,18 @@ model ChatSession {
   hiddenFromOwner Boolean @default(false) @map("hidden_from_owner")
   // Клиент бота (TelegramBotUser), чей это диалог
   endUserId     String?   @map("end_user_id") @db.Uuid
+  // Долговременная память: краткое содержание сообщений до summaryUpToSeq
+  // (последние сообщения идут в контекст как есть)
+  summary        String?
+  summaryUpToSeq BigInt?   @map("summary_up_to_seq")
+  // Инициативные сообщения персонажа (ProactiveService)
+  lastUserMessageAt DateTime? @map("last_user_message_at")
+  proactiveEnabled  Boolean   @default(true) @map("proactive_enabled")
+  // Сколько инициативных сообщений подряд осталось без ответа
+  proactiveCount    Int       @default(0) @map("proactive_count")
+  nextProactiveAt   DateTime? @map("next_proactive_at")
+  // Непрочитанные сообщения персонажа (бейдж в списке чатов)
+  unreadCount       Int       @default(0) @map("unread_count")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   character   Character    @relation(fields: [characterId], references: [id])
@@ -353,6 +367,7 @@ model ChatSession {
   @@index([userId, deletedAt, lastMessageAt(sort: Desc)])
   @@index([endUserId])
   @@index([characterId])
+  @@index([nextProactiveAt])
   @@map("chat_sessions")
 }
 
@@ -851,6 +866,8 @@ model TelegramBot {
   // Тексты /terms и /support (/paysupport) — обязательны для приёма Stars
   termsText     String?   @map("terms_text")
   supportText   String?   @map("support_text")
+  // Переопределение политики инициативных сообщений для клиентов бота (RESELLER)
+  proactive     Json?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")

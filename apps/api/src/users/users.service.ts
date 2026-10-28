@@ -52,6 +52,7 @@ export class UsersService {
         lang: true,
         contentMode: true,
         isAdult: true,
+        timezone: true,
         createdAt: true,
         socialLinks: {
           select: { provider: true, url: true },
@@ -170,8 +171,11 @@ export class UsersService {
    */
   async updateProfile(
     userId: string,
-    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string; contentMode?: string },
+    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string; contentMode?: string; timezone?: string },
   ) {
+    if (data.timezone && !isValidTimezone(data.timezone)) {
+      throw new BadRequestException("Invalid timezone");
+    }
     if (data.nickname) {
       const conflict = await this.prisma.user.findFirst({
         where: { nickname: data.nickname, id: { not: userId } },
@@ -205,6 +209,7 @@ export class UsersService {
         lang: true,
         contentMode: true,
         isAdult: true,
+        timezone: true,
       },
     });
   }
@@ -289,5 +294,15 @@ export class UsersService {
       where: { userId },
       select: { provider: true, url: true },
     });
+  }
+}
+
+/** Часовой пояс IANA, известный Intl. */
+function isValidTimezone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
   }
 }

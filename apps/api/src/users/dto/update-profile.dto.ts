@@ -28,4 +28,11 @@ export class UpdateProfileDto {
   @IsString()
   @IsIn(["nsfw", "sfw"])
   contentMode?: string;
+
+  /** Часовой пояс IANA из браузера (Intl) — для тихих часов инициативных сообщений. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/, { message: "Invalid timezone" })
+  timezone?: string;
 }

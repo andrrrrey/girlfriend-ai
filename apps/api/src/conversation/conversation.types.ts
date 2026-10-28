@@ -114,6 +114,8 @@ export interface RespondInput extends EngineBaseInput {
   /** Переопределения контекста (например, профиль робота в автопереписке). */
   contentMode?: string;
   userProfile?: string;
+  /** Служебная реплика в конце запроса к модели (инициативное сообщение). */
+  trailingNote?: string;
   /** Доп. поля для AiJob.input и metadata ответа. */
   jobInput?: Record<string, unknown>;
   replyMetadata?: Record<string, unknown>;

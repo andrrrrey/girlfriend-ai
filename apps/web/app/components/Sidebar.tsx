@@ -42,6 +42,7 @@ export default function Sidebar({
     if (!user) return;
     chats.list().then((res) => {
       const count = res.items.filter((c) => {
+        if (typeof c.unreadCount === "number") return c.unreadCount > 0;
         if (!c.lastMessage || c.lastMessage.role !== "assistant") return false;
         const lastRead = localStorage.getItem(`chat-read-${c.id}`);
         if (!lastRead) return true;

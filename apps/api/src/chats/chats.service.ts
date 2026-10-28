@@ -149,6 +149,8 @@ export class ChatsService {
         lastMessageAt: c.lastMessageAt,
         createdAt: c.createdAt,
         assistantCount: countMap.get(c.id) ?? 0, // всего сообщений ассистента
+        unreadCount: c.unreadCount, // непрочитанные сообщения персонажа
+        proactiveEnabled: c.proactiveEnabled, // персонаж может писать первым
       })),
       nextCursor: hasMore ? items[items.length - 1]?.id : null, // null = последняя страница
     };
@@ -184,6 +186,24 @@ export class ChatsService {
     // Защита от IDOR — проверяем что запрашивает именно владелец
     if (chat.userId !== userId) throw new ForbiddenException();
     return chat;
+  }
+
+  /** Отмечает диалог прочитанным (бейдж непрочитанных в списке чатов). */
+  async markRead(chatId: string, userId: string): Promise<void> {
+    await this.getChat(chatId, userId);
+    await this.prisma.chatSession.update({ where: { id: chatId }, data: { unreadCount: 0 } });
+  }
+
+  /**
+   * Вкл/выкл инициативные сообщения персонажа в диалоге. Выключение снимает
+   * расписание; включение — ProactiveService поставит его после следующей реплики.
+   */
+  async setProactive(chatId: string, userId: string, enabled: boolean, opts: { includeHidden?: boolean } = {}) {
+    await this.getChat(chatId, userId, opts);
+    await this.prisma.chatSession.update({
+      where: { id: chatId },
+      data: enabled ? { proactiveEnabled: true } : { proactiveEnabled: false, nextProactiveAt: null },
+    });
   }
 
   /**
@@ -316,10 +336,19 @@ export class ChatsService {
         },
       });
 
-      // Обновляем дату последнего сообщения для сортировки списка чатов
+      // Дата последнего сообщения — для сортировки списка чатов. Реплика
+      // пользователя: диалог прочитан, отсчёт инициативных сообщений заново
+      // (расписание ставит ProactiveService по событию message.created);
+      // сообщение персонажа — +1 непрочитанное.
+      const now = new Date();
       await db.chatSession.update({
         where: { id: chatSessionId },
-        data: { lastMessageAt: new Date() },
+        data:
+          role === "user"
+            ? { lastMessageAt: now, lastUserMessageAt: now, unreadCount: 0 }
+            : role === "assistant"
+              ? { lastMessageAt: now, unreadCount: { increment: 1 } }
+              : { lastMessageAt: now },
       });
 
       await this.outbox.enqueue(
@@ -419,6 +448,11 @@ export class ChatsService {
     await this.prisma.message.updateMany({
       where: { chatSessionId: chat.id, deletedAt: null },
       data: { deletedAt: new Date() },
+    });
+    // Новый диалог: память, непрочитанные и расписание инициативных — с нуля.
+    await this.prisma.chatSession.update({
+      where: { id: chat.id },
+      data: { summary: null, summaryUpToSeq: null, unreadCount: 0, proactiveCount: 0, nextProactiveAt: null, lastUserMessageAt: null },
     });
   }
 
