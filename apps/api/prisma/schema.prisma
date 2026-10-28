@@ -846,6 +846,11 @@ model TelegramBot {
   // active | disabled | error
   status        String    @default("active")
   lastError     String?   @map("last_error")
+  // Оплата Telegram Stars (только RESELLER): включается владельцем на бота (canary)
+  starsEnabled  Boolean   @default(false) @map("stars_enabled")
+  // Тексты /terms и /support (/paysupport) — обязательны для приёма Stars
+  termsText     String?   @map("terms_text")
+  supportText   String?   @map("support_text")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
@@ -857,6 +862,9 @@ model TelegramBot {
   links     TelegramLinkToken[]
   fileCache TelegramFileCache[]
   limits    BotLimits?
+  plans         BotPlan[]
+  starsPayments StarsPayment[]
+  subscriptions BotSubscription[]
 
   @@index([ownerUserId])
   @@map("telegram_bots")
@@ -906,6 +914,68 @@ model BotLimits {
   bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@map("bot_limits")
+}
+
+// Тариф доступа к боту для клиентов (оплата Telegram Stars). 30 дней —
+// подписка с автопродлением Telegram; другой срок — разовая оплата.
+model BotPlan {
+  id         String   @id @default(uuid()) @db.Uuid
+  botId      String   @map("bot_id") @db.Uuid
+  title      String
+  priceStars Int      @map("price_stars")
+  periodDays Int      @map("period_days")
+  // Снятый с продажи тариф не предлагается, но уже оплаченные действуют
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId])
+  @@map("bot_plans")
+}
+
+// Платёж клиента бота в Stars. Идемпотентность — по telegram_payment_charge_id.
+// Хранится и после /deletemydata клиента: нужен для возвратов и учёта владельца.
+model StarsPayment {
+  id          String    @id @default(uuid()) @db.Uuid
+  botId       String    @map("bot_id") @db.Uuid
+  tgUserId    String    @map("tg_user_id")
+  planId      String?   @map("plan_id") @db.Uuid
+  chargeId    String    @unique @map("charge_id")
+  payload     String
+  amount      Int
+  periodDays  Int       @map("period_days")
+  isRecurring Boolean   @default(false) @map("is_recurring")
+  // paid | refunded
+  status      String    @default("paid")
+  refundedAt  DateTime? @map("refunded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, createdAt])
+  @@map("stars_payments")
+}
+
+// Доступ клиента к боту. Истечение проверяется по expiresAt при каждом сообщении:
+// доступ закрывается, история диалога остаётся.
+model BotSubscription {
+  id         String    @id @default(uuid()) @db.Uuid
+  botId      String    @map("bot_id") @db.Uuid
+  tgUserId   String    @map("tg_user_id")
+  planId     String?   @map("plan_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at")
+  // Автопродление подписки Telegram (тариф на 30 дней)
+  autoRenew  Boolean   @default(false) @map("auto_renew")
+  // charge id первого платежа подписки — для editUserStarSubscription
+  subscriptionChargeId String? @map("subscription_charge_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  bot TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, tgUserId])
+  @@map("bot_subscriptions")
 }
 
 // Входящие обновления Telegram: журнал идемпотентности и очередь обработки.

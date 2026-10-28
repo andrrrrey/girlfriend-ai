@@ -62,6 +62,7 @@ export class TelegramUpdatesService implements OnModuleInit {
    */
   async accept(botId: string, update: TgUpdate): Promise<boolean> {
     if (typeof update?.update_id !== "number") return false;
+    if (update.pre_checkout_query) return this.acceptPreCheckout(botId, update);
     const res = await this.prisma.telegramUpdate.createMany({
       data: [{ botId, updateId: BigInt(update.update_id), payload: update as unknown as Prisma.InputJsonValue }],
       skipDuplicates: true,
@@ -71,6 +72,36 @@ export class TelegramUpdatesService implements OnModuleInit {
       void this.dispatchBatch().catch((err) => this.logger.warn(`dispatch failed: ${err?.message}`));
     }
     return res.count > 0;
+  }
+
+  /**
+   * pre_checkout_query нужно подтвердить за 10 секунд — не ждём очереди (там
+   * может идти долгий ответ персонажа): обрабатываем сразу, в журнал — как done.
+   */
+  private async acceptPreCheckout(botId: string, update: TgUpdate): Promise<boolean> {
+    const res = await this.prisma.telegramUpdate.createMany({
+      data: [
+        {
+          botId,
+          updateId: BigInt(update.update_id),
+          payload: update as unknown as Prisma.InputJsonValue,
+          status: "done",
+          processedAt: new Date(),
+        },
+      ],
+      skipDuplicates: true,
+    });
+    if (res.count === 0) return false;
+    try {
+      await this.handler.handle(botId, update);
+    } catch (err: any) {
+      this.logger.warn(`pre_checkout_query ${update.pre_checkout_query?.id} failed: ${err?.message}`);
+      await this.prisma.telegramUpdate.updateMany({
+        where: { botId, updateId: BigInt(update.update_id) },
+        data: { status: "failed", lastError: String(err?.message ?? err).slice(0, 1000) },
+      });
+    }
+    return true;
   }
 
   /** Забирает и обрабатывает пачку обновлений. */

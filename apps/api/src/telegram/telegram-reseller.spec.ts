@@ -14,6 +14,9 @@ const bot = {
   characterId: "char-1",
   tokenEnc: "x",
   character: { id: "char-1", name: "Hannah" },
+  starsEnabled: false,
+  termsText: null,
+  supportText: null,
 };
 
 const message = (text: string, tgUserId = 42, updateId = 100) => ({
@@ -32,6 +35,7 @@ describe("Бот для клиентов (RESELLER): обработчик", () =
   let api: any;
   let engine: any;
   let reseller: any;
+  let stars: any;
   let handler: TelegramHandlerService;
   /** Контекст списаний, в котором ядро обрабатывало сообщение. */
   let seenContext: unknown;
@@ -69,7 +73,8 @@ describe("Бот для клиентов (RESELLER): обработчик", () =
       exportEndUserData: jest.fn().mockResolvedValue("dump"),
       deleteEndUserData: jest.fn(),
     };
-    handler = new TelegramHandlerService(prisma, {} as any, engine, {} as any, { apiFor: () => api } as any, reseller);
+    stars = { paywallActive: jest.fn().mockResolvedValue(false), activeSubscription: jest.fn().mockResolvedValue(null) };
+    handler = new TelegramHandlerService(prisma, {} as any, engine, {} as any, { apiFor: () => api } as any, reseller, stars);
   });
 
   it("привязка не нужна: у каждого клиента свой диалог, списание с владельца в контексте клиента", async () => {

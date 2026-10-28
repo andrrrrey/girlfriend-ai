@@ -2333,6 +2333,39 @@ export interface TelegramBotClient {
   credits: number;
 }
 
+/** Тариф доступа к боту для клиентов (Telegram Stars). */
+export interface TelegramBotPlan {
+  id: string;
+  title: string;
+  priceStars: number;
+  periodDays: number;
+  active: boolean;
+}
+
+/** Платёж клиента бота в Stars. */
+export interface TelegramStarsPayment {
+  id: string;
+  tgUserId: string;
+  amount: number;
+  periodDays: number;
+  isRecurring: boolean;
+  /** paid | refunded */
+  status: string;
+  createdAt: string;
+  refundedAt: string | null;
+}
+
+/** Оплата Stars в боте: настройки, тарифы, последние платежи. */
+export interface TelegramStarsOverview {
+  enabled: boolean;
+  termsText: string | null;
+  supportText: string | null;
+  plans: TelegramBotPlan[];
+  payments: TelegramStarsPayment[];
+  activeSubscribers: number;
+  revenueStars: number;
+}
+
 /** Диагностика бота: webhook глазами Telegram и последние входящие обновления. */
 export interface TelegramBotDiagnostics {
   pollingMode: boolean;
@@ -2373,6 +2406,34 @@ export const telegram = {
   /** Удалить данные клиента (DELETE /telegram/bots/:id/users/:userId). */
   async deleteClient(botId: string, userId: string): Promise<void> {
     return apiFetch(`/telegram/bots/${botId}/users/${userId}`, { method: "DELETE" });
+  },
+
+  /** Оплата Stars: настройки, тарифы, платежи (GET /telegram/bots/:id/stars). */
+  async starsOverview(botId: string): Promise<TelegramStarsOverview> {
+    return apiFetch(`/telegram/bots/${botId}/stars`);
+  },
+
+  /** Включить/выключить Stars, тексты /terms и /support (PUT /telegram/bots/:id/stars). */
+  async starsSettings(
+    botId: string,
+    body: { enabled?: boolean; termsText?: string | null; supportText?: string | null },
+  ): Promise<TelegramStarsOverview> {
+    return apiFetch(`/telegram/bots/${botId}/stars`, { method: "PUT", body: JSON.stringify(body) });
+  },
+
+  /** Добавить тариф (POST /telegram/bots/:id/stars/plans). */
+  async createPlan(botId: string, plan: { title: string; priceStars: number; periodDays: number }): Promise<TelegramBotPlan> {
+    return apiFetch(`/telegram/bots/${botId}/stars/plans`, { method: "POST", body: JSON.stringify(plan) });
+  },
+
+  /** Снять тариф с продажи (DELETE /telegram/bots/:id/stars/plans/:planId). */
+  async archivePlan(botId: string, planId: string): Promise<void> {
+    return apiFetch(`/telegram/bots/${botId}/stars/plans/${planId}`, { method: "DELETE" });
+  },
+
+  /** Вернуть платёж (POST /telegram/bots/:id/stars/payments/:paymentId/refund). */
+  async refundPayment(botId: string, paymentId: string): Promise<TelegramStarsPayment> {
+    return apiFetch(`/telegram/bots/${botId}/stars/payments/${paymentId}/refund`, { method: "POST" });
   },
 
   /** Изменить лимиты бота (PUT /telegram/bots/:id/limits). */

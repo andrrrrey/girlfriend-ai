@@ -195,7 +195,7 @@ describe("TelegramHandlerService", () => {
     };
     handler = new TelegramHandlerService(prisma, { resetChat: jest.fn(), createChat: jest.fn() } as any, engine, {} as any, {
       apiFor: () => api,
-    } as any, {} as any);
+    } as any, {} as any, {} as any);
   });
 
   it("текст привязанного владельца идёт в общее ядро (source=telegram, externalId=update_id)", async () => {
