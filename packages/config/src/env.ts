@@ -110,6 +110,14 @@ const EnvSchema = z.object({
    */
   SECRETS_ENC_KEY: z.string().optional(),
 
+  // ─── Internal API ───────────────────────────────────────────────────────────
+  /**
+   * Общий секрет для /internal/* в API (вызовы из ai и worker).
+   * Задаётся одинаковым в api, ai и worker: `openssl rand -hex 32`.
+   * Без него API отклоняет /internal/* везде, кроме ENV=development и ENV=test.
+   */
+  INTERNAL_API_TOKEN: z.string().optional(),
+
   // ─── Telegram ───────────────────────────────────────────────────────────────
   /**
    * Публичный базовый URL API для webhook Telegram (без завершающего слэша).
@@ -134,6 +142,14 @@ const EnvSchema = z.object({
 
 /** Типизированный объект конфига (инференс из Zod-схемы) */
 export type AppEnv = z.infer<typeof EnvSchema>;
+
+/** Заголовок с общим секретом для вызовов /internal/* в API */
+export const INTERNAL_TOKEN_HEADER = "x-internal-token";
+
+/** Заголовки авторизации для вызовов /internal/* из ai и worker. */
+export function internalAuthHeaders(env: Pick<AppEnv, "INTERNAL_API_TOKEN">): Record<string, string> {
+  return env.INTERNAL_API_TOKEN ? { [INTERNAL_TOKEN_HEADER]: env.INTERNAL_API_TOKEN } : {};
+}
 
 /**
  * Загружает и валидирует переменные окружения.

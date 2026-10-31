@@ -27,7 +27,7 @@
  * - Internal API: http://{env.API_HOST}:{env.API_PORT}/internal/*
  */
 
-import { loadEnv } from "@repo/config";
+import { internalAuthHeaders, loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { Queue, Worker, Job } from "bullmq";
 import IORedis from "ioredis";
@@ -92,7 +92,7 @@ async function updateJobStatus(
   try {
     await fetch(`${API_BASE}/internal/ai-jobs/${jobId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...internalAuthHeaders(env) },
       body: JSON.stringify({ status, ...data }),
     });
   } catch (err) {
@@ -116,7 +116,7 @@ async function logUsage(userId: string, action: string, tokensUsed?: number) {
   try {
     await fetch(`${API_BASE}/internal/usage-logs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...internalAuthHeaders(env) },
       body: JSON.stringify({ userId, action, tokensUsed }),
     });
   } catch (err) {

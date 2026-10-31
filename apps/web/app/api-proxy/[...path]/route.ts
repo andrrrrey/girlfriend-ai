@@ -30,6 +30,26 @@ const CONTENT_FRAMING = new Set([
   'content-encoding',
 ]);
 
+/**
+ * /internal/* — межсервисный API, наружу его не отдаём. Проверяем итоговый URL
+ * запроса к API: fetch схлопывает "..", а Express сравнивает маршруты без учёта
+ * регистра, поэтому сравнения исходной строки пути недостаточно.
+ */
+function isInternalApiPath(targetUrl: string): boolean {
+  let path = new URL(targetUrl).pathname;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const decoded = decodeURIComponent(path);
+      if (decoded === path) break;
+      path = decoded;
+    } catch {
+      return true;
+    }
+  }
+  const segments = path.toLowerCase().split(/[\\/]+/).filter(Boolean);
+  return segments.includes('..') || segments[0] === 'internal';
+}
+
 async function handler(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> | { path: string[] } },
@@ -40,6 +60,10 @@ async function handler(
     const path = resolvedParams.path.join('/');
     const { search } = new URL(request.url);
     const targetUrl = `${API_URL}/${path}${search}`;
+
+    if (isInternalApiPath(targetUrl)) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
 
     const forwardHeaders = new Headers();
     request.headers.forEach((value, key) => {

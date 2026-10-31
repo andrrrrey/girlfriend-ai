@@ -2,7 +2,9 @@
  * @file internal.controller.ts
  * @description Внутренний HTTP API для межсервисного взаимодействия.
  *
- * ВАЖНО: Этот контроллер НЕ защищён JWT-аутентификацией.
+ * ВАЖНО: Этот контроллер НЕ защищён JWT-аутентификацией, его закрывает
+ * InternalAuthGuard (общий секрет INTERNAL_API_TOKEN). Web-прокси /api-proxy
+ * такие запросы не пересылает.
  * Он предназначен только для вызовов внутри приватной Docker-сети.
  * В production НЕ должен быть доступен извне (закрыть через nginx/firewall).
  *
@@ -18,7 +20,8 @@
  * - POST  /internal/usage-logs        — запись события использования
  */
 
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { InternalAuthGuard } from "./internal-auth.guard";
 import { PrismaService } from "../prisma.service";
 import { WalletService, generationReservationKey } from "../billing/wallet.service";
 import { ChatMediaService } from "../conversation/chat-media.service";
@@ -32,6 +35,7 @@ import { parseGenerationSpec } from "../generation/prompt/generation-spec";
  * Все запросы должны идти по внутренней Docker-сети (не через интернет).
  */
 @Controller("internal")
+@UseGuards(InternalAuthGuard)
 export class InternalController {
   constructor(
     private readonly prisma: PrismaService,

@@ -22,7 +22,7 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
-import { loadEnv } from "@repo/config";
+import { internalAuthHeaders, loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
 import { getRequestId } from "@repo/logger";
 import type { HealthResponse } from "@repo/types";
@@ -184,7 +184,7 @@ async function uploadToS3(
  * @throws Error если internal API недоступен
  */
 async function fetchSettings(): Promise<Record<string, string>> {
-  const res = await fetch(`${API_BASE}/internal/settings`);
+  const res = await fetch(`${API_BASE}/internal/settings`, { headers: internalAuthHeaders(env) });
   if (!res.ok) throw new Error(`Failed to fetch settings: ${res.status}`);
   return res.json();
 }
@@ -282,7 +282,7 @@ async function ensureEnglishPrompt(prompt: string): Promise<string> {
  * @returns данные персонажа или null если не найден
  */
 async function fetchCharacter(id: string) {
-  const res = await fetch(`${API_BASE}/internal/characters/${id}`);
+  const res = await fetch(`${API_BASE}/internal/characters/${id}`, { headers: internalAuthHeaders(env) });
   if (!res.ok) return null;
   return res.json();
 }
