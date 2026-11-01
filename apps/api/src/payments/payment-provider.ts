@@ -67,6 +67,15 @@ export interface NormalizedEvent {
   reviewReason?: string;
 }
 
+export interface RefundInput {
+  externalTransactionId: string;
+  /** Без суммы — полный возврат */
+  amountMinor?: number;
+  currency: string;
+  reason: string;
+  initiatedBy: string;
+}
+
 export interface PaymentProvider {
   id: PaymentProviderId;
   /** Без этих секретов провайдер считается выключенным. */
@@ -79,6 +88,10 @@ export interface PaymentProvider {
   /** Состояние подписки и её транзакции у провайдера: догоняет потерянные продления. */
   fetchSubscription?(subscription: SiteSubscription): Promise<NormalizedEvent[]>;
   cancelSubscription?(subscription: SiteSubscription): Promise<void>;
+  /** Проверка ключа из админки; при неверном ключе бросает ошибку. */
+  testConnection(): Promise<void>;
+  /** Запрашивает возврат; результат придёт отдельным событием. У CoinGate возвраты в кабинете. */
+  refund?(input: RefundInput): Promise<void>;
 }
 
 /**

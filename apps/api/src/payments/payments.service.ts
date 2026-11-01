@@ -151,6 +151,34 @@ export class PaymentsService {
     });
   }
 
+  /** Premium пользователя для страницы подписки. */
+  async getOwnSubscription(userId: string) {
+    const [subscription, user] = await Promise.all([
+      this.prisma.siteSubscription.findUnique({ where: { userId } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { paymentsBlockedAt: true } }),
+    ]);
+    const blocked = Boolean(user?.paymentsBlockedAt);
+    if (!subscription) return { subscription: null, paymentsBlocked: blocked };
+    const { status, expiresAt, autoRenew, provider } = subscription;
+    return { subscription: { status, expiresAt, autoRenew, provider }, paymentsBlocked: blocked };
+  }
+
+  /** Отключает автопродление у провайдера. Оплаченный срок сохраняется. */
+  async cancelAutoRenew(userId: string) {
+    const subscription = await this.prisma.siteSubscription.findUnique({ where: { userId } });
+    if (!subscription || subscription.status !== "active" || !subscription.autoRenew) {
+      throw new ConflictException({ error: "NO_AUTO_RENEW", message: "Auto-renewal is not active" });
+    }
+    try {
+      await this.registry.get(subscription.provider)?.cancelSubscription?.(subscription);
+    } catch (err: any) {
+      this.logger.error(`cancel auto-renew of ${subscription.id} failed: ${err?.message}`);
+      throw new BadGatewayException({ error: "PAYMENT_PROVIDER_ERROR", message: "Payment provider is unavailable" });
+    }
+    await this.prisma.siteSubscription.update({ where: { id: subscription.id }, data: { autoRenew: false } });
+    return { autoRenew: false };
+  }
+
   webhookUrl(provider: PaymentProviderId): string {
     const base = this.env.PAYMENTS_PUBLIC_BASE_URL || `${trimSlashes(this.env.WEB_URL)}/api-proxy`;
     return `${trimSlashes(base)}/payments/webhook/${provider}`;

@@ -5,6 +5,8 @@
  *   GET  /payments/catalog            — продукты и доступные способы оплаты
  *   POST /payments/checkout           — создать оплату, вернуть redirectUrl
  *   GET  /payments                    — история платежей пользователя
+ *   GET  /payments/subscription       — Premium пользователя
+ *   POST /payments/subscription/cancel — отключить автопродление
  *   GET  /payments/:id                — статус платежа (страница возврата)
  *   POST /payments/webhook/:provider  — webhook провайдера (проверяет адаптер)
  */
@@ -68,6 +70,23 @@ export class PaymentsController {
   @Get()
   async list(@Req() req: any) {
     return this.payments.listOwn(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Current user's Premium subscription" })
+  @UseGuards(JwtAuthGuard)
+  @Get("subscription")
+  async subscription(@Req() req: any) {
+    return this.payments.getOwnSubscription(req.user.id);
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Turn off Premium auto-renewal" })
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post("subscription/cancel")
+  async cancelSubscription(@Req() req: any) {
+    return this.payments.cancelAutoRenew(req.user.id);
   }
 
   @ApiBearerAuth()

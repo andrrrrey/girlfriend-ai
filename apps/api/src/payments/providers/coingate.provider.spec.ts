@@ -140,6 +140,19 @@ describe("CoinGateProvider", () => {
     });
   });
 
+  describe("testConnection", () => {
+    it("ответ не в JSON считается успехом", async () => {
+      fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error("not json"); } });
+      await expect(provider.testConnection()).resolves.toBeUndefined();
+      expect(fetchMock.mock.calls[0][0]).toBe("https://api-sandbox.coingate.com/v2/auth/test");
+    });
+
+    it("неверный ключ приводит к ошибке", async () => {
+      fetchMock.mockResolvedValue(json({ reason: "BadCredentials" }, 401));
+      await expect(provider.testConnection()).rejects.toThrow("401");
+    });
+  });
+
   describe("fetchState", () => {
     it("возвращает состояние заказа", async () => {
       fetchMock.mockResolvedValue(json(paidOrder));
