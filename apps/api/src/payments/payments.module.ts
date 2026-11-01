@@ -13,16 +13,18 @@ import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
 import { ProviderConfigService } from "./provider-config.service";
 import { CoinGateProvider } from "./providers/coingate.provider";
+import { UpGateProvider } from "./providers/upgate.provider";
 
 @Module({
   controllers: [PaymentsController],
   providers: [
     PrismaService,
     CoinGateProvider,
+    UpGateProvider,
     {
       provide: PAYMENT_PROVIDERS,
-      useFactory: (coingate: CoinGateProvider): PaymentProvider[] => [coingate],
-      inject: [CoinGateProvider],
+      useFactory: (coingate: CoinGateProvider, upgate: UpGateProvider): PaymentProvider[] => [coingate, upgate],
+      inject: [CoinGateProvider, UpGateProvider],
     },
     ProviderConfigService,
     PaymentRegistryService,
