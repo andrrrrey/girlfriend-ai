@@ -1,7 +1,6 @@
 /**
  * @file payments.module.ts
- * @description Платежи сайта. Адаптеры провайдеров подключаются в PAYMENT_PROVIDERS;
- * пока список пуст, webhook отвечает 404, а способов оплаты нет.
+ * @description Платежи сайта. Адаптеры провайдеров подключаются в PAYMENT_PROVIDERS.
  */
 
 import { Module } from "@nestjs/common";
@@ -13,12 +12,18 @@ import { PaymentRegistryService } from "./payment-registry.service";
 import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
 import { ProviderConfigService } from "./provider-config.service";
+import { CoinGateProvider } from "./providers/coingate.provider";
 
 @Module({
   controllers: [PaymentsController],
   providers: [
     PrismaService,
-    { provide: PAYMENT_PROVIDERS, useValue: [] as PaymentProvider[] },
+    CoinGateProvider,
+    {
+      provide: PAYMENT_PROVIDERS,
+      useFactory: (coingate: CoinGateProvider): PaymentProvider[] => [coingate],
+      inject: [CoinGateProvider],
+    },
     ProviderConfigService,
     PaymentRegistryService,
     FulfillmentService,
