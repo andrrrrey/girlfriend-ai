@@ -203,6 +203,61 @@ describe("UpGateProvider", () => {
   });
 });
 
+describe("UpGateProvider.fetchSubscription", () => {
+  const DAY = 86_400_000;
+  let fetchMock: jest.Mock;
+  let provider: UpGateProvider;
+  const subscription = (expiresAt: Date): any => ({
+    externalSubscriptionId: "S1",
+    originPaymentId: PAYMENT_ID,
+    expiresAt,
+  });
+  const state = { data: { subscription_id: "S1", is_rebill_enabled: true, version: 1 } };
+
+  beforeEach(() => {
+    fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const config = { mode: "sandbox", secrets: { UPGATE_API_KEY: "api-key" }, settings: {} };
+    provider = new UpGateProvider({ load: async () => config } as any);
+  });
+
+  it("далеко от продления запрашивает только состояние подписки", async () => {
+    fetchMock.mockResolvedValue(json(state));
+    const events = await provider.fetchSubscription(subscription(new Date(Date.now() + 10 * DAY)));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.sandbox.upgate.com/v1/subscription/S1");
+    expect(events).toEqual([expect.objectContaining({ kind: "subscription_update", externalSubscriptionId: "S1" })]);
+  });
+
+  it("при подходе срока находит потерянное продление среди транзакций мерчанта", async () => {
+    const rebill = { merchant_payment_id: undefined, initial_subscription_id: "S1", payment_type: "RECURRING_REBILL" };
+    const foreign = { merchant_payment_id: undefined, initial_subscription_id: "S2", payment_type: "RECURRING_REBILL" };
+    fetchMock
+      .mockResolvedValueOnce(json(state))
+      .mockResolvedValueOnce(json({ data: [tx("SALE", "SUCCESS", rebill).data, tx("SALE", "SUCCESS", foreign).data], meta: {} }));
+    const events = await provider.fetchSubscription(subscription(new Date(Date.now() + DAY)));
+    expect(events.map((event) => event.kind)).toEqual(["subscription_update", "renewal"]);
+  });
+
+  it("находит и поздний чарджбэк исходного платежа", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(state))
+      .mockResolvedValueOnce(json({ data: [tx("CHARGEBACK").data], meta: {} }));
+    const events = await provider.fetchSubscription(subscription(new Date(Date.now() - DAY)));
+    expect(events.map((event) => event.kind)).toEqual(["subscription_update", "chargeback"]);
+  });
+
+  it("без id подписки ничего не запрашивает", async () => {
+    await expect(provider.fetchSubscription({ externalSubscriptionId: null } as any)).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("сбой API пробрасывается: запись обработается в следующий раз", async () => {
+    fetchMock.mockResolvedValue(json({}, 500));
+    await expect(provider.fetchSubscription(subscription(new Date()))).rejects.toThrow("500");
+  });
+});
+
 describe("postbackToEvents", () => {
   it("успешная продажа — оплата с суммой в цене товара", () => {
     const body = tx("SALE", "SUCCESS", { transaction_amount: "11.99", transaction_currency_code: "GBP" });

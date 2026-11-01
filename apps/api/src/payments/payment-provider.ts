@@ -76,6 +76,8 @@ export interface PaymentProvider {
   parseWebhook(webhook: RawWebhook): Promise<NormalizedEvent[]>;
   /** Текущее состояние платежа у провайдера (сверка). */
   fetchState(payment: Payment): Promise<NormalizedEvent[]>;
+  /** Состояние подписки и её транзакции у провайдера: догоняет потерянные продления. */
+  fetchSubscription?(subscription: SiteSubscription): Promise<NormalizedEvent[]>;
   cancelSubscription?(subscription: SiteSubscription): Promise<void>;
 }
 

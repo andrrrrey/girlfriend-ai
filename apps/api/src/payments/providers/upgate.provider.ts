@@ -37,6 +37,11 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const STATE_WINDOW_MS = 2 * 60 * 60_000;
 const STATE_PAGE_SIZE = 100;
 const STATE_MAX_PAGES = 5;
+/** Окно продления шире и за него транзакций всего мерчанта больше. */
+const RENEWAL_MAX_PAGES = 20;
+const RENEWAL_LOOKBACK_MS = 3 * 24 * 60 * 60_000;
+/** Транзакции ищем только у подписок, которым пора продлеваться. */
+const RENEWAL_DUE_MS = 2 * 24 * 60 * 60_000;
 const LANGUAGES: Record<string, string> = { en: "en-us", ru: "ru-ru" };
 
 interface UpGatePayment {
@@ -257,14 +262,45 @@ export class UpGateProvider implements PaymentProvider {
     if (!valid) throw new WebhookRejectedError("invalid signature");
   }
 
-  /** Транзакции платежа за окно checkout: фильтра по платежу в API нет, только по датам. */
+  /** Транзакции платежа за окно checkout. */
   async fetchState(payment: Payment): Promise<NormalizedEvent[]> {
-    const events: NormalizedEvent[] = [];
+    const transactions = await this.listTransactions(
+      payment.createdAt,
+      new Date(payment.createdAt.getTime() + STATE_WINDOW_MS),
+      STATE_MAX_PAGES,
+    );
+    return transactions.filter((tx) => tx.payment?.merchant_payment_id === payment.id).flatMap(transactionToEvents);
+  }
+
+  /** Постбэков всего 6: подписку и продления сверяем с API. */
+  async fetchSubscription(subscription: SiteSubscription): Promise<NormalizedEvent[]> {
+    const externalId = subscription.externalSubscriptionId;
+    if (!externalId) return [];
+    const response = await this.request<{ data?: unknown }>("GET", `/subscription/${encodeURIComponent(externalId)}`);
+    const events = postbackToEvents({ type: "SUBSCRIPTION", data: response.data });
+
+    const now = Date.now();
+    if (subscription.expiresAt.getTime() > now + RENEWAL_DUE_MS) return events;
+    const transactions = await this.listTransactions(
+      new Date(subscription.expiresAt.getTime() - RENEWAL_LOOKBACK_MS),
+      new Date(now),
+      RENEWAL_MAX_PAGES,
+    );
+    const own = transactions.filter(
+      ({ payment }) =>
+        payment?.initial_subscription_id === externalId || payment?.merchant_payment_id === subscription.originPaymentId,
+    );
+    return [...events, ...own.flatMap(transactionToEvents)];
+  }
+
+  /** Транзакции за период: фильтра по платежу в API нет, только по датам. */
+  private async listTransactions(from: Date, to: Date, maxPages: number): Promise<UpGateTransaction[]> {
+    const transactions: UpGateTransaction[] = [];
     let prevId: string | undefined;
-    for (let page = 0; page < STATE_MAX_PAGES; page++) {
+    for (let page = 0; page < maxPages; page++) {
       const query = new URLSearchParams({
-        created_at_from: payment.createdAt.toISOString(),
-        created_at_to: new Date(payment.createdAt.getTime() + STATE_WINDOW_MS).toISOString(),
+        created_at_from: from.toISOString(),
+        created_at_to: to.toISOString(),
         limit: String(STATE_PAGE_SIZE),
         ...(prevId ? { prev_id: prevId } : {}),
       });
@@ -272,13 +308,11 @@ export class UpGateProvider implements PaymentProvider {
         "GET",
         `/transaction?${query}`,
       );
-      for (const tx of list.data ?? []) {
-        if (tx.payment?.merchant_payment_id === payment.id) events.push(...transactionToEvents(tx));
-      }
+      transactions.push(...(list.data ?? []));
       prevId = list.meta?.next_prev_id;
       if (!prevId) break;
     }
-    return events;
+    return transactions;
   }
 
   async cancelSubscription(subscription: SiteSubscription): Promise<void> {

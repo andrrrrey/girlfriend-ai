@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma.service";
 import { FulfillmentService } from "./fulfillment.service";
 import { PaymentEventsService } from "./payment-events.service";
 import { PAYMENT_PROVIDERS, type PaymentProvider } from "./payment-provider";
+import { PaymentReconciliationService } from "./payment-reconciliation.service";
 import { PaymentRegistryService } from "./payment-registry.service";
 import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
@@ -30,6 +31,7 @@ import { UpGateProvider } from "./providers/upgate.provider";
     PaymentRegistryService,
     FulfillmentService,
     PaymentEventsService,
+    PaymentReconciliationService,
     PaymentsService,
   ],
   exports: [PaymentsService, ProviderConfigService, PaymentRegistryService],
