@@ -34,6 +34,9 @@ model User {
   createdAt                   DateTime  @default(now()) @map("created_at")
   updatedAt                   DateTime  @updatedAt @map("updated_at")
   deletedAt                   DateTime? @map("deleted_at")
+  // Блокировка покупок после чарджбэка; снимает только админ
+  paymentsBlockedAt           DateTime? @map("payments_blocked_at")
+  paymentsBlockReason         String?   @map("payments_block_reason")
 
   sessions         Session[]
   socialLinks      SocialLink[]
@@ -50,6 +53,8 @@ model User {
   followers        Follow[]           @relation("followee")
   wallet           Wallet?
   telegramBots     TelegramBot[]
+  payments         Payment[]
+  siteSubscription SiteSubscription?
 
   @@map("users")
 }
@@ -1108,4 +1113,149 @@ model TelegramFileCache {
 
   @@unique([botId, assetId])
   @@map("telegram_file_cache")
+}
+
+// ─── Платежи сайта (CoinGate, UpGate) ─────────────────────────
+
+// Каталог: пакет кредитов или Premium. Цены только в валютах с двумя знаками.
+model BillingProduct {
+  id         String   @id @default(uuid()) @db.Uuid
+  // credits | premium
+  kind       String
+  title      String
+  priceMinor Int      @map("price_minor")
+  currency   String   @default("USD")
+  credits    Int      @default(0)
+  // Срок Premium; у пакета кредитов пусто
+  periodDays Int?     @map("period_days")
+  // Новый продукт не продаётся, пока админ его не включит
+  active     Boolean  @default(false)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  payments Payment[]
+
+  @@index([active, sortOrder])
+  @@map("billing_products")
+}
+
+// Настройки провайдера из админки. Секреты зашифрованы и хранятся отдельно от
+// app_settings, потому что те целиком отдаются через /internal/settings.
+model PaymentProviderConfig {
+  id         String   @id @default(uuid()) @db.Uuid
+  provider   String   @unique
+  enabled    Boolean  @default(false)
+  // sandbox | live
+  mode       String   @default("sandbox")
+  secretsEnc String?  @map("secrets_enc")
+  settings   Json?
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_provider_configs")
+}
+
+// Платёж на сайте. Цена и начисление — снимок на момент покупки.
+// Финансовая история переживает удаление пользователя и продукта.
+model Payment {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String?   @map("user_id") @db.Uuid
+  provider          String
+  productId         String?   @map("product_id") @db.Uuid
+  productKind       String    @map("product_kind")
+  productTitle      String    @map("product_title")
+  amountMinor       Int       @map("amount_minor")
+  currency          String
+  credits           Int       @default(0)
+  periodDays        Int?      @map("period_days")
+  // created | pending | paid | refunded | partially_refunded | charged_back | failed | expired | canceled
+  status            String    @default("created")
+  externalId        String?   @map("external_id")
+  callbackTokenHash String?   @map("callback_token_hash")
+  refundedMinor     Int       @default(0) @map("refunded_minor")
+  needsReview       Boolean   @default(false) @map("needs_review")
+  reviewReason      String?   @map("review_reason")
+  termsAcceptedAt   DateTime  @map("terms_accepted_at")
+  paidAt            DateTime? @map("paid_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user         User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product      BillingProduct?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  transactions PaymentTransaction[]
+
+  @@unique([provider, externalId])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([needsReview])
+  @@map("payments")
+}
+
+// Денежные события платежа. Уникальность защищает от двойного начисления.
+model PaymentTransaction {
+  id                    String   @id @default(uuid()) @db.Uuid
+  paymentId             String   @map("payment_id") @db.Uuid
+  provider              String
+  externalTransactionId String   @map("external_transaction_id")
+  // sale | rebill | refund | chargeback | chargeback_reversal
+  type                  String
+  amountMinor           Int      @map("amount_minor")
+  currency              String
+  creditsDelta          Int      @default(0) @map("credits_delta")
+  // Какую транзакцию отменяет эта
+  relatedId             String?  @map("related_id") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, externalTransactionId])
+  @@index([paymentId, createdAt])
+  @@map("payment_transactions")
+}
+
+// Входящие события провайдеров: журнал идемпотентности и очередь обработки.
+// Хранится только нормализованное событие, без карточных и личных данных.
+model PaymentWebhookEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String
+  eventKey    String    @map("event_key")
+  payload     Json
+  // pending | processing | done | failed
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now()) @map("available_at")
+  lastError   String?   @map("last_error")
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([provider, eventKey])
+  @@index([status, availableAt])
+  @@map("payment_webhook_events")
+}
+
+// Premium на сайте. User.subscription остаётся флагом, который читает DemoService.
+model SiteSubscription {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @unique @map("user_id") @db.Uuid
+  productId              String?  @map("product_id") @db.Uuid
+  originPaymentId        String   @map("origin_payment_id") @db.Uuid
+  provider               String
+  // active | expired | revoked
+  status                 String   @default("active")
+  expiresAt              DateTime @map("expires_at")
+  autoRenew              Boolean  @default(false) @map("auto_renew")
+  externalSubscriptionId String?  @map("external_subscription_id")
+  lastEventVersion       Int?     @map("last_event_version")
+  // Автопродление нужно отменить у провайдера (повтор при сбое API)
+  providerCancelPending  Boolean  @default(false) @map("provider_cancel_pending")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalSubscriptionId])
+  @@index([status, expiresAt])
+  @@map("site_subscriptions")
 }

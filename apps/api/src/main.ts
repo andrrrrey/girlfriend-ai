@@ -44,6 +44,8 @@ async function bootstrap() {
     bufferLogs: true,
     // abortOnError: false — пробрасывает ошибки инициализации в .catch() вместо тихого process.exit(1)
     abortOnError: false,
+    // rawBody: true — исходные байты тела для проверки подписи webhook платежей
+    rawBody: true,
   });
 
   // Логи сервисов (new Logger(...)) — в тот же JSON-лог, что и HTTP-запросы.
