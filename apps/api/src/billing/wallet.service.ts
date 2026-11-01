@@ -424,31 +424,37 @@ export class WalletService implements OnModuleInit {
 
   /** Начисление без ensureWallet (используется внутри ensureWallet). */
   private async applyCredit(params: CreditParams) {
-    const amount = Math.round(params.amount);
     try {
-      return await this.prisma.$transaction(async (db) => {
-        const existing = await db.ledgerEntry.findUnique({ where: { operationKey: params.operationKey } });
-        if (existing) return existing;
-
-        const wallet = await db.wallet.findUniqueOrThrow({ where: { ownerUserId: params.userId } });
-        const after = await this.applyWalletDelta(db, wallet.id, amount, 0);
-        return db.ledgerEntry.create({
-          data: {
-            walletId: wallet.id,
-            type: params.type,
-            balanceDelta: amount,
-            balanceAfter: after.balance,
-            reservedAfter: after.reserved,
-            operationKey: params.operationKey,
-            actorUserId: params.actorUserId,
-            reason: params.reason,
-          },
-        });
-      });
+      return await this.prisma.$transaction((db) => this.creditTx(db, params));
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
       return this.prisma.ledgerEntry.findUniqueOrThrow({ where: { operationKey: params.operationKey } });
     }
+  }
+
+  /**
+   * Начисление внутри транзакции вызывающего: платёж и баланс меняются вместе.
+   * Кошелёк уже должен существовать (ensureWallet до транзакции).
+   */
+  async creditTx(db: Db, params: CreditParams) {
+    const amount = Math.round(params.amount);
+    const existing = await db.ledgerEntry.findUnique({ where: { operationKey: params.operationKey } });
+    if (existing) return existing;
+
+    const wallet = await db.wallet.findUniqueOrThrow({ where: { ownerUserId: params.userId } });
+    const after = await this.applyWalletDelta(db, wallet.id, amount, 0);
+    return db.ledgerEntry.create({
+      data: {
+        walletId: wallet.id,
+        type: params.type,
+        balanceDelta: amount,
+        balanceAfter: after.balance,
+        reservedAfter: after.reserved,
+        operationKey: params.operationKey,
+        actorUserId: params.actorUserId,
+        reason: params.reason,
+      },
+    });
   }
 
   // ─── Сверка ─────────────────────────────────────────────────────────────────

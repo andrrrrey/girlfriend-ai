@@ -118,6 +118,13 @@ const EnvSchema = z.object({
    */
   INTERNAL_API_TOKEN: z.string().optional(),
 
+  // ─── Payments ───────────────────────────────────────────────────────────────
+  /**
+   * Публичный базовый URL API для webhook платежей (без завершающего слэша).
+   * По умолчанию — `${WEB_URL}/api-proxy`. Ключи провайдеров задаются в админке.
+   */
+  PAYMENTS_PUBLIC_BASE_URL: z.string().optional(),
+
   // ─── Telegram ───────────────────────────────────────────────────────────────
   /**
    * Публичный базовый URL API для webhook Telegram (без завершающего слэша).
