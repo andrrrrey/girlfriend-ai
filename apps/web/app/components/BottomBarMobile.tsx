@@ -48,7 +48,7 @@ export default function BottomBarMobile() {
         </svg>
         <span>{t("bottombar.chat")}</span>
       </Link>
-      <a href="#" className={`bb-tab${false ? " bb-active" : ""}`}>
+      <Link href="/subscription" className={`bb-tab${isActive("/subscription") ? " bb-active" : ""}`}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="6 3 18 3 22 9 12 22 2 9"/>
           <line x1="2" y1="9" x2="22" y2="9"/>
@@ -56,7 +56,7 @@ export default function BottomBarMobile() {
           <line x1="12" y1="22" x2="16" y2="9"/>
         </svg>
         <span>{t("bottombar.premium")}</span>
-      </a>
+      </Link>
     </nav>
   );
 }

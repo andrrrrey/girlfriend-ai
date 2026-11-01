@@ -198,11 +198,20 @@ export class CoinGateProvider implements PaymentProvider {
     return orderToEvents(await this.fetchOrder(payment.externalId), payment.id);
   }
 
+  /** GET /auth/test отвечает не JSON, поэтому проверяем только статус. */
+  async testConnection(): Promise<void> {
+    await this.send("GET", "/auth/test");
+  }
+
   private fetchOrder(externalId: string): Promise<CoinGateOrder> {
     return this.request<CoinGateOrder>("GET", `/orders/${encodeURIComponent(externalId)}`);
   }
 
   private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+    return (await (await this.send(method, path, body)).json()) as T;
+  }
+
+  private async send(method: "GET" | "POST", path: string, body?: unknown): Promise<Response> {
     const { mode, secrets } = await this.configs.load(this.id);
     const token = secrets.COINGATE_API_TOKEN;
     if (!token) throw new Error("CoinGate API token is not configured");
@@ -220,6 +229,6 @@ export class CoinGateProvider implements PaymentProvider {
       const error = (await res.json().catch(() => null)) as { reason?: string } | null;
       throw new Error(`CoinGate ${method} ${path}: HTTP ${res.status} ${error?.reason ?? ""}`.trim());
     }
-    return (await res.json()) as T;
+    return res;
   }
 }

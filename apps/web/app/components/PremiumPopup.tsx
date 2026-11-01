@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useT } from "../../context/language";
 import type { TKey } from "../../lib/i18n";
 
@@ -47,6 +48,7 @@ const LIMIT_KEYS: Record<PremiumLimitType, { title: TKey; description: TKey }> =
 
 export default function PremiumPopup({ limitType, limit, used, onClose }: Props) {
   const { t } = useT();
+  const router = useRouter();
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -86,7 +88,7 @@ export default function PremiumPopup({ limitType, limit, used, onClose }: Props)
         </div>
 
         <div style={s.buttons}>
-          <button style={s.primaryBtn} onClick={() => { /* TODO: navigate to payment */ }}>
+          <button style={s.primaryBtn} onClick={() => { onClose(); router.push(limitType === "credits" ? "/subscription#credits" : "/subscription"); }}>
             {t("premium.getPremium")}
           </button>
           <button style={s.secondaryBtn} onClick={onClose}>

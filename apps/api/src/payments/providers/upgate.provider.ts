@@ -24,6 +24,7 @@ import {
   type NormalizedEvent,
   type PaymentProvider,
   type RawWebhook,
+  type RefundInput,
 } from "../payment-provider";
 import { ProviderConfigService, type ProviderMode } from "../provider-config.service";
 
@@ -319,6 +320,20 @@ export class UpGateProvider implements PaymentProvider {
     if (!subscription.externalSubscriptionId) return;
     await this.request("PATCH", `/subscription/${encodeURIComponent(subscription.externalSubscriptionId)}`, {
       is_rebill_enabled: false,
+    });
+  }
+
+  async testConnection(): Promise<void> {
+    await this.request("GET", "/transaction?limit=1");
+  }
+
+  async refund({ externalTransactionId, amountMinor, currency, reason, initiatedBy }: RefundInput): Promise<void> {
+    await this.request("POST", "/refund", {
+      // В наших записях ключ транзакции содержит её тип: "SALE:<id>".
+      transaction_id: externalTransactionId.split(":").pop(),
+      reason: reason.slice(0, 160),
+      initiated_by: initiatedBy.slice(0, 160),
+      ...(amountMinor === undefined ? {} : { amount: fromMinor(amountMinor), currency_code: currency }),
     });
   }
 

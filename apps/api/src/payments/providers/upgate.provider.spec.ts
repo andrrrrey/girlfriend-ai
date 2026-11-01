@@ -203,6 +203,36 @@ describe("UpGateProvider", () => {
   });
 });
 
+describe("UpGateProvider: админские запросы", () => {
+  let fetchMock: jest.Mock;
+  let provider: UpGateProvider;
+
+  beforeEach(() => {
+    fetchMock = jest.fn(async () => json({}));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const config = { mode: "sandbox", secrets: { UPGATE_API_KEY: "api-key" }, settings: {} };
+    provider = new UpGateProvider({ load: async () => config } as any);
+  });
+
+  it("полный возврат без суммы и с id транзакции без типа", async () => {
+    await provider.refund({ externalTransactionId: "SALE:T1", currency: "USD", reason: "r", initiatedBy: "a" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.sandbox.upgate.com/v1/refund");
+    expect(JSON.parse(init.body)).toEqual({ transaction_id: "T1", reason: "r", initiated_by: "a" });
+  });
+
+  it("частичный возврат передаёт сумму и валюту", async () => {
+    await provider.refund({ externalTransactionId: "SALE:T1", amountMinor: 450, currency: "USD", reason: "r", initiatedBy: "a" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ amount: "4.50", currency_code: "USD" });
+  });
+
+  it("проверка ключа падает при отказе API", async () => {
+    await expect(provider.testConnection()).resolves.toBeUndefined();
+    fetchMock.mockResolvedValue(json({}, 401));
+    await expect(provider.testConnection()).rejects.toThrow("401");
+  });
+});
+
 describe("UpGateProvider.fetchSubscription", () => {
   const DAY = 86_400_000;
   let fetchMock: jest.Mock;

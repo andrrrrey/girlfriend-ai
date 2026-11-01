@@ -3353,3 +3353,193 @@ export interface UserLimitsResponse {
 export async function getUserLimits(): Promise<UserLimitsResponse> {
   return apiFetch<UserLimitsResponse>("/users/me/limits");
 }
+
+// ─── Платежи сайта ────────────────────────────────────────────
+
+export type PaymentProviderId = "coingate" | "upgate";
+export type PaymentStatus =
+  | "created"
+  | "pending"
+  | "paid"
+  | "refunded"
+  | "partially_refunded"
+  | "charged_back"
+  | "failed"
+  | "expired"
+  | "canceled";
+
+export interface BillingProduct {
+  id: string;
+  kind: "credits" | "premium";
+  title: string;
+  priceMinor: number;
+  currency: string;
+  credits: number;
+  periodDays: number | null;
+}
+
+export interface PaymentSummary {
+  id: string;
+  provider: PaymentProviderId;
+  productKind: "credits" | "premium";
+  productTitle: string;
+  amountMinor: number;
+  currency: string;
+  credits: number;
+  periodDays: number | null;
+  status: PaymentStatus;
+  refundedMinor: number;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface OwnSubscription {
+  subscription: { status: string; expiresAt: string; autoRenew: boolean; provider: PaymentProviderId } | null;
+  paymentsBlocked: boolean;
+}
+
+export const payments = {
+  /** Продукты и доступные способы оплаты (GET /payments/catalog). */
+  async getCatalog(): Promise<{ products: BillingProduct[]; providers: PaymentProviderId[] }> {
+    return apiFetch(`/payments/catalog`);
+  },
+
+  /** Создаёт оплату и возвращает ссылку провайдера (POST /payments/checkout). */
+  async checkout(productId: string, provider: PaymentProviderId): Promise<{ paymentId: string; redirectUrl: string }> {
+    return apiFetch(`/payments/checkout`, {
+      method: "POST",
+      body: JSON.stringify({ productId, provider, acceptTerms: true }),
+    });
+  },
+
+  /** История платежей (GET /payments). */
+  async list(): Promise<PaymentSummary[]> {
+    return apiFetch(`/payments`);
+  },
+
+  /** Статус платежа (GET /payments/:id). */
+  async get(id: string): Promise<PaymentSummary> {
+    return apiFetch(`/payments/${encodeURIComponent(id)}`);
+  },
+
+  /** Premium текущего пользователя (GET /payments/subscription). */
+  async getSubscription(): Promise<OwnSubscription> {
+    return apiFetch(`/payments/subscription`);
+  },
+
+  /** Отключает автопродление (POST /payments/subscription/cancel). */
+  async cancelAutoRenew(): Promise<{ autoRenew: boolean }> {
+    return apiFetch(`/payments/subscription/cancel`, { method: "POST" });
+  },
+};
+
+export interface AdminPaymentProvider {
+  provider: PaymentProviderId;
+  enabled: boolean;
+  mode: "sandbox" | "live";
+  settings: Record<string, unknown>;
+  secretsUnreadable: boolean;
+  secrets: Record<string, { configured: boolean; hint: string }>;
+  requiredSecrets: string[];
+  webhookUrl: string;
+  /** Провайдер реально принимает оплату: включён и все ключи читаются */
+  available: boolean;
+}
+
+export interface AdminProduct extends BillingProduct {
+  active: boolean;
+  sortOrder: number;
+}
+
+export type AdminProductInput = Omit<AdminProduct, "id">;
+
+export interface AdminPaymentTransaction {
+  id: string;
+  externalTransactionId: string;
+  type: string;
+  amountMinor: number;
+  currency: string;
+  creditsDelta: number;
+  createdAt: string;
+}
+
+export interface AdminPayment extends PaymentSummary {
+  userId: string | null;
+  externalId: string | null;
+  needsReview: boolean;
+  reviewReason: string | null;
+  user: { email: string; paymentsBlockedAt: string | null; paymentsBlockReason: string | null } | null;
+  transactions?: AdminPaymentTransaction[];
+}
+
+export interface AdminPaymentFilters {
+  status?: string;
+  provider?: string;
+  needsReview?: boolean;
+  cursor?: string;
+}
+
+export const adminPayments = {
+  async getProviders(): Promise<AdminPaymentProvider[]> {
+    return apiFetch(`/admin/payments/providers`);
+  },
+
+  /** Секреты только на запись: пустое значение не меняет сохранённый ключ. */
+  async updateProvider(
+    provider: PaymentProviderId,
+    data: { enabled: boolean; mode: "sandbox" | "live"; secrets: Record<string, string>; settings: Record<string, string> },
+  ): Promise<AdminPaymentProvider> {
+    return apiFetch(`/admin/payments/providers/${provider}`, { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async testProvider(provider: PaymentProviderId): Promise<{ ok: boolean; error?: string }> {
+    return apiFetch(`/admin/payments/providers/${provider}/test`, { method: "POST" });
+  },
+
+  async getProducts(): Promise<AdminProduct[]> {
+    return apiFetch(`/admin/payments/products`);
+  },
+
+  async createProduct(data: AdminProductInput): Promise<AdminProduct> {
+    return apiFetch(`/admin/payments/products`, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async updateProduct(id: string, data: AdminProductInput): Promise<AdminProduct> {
+    return apiFetch(`/admin/payments/products/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  },
+
+  async list(filters: AdminPaymentFilters = {}): Promise<{ items: AdminPayment[]; nextCursor: string | null }> {
+    const query = new URLSearchParams();
+    if (filters.status) query.set("status", filters.status);
+    if (filters.provider) query.set("provider", filters.provider);
+    if (filters.needsReview) query.set("needsReview", "true");
+    if (filters.cursor) query.set("cursor", filters.cursor);
+    const suffix = query.toString();
+    return apiFetch(`/admin/payments${suffix ? `?${suffix}` : ""}`);
+  },
+
+  async get(id: string): Promise<AdminPayment> {
+    return apiFetch(`/admin/payments/${id}`);
+  },
+
+  async getStats(): Promise<{ provider: string; currency: string; type: string; amountMinor: number; count: number }[]> {
+    return apiFetch(`/admin/payments/stats`);
+  },
+
+  async resolveReview(id: string): Promise<void> {
+    await apiFetch(`/admin/payments/${id}/resolve`, { method: "POST" });
+  },
+
+  /** Запрашивает возврат у провайдера; статус изменится, когда придёт постбэк. */
+  async refund(id: string, data: { transactionId: string; amountMinor?: number; reason: string }): Promise<void> {
+    await apiFetch(`/admin/payments/${id}/refund`, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  async blockUser(userId: string, reason: string): Promise<void> {
+    await apiFetch(`/admin/payments/users/${userId}/block`, { method: "POST", body: JSON.stringify({ reason }) });
+  },
+
+  async unblockUser(userId: string): Promise<void> {
+    await apiFetch(`/admin/payments/users/${userId}/unblock`, { method: "POST" });
+  },
+};

@@ -10,6 +10,8 @@ import { PaymentEventsService } from "./payment-events.service";
 import { PAYMENT_PROVIDERS, type PaymentProvider } from "./payment-provider";
 import { PaymentReconciliationService } from "./payment-reconciliation.service";
 import { PaymentRegistryService } from "./payment-registry.service";
+import { PaymentsAdminController } from "./payments-admin.controller";
+import { PaymentsAdminService } from "./payments-admin.service";
 import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
 import { ProviderConfigService } from "./provider-config.service";
@@ -17,7 +19,7 @@ import { CoinGateProvider } from "./providers/coingate.provider";
 import { UpGateProvider } from "./providers/upgate.provider";
 
 @Module({
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, PaymentsAdminController],
   providers: [
     PrismaService,
     CoinGateProvider,
@@ -33,6 +35,7 @@ import { UpGateProvider } from "./providers/upgate.provider";
     PaymentEventsService,
     PaymentReconciliationService,
     PaymentsService,
+    PaymentsAdminService,
   ],
   exports: [PaymentsService, ProviderConfigService, PaymentRegistryService],
 })
