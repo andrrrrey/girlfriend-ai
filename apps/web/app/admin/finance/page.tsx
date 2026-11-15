@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useAuth } from "../../../context/auth";
 import {
   admin,
+  adminPayments,
   type FinanceAssumptions,
   type FinanceData,
   type FinanceOperationKey,
@@ -262,11 +263,11 @@ export default function AdminFinancePage() {
   const applyProductCredits = async (productId: string, credits: number) => {
     setBusy(true);
     try {
-      const products = await admin.getProducts();
+      const products = await adminPayments.getProducts();
       const p = products.find((x) => x.id === productId);
       if (!p) throw new Error("Продукт не найден");
       if (!confirm(`Тариф «${p.title}»: ${p.credits} → ${credits} кредитов. Новые покупки получат новое количество. Продолжить?`)) return;
-      await admin.updateProduct(productId, {
+      await adminPayments.updateProduct(productId, {
         kind: p.kind,
         title: p.title,
         priceMinor: p.priceMinor,
@@ -293,10 +294,10 @@ export default function AdminFinancePage() {
     }
     setBusy(true);
     try {
-      const existing = await admin.getProducts();
+      const existing = await adminPayments.getProducts();
       const maxOrder = existing.reduce((m, p) => Math.max(m, p.sortOrder), 0);
       for (const [i, g] of result.grid.entries()) {
-        await admin.createProduct({
+        await adminPayments.createProduct({
           kind: g.kind,
           title: g.title,
           priceMinor: Math.round(g.priceUsd * 100),
