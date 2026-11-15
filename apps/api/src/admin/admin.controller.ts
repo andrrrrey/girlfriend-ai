@@ -59,6 +59,7 @@ import { CreateSceneOptionDto } from "./dto/create-scene-option.dto";
 import { UpdateSceneOptionDto } from "./dto/update-scene-option.dto";
 import { CreateCameraOptionDto } from "./dto/create-camera-option.dto";
 import { UpdateCameraOptionDto } from "./dto/update-camera-option.dto";
+import { ModelPricingService, type ModelPriceInput } from "./model-pricing/model-pricing.service";
 
 /**
  * Контроллер административного раздела.
@@ -79,6 +80,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly commentGen: CommentGenService,
     private readonly billingConfig: BillingConfigService,
+    private readonly modelPricing: ModelPricingService,
   ) {}
 
   // ─── Settings ──────────────────────────────────────────────
@@ -616,6 +618,37 @@ export class AdminController {
       limit: limit ? parseInt(limit, 10) : 100,
       offset: offset ? parseInt(offset, 10) : 0,
     });
+  }
+
+  /**
+   * Себестоимость моделей нейросетей (USD) с источником цены.
+   *
+   * `GET /admin/model-pricing`
+   */
+  @Get("model-pricing")
+  async getModelPricing() {
+    return { models: await this.modelPricing.getView() };
+  }
+
+  /**
+   * Сохраняет цены моделей, заданные вручную.
+   *
+   * `PUT /admin/model-pricing` — `{ prices: { "<model>": { price, outputPrice?, locked? } } }`
+   */
+  @Put("model-pricing")
+  async saveModelPricing(@Body() body: { prices?: Record<string, ModelPriceInput> }) {
+    return { models: await this.modelPricing.saveManual(body?.prices ?? {}) };
+  }
+
+  /**
+   * Загружает цены из каталогов провайдеров (OpenRouter, Atlas Cloud) и применяет
+   * к незафиксированным моделям.
+   *
+   * `POST /admin/model-pricing/refresh`
+   */
+  @Post("model-pricing/refresh")
+  async refreshModelPricing() {
+    return this.modelPricing.refreshFromProviders();
   }
 
   // ─── Engagement (накрутка лайков + автокомментарии) ─────────

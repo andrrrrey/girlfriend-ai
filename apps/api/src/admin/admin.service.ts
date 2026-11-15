@@ -1134,11 +1134,38 @@ export class AdminService {
         skip: offset,
       }),
       this.prisma.aiJob.count({ where }),
-      this.prisma.$queryRaw<{ type: string; model: string | null; count: number; units: number }[]>(
+      this.prisma.$queryRaw<
+        {
+          type: string;
+          model: string | null;
+          count: number;
+          units: number;
+          provider_cost: number;
+          est_count: number;
+          est_units: number;
+          est_prompt: number;
+          est_completion: number;
+        }[]
+      >(
         // units = суммарные единицы тарификации: символы (tts), секунды (stt),
         // токены (chat берётся из колонки tokens_used). Для image/video единиц
         // нет → 0. COALESCE перебирает input->>'units' → tokens_used → 0.
-        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count, COALESCE(SUM(COALESCE((input->>'units')::numeric, tokens_used, 0)), 0)::float8 AS units FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
+        //
+        // provider_cost — фактическая стоимость, которую вернул провайдер
+        // (OpenRouter, input.providerCostUsd). Для остальных записей (est_*)
+        // стоимость оценивается по ценам моделей: est_prompt/est_completion —
+        // раздельные токены чата, est_units — единицы без разбивки.
+        Prisma.sql`SELECT type, input->>'model' AS model, COUNT(*)::int AS count,
+          COALESCE(SUM(COALESCE((input->>'units')::numeric, tokens_used, 0)), 0)::float8 AS units,
+          COALESCE(SUM((input->>'providerCostUsd')::numeric), 0)::float8 AS provider_cost,
+          (COUNT(*) FILTER (WHERE input->>'providerCostUsd' IS NULL))::int AS est_count,
+          COALESCE(SUM(COALESCE((input->>'units')::numeric, tokens_used, 0))
+            FILTER (WHERE input->>'providerCostUsd' IS NULL AND input->>'promptTokens' IS NULL), 0)::float8 AS est_units,
+          COALESCE(SUM((input->>'promptTokens')::numeric)
+            FILTER (WHERE input->>'providerCostUsd' IS NULL AND input->>'promptTokens' IS NOT NULL), 0)::float8 AS est_prompt,
+          COALESCE(SUM(COALESCE((input->>'completionTokens')::numeric, 0))
+            FILTER (WHERE input->>'providerCostUsd' IS NULL AND input->>'promptTokens' IS NOT NULL), 0)::float8 AS est_completion
+          FROM ai_jobs WHERE ${whereSql} GROUP BY type, model`,
       ),
       // Список доступных моделей для фильтра — по всем завершённым генерациям, без учёта фильтров.
       this.prisma.$queryRaw<{ type: string; model: string | null }[]>(
@@ -1166,6 +1193,10 @@ export class AdminService {
         // Единицы тарификации: символы (tts), секунды аудио (stt) или токены
         // (chat — из колонки tokens_used); для image/video отсутствуют.
         units: input["units"] != null ? Number(input["units"]) : it.tokensUsed ?? null,
+        // Чат: раздельные токены и фактическая стоимость у провайдера (если есть).
+        promptTokens: numOrNull(input["promptTokens"]),
+        completionTokens: numOrNull(input["completionTokens"]),
+        providerCostUsd: numOrNull(input["providerCostUsd"]),
         createdAt: it.createdAt,
       };
     });
@@ -1175,6 +1206,11 @@ export class AdminService {
       model: g.model ?? "unknown",
       count: Number(g.count),
       units: Number(g.units) || 0,
+      providerCost: Number(g.provider_cost) || 0,
+      estCount: Number(g.est_count) || 0,
+      estUnits: Number(g.est_units) || 0,
+      estPromptTokens: Number(g.est_prompt) || 0,
+      estCompletionTokens: Number(g.est_completion) || 0,
     }));
 
     const availableModels = distinctModels
@@ -1502,4 +1538,11 @@ export class AdminService {
       clearTimeout(timer);
     }
   }
+}
+
+/** Число из JSON-поля или null (для необязательных метрик в input). */
+function numOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }

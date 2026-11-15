@@ -365,7 +365,7 @@ async function callOpenRouter(params: {
   temperature: number;
   penalties: boolean;
   signal: AbortSignal;
-}): Promise<{ output: string; totalTokens: number; costUsd?: number }> {
+}): Promise<{ output: string; totalTokens: number; promptTokens?: number; completionTokens?: number; costUsd?: number }> {
   const { apiKey, model, system, messages, maxTokens, temperature, penalties, signal } = params;
   // Если system передан отдельно — ставим его первым и убираем system-роль из
   // messages. Если нет — messages уже содержат system-сообщение (как в чат-эндпоинте),
@@ -416,7 +416,16 @@ async function callOpenRouter(params: {
     data.usage?.total_tokens ??
     Math.ceil((orMessages.reduce((n: number, m: any) => n + (m.content?.length ?? 0), 0) + output.length) / 4);
   const cost = Number(data.usage?.cost);
-  return { output, totalTokens, costUsd: Number.isFinite(cost) ? cost : undefined };
+  // Раздельные токены нужны разделу «Расходы»: вход и выход стоят по-разному.
+  const promptTokens = Number(data.usage?.prompt_tokens);
+  const completionTokens = Number(data.usage?.completion_tokens);
+  return {
+    output,
+    totalTokens,
+    promptTokens: Number.isFinite(promptTokens) ? promptTokens : undefined,
+    completionTokens: Number.isFinite(completionTokens) ? completionTokens : undefined,
+    costUsd: Number.isFinite(cost) ? cost : undefined,
+  };
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
@@ -638,7 +647,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       });
       reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
       reply.raw.write(
-        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, costUsd: or.costUsd }, model })}\n\n`,
+        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, promptTokens: or.promptTokens, completionTokens: or.completionTokens, costUsd: or.costUsd }, model })}\n\n`,
       );
       reply.raw.write("data: [DONE]\n\n");
       reply.raw.end();
@@ -774,11 +783,13 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     // их сами (~4 символа на токен по input+output) — этого достаточно для учёта
     // расходов на чат в админке (ModelsLab тарифицирует LLM за токены).
     const inputChars = chatMessages.reduce((n, m) => n + (m.content?.length ?? 0), 0);
-    const totalTokens = Math.ceil((inputChars + output.length) / 4);
+    const promptTokens = Math.ceil(inputChars / 4);
+    const completionTokens = Math.ceil(output.length / 4);
+    const totalTokens = promptTokens + completionTokens;
 
     reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
     reply.raw.write(
-      `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens }, model })}\n\n`,
+      `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, promptTokens, completionTokens }, model })}\n\n`,
     );
 
     logger.info({ model, outputLength: output.length, totalTokens }, "modelslab_chat_done");
