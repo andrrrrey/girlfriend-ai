@@ -848,6 +848,128 @@ export interface GenerationCostBreakdown {
   estCompletionTokens?: number; // их выходные токены (чат)
 }
 
+// ─── Финансовая модель (GET/POST /admin/finance-model) ─────────────────────
+
+export type FinanceOperationKey =
+  | "chat_message"
+  | "chat_greeting"
+  | "stt_message"
+  | "tts_per_1k_chars"
+  | "image"
+  | "image_hires_extra"
+  | "video";
+
+/** Профиль потребления пользователя за месяц. */
+export interface FinanceUsageMix {
+  chatMessages: number;
+  images: number;
+  hiresImages: number;
+  videos: number;
+  ttsChars: number;
+  sttMessages: number;
+}
+
+/** Допущения финансовой модели. */
+export interface FinanceAssumptions {
+  targetMargin: number;
+  paymentFeePct: number;
+  paymentFixedUsd: number;
+  refundPct: number;
+  creditPriceUsd: number;
+  usage: FinanceUsageMix;
+  costOverrides?: Partial<Record<FinanceOperationKey, number>>;
+  gridPrices?: number[];
+  premiumPrices?: number[];
+}
+
+export interface FinanceOperation {
+  key: FinanceOperationKey;
+  label: string;
+  unit: string;
+  costUsd: number;
+  samples: number;
+  basis: string;
+  currentCredits: number;
+  currentMargin: number | null;
+  recommendedCredits: number;
+  recommendedMargin: number | null;
+  note?: string;
+}
+
+export interface FinanceModelRow {
+  type: "image" | "video";
+  model: string;
+  costUsd: number;
+  samples: number;
+  currentCredits: number;
+  currentMargin: number | null;
+  recommendedCredits: number;
+  recommendedMargin: number | null;
+}
+
+export interface FinanceMix {
+  credits: number;
+  costUsd: number;
+  costPerCredit: number;
+  spendUsd: number;
+  margin: number | null;
+}
+
+export interface FinanceProduct {
+  id: string;
+  kind: string;
+  title: string;
+  priceUsd: number;
+  credits: number;
+  periodDays: number | null;
+  active: boolean;
+  usdPerCredit: number | null;
+  netUsd: number;
+  aiCostUsd: number;
+  margin: number | null;
+  marginRecommended: number | null;
+  maxCreditsAtTarget: number;
+  status: "ok" | "low" | "loss";
+}
+
+export interface FinanceGridItem {
+  kind: "credits" | "premium";
+  title: string;
+  priceUsd: number;
+  credits: number;
+  bonusPct: number;
+  periodDays: number | null;
+  usdPerCredit: number;
+  margin: number | null;
+}
+
+export interface FinanceResult {
+  assumptions: FinanceAssumptions;
+  netShare: number;
+  netCreditValueUsd: number;
+  operations: FinanceOperation[];
+  models: FinanceModelRow[];
+  recommendedPrices: PriceItems;
+  mix: { current: FinanceMix; recommended: FinanceMix };
+  products: FinanceProduct[];
+  grid: FinanceGridItem[];
+  welcomeBonus: { credits: number; costUsd: number };
+  warnings: string[];
+}
+
+export interface FinanceData {
+  windowDays: number;
+  usage: {
+    activeUsers: number;
+    payingUsers: number;
+    perActiveUser: FinanceUsageMix;
+    perPayingUser: FinanceUsageMix;
+  };
+  prices: PriceItems;
+  priceVersion: number;
+  welcomeBonus: number;
+}
+
 /** Источник цены модели. */
 export type ModelPriceSource =
   | "manual"
@@ -1778,6 +1900,16 @@ export const admin = {
     if (params?.offset != null) qs.set("offset", String(params.offset));
     const q = qs.toString();
     return apiFetch<GenerationCosts>(`/admin/generation-costs${q ? `?${q}` : ""}`);
+  },
+
+  /** Финансовая модель с допущениями по умолчанию (GET /admin/finance-model). */
+  async getFinanceModel(): Promise<{ data: FinanceData; result: FinanceResult }> {
+    return apiFetch("/admin/finance-model");
+  },
+
+  /** Пересчёт финансовой модели по допущениям (POST /admin/finance-model/calculate). */
+  async calculateFinanceModel(assumptions: Partial<FinanceAssumptions>): Promise<{ data: FinanceData; result: FinanceResult }> {
+    return apiFetch("/admin/finance-model/calculate", { method: "POST", body: JSON.stringify({ assumptions }) });
   },
 
   /** Себестоимость моделей с источником цены (GET /admin/model-pricing). */

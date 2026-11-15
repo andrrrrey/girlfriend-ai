@@ -60,6 +60,8 @@ import { UpdateSceneOptionDto } from "./dto/update-scene-option.dto";
 import { CreateCameraOptionDto } from "./dto/create-camera-option.dto";
 import { UpdateCameraOptionDto } from "./dto/update-camera-option.dto";
 import { ModelPricingService, type ModelPriceInput } from "./model-pricing/model-pricing.service";
+import { FinanceModelService } from "./finance-model/finance-model.service";
+import type { Assumptions } from "./finance-model/finance-model";
 
 /**
  * Контроллер административного раздела.
@@ -81,6 +83,7 @@ export class AdminController {
     private readonly commentGen: CommentGenService,
     private readonly billingConfig: BillingConfigService,
     private readonly modelPricing: ModelPricingService,
+    private readonly financeModel: FinanceModelService,
   ) {}
 
   // ─── Settings ──────────────────────────────────────────────
@@ -649,6 +652,28 @@ export class AdminController {
   @Post("model-pricing/refresh")
   async refreshModelPricing() {
     return this.modelPricing.refreshFromProviders();
+  }
+
+  /**
+   * Финансовая модель с допущениями по умолчанию: себестоимость операций,
+   * профиль потребления, текущие цены и тарифы, рекомендации.
+   *
+   * `GET /admin/finance-model`
+   */
+  @Get("finance-model")
+  async getFinanceModel() {
+    return this.financeModel.calculate();
+  }
+
+  /**
+   * Пересчёт финансовой модели с допущениями администратора (маржа, комиссии,
+   * цена кредита, профиль потребления, ручная себестоимость).
+   *
+   * `POST /admin/finance-model/calculate` — `{ assumptions }`
+   */
+  @Post("finance-model/calculate")
+  async calculateFinanceModel(@Body() body: { assumptions?: Partial<Assumptions> }) {
+    return this.financeModel.calculate(body?.assumptions ?? {});
   }
 
   // ─── Engagement (накрутка лайков + автокомментарии) ─────────
