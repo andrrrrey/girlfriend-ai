@@ -573,6 +573,9 @@ export class ConversationEngine {
 
     let content = "";
     let tokens = 0;
+    // Входные/выходные токены — для расчёта расходов по раздельным ценам.
+    let promptTokens: number | undefined;
+    let completionTokens: number | undefined;
     // Фактическая стоимость у провайдера (OpenRouter) — для сверки маржи.
     let providerCostUsd: number | undefined;
     let error: string | undefined;
@@ -582,8 +585,12 @@ export class ConversationEngine {
         // Ответ приходит одним чанком — служебные фрагменты чистим до показа и сохранения.
         const data = typeof raw.content === "string" ? { ...raw, content: cleanAssistantReply(raw.content) } : raw;
         if (typeof data.content === "string") content += data.content;
-        const usage = data.usage as { totalTokens?: number; costUsd?: number } | undefined;
+        const usage = data.usage as
+          | { totalTokens?: number; promptTokens?: number; completionTokens?: number; costUsd?: number }
+          | undefined;
         if (usage?.totalTokens) tokens = usage.totalTokens;
+        if (typeof usage?.promptTokens === "number") promptTokens = usage.promptTokens;
+        if (typeof usage?.completionTokens === "number") completionTokens = usage.completionTokens;
         if (typeof usage?.costUsd === "number") providerCostUsd = usage.costUsd;
         if (data.error) error = String(data.error);
         yield { type: "llm", data };
@@ -624,11 +631,15 @@ export class ConversationEngine {
       if (failed && !content) {
         await this.chats.failAiJob(aiJob.id, error!, tx);
       } else {
+        const usageInput: Record<string, unknown> = {};
+        if (providerCostUsd !== undefined) usageInput.providerCostUsd = providerCostUsd;
+        if (promptTokens !== undefined) usageInput.promptTokens = promptTokens;
+        if (completionTokens !== undefined) usageInput.completionTokens = completionTokens;
         await this.chats.completeAiJob(
           aiJob.id,
           tokens || undefined,
           tx,
-          providerCostUsd !== undefined ? { providerCostUsd } : undefined,
+          Object.keys(usageInput).length ? usageInput : undefined,
         );
         await this.chats.logUsage(actor.id, opts.usageAction, tokens || undefined, tx);
       }

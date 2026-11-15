@@ -3,51 +3,26 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
-import { admin, type GenerationCosts } from "../../../lib/api";
+import {
+  admin,
+  type GenerationCosts,
+  type GenerationCostItem,
+  type GenerationCostBreakdown,
+  type ModelPrice,
+  type ModelPriceSource,
+} from "../../../lib/api";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 
 const LIMIT = 100;
 
-// Цены за 1 генерацию по умолчанию (USD), найдены по тарифам провайдеров:
-// ModelsLab: SD1.5 ~$0.002/img, SDXL/Flux ~$0.004/img (modelslab.com/pricing);
-// Civitai: SDXL ~4–6 Buzz ≈ $0.005/img (education.civitai.com);
-// Atlas Cloud: text-to-video ~$0.07/сек × ~5 сек ≈ $0.35 (atlascloud.ai);
-// wan-2.6 text-to-image (Atlas) — оценка ~$0.01/img.
-const DEFAULT_PRICING: Record<string, number> = {
-  "realistic-vision-v51": 0.002,
-  sdxl: 0.004,
-  "juggernaut-xl": 0.004,
-  flux: 0.004,
-  "alibaba/wan-2.6/text-to-image": 0.01,
-  civitai: 0.005,
-  "atlascloud/van-2.6/text-to-video": 0.35,
-  "atlascloud/wan-2.6-spicy/image-to-video": 0.35,
-  "alibaba/wan-2.7/image-to-video": 0.35,
-  // Голос. Единица тарификации зависит от типа (см. UNIT_BY_TYPE):
-  // ElevenLabs (tts) — цена за 1000 символов (Creator-план ≈ $0.22/1k симв.);
-  // OpenAI Whisper (stt) — цена за минуту аудио ($0.006/мин).
-  eleven_multilingual_v2: 0.2,
-  "whisper-1": 0.006,
-  // Чат (ModelsLab uncensored_chat) — цена за 1M токенов. ModelsLab: LLM от
-  // $0.20/1M токенов (open-source модели входят в план $149/мес — тогда 0).
-  "llama-3-70b-instruct": 0.2,
-  "llama-3-8b-instruct": 0.2,
-};
-
-// Классификация моделей по типу операции — нужна, чтобы понимать единицу
-// тарификации у модели, для которой ещё нет ни одной генерации (в breakdown
-// её нет, тип брать неоткуда). Для моделей с историей тип приходит с бэкенда.
-const TTS_MODELS = new Set(["eleven_multilingual_v2", "eleven_turbo_v2_5", "eleven_flash_v2_5"]);
-const STT_MODELS = new Set(["whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"]);
-const CHAT_MODELS = new Set(["llama-3-70b-instruct", "llama-3-8b-instruct"]);
-
-// Как считается стоимость для каждого типа и как подписывается поле цены.
+// Единица цены и способ расчёта для каждого типа операции.
+// divisor > 0 → стоимость = единицы / divisor × цена; divisor 0 → цена за генерацию.
 const UNIT_BY_TYPE: Record<string, { label: string; divisor: number }> = {
-  tts: { label: "$ / 1000 симв.", divisor: 1000 }, // цена за 1000 символов
-  stt: { label: "$ / мин", divisor: 60 },          // цена за минуту (units в секундах)
-  chat: { label: "$ / 1M токенов", divisor: 1_000_000 }, // цена за 1M токенов
-  image: { label: "$ / ген.", divisor: 0 },        // divisor 0 → плоская цена за генерацию
+  tts: { label: "$ / 1000 симв.", divisor: 1000 },
+  stt: { label: "$ / мин", divisor: 60 },          // units хранятся в секундах
+  chat: { label: "$ / 1M токенов", divisor: 1_000_000 },
+  image: { label: "$ / ген.", divisor: 0 },
   video: { label: "$ / ген.", divisor: 0 },
 };
 
@@ -59,6 +34,21 @@ const TYPE_META: Record<string, { label: string; color: string }> = {
   stt: { label: "Распознавание", color: "#f0b429" },
   chat: { label: "Чат", color: "#b39ddb" },
 };
+
+// Подписи источников цены.
+const SOURCE_META: Record<ModelPriceSource, { label: string; color: string }> = {
+  openrouter: { label: "OpenRouter", color: "#7ed492" },
+  atlascloud: { label: "Atlas Cloud", color: "#7ed492" },
+  manual: { label: "вручную", color: "#f0b429" },
+  default: { label: "по умолчанию", color: "#848484" },
+};
+
+/** Редактируемая цена модели в форме. */
+interface PriceEdit {
+  price: string;
+  outputPrice: string;
+  locked: boolean;
+}
 
 const s: Record<string, React.CSSProperties> = {
   filterRow: { display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 16, flexWrap: "wrap" },
@@ -132,23 +122,37 @@ const s: Record<string, React.CSSProperties> = {
   pageInfo: { color: "#888", fontSize: 13 },
   priceCell: { display: "flex", alignItems: "center", gap: 10 },
   modelName: { color: "#fff", fontSize: 13 },
+  hint: { color: "#6b6b6b", fontSize: 11 },
 };
 
 function fmt(n: number): string {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Цена за одну генерацию часто меньше цента (0.002–0.005). Для таких значений
-// показываем до 4 знаков, иначе fmt() округлил бы их до "$0.00".
+// Стоимость одного сообщения чата — доли цента ($0.0001), генерации — до 0.005.
+// Для значений меньше цента показываем до 6 знаков, иначе получилось бы "$0.00".
 function fmtCost(n: number): string {
-  const digits = n > 0 && n < 0.01 ? 4 : 2;
+  const digits = n > 0 && n < 0.01 ? 6 : 2;
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: digits });
+}
+
+function fmtDate(iso?: string): string {
+  return iso ? new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+}
+
+function toEdit(m: ModelPrice): PriceEdit {
+  return {
+    price: m.price != null ? String(m.price) : "",
+    outputPrice: m.outputPrice != null ? String(m.outputPrice) : "",
+    locked: Boolean(m.meta.locked),
+  };
 }
 
 export default function AdminCostsPage() {
   const { user, loading } = useAuth();
   const [data, setData] = useState<GenerationCosts | null>(null);
-  const [pricing, setPricing] = useState<Record<string, string>>({});
+  const [models, setModels] = useState<ModelPrice[]>([]);
+  const [edits, setEdits] = useState<Record<string, PriceEdit>>({});
   const [typeFilter, setTypeFilter] = useState("");
   const [modelFilter, setModelFilter] = useState("");
   const [from, setFrom] = useState("");
@@ -156,8 +160,23 @@ export default function AdminCostsPage() {
   const [offset, setOffset] = useState(0);
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  const applyModels = useCallback((list: ModelPrice[]) => {
+    setModels(list);
+    setEdits(Object.fromEntries(list.map((m) => [m.model, toEdit(m)])));
+  }, []);
+
+  const loadPricing = useCallback(async () => {
+    try {
+      const res = await admin.getModelPricing();
+      applyModels(res.models);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }, [applyModels]);
 
   const loadData = useCallback(
     async (type: string, model: string, f: string, t: string, off: number) => {
@@ -173,24 +192,6 @@ export default function AdminCostsPage() {
           offset: off,
         });
         setData(res);
-        // Префилл цен: сохранённое значение → значение по умолчанию.
-        setPricing((prev) => {
-          const next = { ...prev };
-          const models = new Set<string>([
-            ...Object.keys(DEFAULT_PRICING),
-            ...Object.keys(res.pricing || {}),
-            ...res.availableModels.map((m) => m.model),
-            ...res.breakdown.map((b) => b.model),
-          ]);
-          for (const m of models) {
-            if (next[m] === undefined) {
-              const saved = res.pricing?.[m];
-              const def = DEFAULT_PRICING[m];
-              next[m] = saved != null ? String(saved) : def != null ? String(def) : "";
-            }
-          }
-          return next;
-        });
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -199,6 +200,10 @@ export default function AdminCostsPage() {
     },
     [],
   );
+
+  useEffect(() => {
+    if (!loading && user?.role === "admin") loadPricing();
+  }, [loading, user, loadPricing]);
 
   useEffect(() => {
     if (!loading && user?.role === "admin") loadData(typeFilter, modelFilter, from, to, offset);
@@ -218,50 +223,69 @@ export default function AdminCostsPage() {
     );
   }
 
-  // Явно заданная цена модели имеет приоритет. Если её нет, но модель — это
-  // civitai-чекпоинт по URN (urn:air:...:civitai:...), берём базовую цену "civitai":
-  // иначе такие генерации показывали бы $0.00, хотя стоят как обычный civitai.
-  const priceOf = (model: string) => {
-    const direct = parseFloat(pricing[model] ?? "");
-    if (!isNaN(direct) && direct > 0) return direct;
-    if (/^urn:air:.*:civitai:/i.test(model)) {
-      const base = parseFloat(pricing["civitai"] ?? "");
-      if (!isNaN(base) && base > 0) return base;
-      return DEFAULT_PRICING["civitai"];
+  const num = (v: string | undefined): number | null => {
+    const n = parseFloat(v ?? "");
+    return isNaN(n) || n < 0 ? null : n;
+  };
+
+  // Цена модели из формы (то, что видит админ — пересчёт сразу, до сохранения).
+  // Civitai-чекпоинты по URN (urn:air:...:civitai:...) без своей цены берут
+  // базовую цену "civitai" — иначе такие генерации показывали бы $0.
+  const priceOf = (model: string): number => {
+    const direct = num(edits[model]?.price);
+    if (direct !== null) return direct;
+    if (/^urn:air:.*:civitai:/i.test(model)) return num(edits["civitai"]?.price) ?? 0;
+    return 0;
+  };
+  // Цена выходных токенов чата; если не задана — как у входных.
+  const outputPriceOf = (model: string): number => num(edits[model]?.outputPrice) ?? priceOf(model);
+
+  // Оценка стоимости по ценам моделей (для записей без фактической стоимости).
+  const estimate = (
+    type: string,
+    model: string,
+    count: number,
+    units: number,
+    promptTokens = 0,
+    completionTokens = 0,
+  ): number => {
+    if (type === "chat") {
+      // Раздельные токены — по своим ценам; старые записи (только сумма токенов)
+      // считаются по цене входных токенов: в чате их подавляющее большинство (контекст).
+      return (
+        (promptTokens / 1_000_000) * priceOf(model) +
+        (completionTokens / 1_000_000) * outputPriceOf(model) +
+        (units / 1_000_000) * priceOf(model)
+      );
     }
-    return isNaN(direct) ? 0 : direct;
+    const unit = UNIT_BY_TYPE[type];
+    if (unit && unit.divisor > 0) return (units / unit.divisor) * priceOf(model);
+    return count * priceOf(model);
+  };
+
+  // Стоимость строки: фактическая у провайдера, если известна, иначе оценка.
+  const rowCost = (row: GenerationCostItem): number => {
+    if (row.providerCostUsd != null) return row.providerCostUsd;
+    if (row.type === "chat" && row.promptTokens != null) {
+      return estimate("chat", row.model, 1, 0, row.promptTokens, row.completionTokens ?? 0);
+    }
+    return estimate(row.type, row.model, 1, row.units ?? 0);
+  };
+
+  // Стоимость группы (тип, модель): фактическая часть + оценка остальных.
+  const groupCost = (b: GenerationCostBreakdown): number => {
+    // Ответ старого бэкенда без разбивки — считаем всё оценкой.
+    if (b.estCount === undefined) return estimate(b.type, b.model, b.count, b.units ?? 0);
+    return (
+      (b.providerCost ?? 0) +
+      estimate(b.type, b.model, b.estCount, b.estUnits ?? 0, b.estPromptTokens ?? 0, b.estCompletionTokens ?? 0)
+    );
   };
 
   const breakdown = data?.breakdown ?? [];
 
-  // Карта «модель → тип операции» по данным с бэкенда (availableModels + breakdown).
-  const modelTypeMap: Record<string, string> = {};
-  for (const m of data?.availableModels ?? []) modelTypeMap[m.model] = m.type;
-  for (const b of breakdown) if (!modelTypeMap[b.model]) modelTypeMap[b.model] = b.type;
-
-  // Определяем тип операции для модели: сначала по истории, затем по статическим
-  // спискам голосовых моделей, иначе считаем это генерацией (плоская цена).
-  const typeOfModel = (model: string): string => {
-    if (modelTypeMap[model]) return modelTypeMap[model];
-    if (TTS_MODELS.has(model)) return "tts";
-    if (STT_MODELS.has(model)) return "stt";
-    if (CHAT_MODELS.has(model)) return "chat";
-    return "image";
-  };
-
-  // Стоимость для (тип, модель) с учётом единиц тарификации.
-  // Для tts/stt: units × цена / делитель (1000 симв. или 60 сек = 1 мин).
-  // Для image/video: count × цена за генерацию.
-  const costOf = (type: string, model: string, count: number, units: number): number => {
-    const price = priceOf(model);
-    const unit = UNIT_BY_TYPE[type];
-    if (unit && unit.divisor > 0) return (units / unit.divisor) * price;
-    return count * price;
-  };
-
-  // Итоги по всем генерациям под фильтр (из breakdown × текущие цены).
-  const totalOf = (t: string) =>
-    breakdown.filter((b) => b.type === t).reduce((sum, b) => sum + costOf(b.type, b.model, b.count, b.units ?? 0), 0);
+  // Итоги по всем генерациям под фильтр.
+  const totalOf = (t: string) => breakdown.filter((b) => b.type === t).reduce((sum, b) => sum + groupCost(b), 0);
   const totalImage = totalOf("image");
   const totalVideo = totalOf("video");
   const totalTTS = totalOf("tts");
@@ -269,39 +293,66 @@ export default function AdminCostsPage() {
   const totalChat = totalOf("chat");
   const totalAll = totalImage + totalVideo + totalTTS + totalSTT + totalChat;
 
-  // Список моделей для блока настройки цен (объединяем известные, доступные и из breakdown).
-  const priceModels = Array.from(
-    new Set<string>([
-      ...Object.keys(DEFAULT_PRICING),
-      ...(data?.availableModels.map((m) => m.model) ?? []),
-      ...breakdown.map((b) => b.model),
-    ]),
-  ).filter((m) => m && m !== "unknown").sort();
-
   // Уникальные модели для выпадающего фильтра.
   const filterModels = Array.from(new Set((data?.availableModels ?? []).map((m) => m.model))).sort();
 
   const applyFilters = () => { setOffset(0); loadData(typeFilter, modelFilter, from, to, 0); };
   const resetFilters = () => { setTypeFilter(""); setModelFilter(""); setFrom(""); setTo(""); setOffset(0); };
 
+  // Ручная правка цены сразу фиксирует её, чтобы автообновление не перезаписало.
+  const editPrice = (model: string, patch: Partial<PriceEdit>) => {
+    setEdits((prev) => {
+      const cur = prev[model] ?? { price: "", outputPrice: "", locked: false };
+      const touchesValue = patch.price !== undefined || patch.outputPrice !== undefined;
+      return { ...prev, [model]: { ...cur, ...patch, ...(touchesValue ? { locked: true } : {}) } };
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
-    setSaved(false);
+    setNotice("");
     setError("");
     try {
-      const map: Record<string, number> = {};
-      for (const [model, val] of Object.entries(pricing)) {
-        const n = parseFloat(val);
-        if (!isNaN(n)) map[model] = n;
+      const payload: Record<string, { price: number | null; outputPrice?: number | null; locked?: boolean }> = {};
+      for (const m of models) {
+        const e = edits[m.model];
+        if (!e) continue;
+        const original = toEdit(m);
+        // Отправляем только изменённые модели — остальные сохраняют источник и дату.
+        if (e.price === original.price && e.outputPrice === original.outputPrice && e.locked === original.locked) continue;
+        payload[m.model] = {
+          price: num(e.price),
+          outputPrice: m.type === "chat" ? num(e.outputPrice) : undefined,
+          locked: e.locked,
+        };
       }
-      await admin.upsertSettings({ MODEL_PRICING: JSON.stringify(map) });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-      await loadData(typeFilter, modelFilter, from, to, offset);
+      const res = await admin.saveModelPricing(payload);
+      applyModels(res.models);
+      setNotice("Цены сохранены.");
     } catch (err: any) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setNotice("");
+    setError("");
+    try {
+      const res = await admin.refreshModelPricing();
+      applyModels(res.models);
+      const { updated, unchanged, locked, notFound } = res.summary;
+      setNotice(
+        `Цены загружены от провайдеров: обновлено ${updated}, без изменений ${unchanged}, ` +
+          `зафиксировано вручную ${locked}, не найдено у провайдеров ${notFound}.` +
+          (res.errors.length ? ` Ошибки: ${res.errors.join("; ")}` : ""),
+      );
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -315,39 +366,98 @@ export default function AdminCostsPage() {
         <AdminTabs active="costs" />
 
         {error && <div style={{ ...adminStyles.card, ...adminStyles.error, marginBottom: 20 }}>{error}</div>}
-        {saved && <div style={{ ...adminStyles.card, ...adminStyles.success, marginBottom: 20 }}>Цены сохранены!</div>}
+        {notice && <div style={{ ...adminStyles.card, ...adminStyles.success, marginBottom: 20 }}>{notice}</div>}
 
-        {/* Настройка стоимости за генерацию по моделям */}
+        {/* Себестоимость по моделям */}
         <div style={{ ...adminStyles.card, marginBottom: 20 }}>
           <h2 style={adminStyles.title}>Стоимость по моделям</h2>
           <p style={adminStyles.subtitle}>
-            Цена для каждой модели ($). Единица тарификации зависит от типа: генерация картинок/видео — за одну генерацию,
-            озвучка (ElevenLabs) — за 1000 символов, распознавание речи (Whisper) — за минуту аудио.
-            Значения по умолчанию подставлены по тарифам провайдеров — отредактируйте при необходимости и сохраните.
+            Цены ($) загружаются автоматически раз в сутки из каталогов провайдеров: OpenRouter (чат) и Atlas Cloud
+            (Wan/Van — изображения и видео; цена видео за секунду × 5 сек). У ModelsLab, Civitai, ElevenLabs и OpenAI
+            нет открытого API цен (цена зависит от тарифного плана) — для них цена задаётся вручную.
+            Изменённая вручную цена фиксируется и не перезаписывается автообновлением. Для чата, где провайдер
+            возвращает фактическую стоимость (OpenRouter), в расходах используется она.
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            {priceModels.map((model) => {
-              const unit = UNIT_BY_TYPE[typeOfModel(model)];
-              return (
-                <div key={model} style={s.priceCell}>
-                  <span style={s.modelName}>{model}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    value={pricing[model] ?? ""}
-                    placeholder="0"
-                    onChange={(e) => setPricing({ ...pricing, [model]: e.target.value })}
-                    style={s.priceInput}
-                  />
-                  <span style={{ color: "#6b6b6b", fontSize: 11, whiteSpace: "nowrap" }}>{unit?.label ?? "$ / ген."}</span>
-                </div>
-              );
-            })}
+          <div style={{ overflowX: "auto" }}>
+            <table style={s.table as React.CSSProperties}>
+              <thead>
+                <tr>
+                  <th style={s.th}>Модель</th>
+                  <th style={{ ...s.th, width: 110 }}>Тип</th>
+                  <th style={{ ...s.th, width: 260 }}>Цена</th>
+                  <th style={{ ...s.th, width: 120 }}>Зафиксировать</th>
+                  <th style={s.th}>Источник</th>
+                </tr>
+              </thead>
+              <tbody>
+                {models.map((m) => {
+                  const e = edits[m.model] ?? toEdit(m);
+                  const unit = UNIT_BY_TYPE[m.type];
+                  const typeMeta = TYPE_META[m.type] ?? { label: m.type, color: "#848484" };
+                  const src = SOURCE_META[m.meta.source] ?? SOURCE_META.manual;
+                  return (
+                    <tr key={m.model}>
+                      <td style={{ ...s.td, ...s.modelName }}>{m.model}</td>
+                      <td style={s.td}><span style={{ color: typeMeta.color, fontWeight: 600 }}>{typeMeta.label}</span></td>
+                      <td style={s.td}>
+                        <div style={s.priceCell}>
+                          {m.type === "chat" && <span style={s.hint}>вход</span>}
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={e.price}
+                            placeholder="0"
+                            onChange={(ev) => editPrice(m.model, { price: ev.target.value })}
+                            style={s.priceInput}
+                          />
+                          {m.type === "chat" && (
+                            <>
+                              <span style={s.hint}>выход</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={e.outputPrice}
+                                placeholder={e.price || "0"}
+                                onChange={(ev) => editPrice(m.model, { outputPrice: ev.target.value })}
+                                style={s.priceInput}
+                              />
+                            </>
+                          )}
+                          <span style={{ ...s.hint, whiteSpace: "nowrap" }}>{unit?.label ?? "$ / ген."}</span>
+                        </div>
+                      </td>
+                      <td style={s.td}>
+                        <input
+                          type="checkbox"
+                          checked={e.locked}
+                          onChange={(ev) => editPrice(m.model, { locked: ev.target.checked })}
+                          title="Не обновлять цену автоматически"
+                        />
+                      </td>
+                      <td style={{ ...s.td, fontSize: 11 }}>
+                        <span style={{ color: src.color, fontWeight: 600 }}>{src.label}</span>
+                        {m.meta.updatedAt && <span style={{ color: "#848484" }}> · {fmtDate(m.meta.updatedAt)}</span>}
+                        {m.meta.note && <div style={{ color: "#848484" }}>{m.meta.note}</div>}
+                        {m.meta.lastError && !m.meta.locked && (
+                          <div style={{ color: "#f0b429" }} title={m.meta.checkedAt ? `Проверено ${fmtDate(m.meta.checkedAt)}` : undefined}>
+                            {m.meta.lastError}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div style={{ marginTop: 16 }}>
-            <button onClick={handleSave} disabled={saving} style={adminStyles.button}>
+          <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={handleSave} disabled={saving || refreshing} style={adminStyles.button}>
               {saving ? "Сохранение..." : "Сохранить цены"}
+            </button>
+            <button onClick={handleRefresh} disabled={saving || refreshing} style={adminStyles.btnSecondary}>
+              {refreshing ? "Загрузка цен..." : "Обновить цены от провайдеров"}
             </button>
           </div>
         </div>
@@ -425,7 +535,12 @@ export default function AdminCostsPage() {
                     if (!name) {
                       if (row.type === "tts") name = `Озвучка · ${units} симв.`;
                       else if (row.type === "stt") name = `Распознавание · ${(units / 60).toFixed(1)} мин`;
-                      else if (row.type === "chat") name = `Чат · ${units} токенов`;
+                      else if (row.type === "chat") {
+                        name =
+                          row.promptTokens != null
+                            ? `Чат · ${row.promptTokens} вх. + ${row.completionTokens ?? 0} вых. токенов`
+                            : `Чат · ${units} токенов`;
+                      }
                       else name = "—";
                     }
                     const truncated = name.length > 80 ? name.slice(0, 80) + "..." : name;
@@ -438,7 +553,12 @@ export default function AdminCostsPage() {
                         </td>
                         <td style={{ ...s.td, fontSize: 12 }}>{row.model}</td>
                         <td style={{ ...s.td, color: "#848484", fontSize: 11, whiteSpace: "nowrap" }}>{date}</td>
-                        <td style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}>{fmtCost(costOf(row.type, row.model, 1, units))}</td>
+                        <td
+                          style={{ ...s.td, ...s.num, color: "#fff", fontWeight: 600 }}
+                          title={row.providerCostUsd != null ? "Фактическая стоимость от провайдера" : "Оценка по цене модели"}
+                        >
+                          {fmtCost(rowCost(row))}
+                        </td>
                       </tr>
                     );
                   })}
@@ -474,7 +594,7 @@ export default function AdminCostsPage() {
             </div>
             <div style={s.totalCard}>
               Чат
-              <div style={s.totalValue}>{fmt(totalChat)}</div>
+              <div style={s.totalValue}>{fmtCost(totalChat)}</div>
             </div>
             <div style={s.totalCard}>
               Всего (под фильтр)

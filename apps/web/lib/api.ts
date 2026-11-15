@@ -829,6 +829,9 @@ export interface GenerationCostItem {
   model: string;
   prompt: string;
   units?: number | null; // символы (tts) / секунды аудио (stt) / токены (chat); null для image/video
+  promptTokens?: number | null;     // чат: входные токены
+  completionTokens?: number | null; // чат: выходные токены
+  providerCostUsd?: number | null;  // фактическая стоимость у провайдера (OpenRouter)
   createdAt: string; // ISO 8601
 }
 
@@ -838,6 +841,37 @@ export interface GenerationCostBreakdown {
   model: string;
   count: number;
   units?: number; // суммарные единицы тарификации (символы/секунды); 0 для image/video
+  providerCost?: number;        // сумма фактической стоимости от провайдера
+  estCount?: number;            // записей без фактической стоимости (оцениваются по ценам)
+  estUnits?: number;            // их единицы без разбивки на вход/выход
+  estPromptTokens?: number;     // их входные токены (чат)
+  estCompletionTokens?: number; // их выходные токены (чат)
+}
+
+/** Источник цены модели. */
+export type ModelPriceSource = "manual" | "default" | "openrouter" | "atlascloud";
+
+/** Себестоимость модели (GET /admin/model-pricing). */
+export interface ModelPrice {
+  model: string;
+  type: string;                 // "image" | "video" | "tts" | "stt" | "chat"
+  price: number | null;         // основная цена (для чата — вход за 1M токенов)
+  outputPrice: number | null;   // чат: выход за 1M токенов
+  meta: {
+    source: ModelPriceSource;
+    updatedAt?: string;
+    checkedAt?: string;
+    locked?: boolean;
+    note?: string;
+    lastError?: string;
+  };
+}
+
+/** Результат автообновления цен (POST /admin/model-pricing/refresh). */
+export interface ModelPricingRefreshResult {
+  errors: string[];
+  summary: { updated: number; unchanged: number; locked: number; notFound: number };
+  models: ModelPrice[];
 }
 
 /** Данные раздела «Расходы» (GET /admin/generation-costs). */
@@ -1735,6 +1769,26 @@ export const admin = {
     if (params?.offset != null) qs.set("offset", String(params.offset));
     const q = qs.toString();
     return apiFetch<GenerationCosts>(`/admin/generation-costs${q ? `?${q}` : ""}`);
+  },
+
+  /** Себестоимость моделей с источником цены (GET /admin/model-pricing). */
+  async getModelPricing(): Promise<{ models: ModelPrice[] }> {
+    return apiFetch<{ models: ModelPrice[] }>("/admin/model-pricing");
+  },
+
+  /** Сохраняет цены моделей, заданные вручную (PUT /admin/model-pricing). */
+  async saveModelPricing(
+    prices: Record<string, { price: number | null; outputPrice?: number | null; locked?: boolean }>,
+  ): Promise<{ models: ModelPrice[] }> {
+    return apiFetch<{ models: ModelPrice[] }>("/admin/model-pricing", {
+      method: "PUT",
+      body: JSON.stringify({ prices }),
+    });
+  },
+
+  /** Загружает цены с сайтов провайдеров (POST /admin/model-pricing/refresh). */
+  async refreshModelPricing(): Promise<ModelPricingRefreshResult> {
+    return apiFetch<ModelPricingRefreshResult>("/admin/model-pricing/refresh", { method: "POST" });
   },
 
   // ─── Engagement (накрутка лайков + автокомментарии) ─────────
