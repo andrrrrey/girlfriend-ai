@@ -1810,45 +1810,22 @@ function buildCivitaiNonSdStep(p: {
   };
 }
 
-async function generateImageCivitai(params: {
-  apiToken: string;
-  generationStyle: string;
+/** Параметры запроса генерации Civitai (без токена и дедлайна — они нужны только для отправки). */
+type CivitaiImageRequestParams = Omit<Parameters<typeof generateImageCivitai>[0], "apiToken" | "deadline">;
+
+/**
+ * Собирает тело воркфлоу Civitai: выбирает чекпоинт, размеры и шаг генерации.
+ * Используется и для генерации, и для оценки стоимости (whatif) — поэтому
+ * оценка считается ровно по тому запросу, который уйдёт при генерации.
+ */
+function buildCivitaiImageRequest(params: CivitaiImageRequestParams): {
+  model: CivitaiModelConfig;
   prompt: string;
-  negativePrompt?: string;
-  aspectRatio?: string;
-  /**
-   * Если задан — генерация идёт в режиме img2img на том же чекпоинте стиля:
-   * исходное фото передаётся как `images: [{ url }]`, сила изменения — `denoise`.
-   * Так результат сохраняет внешность персонажа И его стиль (в отличие от
-   * ModelsLab img2img, который работает только на своих realistic-vision и т.п.).
-   */
-  initImageUrl?: string;
-  /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
-  denoise?: number;
-  /** Аватар персонажа как референс внешности (только Grok → editImage). */
-  referenceImageUrl?: string;
-  /** Промпт с SFW-тегами — подменяет `prompt` для Grok (модерация xAI не пропускает NSFW). */
-  sfwPrompt?: string;
-  /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
-  seed?: number;
-  /**
-   * Точный чекпоинт (AIR), которым нужно генерировать. Если задан — используется
-   * именно он (а не случайный из пула стиля). КРИТИЧНО для совпадения: аватар и
-   * последующие картинки персонажа должны идти на ОДНОМ чекпоинте, иначе стиль и
-   * внешность расходятся, а seed теряет смысл (seed воспроизводит только в рамках
-   * того же чекпоинта).
-   */
-  modelAir?: string;
-  /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
-  models: Record<string, CivitaiModelConfig[]>;
-  /** Явные размеры кадра (hires-проход) — перекрывают размеры по aspectRatio. */
-  dims?: { width: number; height: number };
-  /** Явное число шагов (hires-проход) — перекрывает шаги чекпоинта. */
-  steps?: number;
-  /** Дедлайн (epoch ms) для необязательных проходов: по истечении — отмена и ошибка. */
-  deadline?: number;
-}): Promise<{ url: string; model: string; prompt: string; base: CivitaiBase; width: number; height: number }> {
-  const { apiToken, generationStyle, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, sfwPrompt, seed, modelAir, models } = params;
+  width: number;
+  height: number;
+  requestBody: unknown;
+} {
+  const { generationStyle, negativePrompt, aspectRatio, initImageUrl, denoise, referenceImageUrl, sfwPrompt, seed, modelAir, models } = params;
 
   // Если передан конкретный AIR — берём именно его (совпадение с аватаром);
   // иначе случайный чекпоинт из пула стиля (как при первичной генерации аватара).
@@ -1902,6 +1879,49 @@ async function generateImageCivitai(params: {
   } : buildCivitaiNonSdStep({ model, prompt, negativePrompt, aspectRatio, width: w, height: h, seed, initImageUrl, denoise, referenceImageUrl });
 
   logger.info({ air: model.air, generationStyle, ecosystem: model.base, width: w, height: h, sampleMethod: sdcpp.sampleMethod, schedule: sdcpp.schedule, cfgScale: model.cfgScale, steps, img2img: isImg2Img, denoise: isImg2Img ? (denoise ?? 0.65) : undefined }, "civitai_image_request");
+  return { model, prompt, width: w, height: h, requestBody };
+}
+
+async function generateImageCivitai(params: {
+  apiToken: string;
+  generationStyle: string;
+  prompt: string;
+  negativePrompt?: string;
+  aspectRatio?: string;
+  /**
+   * Если задан — генерация идёт в режиме img2img на том же чекпоинте стиля:
+   * исходное фото передаётся как `images: [{ url }]`, сила изменения — `denoise`.
+   * Так результат сохраняет внешность персонажа И его стиль (в отличие от
+   * ModelsLab img2img, который работает только на своих realistic-vision и т.п.).
+   */
+  initImageUrl?: string;
+  /** Сила денойза для img2img (0..1). Ниже — ближе к оригиналу, выше — больше меняет позу. */
+  denoise?: number;
+  /** Аватар персонажа как референс внешности (только Grok → editImage). */
+  referenceImageUrl?: string;
+  /** Промпт с SFW-тегами — подменяет `prompt` для Grok (модерация xAI не пропускает NSFW). */
+  sfwPrompt?: string;
+  /** Seed генерации; если задан — фиксирует результат для воспроизводимости. */
+  seed?: number;
+  /**
+   * Точный чекпоинт (AIR), которым нужно генерировать. Если задан — используется
+   * именно он (а не случайный из пула стиля). КРИТИЧНО для совпадения: аватар и
+   * последующие картинки персонажа должны идти на ОДНОМ чекпоинте, иначе стиль и
+   * внешность расходятся, а seed теряет смысл (seed воспроизводит только в рамках
+   * того же чекпоинта).
+   */
+  modelAir?: string;
+  /** Актуальные пулы чекпоинтов по стилям (resolveCivitaiModels). */
+  models: Record<string, CivitaiModelConfig[]>;
+  /** Явные размеры кадра (hires-проход) — перекрывают размеры по aspectRatio. */
+  dims?: { width: number; height: number };
+  /** Явное число шагов (hires-проход) — перекрывает шаги чекпоинта. */
+  steps?: number;
+  /** Дедлайн (epoch ms) для необязательных проходов: по истечении — отмена и ошибка. */
+  deadline?: number;
+}): Promise<{ url: string; model: string; prompt: string; base: CivitaiBase; width: number; height: number }> {
+  const { apiToken } = params;
+  const { model, prompt, width: w, height: h, requestBody } = buildCivitaiImageRequest(params);
 
   const { deadline } = params;
   const response = await fetch(`https://orchestration.civitai.com/v2/consumer/workflows?wait=${civitaiSubmitWait(deadline)}&allowMatureContent=true`, {
@@ -2762,6 +2782,62 @@ async function generateImageAtlasCloud(params: {
 
   throw new Error("Atlas Cloud image generation timed out");
 }
+
+/**
+ * POST /ai/civitai/estimate — оценка стоимости генерации на чекпоинтах Civitai.
+ *
+ * Body: `{ airs: string[] }`. Для каждого AIR собирается тот же воркфлоу, что
+ * и при обычной генерации (buildCivitaiImageRequest), и отправляется с
+ * `whatif=true`: Civitai возвращает оценку `cost.total` в Buzz, генерация не
+ * запускается и Buzz не списываются. Апскейл/hires-проход в оценку не входят.
+ *
+ * Ответ: `{ results: [{ air, buzz } | { air, error }] }`. Используется разделом
+ * «Расходы» админки для автоматической цены моделей Civitai.
+ */
+app.post<{ Body: { airs?: unknown } }>("/ai/civitai/estimate", async (req, reply) => {
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "failed_to_fetch_settings_civitai_estimate");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+  const apiToken = settings.CIVITAI_API_TOKEN;
+  if (!apiToken) return reply.status(503).send({ error: "Civitai API token not configured" });
+
+  const airs = (Array.isArray(req.body?.airs) ? req.body.airs : [])
+    .filter((a): a is string => typeof a === "string" && a.startsWith("urn:air:"))
+    .slice(0, 100);
+  const models = resolveCivitaiModels(settings);
+  const results: Array<{ air: string; buzz?: number; error?: string }> = [];
+
+  for (const air of airs) {
+    try {
+      const { requestBody } = buildCivitaiImageRequest({
+        generationStyle: "",
+        prompt: "portrait photo of a young woman, high quality",
+        aspectRatio: "2:3",
+        modelAir: air,
+        models,
+      });
+      const res = await fetch("https://orchestration.civitai.com/v2/consumer/workflows?whatif=true&allowMatureContent=true", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const wf = (await res.json()) as { cost?: { total?: unknown } };
+      const total = Number(wf.cost?.total);
+      if (!Number.isFinite(total) || total < 0) throw new Error("Civitai не вернул стоимость (cost.total)");
+      results.push({ air, buzz: total });
+    } catch (err: any) {
+      logger.warn({ air, err: err?.message }, "civitai_estimate_failed");
+      results.push({ air, error: String(err?.message ?? err) });
+    }
+  }
+  return reply.send({ results });
+});
 
 /**
  * Генерация изображения в режиме img2img через ModelsLab.

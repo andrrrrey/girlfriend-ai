@@ -1,7 +1,7 @@
 /**
  * @file model-pricing.ts
  * @description Себестоимость моделей нейросетей (USD) для раздела «Расходы»:
- * формат хранения, разбор каталогов цен провайдеров и сопоставление моделей.
+ * формат хранения, разбор цен провайдеров и сопоставление моделей.
  *
  * Чистые функции без зависимостей — их используют ModelPricingService и тесты.
  *
@@ -9,13 +9,19 @@
  * - `MODEL_PRICING`      — `{ "<model>": число }` — основная цена модели. Для чата —
  *                          цена входных токенов за 1M, для озвучки — за 1000 символов,
  *                          для распознавания — за минуту, для картинок/видео — за генерацию.
- *                          Формат не меняется (обратная совместимость).
  * - `MODEL_PRICING_META` — `{ "<model>": ModelPriceMeta }` — откуда цена, когда обновлена,
  *                          зафиксирована ли вручную, цена выходных токенов (чат).
  *
- * Автозагрузка: цены есть в открытых JSON-API только у OpenRouter (чат) и Atlas Cloud
- * (изображения/видео wan/van). ModelsLab, Civitai, ElevenLabs и OpenAI публикуют цены
- * только на страницах тарифов и зависят от плана — такие модели остаются с ручной ценой.
+ * Источники цен:
+ * - OpenRouter — JSON-каталог моделей (чат);
+ * - Atlas Cloud — JSON-каталог моделей (Wan/Van: изображения, видео), с поиском
+ *   аналогичной модели, если точного id нет в каталоге;
+ * - ModelsLab — страница тарифов (цена вызова SD/SDXL/Flux на тарифе Standard, LLM);
+ * - ElevenLabs — страница тарифов API (озвучка, за 1000 символов);
+ * - OpenAI — страница цен (распознавание речи, за минуту);
+ * - Civitai — оценка стоимости воркфлоу (whatif) через AI-сервис, Buzz → USD;
+ * - история — фактическая стоимость ответов чата у провайдера ($/1M токенов),
+ *   если модели уже нет в каталоге.
  */
 
 /** Ключи настроек. */
@@ -23,19 +29,40 @@ export const MODEL_PRICING_KEY = "MODEL_PRICING";
 export const MODEL_PRICING_META_KEY = "MODEL_PRICING_META";
 
 /** Источник цены модели. */
-export type PriceSource = "manual" | "default" | "openrouter" | "atlascloud";
+export type PriceSource =
+  | "manual"
+  | "default"
+  | "openrouter"
+  | "atlascloud"
+  | "modelslab"
+  | "elevenlabs"
+  | "openai"
+  | "civitai"
+  | "history";
+
+const PRICE_SOURCES: PriceSource[] = [
+  "manual",
+  "default",
+  "openrouter",
+  "atlascloud",
+  "modelslab",
+  "elevenlabs",
+  "openai",
+  "civitai",
+  "history",
+];
 
 /** Метаданные цены модели. */
 export interface ModelPriceMeta {
   /** Откуда взята текущая цена. */
   source: PriceSource;
-  /** Когда цена последний раз менялась/подтверждалась (ISO). */
+  /** Когда цена последний раз менялась (ISO). */
   updatedAt?: string;
   /** Зафиксирована вручную — автообновление её не трогает. */
   locked?: boolean;
   /** Цена выходных токенов за 1M (только чат). */
   outputPrice?: number;
-  /** Пояснение к цене (например «0.068 $/сек × 5 сек»). */
+  /** Пояснение к цене (например «$0.068/сек × 5 сек»). */
   note?: string;
   /** Последняя ошибка автообновления (модель не найдена у провайдера и т.п.). */
   lastError?: string;
@@ -43,7 +70,7 @@ export interface ModelPriceMeta {
   checkedAt?: string;
 }
 
-/** Цена модели, найденная в каталоге провайдера. */
+/** Цена модели, найденная у провайдера. */
 export interface FetchedPrice {
   source: Exclude<PriceSource, "manual" | "default">;
   /** Основная цена (см. MODEL_PRICING). */
@@ -71,45 +98,48 @@ export interface AtlasPrice {
   outputPer1M?: number;
 }
 
-/**
- * Длительность видео по умолчанию (сек). Atlas Cloud тарифицирует видео посекундно
- * с минимумом 5 секунд, а AI-сервис генерирует 5-секундные ролики, если длительность
- * не указана, поэтому цена «за генерацию» = цена за секунду × 5.
- */
-export const DEFAULT_VIDEO_SECONDS = 5;
+/** Цены ModelsLab со страницы тарифов. */
+export interface ModelsLabPrices {
+  /** Цена вызова генерации изображения (SD/SDXL/Flux), USD. */
+  imagePerCall?: number;
+  /** Тариф, к которому относится цена вызова. */
+  plan?: string;
+  /** Цена LLM, USD за 1M токенов («от»). */
+  llmPer1M?: number;
+}
 
-/** Тип операции → модели с ценой по умолчанию (USD), пока нет сохранённой/загруженной. */
+/** Типы операций, для которых считается себестоимость. */
+export type CostType = "image" | "video" | "tts" | "stt" | "chat";
+
+/** Цена модели по умолчанию (USD). */
 export interface DefaultModelPrice {
-  type: "image" | "video" | "tts" | "stt" | "chat";
+  type: CostType;
   price: number;
   outputPrice?: number;
 }
 
 /**
- * Цены по умолчанию — оценки по тарифам провайдеров. Используются, пока
- * администратор не сохранил свою цену и автозагрузка её не нашла.
- * ModelsLab: SD1.5 ~$0.002/img, SDXL/Flux ~$0.004/img; Civitai ~$0.005/img;
- * Atlas Cloud видео ~$0.07/сек × 5 сек; ElevenLabs ≈ $0.2/1k симв.; Whisper $0.006/мин;
- * ModelsLab LLM ~$0.2/1M токенов; minimax на OpenRouter ~$0.3 вход / $1.2 выход за 1M.
+ * Цены по умолчанию — пока цена не сохранена и не загружена от провайдера.
+ * Оценки по тарифам провайдеров на ноябрь 2026.
  */
 export const DEFAULT_MODEL_PRICES: Record<string, DefaultModelPrice> = {
-  "realistic-vision-v51": { type: "image", price: 0.002 },
-  sdxl: { type: "image", price: 0.004 },
-  "juggernaut-xl": { type: "image", price: 0.004 },
-  flux: { type: "image", price: 0.004 },
+  "realistic-vision-v51": { type: "image", price: 0.0047 },
+  sdxl: { type: "image", price: 0.0047 },
+  "juggernaut-xl": { type: "image", price: 0.0047 },
+  flux: { type: "image", price: 0.0047 },
   "alibaba/wan-2.6/text-to-image": { type: "image", price: 0.021 },
   civitai: { type: "image", price: 0.005 },
-  "atlascloud/van-2.6/text-to-video": { type: "video", price: 0.35 },
+  "atlascloud/van-2.6/text-to-video": { type: "video", price: 0.34 },
   "atlascloud/wan-2.6-spicy/image-to-video": { type: "video", price: 0.35 },
   "alibaba/wan-2.7/image-to-video": { type: "video", price: 0.5 },
-  eleven_multilingual_v2: { type: "tts", price: 0.2 },
+  eleven_multilingual_v2: { type: "tts", price: 0.08 },
   "whisper-1": { type: "stt", price: 0.006 },
   "llama-3.1-8b-uncensored": { type: "chat", price: 0.2, outputPrice: 0.2 },
   "minimax/minimax-m2-her": { type: "chat", price: 0.3, outputPrice: 1.2 },
 };
 
 /** Тип операции для модели без истории генераций (по известным спискам). */
-export function guessModelType(model: string): string | undefined {
+export function guessModelType(model: string): CostType | undefined {
   if (DEFAULT_MODEL_PRICES[model]) return DEFAULT_MODEL_PRICES[model].type;
   if (/^eleven_/.test(model)) return "tts";
   if (/whisper|transcribe/.test(model)) return "stt";
@@ -119,6 +149,16 @@ export function guessModelType(model: string): string | undefined {
   if (/llama|minimax|mistral|qwen|gpt|claude|gemini|deepseek|hermes|uncensored/i.test(model)) return "chat";
   return undefined;
 }
+
+/**
+ * Длительность видео по умолчанию (сек). Atlas Cloud тарифицирует видео посекундно
+ * с минимумом 5 секунд, а AI-сервис генерирует 5-секундные ролики, если длительность
+ * не указана, поэтому цена «за генерацию» = цена за секунду × 5.
+ */
+export const DEFAULT_VIDEO_SECONDS = 5;
+
+/** Курс Buzz Civitai по умолчанию: 1000 Buzz = $1. Переопределяется настройкой CIVITAI_BUZZ_USD. */
+export const DEFAULT_BUZZ_USD = 0.001;
 
 /** Неотрицательное конечное число или undefined. */
 function toNum(value: unknown): number | undefined {
@@ -131,6 +171,33 @@ function toNum(value: unknown): number | undefined {
 export function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6;
 }
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Основные HTML-сущности (страницы тарифов кодируют кавычки и амперсанды). */
+export function decodeEntities(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&amp;/g, "&");
+}
+
+/** Видимый текст HTML-страницы одной строкой (без скриптов, стилей и тегов). */
+export function htmlToText(html: string): string {
+  const stripped = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+  return decodeEntities(stripped).replace(/\s+/g, " ");
+}
+
+// ─── Разбор источников ────────────────────────────────────────────────────────
 
 /**
  * Разбирает ответ `GET https://openrouter.ai/api/v1/models`.
@@ -175,79 +242,280 @@ export function parseAtlasCatalog(json: unknown): Map<string, AtlasPrice> {
   return out;
 }
 
-/** Каталоги цен, загруженные с провайдеров (null — каталог недоступен). */
-export interface PriceCatalogs {
-  openrouter: Map<string, OpenRouterPrice> | null;
-  atlascloud: Map<string, AtlasPrice> | null;
+/**
+ * Разбирает страницу https://modelslab.com/pricing: цену вызова Stable Diffusion
+ * («A Stable Diffusion API call costs $0.0047 on the $47/month Standard plan») и
+ * минимальную цену LLM («LLM inference from $0.20 per million tokens»).
+ */
+export function parseModelsLabPricing(html: string): ModelsLabPrices {
+  const text = htmlToText(html);
+  const out: ModelsLabPrices = {};
+  const call = text.match(/Stable Diffusion API call costs \$([\d.]+) on the \$\d+\/month (\w+) plan/i);
+  if (call) {
+    out.imagePerCall = toNum(call[1]);
+    out.plan = call[2];
+  } else {
+    const from = text.match(/Image generation starts at \$([\d.]+) per image/i);
+    if (from) out.imagePerCall = toNum(from[1]);
+  }
+  const llm = text.match(/LLM inference from \$([\d.]+) per million tokens/i);
+  if (llm) out.llmPer1M = toNum(llm[1]);
+  if (out.imagePerCall === undefined && out.llmPer1M === undefined) {
+    throw new Error("ModelsLab: цены на странице тарифов не найдены");
+  }
+  return out;
+}
+
+/** Группы моделей ElevenLabs на странице тарифов API. */
+const ELEVENLABS_LABELS = ["v2 Multilingual", "Flash / Turbo", "v3 Conversational", "v3", "v4 Turbo", "v4"];
+
+/**
+ * Разбирает страницу https://elevenlabs.io/pricing/api: цена озвучки за 1000 символов
+ * по группам моделей («v2 Multilingual Text to Speech $0.08 Price per 1K characters»).
+ *
+ * @returns карта «группа моделей → $ за 1000 символов»
+ */
+export function parseElevenLabsPricing(html: string): Map<string, number> {
+  const text = htmlToText(html);
+  const out = new Map<string, number>();
+  for (const label of ELEVENLABS_LABELS) {
+    const re = new RegExp(`(?:^|\\s)${escapeRegExp(label)} Text to Speech (?:New )?\\$([\\d.]+) Price per 1K characters`, "i");
+    const m = text.match(re);
+    const price = m ? toNum(m[1]) : undefined;
+    if (price !== undefined) out.set(label, price);
+  }
+  if (out.size === 0) throw new Error("ElevenLabs: цены на странице тарифов не найдены");
+  return out;
+}
+
+/** Группа ElevenLabs на странице тарифов по id модели. */
+export function elevenLabsLabel(model: string): string | undefined {
+  if (/^eleven_multilingual_v2/.test(model)) return "v2 Multilingual";
+  if (/^eleven_(turbo|flash)_/.test(model)) return "Flash / Turbo";
+  if (/^eleven_v3_conversational/.test(model)) return "v3 Conversational";
+  if (/^eleven_v3/.test(model)) return "v3";
+  if (/^eleven_v4_turbo/.test(model)) return "v4 Turbo";
+  if (/^eleven_v4/.test(model)) return "v4";
+  return undefined;
 }
 
 /**
- * Находит цену модели в каталогах провайдеров.
+ * Разбирает страницу https://developers.openai.com/api/docs/pricing: цены
+ * распознавания речи за минуту. Таблица лежит в JSON-атрибуте компонента:
+ * `"modelId":[0,"whisper-1"],"rows":[...,"$0.006 / minute"]`.
+ *
+ * @returns карта «id модели → $ за минуту»
+ */
+export function parseOpenAIPricing(html: string): Map<string, number> {
+  const src = decodeEntities(html);
+  const out = new Map<string, number>();
+  // У одной записи бывают и "model" (название), и "modelId" — поэтому цену ищем
+  // вперёд от каждого упоминания отдельно, а не одним глобальным выражением
+  // (оно «съело» бы modelId, стоящий между названием и ценой).
+  const idRe = /"(?:modelId|model)":\[0,"([^"]+)"\]/g;
+  for (const m of src.matchAll(idRe)) {
+    const from = (m.index ?? 0) + m[0].length;
+    const priceMatch = src.slice(from, from + 400).match(/^[^{}]*?"\$([\d.]+) \/ minute"/);
+    const price = priceMatch ? toNum(priceMatch[1]) : undefined;
+    if (price !== undefined && !out.has(m[1])) out.set(m[1], price);
+  }
+  if (out.size === 0) throw new Error("OpenAI: цены за минуту на странице не найдены");
+  return out;
+}
+
+/** Медиана списка чисел (для базовой цены «civitai» по оценкам чекпоинтов). */
+export function median(values: number[]): number | undefined {
+  if (!values.length) return undefined;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+// ─── Сопоставление моделей ───────────────────────────────────────────────────
+
+/** Цены, загруженные из всех источников (null — источник недоступен). */
+export interface PriceCatalogs {
+  openrouter: Map<string, OpenRouterPrice> | null;
+  atlascloud: Map<string, AtlasPrice> | null;
+  modelslab: ModelsLabPrices | null;
+  elevenlabs: Map<string, number> | null;
+  openai: Map<string, number> | null;
+  /** Civitai: AIR (и "civitai" — медиана) → USD за генерацию. */
+  civitai: Map<string, { usd: number; buzz: number }> | null;
+  /** Фактическая стоимость чата: модель → $ за 1M токенов (по ответам провайдера). */
+  history: Map<string, { per1M: number; replies: number }> | null;
+  /** Модели, которые обслуживает ModelsLab (картинки и чат). */
+  modelslabModels: Set<string>;
+}
+
+/** Пустые каталоги (для тестов и частичных обновлений). */
+export function emptyCatalogs(): PriceCatalogs {
+  return {
+    openrouter: null,
+    atlascloud: null,
+    modelslab: null,
+    elevenlabs: null,
+    openai: null,
+    civitai: null,
+    history: null,
+    modelslabModels: new Set(),
+  };
+}
+
+/**
+ * Ищет в каталоге Atlas аналогичную модель, если точного id нет: та же модель
+ * и задача без NSFW-суффиксов (`atlascloud/wan-2.6-spicy/image-to-video` →
+ * `…/wan-2.6/image-to-video`).
+ */
+export function findAtlasSimilar(model: string, catalog: Map<string, AtlasPrice>): string | undefined {
+  const segs = model.split("/");
+  if (segs.length < 2) return undefined;
+  const key = `${segs[segs.length - 2]}/${segs[segs.length - 1]}`
+    .replace(/-(spicy|nsfw|uncensored)(?=\/|$)/gi, "")
+    .toLowerCase();
+  const candidates = Array.from(catalog.keys()).filter((id) => id.toLowerCase().endsWith(`/${key}`));
+  if (!candidates.length) return undefined;
+  const org = segs[0].toLowerCase();
+  return candidates.find((id) => id.toLowerCase().startsWith(`${org}/`)) ?? candidates.sort()[0];
+}
+
+/** Цена картинки/видео из записи Atlas; null — непонятная единица. */
+function atlasMediaPrice(type: string, atlas: AtlasPrice, note: string): FetchedPrice | string {
+  if (atlas.basePrice === undefined) return "у модели в каталоге Atlas Cloud нет цены";
+  const perSecond = type === "video" && (!atlas.unit || atlas.unit === "second");
+  if (perSecond) {
+    return {
+      source: "atlascloud",
+      price: round6(atlas.basePrice * DEFAULT_VIDEO_SECONDS),
+      note: `$${atlas.basePrice}/сек × ${DEFAULT_VIDEO_SECONDS} сек${note}`,
+    };
+  }
+  if (atlas.unit && !["image", "generation", "request"].includes(atlas.unit)) {
+    return `неизвестная единица цены Atlas Cloud: «${atlas.unit}»`;
+  }
+  return { source: "atlascloud", price: atlas.basePrice, note: `$${atlas.basePrice} за генерацию${note}` };
+}
+
+type Resolved = { ok: true; price: FetchedPrice } | { ok: false; reason: string };
+
+function chatPrice(model: string, c: PriceCatalogs): Resolved {
+  const or = c.openrouter?.get(model);
+  if (or) {
+    return {
+      ok: true,
+      price: {
+        source: "openrouter",
+        price: or.inputPer1M,
+        outputPrice: or.outputPer1M,
+        note: `OpenRouter: вход $${or.inputPer1M} / выход $${or.outputPer1M} за 1M токенов`,
+      },
+    };
+  }
+  const atlas = c.atlascloud?.get(model);
+  if (atlas?.inputPer1M !== undefined) {
+    const out = atlas.outputPer1M ?? atlas.inputPer1M;
+    return {
+      ok: true,
+      price: {
+        source: "atlascloud",
+        price: atlas.inputPer1M,
+        outputPrice: out,
+        note: `Atlas Cloud: вход $${atlas.inputPer1M} / выход $${out} за 1M токенов`,
+      },
+    };
+  }
+  const hist = c.history?.get(model);
+  if (hist) {
+    return {
+      ok: true,
+      price: {
+        source: "history",
+        price: hist.per1M,
+        outputPrice: hist.per1M,
+        note: `по фактической стоимости ${hist.replies} ответов у провайдера (в среднем за 1M токенов)`,
+      },
+    };
+  }
+  if (c.modelslabModels.has(model) && c.modelslab?.llmPer1M !== undefined) {
+    const p = c.modelslab.llmPer1M;
+    return { ok: true, price: { source: "modelslab", price: p, outputPrice: p, note: `ModelsLab: LLM от $${p} за 1M токенов` } };
+  }
+  return { ok: false, reason: "модели нет у OpenRouter/Atlas Cloud/ModelsLab и нет истории фактических расходов" };
+}
+
+function imageVideoPrice(model: string, type: string, c: PriceCatalogs): Resolved {
+  // Civitai: чекпоинты по AIR и базовая цена «civitai».
+  if (/^urn:air:/i.test(model) || model === "civitai") {
+    const civ = c.civitai?.get(model);
+    if (civ) {
+      const note =
+        model === "civitai"
+          ? `медиана оценок чекпоинтов Civitai (${civ.buzz} Buzz)`
+          : `оценка Civitai: ${civ.buzz} Buzz за генерацию (без апскейла)`;
+      return { ok: true, price: { source: "civitai", price: civ.usd, note } };
+    }
+    if (!c.civitai) return { ok: false, reason: "оценка Civitai недоступна (нет токена или AI-сервис не ответил)" };
+    return { ok: false, reason: "Civitai не вернул оценку стоимости для этого чекпоинта" };
+  }
+
+  const atlas = c.atlascloud;
+  if (atlas) {
+    const exact = atlas.get(model);
+    if (exact) {
+      const r = atlasMediaPrice(type, exact, "");
+      return typeof r === "string" ? { ok: false, reason: r } : { ok: true, price: r };
+    }
+    const similar = findAtlasSimilar(model, atlas);
+    if (similar) {
+      const r = atlasMediaPrice(type, atlas.get(similar)!, ` (по аналогичной модели ${similar})`);
+      return typeof r === "string" ? { ok: false, reason: r } : { ok: true, price: r };
+    }
+  }
+
+  if (type === "image" && c.modelslabModels.has(model) && c.modelslab?.imagePerCall !== undefined) {
+    const p = c.modelslab.imagePerCall;
+    const plan = c.modelslab.plan ? ` на тарифе ${c.modelslab.plan}` : "";
+    return { ok: true, price: { source: "modelslab", price: p, note: `ModelsLab: $${p} за вызов${plan}` } };
+  }
+
+  if (!atlas && !c.modelslab) return { ok: false, reason: "каталоги Atlas Cloud и ModelsLab недоступны" };
+  return { ok: false, reason: "модели нет в каталогах Atlas Cloud/ModelsLab" };
+}
+
+/**
+ * Находит цену модели в загруженных источниках.
  *
  * @param model — id модели, как он записан в ai_jobs.input.model
  * @param type  — тип операции: "chat" | "image" | "video" | "tts" | "stt"
  * @returns цену или причину, почему её нет
  */
-export function resolveModelPrice(
-  model: string,
-  type: string,
-  catalogs: PriceCatalogs,
-): { ok: true; price: FetchedPrice } | { ok: false; reason: string } {
-  if (type === "chat") {
-    const or = catalogs.openrouter?.get(model);
-    if (or) {
-      return {
-        ok: true,
-        price: {
-          source: "openrouter",
-          price: or.inputPer1M,
-          outputPrice: or.outputPer1M,
-          note: `вход $${or.inputPer1M} / выход $${or.outputPer1M} за 1M токенов`,
-        },
-      };
+export function resolveModelPrice(model: string, type: string, catalogs: PriceCatalogs): Resolved {
+  switch (type) {
+    case "chat":
+      return chatPrice(model, catalogs);
+    case "image":
+    case "video":
+      return imageVideoPrice(model, type, catalogs);
+    case "tts": {
+      const label = elevenLabsLabel(model);
+      if (!label) return { ok: false, reason: "неизвестная модель ElevenLabs" };
+      if (!catalogs.elevenlabs) return { ok: false, reason: "страница тарифов ElevenLabs недоступна" };
+      const p = catalogs.elevenlabs.get(label);
+      if (p === undefined) return { ok: false, reason: `на странице ElevenLabs нет цены для «${label}»` };
+      return { ok: true, price: { source: "elevenlabs", price: p, note: `ElevenLabs API: $${p} за 1000 символов (${label})` } };
     }
-    const atlas = catalogs.atlascloud?.get(model);
-    if (atlas?.inputPer1M !== undefined) {
-      return {
-        ok: true,
-        price: {
-          source: "atlascloud",
-          price: atlas.inputPer1M,
-          outputPrice: atlas.outputPer1M,
-          note: `вход $${atlas.inputPer1M} / выход $${atlas.outputPer1M ?? atlas.inputPer1M} за 1M токенов`,
-        },
-      };
+    case "stt": {
+      if (!catalogs.openai) return { ok: false, reason: "страница цен OpenAI недоступна" };
+      const p = catalogs.openai.get(model);
+      if (p === undefined) return { ok: false, reason: "модели нет на странице цен OpenAI" };
+      return { ok: true, price: { source: "openai", price: p, note: `OpenAI: $${p} за минуту` } };
     }
-    if (!catalogs.openrouter && !catalogs.atlascloud) return { ok: false, reason: "каталоги провайдеров недоступны" };
-    return { ok: false, reason: "модели нет в каталогах OpenRouter/Atlas Cloud — цена задаётся вручную" };
+    default:
+      return { ok: false, reason: "неизвестный тип операции" };
   }
-
-  if (type === "image" || type === "video") {
-    const atlas = catalogs.atlascloud?.get(model);
-    if (!atlas || atlas.basePrice === undefined) {
-      if (!catalogs.atlascloud) return { ok: false, reason: "каталог Atlas Cloud недоступен" };
-      return { ok: false, reason: "модели нет в каталоге Atlas Cloud — цена задаётся вручную" };
-    }
-    // Видео в Atlas тарифицируется посекундно (unit "second" или без unit).
-    const perSecond = type === "video" && (!atlas.unit || atlas.unit === "second");
-    if (perSecond) {
-      return {
-        ok: true,
-        price: {
-          source: "atlascloud",
-          price: round6(atlas.basePrice * DEFAULT_VIDEO_SECONDS),
-          note: `$${atlas.basePrice}/сек × ${DEFAULT_VIDEO_SECONDS} сек`,
-        },
-      };
-    }
-    if (atlas.unit && atlas.unit !== "image" && atlas.unit !== "generation" && atlas.unit !== "request") {
-      return { ok: false, reason: `неизвестная единица цены Atlas Cloud: «${atlas.unit}»` };
-    }
-    return { ok: true, price: { source: "atlascloud", price: atlas.basePrice, note: `$${atlas.basePrice} за генерацию` } };
-  }
-
-  return { ok: false, reason: "у провайдера нет API цен — цена задаётся вручную" };
 }
+
+// ─── Хранение ────────────────────────────────────────────────────────────────
 
 /** Безопасный разбор JSON-настройки в объект. */
 export function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -273,11 +541,10 @@ export function normalizePriceMap(raw: Record<string, unknown>): Record<string, 
 /** Нормализует MODEL_PRICING_META. */
 export function normalizeMetaMap(raw: Record<string, unknown>): Record<string, ModelPriceMeta> {
   const out: Record<string, ModelPriceMeta> = {};
-  const sources: PriceSource[] = ["manual", "default", "openrouter", "atlascloud"];
   for (const [model, v] of Object.entries(raw)) {
     if (!v || typeof v !== "object") continue;
     const m = v as Record<string, unknown>;
-    const source = sources.includes(m.source as PriceSource) ? (m.source as PriceSource) : "manual";
+    const source = PRICE_SOURCES.includes(m.source as PriceSource) ? (m.source as PriceSource) : "manual";
     const meta: ModelPriceMeta = { source };
     if (typeof m.updatedAt === "string") meta.updatedAt = m.updatedAt;
     if (m.locked === true) meta.locked = true;

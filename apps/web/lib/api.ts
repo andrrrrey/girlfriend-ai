@@ -849,7 +849,16 @@ export interface GenerationCostBreakdown {
 }
 
 /** Источник цены модели. */
-export type ModelPriceSource = "manual" | "default" | "openrouter" | "atlascloud";
+export type ModelPriceSource =
+  | "manual"
+  | "default"
+  | "openrouter"
+  | "atlascloud"
+  | "modelslab"
+  | "elevenlabs"
+  | "openai"
+  | "civitai"
+  | "history";
 
 /** Себестоимость модели (GET /admin/model-pricing). */
 export interface ModelPrice {

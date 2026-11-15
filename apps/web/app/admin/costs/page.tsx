@@ -39,6 +39,11 @@ const TYPE_META: Record<string, { label: string; color: string }> = {
 const SOURCE_META: Record<ModelPriceSource, { label: string; color: string }> = {
   openrouter: { label: "OpenRouter", color: "#7ed492" },
   atlascloud: { label: "Atlas Cloud", color: "#7ed492" },
+  modelslab: { label: "ModelsLab", color: "#7ed492" },
+  elevenlabs: { label: "ElevenLabs", color: "#7ed492" },
+  openai: { label: "OpenAI", color: "#7ed492" },
+  civitai: { label: "Civitai", color: "#7ed492" },
+  history: { label: "по фактическим расходам", color: "#6cb2eb" },
   manual: { label: "вручную", color: "#f0b429" },
   default: { label: "по умолчанию", color: "#848484" },
 };
@@ -372,11 +377,13 @@ export default function AdminCostsPage() {
         <div style={{ ...adminStyles.card, marginBottom: 20 }}>
           <h2 style={adminStyles.title}>Стоимость по моделям</h2>
           <p style={adminStyles.subtitle}>
-            Цены ($) загружаются автоматически раз в сутки из каталогов провайдеров: OpenRouter (чат) и Atlas Cloud
-            (Wan/Van — изображения и видео; цена видео за секунду × 5 сек). У ModelsLab, Civitai, ElevenLabs и OpenAI
-            нет открытого API цен (цена зависит от тарифного плана) — для них цена задаётся вручную.
-            Изменённая вручную цена фиксируется и не перезаписывается автообновлением. Для чата, где провайдер
-            возвращает фактическую стоимость (OpenRouter), в расходах используется она.
+            Цены ($) загружаются автоматически раз в сутки и по кнопке «Обновить цены от провайдеров»:
+            OpenRouter и Atlas Cloud — из каталогов моделей (видео — цена за секунду × 5 сек); ModelsLab, ElevenLabs
+            и OpenAI — со страниц тарифов (ModelsLab — цена вызова на тарифе Standard); Civitai — оценка стоимости
+            генерации на каждом чекпоинте (Buzz → $, 1000 Buzz = $1, без апскейла). Если модели чата уже нет в
+            каталогах, цена считается по фактической стоимости её ответов за 30 дней. Изменённая вручную цена
+            фиксируется и не перезаписывается автообновлением. Для ответов чата, где провайдер вернул фактическую
+            стоимость (OpenRouter), в расходах используется она.
           </p>
           <div style={{ overflowX: "auto" }}>
             <table style={s.table as React.CSSProperties}>
