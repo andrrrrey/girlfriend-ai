@@ -191,6 +191,24 @@ async function fetchSettings(): Promise<Record<string, string>> {
   return res.json();
 }
 
+/**
+ * Причина, по которой не загрузились настройки, — отдаётся вместе с 503, чтобы
+ * её было видно без логов (админ в чате, «Диагностика чата» в админке).
+ * 401 — INTERNAL_API_TOKEN не задан или не совпадает у api и ai (вне
+ * ENV=development /internal/* без токена закрыт). Сетевая ошибка — API
+ * недоступен по API_HOST:API_PORT.
+ */
+function settingsErrorDetails(err: unknown): string {
+  const e = err as Error & { cause?: { code?: string } };
+  let msg = `${e?.message ?? String(err)}${e?.cause?.code ? ` (${e.cause.code})` : ""} [${API_BASE}/internal/settings]`;
+  if (/: 401\b/.test(msg)) {
+    msg += env.INTERNAL_API_TOKEN
+      ? " — api отклонил INTERNAL_API_TOKEN: у api он не задан или отличается от ai"
+      : " — у ai не задан INTERNAL_API_TOKEN, а api вне ENV=development его требует";
+  }
+  return msg;
+}
+
 // ─── Глобальные промпт-теги и negative_prompt ────────────────────────────────
 // Применяются на сервере ко ВСЕМ генерациям изображений и видео (аватар,
 // автоген, чат, страница генерации), чтобы поведение было единым независимо от
@@ -583,7 +601,7 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   const chatCfg = resolveChatProvider(settings);
@@ -934,7 +952,7 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "text_completion_failed_to_fetch_settings");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   const overrideModel = typeof req.body.model === "string" ? req.body.model.trim() : "";
@@ -1125,7 +1143,7 @@ app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply)
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "vision_failed_to_fetch_settings");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
   const apiKey = settings.OPENROUTER_API_KEY;
   if (!apiKey) return reply.status(503).send({ error: "openrouter API key not configured" });
@@ -1230,7 +1248,7 @@ app.post("/ai/stt", async (req, reply) => {
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings_stt");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   const apiKey = settings.OPENAI_API_KEY;
@@ -1319,7 +1337,7 @@ app.post<{ Body: TTSBody }>("/ai/tts", async (req, reply) => {
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings_tts");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   const apiKey = settings.ELEVENLABS_API_KEY;
@@ -2874,7 +2892,7 @@ app.post<{ Body: { airs?: unknown } }>("/ai/civitai/estimate", async (req, reply
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings_civitai_estimate");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
   const apiToken = settings.CIVITAI_API_TOKEN;
   if (!apiToken) return reply.status(503).send({ error: "Civitai API token not configured" });
@@ -3011,7 +3029,7 @@ app.post<{ Body: ImageGenerateBody }>("/ai/image/generate", async (req, reply) =
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings_image");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   // Последняя сетка от русских слов: если после клиентской сборки в промпте
@@ -4025,7 +4043,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
     settings = await fetchSettings();
   } catch (err) {
     logger.error({ err }, "failed_to_fetch_settings_video");
-    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+    return reply.status(503).send({ error: "Failed to fetch AI settings", details: settingsErrorDetails(err) });
   }
 
   // Русская сетка + глобальные теги и обязательный negative_prompt (мердж).
