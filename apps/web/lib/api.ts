@@ -1198,6 +1198,31 @@ export interface ProactiveStats {
 /** Переопределение политики для клиентов бота (пустое поле — как в общей политике). */
 export type ProactiveOverride = Partial<Pick<ProactivePolicy, "enabled" | "delaysHours" | "maxUnanswered" | "quietStart" | "quietEnd">>;
 
+/** Результат запроса к AI-сервису в диагностике чата. */
+export interface ChatDiagnosticsProbe {
+  ok: boolean;
+  status: number | null;
+  ms: number;
+  body: string;
+}
+
+/** Ответ POST /admin/chat-diagnostics. */
+export interface ChatDiagnostics {
+  checkedAt: string;
+  aiBase: string;
+  settings: {
+    chatProvider: string;
+    openrouterChatModelSaved: string | null;
+    openrouterChatModelEffective: string;
+    modelslabChatModel: string | null;
+    openrouterKeySet: boolean;
+    modelslabKeySet: boolean;
+  };
+  health: ChatDiagnosticsProbe;
+  testReply: ChatDiagnosticsProbe;
+  recentFailures: { id: string; createdAt: string; error: string | null; model: unknown }[];
+}
+
 export const admin = {
   /** Инициативные сообщения: политика и статистика (GET /admin/proactive). */
   async getProactive(days = 30): Promise<{ policy: ProactivePolicy; stats: ProactiveStats | null; statsError?: string | null }> {
@@ -1218,6 +1243,14 @@ export const admin = {
    * Обновляет/создаёт настройки пачкой (PUT /admin/settings).
    * @param {Record<string, string>} settings - Словарь key→value
    */
+  /**
+   * Диагностика чата (POST /admin/chat-diagnostics): настройки, здоровье
+   * AI-сервиса, тестовый ответ модели и последние ошибки чата.
+   */
+  async runChatDiagnostics(): Promise<ChatDiagnostics> {
+    return apiFetch<ChatDiagnostics>("/admin/chat-diagnostics", { method: "POST" });
+  },
+
   async upsertSettings(settings: Record<string, string>): Promise<AppSetting[]> {
     return apiFetch<AppSetting[]>("/admin/settings", {
       method: "PUT",

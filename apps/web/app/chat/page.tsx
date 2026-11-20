@@ -334,6 +334,12 @@ function ChatPageInner() {
   // applied right before the final JSX return instead.
 
   const handleDemoError = (err: string, code?: number, body?: any) => {
+    // Администратору показываем настоящую причину от сервера (ключ не задан,
+    // провайдер недоступен и т.п.) — на бою иначе её не увидеть без логов.
+    const adminDetail =
+      user?.role === "admin" && (code === 502 || code === 503 || code === 504)
+        ? ` [${code}: ${String(body?.details ?? body?.error ?? err)}]`
+        : "";
     const popup = code === 429 || code === 403 || code === 402 ? premiumPopupFromError(body) : null;
     if (popup) {
       setPremiumPopup(popup);
@@ -341,12 +347,12 @@ function ChatPageInner() {
       setDemoBanner({ message: t("chat.voiceSubOnly"), subscribeCta: true });
     } else if (code === 503) {
       setDemoBanner({
-        message: "AI-сервис временно недоступен. Попробуйте через минуту.",
+        message: "AI-сервис временно недоступен. Попробуйте через минуту." + adminDetail,
         subscribeCta: false,
       });
     } else if (code === 502 || code === 504) {
       setDemoBanner({
-        message: t("chat.aiError"),
+        message: t("chat.aiError") + adminDetail,
         subscribeCta: false,
       });
     } else {

@@ -8,6 +8,7 @@ import { adminStyles } from "./admin-styles";
 import { AdminTabs } from "./AdminTabs";
 import { CivitaiModelsEditor } from "./CivitaiModelsEditor";
 import { CivitaiLab } from "./CivitaiLab";
+import { ChatDiagnosticsPanel } from "./ChatDiagnosticsPanel";
 
 // Чат-модели OpenRouter. Зеркало OPENROUTER_CHAT_MODELS из packages/types
 // (web не зависит от @repo/types) — меняете список, меняйте в обоих местах.
@@ -263,6 +264,8 @@ export default function AdminSettingsPage() {
             ))}
           </div>
         ))}
+
+        <ChatDiagnosticsPanel />
 
         <CivitaiModelsEditor settings={settings} setSettings={setSettings} />
 

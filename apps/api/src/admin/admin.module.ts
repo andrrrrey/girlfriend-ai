@@ -22,6 +22,7 @@ import { S3Module } from "../s3/s3.module";
 import { CommentGenService } from "./comment-gen/comment-gen.service";
 import { ModelPricingService } from "./model-pricing/model-pricing.service";
 import { FinanceModelService } from "./finance-model/finance-model.service";
+import { ChatDiagnosticsService } from "./chat-diagnostics/chat-diagnostics.service";
 
 /**
  * Модуль администрирования.
@@ -36,7 +37,7 @@ import { FinanceModelService } from "./finance-model/finance-model.service";
 @Module({
   imports: [S3Module],
   controllers: [AdminController, AdminUploadController],
-  providers: [AdminService, CommentGenService, ModelPricingService, FinanceModelService, PrismaService],
+  providers: [AdminService, CommentGenService, ModelPricingService, FinanceModelService, ChatDiagnosticsService, PrismaService],
   exports: [AdminService],
 })
 export class AdminModule {}

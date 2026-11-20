@@ -61,6 +61,7 @@ import { CreateCameraOptionDto } from "./dto/create-camera-option.dto";
 import { UpdateCameraOptionDto } from "./dto/update-camera-option.dto";
 import { ModelPricingService, type ModelPriceInput } from "./model-pricing/model-pricing.service";
 import { FinanceModelService } from "./finance-model/finance-model.service";
+import { ChatDiagnosticsService } from "./chat-diagnostics/chat-diagnostics.service";
 import type { Assumptions } from "./finance-model/finance-model";
 
 /**
@@ -84,6 +85,7 @@ export class AdminController {
     private readonly billingConfig: BillingConfigService,
     private readonly modelPricing: ModelPricingService,
     private readonly financeModel: FinanceModelService,
+    private readonly chatDiagnostics: ChatDiagnosticsService,
   ) {}
 
   // ─── Settings ──────────────────────────────────────────────
@@ -122,6 +124,18 @@ export class AdminController {
     // BILLING_ENFORCED / WELCOME_BONUS_CREDITS должны действовать сразу, без ожидания кэша
     this.billingConfig.invalidate();
     return result;
+  }
+
+  /**
+   * Диагностика чата персонажей: настройки, здоровье AI-сервиса, тестовый
+   * ответ модели и последние ошибки чата — для разбора сбоев без доступа к логам.
+   *
+   * `POST /admin/chat-diagnostics` (POST: делает платный тестовый запрос к модели)
+   */
+  @Post("chat-diagnostics")
+  @HttpCode(HttpStatus.OK)
+  async runChatDiagnostics() {
+    return this.chatDiagnostics.run();
   }
 
   // ─── Characters ────────────────────────────────────────────
