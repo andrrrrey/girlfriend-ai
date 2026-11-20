@@ -34,6 +34,8 @@ import {
   DEFAULT_CHAT_NSFW_PREAMBLE,
   DEFAULT_CHAT_SFW_PREAMBLE,
   DEFAULT_CHAT_RULES,
+  OPENROUTER_CHAT_MODELS,
+  resolveOpenRouterChatModel,
   applyPeopleCountHints,
 } from "@repo/types";
 import OpenAI from "openai";
@@ -302,23 +304,32 @@ interface ChatProviderCfg {
   provider: "modelslab" | "openrouter";
   apiKey: string | undefined;
   model: string;
+  /**
+   * Запасные модели OpenRouter (без основной), которые пробуются по очереди,
+   * если основная недоступна. Пусто — без запасных (например, явный override).
+   */
+  fallbackModels?: string[];
 }
 
 /**
  * Выбирает провайдера чат-модели по настройкам админки.
  *  - CHAT_PROVIDER = "openrouter" → OpenRouter (OPENROUTER_API_KEY,
- *    OPENROUTER_CHAT_MODEL, по умолчанию minimax/minimax-m2-her — заточена
- *    под ролеплей/компаньонов);
+ *    OPENROUTER_CHAT_MODEL, по умолчанию DEFAULT_OPENROUTER_CHAT_MODEL);
+ *    остальные модели из OPENROUTER_CHAT_MODELS — запасные на случай,
+ *    если выбранная недоступна;
  *  - иначе ModelsLab (как раньше).
  * Позволяет менять модель/провайдера без передеплоя — правкой app_settings.
  */
 function resolveChatProvider(settings: Record<string, string>): ChatProviderCfg {
   const provider = (settings.CHAT_PROVIDER || "modelslab").toLowerCase();
   if (provider === "openrouter") {
+    // Сохранённая модель не из списка (снятая с OpenRouter) → дефолт, как и в админке.
+    const model = resolveOpenRouterChatModel(settings.OPENROUTER_CHAT_MODEL);
     return {
       provider: "openrouter",
       apiKey: settings.OPENROUTER_API_KEY,
-      model: settings.OPENROUTER_CHAT_MODEL || "minimax/minimax-m2-her",
+      model,
+      fallbackModels: OPENROUTER_CHAT_MODELS.filter((m) => m !== model),
     };
   }
   return {
@@ -330,6 +341,13 @@ function resolveChatProvider(settings: Record<string, string>): ChatProviderCfg 
 
 /** Ошибка нехватки баланса провайдера (для единой обработки 402). */
 class ProviderBalanceError extends Error {}
+
+/** HTTP-ошибка OpenRouter с кодом ответа (404 — модель снята с OpenRouter). */
+class OpenRouterHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`OpenRouter error ${status}`);
+  }
+}
 
 /**
  * Убирает ролеплей-ремарки в звёздочках (*обнимает*, *smiles*, **…**) — модели,
@@ -403,7 +421,7 @@ async function callOpenRouter(params: {
     if (res.status === 402 || isInsufficientBalance(res.status, text)) {
       throw new ProviderBalanceError("INSUFFICIENT_BALANCE");
     }
-    throw new Error(`OpenRouter error ${res.status}`);
+    throw new OpenRouterHttpError(res.status);
   }
   const data: any = await res.json();
   if (data.error) {
@@ -426,6 +444,58 @@ async function callOpenRouter(params: {
     completionTokens: Number.isFinite(completionTokens) ? completionTokens : undefined,
     costUsd: Number.isFinite(cost) ? cost : undefined,
   };
+}
+
+/**
+ * Модели, которые OpenRouter недавно вернул как недоступные (404 — снята с
+ * OpenRouter / нет провайдеров). Пока срок не истёк, такую модель пропускаем
+ * сразу, не тратя время пользователя на заведомо неудачный запрос.
+ */
+const unavailableOpenRouterModels = new Map<string, number>();
+const UNAVAILABLE_MODEL_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Вызов OpenRouter с запасными моделями: пробует `model`, при ошибке —
+ * по очереди `fallbackModels`. Так снятие модели с OpenRouter или сбой
+ * провайдера не оставляют пользователя без ответа персонажа.
+ *
+ * Не переключаемся (пробрасываем сразу): отмена клиентом и нехватка баланса —
+ * баланс общий на аккаунт, другая модель не поможет.
+ * Пустой ответ модели считается сбоем — пробуем следующую.
+ *
+ * @returns результат callOpenRouter + `model`, которая фактически ответила
+ */
+async function callOpenRouterWithFallback(
+  params: Parameters<typeof callOpenRouter>[0] & { fallbackModels?: string[] },
+): Promise<Awaited<ReturnType<typeof callOpenRouter>> & { model: string }> {
+  const { fallbackModels = [], ...base } = params;
+  const all = [...new Set([base.model, ...fallbackModels].filter(Boolean))];
+  const now = Date.now();
+  const available = all.filter((m) => (unavailableOpenRouterModels.get(m) ?? 0) <= now);
+  // Если все помечены недоступными — всё равно пробуем полный список.
+  const queue = available.length ? available : all;
+
+  let lastErr: unknown;
+  for (const model of queue) {
+    try {
+      const res = await callOpenRouter({ ...base, model });
+      if (!res.output) throw new Error("Empty response from AI model");
+      unavailableOpenRouterModels.delete(model);
+      if (model !== base.model) {
+        logger.warn({ model, primary: base.model }, "openrouter_fallback_used");
+      }
+      return { ...res, model };
+    } catch (err: any) {
+      if (err?.name === "AbortError" || base.signal.aborted) throw err;
+      if (err instanceof ProviderBalanceError) throw err;
+      if (err instanceof OpenRouterHttpError && err.status === 404) {
+        unavailableOpenRouterModels.set(model, Date.now() + UNAVAILABLE_MODEL_TTL_MS);
+      }
+      logger.warn({ model, err: err?.message ?? String(err) }, "openrouter_model_failed");
+      lastErr = err;
+    }
+  }
+  throw lastErr ?? new Error("No OpenRouter models configured");
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
@@ -624,19 +694,22 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
   // chatMessages уже содержит system-сообщение первым, поэтому передаём как есть.
   if (chatCfg.provider === "openrouter") {
     try {
-      const or = await callOpenRouter({
+      const or = await callOpenRouterWithFallback({
         apiKey,
         model,
+        fallbackModels: chatCfg.fallbackModels,
         messages: chatMessages,
         maxTokens: 2048,
         temperature: 0.8,
         penalties: true,
         signal: abortController.signal,
       });
+      // Фактически ответившая модель (могла сработать запасная) — для учёта расходов.
+      const usedModel = or.model;
       const output = stripRoleplayActions(or.output);
       const totalTokens = or.totalTokens;
       if (!output) {
-        logger.error({ model }, "openrouter_chat_empty_output");
+        logger.error({ model: usedModel }, "openrouter_chat_empty_output");
         return reply.status(502).send({ error: "Empty response from AI model" });
       }
       reply.raw.writeHead(200, {
@@ -647,11 +720,11 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       });
       reply.raw.write(`data: ${JSON.stringify({ content: output })}\n\n`);
       reply.raw.write(
-        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, promptTokens: or.promptTokens, completionTokens: or.completionTokens, costUsd: or.costUsd }, model })}\n\n`,
+        `data: ${JSON.stringify({ done: true, finishReason: "stop", usage: { totalTokens, promptTokens: or.promptTokens, completionTokens: or.completionTokens, costUsd: or.costUsd }, model: usedModel })}\n\n`,
       );
       reply.raw.write("data: [DONE]\n\n");
       reply.raw.end();
-      logger.info({ model, outputLength: output.length, totalTokens, costUsd: or.costUsd }, "openrouter_chat_done");
+      logger.info({ model: usedModel, outputLength: output.length, totalTokens, costUsd: or.costUsd }, "openrouter_chat_done");
       return;
     } catch (err: any) {
       if (err.name === "AbortError" || abortController.signal.aborted) {
@@ -890,9 +963,10 @@ app.post<{ Body: TextCompletionBody }>("/ai/text/completion", async (req, reply)
   // ─── Ветка OpenRouter ──────────────────────────────────────────────────────
   if (chatCfg.provider === "openrouter") {
     try {
-      const or = await callOpenRouter({
+      const or = await callOpenRouterWithFallback({
         apiKey,
         model,
+        fallbackModels: chatCfg.fallbackModels,
         system,
         messages,
         maxTokens: maxTokens || 4096,

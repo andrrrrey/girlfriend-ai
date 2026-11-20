@@ -18,6 +18,7 @@ import { PrismaService } from "../../prisma.service";
 import { PricingService } from "../../billing/pricing.service";
 import { BillingConfigService } from "../../billing/billing-config.service";
 import { ModelPricingService } from "../model-pricing/model-pricing.service";
+import { resolveOpenRouterChatModel } from "@repo/types";
 import {
   Assumptions,
   CostGroup,
@@ -104,7 +105,7 @@ export class FinanceModelService {
     const chatOps = countOps("chat");
     const chatModel =
       (cfg.CHAT_PROVIDER || "modelslab").toLowerCase() === "openrouter"
-        ? cfg.OPENROUTER_CHAT_MODEL || "minimax/minimax-m2-her"
+        ? resolveOpenRouterChatModel(cfg.OPENROUTER_CHAT_MODEL)
         : cfg.MODELSLAB_CHAT_MODEL || "llama-3.1-8b-uncensored";
     const chatFallback =
       (FALLBACK_CHAT_TOKENS.prompt / 1e6) * modelPriceOf(chatModel, prices) +

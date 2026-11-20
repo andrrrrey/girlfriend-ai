@@ -60,7 +60,7 @@ function catalogs(): PriceCatalogs {
       ["urn:air:sdxl:checkpoint:civitai:1@2", { usd: 0.006, buzz: 6 }],
       ["civitai", { usd: 0.005, buzz: 5 }],
     ]),
-    history: new Map([["minimax/minimax-m2-her", { per1M: 0.42, replies: 120 }]]),
+    history: new Map([["thedrummer/cydonia-24b-v4.1", { per1M: 0.42, replies: 120 }]]),
     modelslabModels: new Set(["sdxl", "flux", "llama-3.1-8b-uncensored"]),
   };
 }
@@ -119,7 +119,7 @@ describe("model-pricing: сопоставление моделей", () => {
       ok: true,
       price: { source: "openrouter", price: 0.27, outputPrice: 0.95 },
     });
-    expect(resolveModelPrice("minimax/minimax-m2-her", "chat", c)).toMatchObject({
+    expect(resolveModelPrice("thedrummer/cydonia-24b-v4.1", "chat", c)).toMatchObject({
       ok: true,
       price: { source: "history", price: 0.42 },
     });
@@ -169,7 +169,7 @@ describe("model-pricing: сопоставление моделей", () => {
     expect(guessModelType("eleven_turbo_v2_5")).toBe("tts");
     expect(guessModelType("gpt-4o-mini-transcribe")).toBe("stt");
     expect(guessModelType("urn:air:sdxl:checkpoint:civitai:1@2")).toBe("image");
-    expect(guessModelType("minimax/minimax-m2-her")).toBe("chat");
+    expect(guessModelType("thedrummer/cydonia-24b-v4.1")).toBe("chat");
   });
 });
 

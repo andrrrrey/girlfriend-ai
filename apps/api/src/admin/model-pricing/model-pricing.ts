@@ -135,7 +135,12 @@ export const DEFAULT_MODEL_PRICES: Record<string, DefaultModelPrice> = {
   eleven_multilingual_v2: { type: "tts", price: 0.08 },
   "whisper-1": { type: "stt", price: 0.006 },
   "llama-3.1-8b-uncensored": { type: "chat", price: 0.2, outputPrice: 0.2 },
-  "minimax/minimax-m2-her": { type: "chat", price: 0.3, outputPrice: 1.2 },
+  // Чат-модели OpenRouter из OPENROUTER_CHAT_MODELS (цены каталога на 2026-11-20).
+  "thedrummer/cydonia-24b-v4.1": { type: "chat", price: 0.3, outputPrice: 0.5 },
+  "aion-labs/aion-3.5-mini": { type: "chat", price: 0.7, outputPrice: 1.4 },
+  "sao10k/l3.1-euryale-70b": { type: "chat", price: 0.85, outputPrice: 0.85 },
+  "thedrummer/skyfall-36b-v2": { type: "chat", price: 0.55, outputPrice: 0.8 },
+  "anthracite-org/magnum-v4-72b": { type: "chat", price: 2.5, outputPrice: 5.0 },
 };
 
 /** Тип операции для модели без истории генераций (по известным спискам). */

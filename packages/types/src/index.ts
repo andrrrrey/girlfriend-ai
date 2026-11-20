@@ -22,6 +22,35 @@
  */
 export type HealthResponse = { ok: boolean; service: string };
 
+// ─── Чат-модели OpenRouter ───────────────────────────────────────────────────
+// Ролеплей/компаньон-модели, из которых админ выбирает OPENROUTER_CHAT_MODEL.
+// Порядок = порядок запасных моделей: если выбранная модель недоступна
+// (снята с OpenRouter, 5xx, лимиты), AI-сервис по очереди пробует остальные,
+// чтобы пользователь не остался без ответа персонажа.
+// web не зависит от @repo/types — список продублирован в apps/web/app/admin/page.tsx.
+
+/** Чат-модель OpenRouter по умолчанию. */
+export const DEFAULT_OPENROUTER_CHAT_MODEL = "thedrummer/cydonia-24b-v4.1";
+
+/** Допустимые чат-модели OpenRouter (первая — по умолчанию). */
+export const OPENROUTER_CHAT_MODELS: readonly string[] = [
+  DEFAULT_OPENROUTER_CHAT_MODEL,
+  "aion-labs/aion-3.5-mini",
+  "sao10k/l3.1-euryale-70b",
+  "thedrummer/skyfall-36b-v2",
+  "anthracite-org/magnum-v4-72b",
+];
+
+/**
+ * Чат-модель OpenRouter по сохранённой настройке OPENROUTER_CHAT_MODEL:
+ * значение из списка — как есть, пустое или устаревшее (снятая с OpenRouter
+ * модель) — DEFAULT_OPENROUTER_CHAT_MODEL. Единое правило для ai и api.
+ */
+export function resolveOpenRouterChatModel(saved?: string | null): string {
+  const value = saved?.trim() ?? "";
+  return OPENROUTER_CHAT_MODELS.includes(value) ? value : DEFAULT_OPENROUTER_CHAT_MODEL;
+}
+
 // ─── Глобальные промпт-дефолты генерации ─────────────────────────────────────
 // Единый источник для apps/ai (применение при генерации), apps/api (показ
 // дефолта в админке, когда ключа AppSetting ещё нет) и сид-скриптов. Значения

@@ -25,6 +25,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { resolveOpenRouterChatModel } from "@repo/types";
 import { PrismaService } from "../prisma.service";
 import { OUTBOX_EVENTS, OutboxService } from "../outbox/outbox.service";
 
@@ -596,7 +597,8 @@ export class ChatsService {
     // Модель, которой отвечал чат (для учёта расходов). Зависит от выбранного
     // провайдера: OpenRouter (OPENROUTER_CHAT_MODEL) или ModelsLab
     // (MODELSLAB_CHAT_MODEL). Настройки могут отсутствовать — берём дефолты,
-    // как в AI-сервисе.
+    // как в AI-сервисе. Если ответила запасная модель, AI-сервис сообщает её,
+    // и она приходит в extraInput.model (перекрывает значение из настроек).
     const [providerSetting, mlSetting, orSetting, job] = await Promise.all([
       this.prisma.appSetting.findUnique({ where: { key: "CHAT_PROVIDER" } }),
       this.prisma.appSetting.findUnique({ where: { key: "MODELSLAB_CHAT_MODEL" } }),
@@ -606,7 +608,7 @@ export class ChatsService {
     const provider = (providerSetting?.value || "modelslab").toLowerCase();
     const model =
       provider === "openrouter"
-        ? orSetting?.value || "minimax/minimax-m2-her"
+        ? resolveOpenRouterChatModel(orSetting?.value)
         : mlSetting?.value || "llama-3.1-8b-uncensored";
     const input = { ...((job?.input as Record<string, unknown>) ?? {}), model, provider, ...(extraInput ?? {}) };
 

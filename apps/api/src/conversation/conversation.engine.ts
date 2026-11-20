@@ -578,6 +578,8 @@ export class ConversationEngine {
     let completionTokens: number | undefined;
     // Фактическая стоимость у провайдера (OpenRouter) — для сверки маржи.
     let providerCostUsd: number | undefined;
+    // Модель, которая фактически ответила (AI-сервис мог переключиться на запасную).
+    let usedModel: string | undefined;
     let error: string | undefined;
 
     try {
@@ -592,6 +594,7 @@ export class ConversationEngine {
         if (typeof usage?.promptTokens === "number") promptTokens = usage.promptTokens;
         if (typeof usage?.completionTokens === "number") completionTokens = usage.completionTokens;
         if (typeof usage?.costUsd === "number") providerCostUsd = usage.costUsd;
+        if (typeof data.model === "string" && data.model) usedModel = data.model;
         if (data.error) error = String(data.error);
         yield { type: "llm", data };
       }
@@ -635,6 +638,7 @@ export class ConversationEngine {
         if (providerCostUsd !== undefined) usageInput.providerCostUsd = providerCostUsd;
         if (promptTokens !== undefined) usageInput.promptTokens = promptTokens;
         if (completionTokens !== undefined) usageInput.completionTokens = completionTokens;
+        if (usedModel) usageInput.model = usedModel;
         await this.chats.completeAiJob(
           aiJob.id,
           tokens || undefined,

@@ -9,18 +9,40 @@ import { AdminTabs } from "./AdminTabs";
 import { CivitaiModelsEditor } from "./CivitaiModelsEditor";
 import { CivitaiLab } from "./CivitaiLab";
 
+// Чат-модели OpenRouter. Зеркало OPENROUTER_CHAT_MODELS из packages/types
+// (web не зависит от @repo/types) — меняете список, меняйте в обоих местах.
+// Порядок важен: если выбранная модель недоступна, AI-сервис пробует остальные
+// по этому порядку.
+const OPENROUTER_CHAT_MODELS = [
+  "thedrummer/cydonia-24b-v4.1",
+  "aion-labs/aion-3.5-mini",
+  "sao10k/l3.1-euryale-70b",
+  "thedrummer/skyfall-36b-v2",
+  "anthracite-org/magnum-v4-72b",
+];
+const OPENROUTER_CHAT_MODEL_LABELS: Record<string, string> = {
+  "thedrummer/cydonia-24b-v4.1": "Cydonia 24B v4.1 — без цензуры, живая переписка, дёшево (по умолчанию)",
+  "aion-labs/aion-3.5-mini": "Aion 3.5 Mini — специально под ролеплей, рассуждающая (медленнее)",
+  "sao10k/l3.1-euryale-70b": "Euryale L3.1 70B — классика ролеплея",
+  "thedrummer/skyfall-36b-v2": "Skyfall 36B v2 — ролеплей, контекст 32k",
+  "anthracite-org/magnum-v4-72b": "Magnum v4 72B — лучший слог, дорогая",
+};
+
 const SETTING_GROUPS = [
   {
     title: "Провайдер чата",
-    subtitle: "Какая нейросеть отвечает в чате персонажей. OpenRouter даёт сильные NSFW/ролеплей-модели (напр. MiniMax M2-her).",
+    subtitle:
+      "Какая нейросеть отвечает в чате персонажей. OpenRouter даёт сильные NSFW/ролеплей-модели. Если выбранная модель недоступна, чат автоматически переключается на следующую из списка.",
     keys: [
       { key: "CHAT_PROVIDER", label: "Провайдер чата (modelslab | openrouter)", type: "select", options: ["modelslab", "openrouter"] },
       { key: "OPENROUTER_API_KEY", label: "Ключ API OpenRouter (нужен при openrouter)", type: "password" },
       {
         key: "OPENROUTER_CHAT_MODEL",
-        label:
-          "Модель OpenRouter (slug). Рекомендации: minimax/minimax-m2-her (ролеплей-компаньон), deepseek/deepseek-v4-flash (дёшево, 1M контекст), anthracite-org/magnum-v4-72b, sao10k/l3.3-euryale-70b",
-        type: "text",
+        label: "Модель чата OpenRouter",
+        type: "select",
+        options: OPENROUTER_CHAT_MODELS,
+        optionLabels: OPENROUTER_CHAT_MODEL_LABELS,
+        emptyLabel: "По умолчанию — Cydonia 24B v4.1",
       },
       {
         key: "COMMENTS_MODEL",
@@ -205,18 +227,20 @@ export default function AdminSettingsPage() {
             <h2 style={adminStyles.title}>{group.title}</h2>
             <p style={adminStyles.subtitle}>{group.subtitle}</p>
 
-            {group.keys.map(({ key, label, type, options }) => (
+            {group.keys.map(({ key, label, type, options, optionLabels, emptyLabel }) => (
               <div key={key} style={adminStyles.field}>
                 <label style={adminStyles.label}>{label}</label>
                 {type === "select" ? (
                   <select
-                    value={settings[key] || ""}
+                    // Сохранённое значение не из списка (напр. снятая модель) показываем
+                    // как «по умолчанию» — именно его и использует AI-сервис.
+                    value={options!.includes(settings[key]) ? settings[key] : ""}
                     onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
                     style={adminStyles.input}
                   >
-                    <option value="">-- выбрать --</option>
+                    <option value="">{emptyLabel ?? "-- выбрать --"}</option>
                     {options!.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={opt} value={opt}>{optionLabels?.[opt] ?? opt}</option>
                     ))}
                   </select>
                 ) : type === "textarea" ? (
