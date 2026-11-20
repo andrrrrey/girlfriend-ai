@@ -212,3 +212,85 @@ migrator_logs_staging:
       echo "=== ssh ${SSHUSER}@${HOST} : migrator status + logs (через sudo docker) ==="
       ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "${SSHUSER}@${HOST}" "cd '$DIR' 2>/dev/null; echo '--- migrator container(s) ---'; (sudo docker compose ps -a migrator 2>/dev/null || sudo docker ps -a --filter name=migrator); echo '--- migrator logs (tail 400) ---'; NAME=\$(sudo docker ps -a --filter name=migrator --format '{{.Names}}' | head -1); if [ -n \"\$NAME\" ]; then sudo docker logs \"\$NAME\" 2>&1 | tail -400; else echo 'no migrator container'; fi"
       echo "=== ssh exit: $? ==="
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Диагностика ПРОДА без доступа к серверу: логи контейнеров и проверка env.
+# Ручной job, ничего не деплоит и не меняет — только читает через тот же SSH,
+# что и deploy_prod_*. Для каждого сервиса печатает:
+#   - статус контейнера и подключённые env_file из docker-compose.yml;
+#   - ключевые переменные (ENV, API_HOST/PORT, AI_HOST/PORT) и задан ли
+#     INTERNAL_API_TOKEN — БЕЗ значения: длина и первые 12 символов sha256,
+#     чтобы сравнить, совпадает ли токен у api/ai/worker;
+#   - хвост логов контейнера.
+# Параметры (можно задать при запуске job в GitLab: «Run job» → Variables):
+#   LOG_SERVICES — сервисы через пробел (по умолчанию "ai api worker")
+#   LOG_TAIL     — сколько последних строк лога (по умолчанию 300)
+#   LOG_GREP     — фильтр строк лога, regex (напр. "ERR|error|401")
+# Запуск: пайплайн по тегу (там доступны ключи прода) → ▶ prod_logs.
+prod_logs:
+  extends: .deploy_production
+  stage: deploy
+  needs: []
+  allow_failure: true
+  variables:
+    LOG_SERVICES: "ai api worker"
+    LOG_TAIL: "300"
+    LOG_GREP: ""
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: manual
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+    - when: never
+  script:
+    - |
+      set +e
+      HOST="${DEPLOY_HOST:-${PRODUCTION_HOST:-}}"
+      SSHUSER="${DEPLOY_USER:-${PRODUCTION_USER:-deploy}}"
+      BASE="${REMOTE_APP_DIR:-/opt/docker/apps/$CI_PROJECT_PATH}"
+      echo "target: ${SSHUSER}@${HOST}  base dir: ${BASE}"
+      echo "services: ${LOG_SERVICES}  tail: ${LOG_TAIL}  grep: '${LOG_GREP}'"
+      if [ -z "$HOST" ]; then echo "!! PRODUCTION_HOST недоступен (job запущен не из пайплайна по тегу / переменные protected?)"; exit 1; fi
+      ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "${SSHUSER}@${HOST}" \
+        bash -s -- "$BASE" "$LOG_SERVICES" "$LOG_TAIL" "$LOG_GREP" <<'REMOTE'
+      set +e
+      BASE="$1"; SERVICES="$2"; TAIL="$3"; GREP="$4"
+      for S in $SERVICES; do
+        echo
+        echo "==================== $S ===================="
+        DIR="$BASE/$S"
+        C=""
+        if [ -d "$DIR" ]; then
+          cd "$DIR"
+          echo "--- env_file в $DIR/docker-compose.yml ---"
+          awk '/env_file/{f=1;print;next} f&&/^[[:space:]]*-/{print;next} {f=0}' docker-compose.yml 2>/dev/null || echo "(нет docker-compose.yml)"
+          echo "--- контейнер ---"
+          sudo docker compose ps -a "$S" 2>/dev/null
+          C=$(sudo docker compose ps -q "$S" 2>/dev/null | head -1)
+        else
+          echo "!! нет каталога $DIR — ищу контейнер по имени"
+        fi
+        [ -z "$C" ] && C=$(sudo docker ps -a --filter "name=$S" --format '{{.ID}}' | head -1)
+        if [ -z "$C" ]; then echo "!! контейнер $S не найден"; continue; fi
+        echo "--- env (без секретов) ---"
+        ENVS=$(sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$C")
+        printf '%s\n' "$ENVS" | grep -E '^(ENV|API_HOST|API_PORT|AI_HOST|AI_PORT|LOG_LEVEL)=' 
+        TOK=$(printf '%s\n' "$ENVS" | grep -E '^INTERNAL_API_TOKEN=' | head -1 | cut -d= -f2-)
+        if printf '%s\n' "$ENVS" | grep -qE '^INTERNAL_API_TOKEN='; then
+          if [ -n "$TOK" ]; then
+            echo "INTERNAL_API_TOKEN: задан (длина ${#TOK}, sha256 $(printf '%s' "$TOK" | sha256sum | cut -c1-12))"
+          else
+            echo "INTERNAL_API_TOKEN: ПУСТОЙ"
+          fi
+        else
+          echo "INTERNAL_API_TOKEN: НЕ ЗАДАН в контейнере"
+        fi
+        echo "--- логи (последние $TAIL строк${GREP:+, фильтр /$GREP/}) ---"
+        if [ -n "$GREP" ]; then
+          sudo docker logs --tail "$TAIL" "$C" 2>&1 | grep -E -- "$GREP" | cut -c1-3000
+        else
+          sudo docker logs --tail "$TAIL" "$C" 2>&1 | cut -c1-3000
+        fi
+      done
+      REMOTE
+      echo "=== ssh exit: $? ==="
