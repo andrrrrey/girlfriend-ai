@@ -9,6 +9,7 @@ import ReportModal from "./components/ReportModal";
 import ScrollableTagsRow from "./components/ScrollableTagsRow";
 import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
+import HeroSlider from "./components/HeroSlider";
 import { formatTag } from "../lib/tags";
 import { useT } from "../context/language";
 import { useContentMode } from "../context/contentMode";
@@ -18,31 +19,16 @@ type TFn = (key: TKey, vars?: Record<string, string | number>) => string;
 
 const PAGE_CSS = `
     .content { position: relative; }
-    .hero {
-      border: 1px solid #313131; border-radius: 8px; height: 160px;
-      position: absolute; left: 0; right: 0; top: 8px; margin: 0 36px;
-      overflow: hidden; display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-end; padding: 4px 8px;
-    }
-    .hero-bg { position: absolute; inset: 0; pointer-events: none; }
-    .hero-content {
-      position: relative; z-index: 2; display: flex; flex: 1;
-      flex-direction: column; align-items: center; justify-content: center;
-      gap: 12px; width: 453px;
-    }
-    .hero-title { font-size: 32px; font-weight: 700; color: #fff; white-space: nowrap; line-height: 1.1; }
-    .hero-progress { position: relative; width: 100%; display: flex; gap: 6px; z-index: 2; }
     .progress-bar { flex: 1; height: 2px; position: relative; }
     .progress-bar-inner { position: absolute; inset: 0; border-radius: 1px; }
     .progress-bar.active .progress-bar-inner { background: #f95bad; box-shadow: 0px 0px 5px 1px rgba(228,0,120,0.6); }
     .progress-bar.inactive { opacity: 0.7; }
     .progress-bar.inactive .progress-bar-inner { background: #46383e; border-radius: 1px; }
+    /* Блоки идут в потоке под слайдером: высота баннера зависит от ширины экрана. */
     .characters-section {
-      position: absolute; left: 36px; right: 36px; top: 324px;
+      position: relative; margin: 32px 36px 0; scroll-margin-top: 16px;
       display: flex; flex-direction: column; gap: 16px;
     }
-    /* Нет активных историй → поднимаем блок персонажей к баннеру, без пустоты. */
-    .characters-section.no-stories { top: 200px; }
     .chars-header { display: flex; flex-direction: column; gap: 5px; max-width: 570px; }
     .chars-title { font-size: 32px; font-weight: 700; line-height: 1.1; }
     .chars-title .pink { color: #ff99ce; }
@@ -116,36 +102,12 @@ const PAGE_CSS = `
     .card-progress .progress-bar { flex: 1; height: 2px; }
     @media (max-width: 768px) {
       .content { padding-bottom: 24px; }
-      .hero { margin: 0 16px; height: 130px; top: 8px; }
-      .hero-content { width: 100%; padding: 0 8px; }
-      .hero-title { font-size: 20px; white-space: normal; text-align: center; }
-      .characters-section { left: 16px; top: 272px; width: calc(100% - 32px); }
-      .characters-section.no-stories { top: 170px; }
+      .characters-section { margin: 24px 16px 0; }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
       .cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .card-name { font-size: 15px; }
     }
-    @media (max-width: 480px) {
-      .hero-title { font-size: 18px; }
-    }
-`;
-
-const heroHtml = (t: TFn) => `
-  <div class="hero">
-    <div class="hero-bg">
-      <div style="width:100%;height:100%;background:linear-gradient(135deg, #1a0a1e 0%, #2d1b3d 30%, #1a0a2e 60%, #0d0d1a 100%);border-radius:8px;"></div>
-    </div>
-    <div class="hero-content">
-      <h1 class="hero-title">${t("home.heroTitle")}</h1>
-      <button class="btn-primary">${t("home.createNow")}</button>
-    </div>
-    <div class="hero-progress">
-      <div class="progress-bar active"><div class="progress-bar-inner"></div></div>
-      <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-      <div class="progress-bar inactive"><div class="progress-bar-inner"></div></div>
-    </div>
-  </div>
 `;
 
 function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { liked: boolean; count: number }>, t: TFn): string {
@@ -229,7 +191,6 @@ export default function HomePage() {
     { value: "name", label: t("home.sortName") },
   ];
   const [chars, setChars] = useState<Character[]>([]);
-  const [hasStories, setHasStories] = useState(false);
   const [selectedChar, setSelectedChar] = useState<Character | null>(null);
   const [shareCharId, setShareCharId] = useState<string | null>(null);
   const [reportCharId, setReportCharId] = useState<string | null>(null);
@@ -412,11 +373,11 @@ export default function HomePage() {
     <>
       <style>{PAGE_CSS}</style>
       <div className="content">
-        <div dangerouslySetInnerHTML={{ __html: heroHtml(t) }} />
+        <HeroSlider title={t("home.heroTitle")} />
 
-        <StoriesRail onOpenProfile={handleOpenProfile} onActiveChange={setHasStories} />
+        <StoriesRail onOpenProfile={handleOpenProfile} />
 
-        <div className={`characters-section${hasStories ? "" : " no-stories"}`}>
+        <div id="characters" className="characters-section">
           <div className="chars-header">
             <div className="section-label" style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", color: "#969696" }}>{t("home.charactersLabel")}</div>
             <h2 className="chars-title"><span className="pink">{t("home.choosePartner")}</span>{t("home.forToday")}</h2>

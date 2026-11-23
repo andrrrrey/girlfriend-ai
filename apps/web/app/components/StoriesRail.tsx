@@ -130,7 +130,7 @@ export default function StoriesRail({ onOpenProfile, onActiveChange }: Props) {
 const STORIES_CSS = `
   @keyframes story-spin { to { transform: rotate(360deg); } }
   .stories-section {
-    position: absolute; left: 36px; right: 36px; top: 184px;
+    position: relative; margin: 16px 36px 0;
     display: flex; flex-direction: column; gap: 10px;
   }
   .stories-label { font-size: 10px; font-weight: 500; text-transform: uppercase; color: #969696; }
@@ -173,7 +173,7 @@ const STORIES_CSS = `
   .stories-arrow-left { left: 0; }
   .stories-arrow-right { right: 0; }
   @media (max-width: 768px) {
-    .stories-section { left: 16px; right: 16px; top: 150px; }
+    .stories-section { margin: 12px 16px 0; }
     .story-ring { width: 60px; height: 60px; }
     .story-item { width: 64px; }
     .story-name { font-size: 10px; max-width: 64px; }
