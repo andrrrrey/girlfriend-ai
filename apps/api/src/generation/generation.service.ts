@@ -428,6 +428,7 @@ export class GenerationService {
     const sfw = mode === "sfw";
     const options = await this.prisma.characterOption.findMany({
       where: {
+        active: true,
         ...(category ? { category } : {}),
         ...(sfw ? { nsfw: false } : {}),
       },
@@ -437,17 +438,19 @@ export class GenerationService {
   }
 
   async getAppearanceOptions(mode?: string) {
-    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
+    const optionsWhere = { active: true, ...(mode === "sfw" ? { nsfw: false } : {}) };
     const categories = await this.prisma.appearanceCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
         options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const mapped = categories.map((cat) => ({
-      ...cat,
-      options: cat.options.map((o) => this.withOptionImageUrls(o)),
-    }));
+    const mapped = categories
+      .filter((cat) => cat.options.length > 0)
+      .map((cat) => ({
+        ...cat,
+        options: cat.options.map((o) => this.withOptionImageUrls(o)),
+      }));
     const result: { OUTFITS: typeof mapped; OUTFIT_DETAILS: typeof mapped } = {
       OUTFITS: [],
       OUTFIT_DETAILS: [],
@@ -460,17 +463,19 @@ export class GenerationService {
   }
 
   async getPoseOptions(mode?: string) {
-    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
+    const optionsWhere = { active: true, ...(mode === "sfw" ? { nsfw: false } : {}) };
     const categories = await this.prisma.poseCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
         options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const mapped = categories.map((cat) => ({
-      ...cat,
-      options: cat.options.map((o) => this.withOptionImageUrls(o)),
-    }));
+    const mapped = categories
+      .filter((cat) => cat.options.length > 0)
+      .map((cat) => ({
+        ...cat,
+        options: cat.options.map((o) => this.withOptionImageUrls(o)),
+      }));
     const result: { FACIAL_EXPRESSION: typeof mapped; POSE: typeof mapped } = {
       FACIAL_EXPRESSION: [],
       POSE: [],
@@ -483,17 +488,19 @@ export class GenerationService {
   }
 
   async getSceneOptions(mode?: string) {
-    const optionsWhere = mode === "sfw" ? { nsfw: false } : undefined;
+    const optionsWhere = { active: true, ...(mode === "sfw" ? { nsfw: false } : {}) };
     const categories = await this.prisma.sceneCategory.findMany({
       orderBy: [{ tab: "asc" }, { order: "asc" }],
       include: {
         options: { where: optionsWhere, orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
       },
     });
-    const mapped = categories.map((cat) => ({
-      ...cat,
-      options: cat.options.map((o) => this.withOptionImageUrls(o)),
-    }));
+    const mapped = categories
+      .filter((cat) => cat.options.length > 0)
+      .map((cat) => ({
+        ...cat,
+        options: cat.options.map((o) => this.withOptionImageUrls(o)),
+      }));
     const result: { LOCATION: typeof mapped } = { LOCATION: [] };
     for (const cat of mapped) {
       if (cat.tab === "LOCATION") result.LOCATION.push(cat);
@@ -503,7 +510,7 @@ export class GenerationService {
 
   async getCameraOptions(mode?: string) {
     const options = await this.prisma.cameraOption.findMany({
-      where: mode === "sfw" ? { nsfw: false } : undefined,
+      where: { active: true, ...(mode === "sfw" ? { nsfw: false } : {}) },
       orderBy: [{ section: "asc" }, { order: "asc" }, { createdAt: "asc" }],
     });
     const mapped = options.map((o) => this.withOptionImageUrls(o));

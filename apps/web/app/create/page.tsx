@@ -14,7 +14,7 @@ import PremiumPopup, { premiumPopupFromError, type PremiumLimitType } from "../c
 import { useGeneration } from "../../context/generation";
 import { useT } from "../../context/language";
 import { useContentMode } from "../../context/contentMode";
-import { localizeOption, toEnglishTag } from "../../lib/optionLabel";
+import { localizeOption, optionLabel, toEnglishTag } from "../../lib/optionLabel";
 import { firstClause, isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
 import { stylePromptPrefix } from "../../lib/prompt";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
@@ -175,9 +175,10 @@ function dropdown(field: string, label: string, options: string[], def: string) 
     <div class="dropdown-menu">${opts}</div></div>`;
 }
 
-function cardGrid(field: string, items: string[], scrollable = false) {
+function cardGrid(field: string, items: string[], scrollable = false, containerId?: string) {
   const cards = items.map((v) => `<div class="ethnicity-card" data-value="${v}"><span class="card-name">${cvLabel(field, v)}</span></div>`).join("");
-  return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}">${cards}</div>`;
+  const idAttr = containerId ? ` id="${containerId}"` : "";
+  return `<div class="ethnicity-grid${scrollable ? " facial-grid" : ""}" data-field="${field}"${idAttr}>${cards}</div>`;
 }
 
 // Сетка карточек с иконкой (образ жизни).
@@ -268,7 +269,7 @@ function populateImageCards(containerId: string, options: CharacterOption[]) {
     const imgHtml = src
       ? `<img src="${src}" alt="${o.name}" class="ethnicity-card-img" loading="lazy" decoding="async" />`
       : "";
-    return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${localizeOption(o.name, currentLang)}</span></div>`;
+    return `<div class="ethnicity-card" data-value="${o.name}" data-prompt="${(o.prompt || "").replace(/"/g, "&quot;")}">${imgHtml}<span class="card-name">${optionLabel(o, currentLang)}</span></div>`;
   }).join("");
   container.querySelectorAll<HTMLElement>(".ethnicity-card").forEach((card) => {
     card.onclick = () => {
@@ -370,8 +371,8 @@ function stage04() {
     ${stageHeader(4, "create.stageBodyType")}
     <div class="facial-scroll">
       <div class="ethnicity-section"><div class="field-label">${tr("create.bodyType")}</div>${imageCardGrid("bodyType", "bodytype-grid-container", true)}</div>
-      <div class="ethnicity-section"><div class="field-label">${tr("create.breastSize")}</div>${cardGrid("breastSize", BREAST_SIZES, true)}</div>
-      <div class="ethnicity-section"><div class="field-label">${tr("create.buttSize")}</div>${cardGrid("buttSize", BUTT_SIZES, true)}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.breastSize")}</div>${cardGrid("breastSize", BREAST_SIZES, true, "breast-grid-container")}</div>
+      <div class="ethnicity-section"><div class="field-label">${tr("create.buttSize")}</div>${cardGrid("buttSize", BUTT_SIZES, true, "butt-grid-container")}</div>
     </div>
     ${navButtons(3, 5)}
   </div>`;
@@ -1590,7 +1591,7 @@ export default function CreateCharacterPage() {
               ? `<img src="${src}" alt="${s.name}" class="style-card-img" loading="lazy" decoding="async" />`
               : "";
             return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
-              ${imgHtml}<span class="name">${s.name}</span></div>`;
+              ${imgHtml}<span class="name">${optionLabel(s, currentLang)}</span></div>`;
           }).join("");
           styleContainer.querySelectorAll<HTMLElement>(".style-card").forEach((card) => {
             card.onclick = () => {
@@ -1678,6 +1679,13 @@ export default function CreateCharacterPage() {
           });
         }
       }
+      // BREAST_SIZE / BUTT_SIZE -> карточки с картинками (Stage 04); без опций в БД
+      // остаются статичные карточки из BREAST_SIZES / BUTT_SIZES.
+      const breastOpts = allOpts.filter((o) => o.category === "BREAST_SIZE").sort((a, b) => a.order - b.order);
+      if (breastOpts.length > 0) populateImageCards("breast-grid-container", breastOpts);
+      const buttOpts = allOpts.filter((o) => o.category === "BUTT_SIZE").sort((a, b) => a.order - b.order);
+      if (buttOpts.length > 0) populateImageCards("butt-grid-container", buttOpts);
+
       // Restore saved form state after all DB grids are populated
       restoreFormState();
     }).catch(() => {

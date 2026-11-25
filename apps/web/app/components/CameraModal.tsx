@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { CameraOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
-import { localizeOption } from "../../lib/optionLabel";
+import { localizeOption, optionLabel } from "../../lib/optionLabel";
 import type { TKey } from "../../lib/i18n";
 
 export interface CameraSelections {
@@ -182,7 +182,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, framing: toggle(draft.framing, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                        <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                       </button>
                     );
                   })}
@@ -203,7 +203,7 @@ export default function CameraModal({ open, onClose, selections, onSave, options
                       <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, cameraAngle: toggle(draft.cameraAngle, opt.name) })}>
                         {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                         {selected && <SelectedOverlay />}
-                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                        <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                       </button>
                     );
                   })}

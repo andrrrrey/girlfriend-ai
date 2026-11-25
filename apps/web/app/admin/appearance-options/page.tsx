@@ -7,6 +7,7 @@ import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
+import { OptionActiveToggle } from "../OptionActiveToggle";
 
 const TABS = [
   { key: "OUTFITS", label: "Outfits" },
@@ -480,6 +481,7 @@ export default function AdminAppearanceOptionsPage() {
                         )}
                         <span style={s.optionName}>{opt.name}</span>
                         <span style={s.optionOrder}>#{opt.order}</span>
+                        <OptionActiveToggle active={opt.active} code={opt.code} onToggle={(v) => admin.updateAppearanceOption(opt.id, { active: v })} />
                         <button style={s.smallBtn} onClick={(e) => openEditOpt(opt, e)}>Edit</button>
                         <button style={s.deleteBtn} onClick={(e) => handleDeleteOpt(opt, e)}>Delete</button>
                       </div>

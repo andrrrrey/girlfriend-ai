@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
-import { localizeOption } from "../../lib/optionLabel";
+import { optionLabel } from "../../lib/optionLabel";
 
 interface Props {
   open: boolean;
@@ -34,7 +34,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
       ? cat.options.filter(
           (o) =>
             o.name.toLowerCase().includes(q) ||
-            localizeOption(o.name, lang).toLowerCase().includes(q),
+            optionLabel(o, lang).toLowerCase().includes(q),
         )
       : cat.options;
   }, [options.POSE, catId, search, lang]);
@@ -90,7 +90,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
                       style={{ ...s.catPill, ...(catId === cat.id ? s.catPillActive : {}) }}
                       onClick={() => { setActiveCategory(cat.id); setSearch(""); }}
                     >
-                      {localizeOption(cat.name, lang)}
+                      {optionLabel(cat, lang)}
                       {catId === cat.id && <div style={s.catPillUnderline} />}
                     </button>
                   ))}
@@ -106,7 +106,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
                         onClick={() => setSelectedPose(isSelected ? null : opt.name)}
                       >
                         {opt.imageUrl && <img src={opt.imageUrl} alt={opt.name} style={s.imgCardImg} />}
-                        <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                        <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                       </button>
                     );
                   })}

@@ -505,6 +505,10 @@ model CharacterOption {
   generationStyle String?  @map("generation_style")
   // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
   nsfw            Boolean  @default(true)
+  // Пак картинок: стабильный код варианта, подписи {en,ru,de,fr} и видимость на сайте
+  code            String?
+  labels          Json?
+  active          Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@index([category])
@@ -519,6 +523,8 @@ model AppearanceCategory {
   tab       String // OUTFITS | OUTFIT_DETAILS
   name      String
   order     Int      @default(0)
+  // Подписи группы {en,ru,de,fr} из пака картинок
+  labels    Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   options AppearanceOption[]
@@ -541,6 +547,10 @@ model AppearanceOption {
   imageThumbKey String?  @map("image_thumb_key")
   imageFullKey  String?  @map("image_full_key")
   order         Int      @default(0)
+  // Пак картинок: стабильный код варианта, подписи {en,ru,de,fr} и видимость на сайте
+  code            String?
+  labels          Json?
+  active          Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
   // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
@@ -560,6 +570,8 @@ model PoseCategory {
   tab       String // FACIAL_EXPRESSION | POSE
   name      String
   order     Int      @default(0)
+  // Подписи группы {en,ru,de,fr} из пака картинок
+  labels    Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   options PoseOption[]
@@ -582,6 +594,10 @@ model PoseOption {
   imageThumbKey String?  @map("image_thumb_key")
   imageFullKey  String?  @map("image_full_key")
   order         Int      @default(0)
+  // Пак картинок: стабильный код варианта, подписи {en,ru,de,fr} и видимость на сайте
+  code            String?
+  labels          Json?
+  active          Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
   // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
@@ -601,6 +617,8 @@ model SceneCategory {
   tab       String // LOCATION
   name      String
   order     Int      @default(0)
+  // Подписи группы {en,ru,de,fr} из пака картинок
+  labels    Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   options SceneOption[]
@@ -623,6 +641,10 @@ model SceneOption {
   imageThumbKey String?  @map("image_thumb_key")
   imageFullKey  String?  @map("image_full_key")
   order         Int      @default(0)
+  // Пак картинок: стабильный код варианта, подписи {en,ru,de,fr} и видимость на сайте
+  code            String?
+  labels          Json?
+  active          Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
   // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
@@ -653,6 +675,10 @@ model CameraOption {
   order         Int      @default(0)
   // Опция NSFW: при SFW-режиме скрывается в пикерах генерации. По умолчанию true.
   nsfw          Boolean  @default(true)
+  // Пак картинок: стабильный код варианта, подписи {en,ru,de,fr} и видимость на сайте
+  code            String?
+  labels          Json?
+  active          Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([section])

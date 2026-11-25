@@ -1,0 +1,8092 @@
+{
+ "version": 1,
+ "sections": {
+  "char_style": {
+   "en": "Art style",
+   "ru": "Графический стиль",
+   "de": "Grafikstil",
+   "fr": "Style graphique"
+  },
+  "ethnicity": {
+   "en": "Ethnicity",
+   "ru": "Этничность",
+   "de": "Herkunft",
+   "fr": "Origine"
+  },
+  "hairstyle": {
+   "en": "Hairstyle",
+   "ru": "Причёска",
+   "de": "Frisur",
+   "fr": "Coiffure"
+  },
+  "body_type": {
+   "en": "Body type",
+   "ru": "Телосложение",
+   "de": "Körperbau",
+   "fr": "Morphologie"
+  },
+  "breast_size": {
+   "en": "Breast size",
+   "ru": "Размер груди",
+   "de": "Brustgröße",
+   "fr": "Taille de poitrine"
+  },
+  "butt_size": {
+   "en": "Butt size",
+   "ru": "Размер ягодиц",
+   "de": "Po-Größe",
+   "fr": "Taille des fesses"
+  },
+  "outfit": {
+   "en": "Outfit",
+   "ru": "Одежда",
+   "de": "Outfit",
+   "fr": "Tenue"
+  },
+  "footwear": {
+   "en": "Footwear",
+   "ru": "Обувь",
+   "de": "Schuhe",
+   "fr": "Chaussures"
+  },
+  "accessories": {
+   "en": "Accessories",
+   "ru": "Аксессуары",
+   "de": "Accessoires",
+   "fr": "Accessoires"
+  },
+  "distinctive_marks": {
+   "en": "Distinctive features",
+   "ru": "Особые приметы",
+   "de": "Besondere Merkmale",
+   "fr": "Signes distinctifs"
+  },
+  "expression": {
+   "en": "Facial expression",
+   "ru": "Выражение лица",
+   "de": "Gesichtsausdruck",
+   "fr": "Expression du visage"
+  },
+  "pose_img": {
+   "en": "Pose",
+   "ru": "Поза",
+   "de": "Pose",
+   "fr": "Pose"
+  },
+  "subject_motion": {
+   "en": "Action (video)",
+   "ru": "Действие (Video)",
+   "de": "Aktion (Video)",
+   "fr": "Action (vidéo)"
+  },
+  "background": {
+   "en": "Location / background",
+   "ru": "Локация / фон",
+   "de": "Ort / Hintergrund",
+   "fr": "Lieu / décor"
+  },
+  "framing": {
+   "en": "Framing",
+   "ru": "Кадрирование",
+   "de": "Bildausschnitt",
+   "fr": "Cadrage"
+  },
+  "camera_angle": {
+   "en": "Camera angle",
+   "ru": "Ракурс камеры",
+   "de": "Kamerawinkel",
+   "fr": "Angle de vue"
+  }
+ },
+ "groups": {
+  "Человеческие": {
+   "en": "Human",
+   "ru": "Человеческие",
+   "de": "Menschlich",
+   "fr": "Humaines"
+  },
+  "Фэнтезийные": {
+   "en": "Fantasy",
+   "ru": "Фэнтезийные",
+   "de": "Fantasy",
+   "fr": "Fantastiques"
+  },
+  "Повседневная": {
+   "en": "Casual",
+   "ru": "Повседневная",
+   "de": "Freizeit",
+   "fr": "Décontractée"
+  },
+  "Формальная / вечерняя": {
+   "en": "Formal / evening",
+   "ru": "Формальная / вечерняя",
+   "de": "Elegant / Abend",
+   "fr": "Habillée / soirée"
+  },
+  "Спортивная": {
+   "en": "Sportswear",
+   "ru": "Спортивная",
+   "de": "Sport",
+   "fr": "Sport"
+  },
+  "Купальники": {
+   "en": "Swimwear",
+   "ru": "Купальники",
+   "de": "Bademode",
+   "fr": "Maillots de bain"
+  },
+  "Нижнее бельё": {
+   "en": "Lingerie",
+   "ru": "Нижнее бельё",
+   "de": "Dessous",
+   "fr": "Lingerie"
+  },
+  "Чулочно-носочные": {
+   "en": "Hosiery",
+   "ru": "Чулочно-носочные",
+   "de": "Strümpfe & Socken",
+   "fr": "Bas et chaussettes"
+  },
+  "Верхняя одежда": {
+   "en": "Outerwear",
+   "ru": "Верхняя одежда",
+   "de": "Oberbekleidung",
+   "fr": "Vêtements d'extérieur"
+  },
+  "Костюмы / профессии": {
+   "en": "Uniforms / professions",
+   "ru": "Костюмы / профессии",
+   "de": "Uniformen / Berufe",
+   "fr": "Uniformes / métiers"
+  },
+  "Косплей / ролевая": {
+   "en": "Cosplay / role-play",
+   "ru": "Косплей / ролевая",
+   "de": "Cosplay / Rollenspiel",
+   "fr": "Cosplay / jeu de rôle"
+  },
+  "Национальная / культурная": {
+   "en": "Traditional / cultural",
+   "ru": "Национальная / культурная",
+   "de": "Traditionell / kulturell",
+   "fr": "Traditionnelle / culturelle"
+  },
+  "Фэнтези / Sci-Fi": {
+   "en": "Fantasy / sci-fi",
+   "ru": "Фэнтези / Sci-Fi",
+   "de": "Fantasy / Sci-Fi",
+   "fr": "Fantasy / SF"
+  },
+  "Субкультура": {
+   "en": "Subculture",
+   "ru": "Субкультура",
+   "de": "Subkultur",
+   "fr": "Sous-culture"
+  },
+  "NSFW-состояния": {
+   "en": "NSFW looks",
+   "ru": "NSFW-состояния",
+   "de": "NSFW-Looks",
+   "fr": "Tenues NSFW"
+  },
+  "Украшения": {
+   "en": "Jewelry",
+   "ru": "Украшения",
+   "de": "Schmuck",
+   "fr": "Bijoux"
+  },
+  "Головные уборы": {
+   "en": "Headwear",
+   "ru": "Головные уборы",
+   "de": "Kopfbedeckungen",
+   "fr": "Couvre-chefs"
+  },
+  "Шея / лицо": {
+   "en": "Neck / face",
+   "ru": "Шея / лицо",
+   "de": "Hals / Gesicht",
+   "fr": "Cou / visage"
+  },
+  "Очки": {
+   "en": "Glasses",
+   "ru": "Очки",
+   "de": "Brillen",
+   "fr": "Lunettes"
+  },
+  "Фэнтези / косплей": {
+   "en": "Fantasy / cosplay",
+   "ru": "Фэнтези / косплей",
+   "de": "Fantasy / Cosplay",
+   "fr": "Fantasy / cosplay"
+  },
+  "Предметы в руках": {
+   "en": "Held items",
+   "ru": "Предметы в руках",
+   "de": "In der Hand",
+   "fr": "Objets en main"
+  },
+  "BDSM / фетиш-аксессуары": {
+   "en": "BDSM / fetish accessories",
+   "ru": "BDSM / фетиш-аксессуары",
+   "de": "BDSM / Fetisch-Accessoires",
+   "fr": "BDSM / accessoires fétichistes"
+  },
+  "Кожа": {
+   "en": "Skin",
+   "ru": "Кожа",
+   "de": "Haut",
+   "fr": "Peau"
+  },
+  "Шрамы": {
+   "en": "Scars",
+   "ru": "Шрамы",
+   "de": "Narben",
+   "fr": "Cicatrices"
+  },
+  "Татуировки": {
+   "en": "Tattoos",
+   "ru": "Татуировки",
+   "de": "Tattoos",
+   "fr": "Tatouages"
+  },
+  "Пирсинг": {
+   "en": "Piercings",
+   "ru": "Пирсинг",
+   "de": "Piercings",
+   "fr": "Piercings"
+  },
+  "Следы на теле (NSFW)": {
+   "en": "Body marks (NSFW)",
+   "ru": "Следы на теле (NSFW)",
+   "de": "Spuren am Körper (NSFW)",
+   "fr": "Marques sur le corps (NSFW)"
+  },
+  "Нейтральные": {
+   "en": "Neutral",
+   "ru": "Нейтральные",
+   "de": "Neutral",
+   "fr": "Neutres"
+  },
+  "Позитивные": {
+   "en": "Positive",
+   "ru": "Позитивные",
+   "de": "Positiv",
+   "fr": "Positives"
+  },
+  "Соблазнительные": {
+   "en": "Seductive",
+   "ru": "Соблазнительные",
+   "de": "Verführerisch",
+   "fr": "Séduisantes"
+  },
+  "Негативные": {
+   "en": "Negative",
+   "ru": "Негативные",
+   "de": "Negativ",
+   "fr": "Négatives"
+  },
+  "Стоячие": {
+   "en": "Standing",
+   "ru": "Стоячие",
+   "de": "Stehend",
+   "fr": "Debout"
+  },
+  "Движение": {
+   "en": "In motion",
+   "ru": "Движение",
+   "de": "In Bewegung",
+   "fr": "En mouvement"
+  },
+  "Сидячие": {
+   "en": "Sitting",
+   "ru": "Сидячие",
+   "de": "Sitzend",
+   "fr": "Assises"
+  },
+  "Лежачие": {
+   "en": "Lying down",
+   "ru": "Лежачие",
+   "de": "Liegend",
+   "fr": "Allongées"
+  },
+  "На коленях": {
+   "en": "Kneeling",
+   "ru": "На коленях",
+   "de": "Kniend",
+   "fr": "À genoux"
+  },
+  "Наклоны и прогибы": {
+   "en": "Bending and arching",
+   "ru": "Наклоны и прогибы",
+   "de": "Vorbeugen und Hohlkreuz",
+   "fr": "Penchées et cambrées"
+  },
+  "На четвереньках": {
+   "en": "On all fours",
+   "ru": "На четвереньках",
+   "de": "Auf allen vieren",
+   "fr": "À quatre pattes"
+  },
+  "Повседневные": {
+   "en": "Everyday",
+   "ru": "Повседневные",
+   "de": "Alltag",
+   "fr": "Quotidien"
+  },
+  "Жесты": {
+   "en": "Gestures",
+   "ru": "Жесты",
+   "de": "Gesten",
+   "fr": "Gestes"
+  },
+  "Суггестивные": {
+   "en": "Suggestive",
+   "ru": "Суггестивные",
+   "de": "Anzüglich",
+   "fr": "Suggestives"
+  },
+  "Мастурбация / соло": {
+   "en": "Masturbation / solo",
+   "ru": "Мастурбация / соло",
+   "de": "Masturbation / Solo",
+   "fr": "Masturbation / solo"
+  },
+  "Оральный секс": {
+   "en": "Oral sex",
+   "ru": "Оральный секс",
+   "de": "Oralsex",
+   "fr": "Sexe oral"
+  },
+  "Ручная стимуляция": {
+   "en": "Manual stimulation",
+   "ru": "Ручная стимуляция",
+   "de": "Manuelle Stimulation",
+   "fr": "Stimulation manuelle"
+  },
+  "Вагинальный секс": {
+   "en": "Vaginal sex",
+   "ru": "Вагинальный секс",
+   "de": "Vaginalsex",
+   "fr": "Sexe vaginal"
+  },
+  "Анальный секс": {
+   "en": "Anal sex",
+   "ru": "Анальный секс",
+   "de": "Analsex",
+   "fr": "Sexe anal"
+  },
+  "Камшоты / финиши": {
+   "en": "Cumshots / finishes",
+   "ru": "Камшоты / финиши",
+   "de": "Cumshots / Finale",
+   "fr": "Éjaculations / finales"
+  },
+  "Групповой секс": {
+   "en": "Group sex",
+   "ru": "Групповой секс",
+   "de": "Gruppensex",
+   "fr": "Sexe en groupe"
+  },
+  "Лесбийские": {
+   "en": "Lesbian",
+   "ru": "Лесбийские",
+   "de": "Lesbisch",
+   "fr": "Lesbiennes"
+  },
+  "BDSM / бондаж": {
+   "en": "BDSM / bondage",
+   "ru": "BDSM / бондаж",
+   "de": "BDSM / Bondage",
+   "fr": "BDSM / bondage"
+  },
+  "Романтические / парные": {
+   "en": "Romantic / couples",
+   "ru": "Романтические / парные",
+   "de": "Romantisch / Paare",
+   "fr": "Romantiques / en couple"
+  },
+  "Действия с одеждой": {
+   "en": "Clothing play",
+   "ru": "Действия с одеждой",
+   "de": "Spiel mit Kleidung",
+   "fr": "Jeux avec les vêtements"
+  },
+  "Танцы": {
+   "en": "Dancing",
+   "ru": "Танцы",
+   "de": "Tanzen",
+   "fr": "Danse"
+  },
+  "Суггестивные / Флирт": {
+   "en": "Suggestive / flirting",
+   "ru": "Суггестивные / Флирт",
+   "de": "Anzüglich / Flirten",
+   "fr": "Suggestif / flirt"
+  },
+  "Тизы": {
+   "en": "Teasing",
+   "ru": "Тизы",
+   "de": "Teasing",
+   "fr": "Taquineries"
+  },
+  "Соло": {
+   "en": "Solo",
+   "ru": "Соло",
+   "de": "Solo",
+   "fr": "Solo"
+  },
+  "Оральный": {
+   "en": "Oral",
+   "ru": "Оральный",
+   "de": "Oral",
+   "fr": "Oral"
+  },
+  "Проникновение": {
+   "en": "Penetration",
+   "ru": "Проникновение",
+   "de": "Penetration",
+   "fr": "Pénétration"
+  },
+  "Анальный": {
+   "en": "Anal",
+   "ru": "Анальный",
+   "de": "Anal",
+   "fr": "Anal"
+  },
+  "Камшоты": {
+   "en": "Cumshots",
+   "ru": "Камшоты",
+   "de": "Cumshots",
+   "fr": "Éjaculations"
+  },
+  "Парные интимные": {
+   "en": "Intimate couples",
+   "ru": "Парные интимные",
+   "de": "Intime Paare",
+   "fr": "Couples intimes"
+  },
+  "🏠 Жилые": {
+   "en": "🏠 Residential",
+   "ru": "🏠 Жилые",
+   "de": "🏠 Wohnräume",
+   "fr": "🏠 Résidentiel"
+  },
+  "🏨 Публичные": {
+   "en": "🏨 Public places",
+   "ru": "🏨 Публичные",
+   "de": "🏨 Öffentliche Orte",
+   "fr": "🏨 Lieux publics"
+  },
+  "🎭 Развлечения": {
+   "en": "🎭 Entertainment",
+   "ru": "🎭 Развлечения",
+   "de": "🎭 Unterhaltung",
+   "fr": "🎭 Divertissement"
+  },
+  "🚗 Транспорт": {
+   "en": "🚗 Transport",
+   "ru": "🚗 Транспорт",
+   "de": "🚗 Transport",
+   "fr": "🚗 Transport"
+  },
+  "🏖️ Пляж и вода": {
+   "en": "🏖️ Beach & water",
+   "ru": "🏖️ Пляж и вода",
+   "de": "🏖️ Strand & Wasser",
+   "fr": "🏖️ Plage et eau"
+  },
+  "🌲 Природа": {
+   "en": "🌲 Nature",
+   "ru": "🌲 Природа",
+   "de": "🌲 Natur",
+   "fr": "🌲 Nature"
+  },
+  "🏙️ Городская среда": {
+   "en": "🏙️ Urban",
+   "ru": "🏙️ Городская среда",
+   "de": "🏙️ Stadt",
+   "fr": "🏙️ Ville"
+  },
+  "🏰 Историческое": {
+   "en": "🏰 Historical",
+   "ru": "🏰 Историческое",
+   "de": "🏰 Historisch",
+   "fr": "🏰 Historique"
+  },
+  "🏕️ Специальные": {
+   "en": "🏕️ Special",
+   "ru": "🏕️ Специальные",
+   "de": "🏕️ Spezial",
+   "fr": "🏕️ Spécial"
+  },
+  "Обувь": {
+   "en": "Footwear",
+   "ru": "Обувь",
+   "de": "Schuhe",
+   "fr": "Chaussures"
+  },
+  "Отличительные черты": {
+   "en": "Distinctive features",
+   "ru": "Особые приметы",
+   "de": "Besondere Merkmale",
+   "fr": "Signes distinctifs"
+  },
+  "Позы": {
+   "en": "Pose",
+   "ru": "Поза",
+   "de": "Pose",
+   "fr": "Pose"
+  },
+  "Действия": {
+   "en": "Action (video)",
+   "ru": "Действие (Video)",
+   "de": "Aktion (Video)",
+   "fr": "Action (vidéo)"
+  }
+ },
+ "items": [
+  {
+   "section": "char_style",
+   "code": "realistic",
+   "group": null,
+   "labels": {
+    "en": "Realistic",
+    "ru": "Реалистичный",
+    "de": "Realistisch",
+    "fr": "Réaliste"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": "hyperrealistic, ultra-detailed skin texture, professional photography, natural skin pores",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "STYLE",
+    "category": null,
+    "name": "Realistic",
+    "generationStyle": "realism"
+   }
+  },
+  {
+   "section": "char_style",
+   "code": "anime",
+   "group": null,
+   "labels": {
+    "en": "Anime",
+    "ru": "Аниме",
+    "de": "Anime",
+    "fr": "Anime"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": "anime artwork, key visual, expressive eyes, perfect anatomy",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "STYLE",
+    "category": null,
+    "name": "Anime",
+    "generationStyle": "mistoon"
+   }
+  },
+  {
+   "section": "char_style",
+   "code": "cartoon_3d",
+   "group": null,
+   "labels": {
+    "en": "3D cartoon",
+    "ru": "3D-мультяшный",
+    "de": "3D-Cartoon",
+    "fr": "Dessin animé 3D"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": "Pixar style, 3D cartoon render, octane render, smooth surfaces",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "STYLE",
+    "category": null,
+    "name": "3D cartoon",
+    "generationStyle": "3d"
+   }
+  },
+  {
+   "section": "char_style",
+   "code": "cartoon_2d",
+   "group": null,
+   "labels": {
+    "en": "2D cartoon",
+    "ru": "2D-мультяшный",
+    "de": "2D-Cartoon",
+    "fr": "Dessin animé 2D"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": "2D cartoon style, flat colors, clean bold lineart, vibrant palette",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "STYLE",
+    "category": null,
+    "name": "2D cartoon",
+    "generationStyle": "2d"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "european",
+   "group": "Человеческие",
+   "labels": {
+    "en": "European",
+    "ru": "Европейская",
+    "de": "Europäisch",
+    "fr": "Européenne"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HUMAN_RACE",
+    "category": null,
+    "name": "Европейская"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "latina",
+   "group": "Человеческие",
+   "labels": {
+    "en": "Latina",
+    "ru": "Латиноамериканская",
+    "de": "Latina",
+    "fr": "Latina"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HUMAN_RACE",
+    "category": null,
+    "name": "Латиноамериканская"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "east_asian",
+   "group": "Человеческие",
+   "labels": {
+    "en": "East Asian",
+    "ru": "Восточноазиатская",
+    "de": "Ostasiatisch",
+    "fr": "Asiatique de l'Est"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HUMAN_RACE",
+    "category": null,
+    "name": "Восточноазиатская"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "arabian",
+   "group": "Человеческие",
+   "labels": {
+    "en": "Arab",
+    "ru": "Арабская",
+    "de": "Arabisch",
+    "fr": "Arabe"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HUMAN_RACE",
+    "category": null,
+    "name": "Арабская"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "african",
+   "group": "Человеческие",
+   "labels": {
+    "en": "African",
+    "ru": "Африканская",
+    "de": "Afrikanisch",
+    "fr": "Africaine"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HUMAN_RACE",
+    "category": null,
+    "name": "Африканская"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "elf",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Elf",
+    "ru": "Эльф",
+    "de": "Elfe",
+    "fr": "Elfe"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Эльф"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "demon",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Demon / Succubus",
+    "ru": "Демон / Суккуб",
+    "de": "Dämonin / Sukkubus",
+    "fr": "Démone / Succube"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Демон / Суккуб"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "angel",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Angel",
+    "ru": "Ангел",
+    "de": "Engel",
+    "fr": "Ange"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Ангел"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "vampire",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Vampire",
+    "ru": "Вампир",
+    "de": "Vampirin",
+    "fr": "Vampire"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Вампир"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "neko",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Neko",
+    "ru": "Неко",
+    "de": "Neko",
+    "fr": "Neko"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Неко"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "kitsune",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Kitsune",
+    "ru": "Кицунэ",
+    "de": "Kitsune",
+    "fr": "Kitsune"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Кицунэ"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "bunny_girl",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Bunny girl",
+    "ru": "Зайчик (Playboy)",
+    "de": "Bunny-Girl",
+    "fr": "Bunny girl"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Банни"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "alien",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Alien",
+    "ru": "Инопланетянин",
+    "de": "Außerirdische",
+    "fr": "Extraterrestre"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Инопланетянин"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "android",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Android",
+    "ru": "Андроид",
+    "de": "Androidin",
+    "fr": "Androïde"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Андроид"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "furry",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Furry",
+    "ru": "Фурри",
+    "de": "Furry",
+    "fr": "Furry"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Фурри"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "fairy",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Fairy",
+    "ru": "Фея",
+    "de": "Fee",
+    "fr": "Fée"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Фея"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "orc",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Orc",
+    "ru": "Орк",
+    "de": "Orkin",
+    "fr": "Orque"
+   },
+   "nsfw": false,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Орк"
+   }
+  },
+  {
+   "section": "ethnicity",
+   "code": "drow",
+   "group": "Фэнтезийные",
+   "labels": {
+    "en": "Drow",
+    "ru": "Дроу",
+    "de": "Drow",
+    "fr": "Drow"
+   },
+   "nsfw": false,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "FANTASY_RACE",
+    "category": null,
+    "name": "Дроу"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "straight",
+   "group": null,
+   "labels": {
+    "en": "Straight",
+    "ru": "Прямые",
+    "de": "Glatt",
+    "fr": "Raides"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Прямые"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "wavy",
+   "group": null,
+   "labels": {
+    "en": "Wavy",
+    "ru": "Волнистые",
+    "de": "Gewellt",
+    "fr": "Ondulés"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Волнистые"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "curly",
+   "group": null,
+   "labels": {
+    "en": "Curly",
+    "ru": "Кудрявые",
+    "de": "Lockig",
+    "fr": "Bouclés"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Кудрявые"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "ponytail",
+   "group": null,
+   "labels": {
+    "en": "Ponytail",
+    "ru": "Хвост",
+    "de": "Pferdeschwanz",
+    "fr": "Queue de cheval"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Хвост"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "braids",
+   "group": null,
+   "labels": {
+    "en": "Braids",
+    "ru": "Косы",
+    "de": "Zöpfe",
+    "fr": "Tresses"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Косы"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "side_braid",
+   "group": null,
+   "labels": {
+    "en": "Side braid",
+    "ru": "Боковая коса",
+    "de": "Seitlicher Zopf",
+    "fr": "Tresse sur le côté"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Боковая коса"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "bun",
+   "group": null,
+   "labels": {
+    "en": "Bun",
+    "ru": "Пучок",
+    "de": "Dutt",
+    "fr": "Chignon"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Пучок"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "updo",
+   "group": null,
+   "labels": {
+    "en": "Updo",
+    "ru": "Высокая укладка",
+    "de": "Hochsteckfrisur",
+    "fr": "Coiffure relevée"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Высокая укладка"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "bangs_blunt",
+   "group": null,
+   "labels": {
+    "en": "Blunt bangs",
+    "ru": "Прямая чёлка",
+    "de": "Gerader Pony",
+    "fr": "Frange droite"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Прямая чёлка"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "afro",
+   "group": null,
+   "labels": {
+    "en": "Afro",
+    "ru": "Афро",
+    "de": "Afro",
+    "fr": "Afro"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Афро"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "dreadlocks",
+   "group": null,
+   "labels": {
+    "en": "Dreadlocks",
+    "ru": "Дреды",
+    "de": "Dreadlocks",
+    "fr": "Dreadlocks"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Дреды"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "messy",
+   "group": null,
+   "labels": {
+    "en": "Messy",
+    "ru": "Растрёпанные",
+    "de": "Zerzaust",
+    "fr": "Décoiffés"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Растрёпанные"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "bob",
+   "group": null,
+   "labels": {
+    "en": "Bob",
+    "ru": "Каре",
+    "de": "Bob",
+    "fr": "Carré"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Каре"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "pixie",
+   "group": null,
+   "labels": {
+    "en": "Pixie cut",
+    "ru": "Пикси",
+    "de": "Pixie-Schnitt",
+    "fr": "Coupe pixie"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Пикси"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "loose",
+   "group": null,
+   "labels": {
+    "en": "Loose",
+    "ru": "Распущенные",
+    "de": "Offen",
+    "fr": "Lâchés"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Распущенные"
+   }
+  },
+  {
+   "section": "hairstyle",
+   "code": "low_tied",
+   "group": null,
+   "labels": {
+    "en": "Low ponytail",
+    "ru": "Низкий хвост",
+    "de": "Tiefer Pferdeschwanz",
+    "fr": "Queue de cheval basse"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "HAIR_STYLE",
+    "category": null,
+    "name": "Низкий хвост"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "petite",
+   "group": null,
+   "labels": {
+    "en": "Petite",
+    "ru": "Миниатюрная",
+    "de": "Zierlich",
+    "fr": "Menue"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_petite"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "slim",
+   "group": null,
+   "labels": {
+    "en": "Slim",
+    "ru": "Стройная",
+    "de": "Schlank",
+    "fr": "Mince"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_slim"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "athletic",
+   "group": null,
+   "labels": {
+    "en": "Athletic",
+    "ru": "Атлетическая",
+    "de": "Athletisch",
+    "fr": "Athlétique"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_athletic"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "curvy",
+   "group": null,
+   "labels": {
+    "en": "Curvy",
+    "ru": "Пышная",
+    "de": "Kurvig",
+    "fr": "Pulpeuse"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_curvy"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "fat",
+   "group": null,
+   "labels": {
+    "en": "Plus-size",
+    "ru": "Толстая",
+    "de": "Mollig",
+    "fr": "Ronde"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_fat"
+   }
+  },
+  {
+   "section": "body_type",
+   "code": "muscular",
+   "group": null,
+   "labels": {
+    "en": "Muscular",
+    "ru": "Мускулистая",
+    "de": "Muskulös",
+    "fr": "Musclée"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BODY_TYPE",
+    "category": null,
+    "name": "type_muscular"
+   }
+  },
+  {
+   "section": "breast_size",
+   "code": "flat",
+   "group": null,
+   "labels": {
+    "en": "Flat",
+    "ru": "Плоская",
+    "de": "Flach",
+    "fr": "Plate"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": "flat chest",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BREAST_SIZE",
+    "category": null,
+    "name": "Flat"
+   }
+  },
+  {
+   "section": "breast_size",
+   "code": "small_br",
+   "group": null,
+   "labels": {
+    "en": "Small",
+    "ru": "Маленькая",
+    "de": "Klein",
+    "fr": "Petite"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": "small breasts",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BREAST_SIZE",
+    "category": null,
+    "name": "Small"
+   }
+  },
+  {
+   "section": "breast_size",
+   "code": "medium_br",
+   "group": null,
+   "labels": {
+    "en": "Medium",
+    "ru": "Средняя",
+    "de": "Mittel",
+    "fr": "Moyenne"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": "medium breasts",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BREAST_SIZE",
+    "category": null,
+    "name": "Medium"
+   }
+  },
+  {
+   "section": "breast_size",
+   "code": "large_br",
+   "group": null,
+   "labels": {
+    "en": "Large",
+    "ru": "Большая",
+    "de": "Groß",
+    "fr": "Généreuse"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": "large breasts",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BREAST_SIZE",
+    "category": null,
+    "name": "Large"
+   }
+  },
+  {
+   "section": "butt_size",
+   "code": "flat_b",
+   "group": null,
+   "labels": {
+    "en": "Flat",
+    "ru": "Плоский",
+    "de": "Flach",
+    "fr": "Plates"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": "flat butt",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BUTT_SIZE",
+    "category": null,
+    "name": "Flat"
+   }
+  },
+  {
+   "section": "butt_size",
+   "code": "small_b",
+   "group": null,
+   "labels": {
+    "en": "Small",
+    "ru": "Небольшой",
+    "de": "Klein",
+    "fr": "Petites"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": "small butt",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BUTT_SIZE",
+    "category": null,
+    "name": "Small"
+   }
+  },
+  {
+   "section": "butt_size",
+   "code": "medium_b",
+   "group": null,
+   "labels": {
+    "en": "Medium",
+    "ru": "Средний",
+    "de": "Mittel",
+    "fr": "Moyennes"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": "medium butt",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BUTT_SIZE",
+    "category": null,
+    "name": "Medium"
+   }
+  },
+  {
+   "section": "butt_size",
+   "code": "large_b",
+   "group": null,
+   "labels": {
+    "en": "Large",
+    "ru": "Большой",
+    "de": "Groß",
+    "fr": "Rebondies"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": "large round butt",
+   "target": {
+    "table": "character_options",
+    "keyCol": "category",
+    "keyVal": "BUTT_SIZE",
+    "category": null,
+    "name": "Large"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "tshirt_jeans",
+   "group": "Повседневная",
+   "labels": {
+    "en": "T-shirt & jeans",
+    "ru": "Футболка и джинсы",
+    "de": "T-Shirt & Jeans",
+    "fr": "T-shirt et jean"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Футболка и джинсы"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "crop_top",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Crop top",
+    "ru": "Кроп-топ",
+    "de": "Crop-Top",
+    "fr": "Crop top"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Кроп-топ"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "tank_top",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Tank top",
+    "ru": "Майка",
+    "de": "Tanktop",
+    "fr": "Débardeur"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Майка"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "hoodie",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Hoodie",
+    "ru": "Худи",
+    "de": "Hoodie",
+    "fr": "Sweat à capuche"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Худи"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "oversized_sweater",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Oversized sweater",
+    "ru": "Оверсайз-свитер",
+    "de": "Oversize-Pullover",
+    "fr": "Pull oversize"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Оверсайз-свитер"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "blouse",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Blouse",
+    "ru": "Блузка",
+    "de": "Bluse",
+    "fr": "Chemisier"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Блузка"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "sundress",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Sundress",
+    "ru": "Сарафан",
+    "de": "Sommerkleid",
+    "fr": "Robe d'été"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Сарафан"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "mini_skirt",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Miniskirt",
+    "ru": "Мини-юбка",
+    "de": "Minirock",
+    "fr": "Minijupe"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Мини-юбка"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "denim_shorts",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Denim shorts",
+    "ru": "Джинсовые шорты",
+    "de": "Jeansshorts",
+    "fr": "Short en jean"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Джинсовые шорты"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "tube_top",
+   "group": "Повседневная",
+   "labels": {
+    "en": "Tube top",
+    "ru": "Тюб-топ",
+    "de": "Bandeau-Top",
+    "fr": "Haut bandeau"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Повседневная",
+    "name": "Тюб-топ"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "evening_gown",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Evening gown",
+    "ru": "Вечернее платье",
+    "de": "Abendkleid",
+    "fr": "Robe de soirée"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Вечернее платье"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "little_black_dress",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Little black dress",
+    "ru": "Маленькое чёрное",
+    "de": "Kleines Schwarzes",
+    "fr": "Petite robe noire"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Маленькое чёрное"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "slit_dress",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Slit dress",
+    "ru": "Платье с разрезом",
+    "de": "Kleid mit Schlitz",
+    "fr": "Robe fendue"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Платье с разрезом"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "bodycon_dress",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Bodycon dress",
+    "ru": "Облегающее платье",
+    "de": "Figurbetontes Kleid",
+    "fr": "Robe moulante"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Облегающее платье"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "sheer_dress",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Sheer dress",
+    "ru": "Прозрачное платье",
+    "de": "Transparentes Kleid",
+    "fr": "Robe transparente"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Прозрачное платье"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "wedding_dress",
+   "group": "Формальная / вечерняя",
+   "labels": {
+    "en": "Wedding dress",
+    "ru": "Свадебное платье",
+    "de": "Brautkleid",
+    "fr": "Robe de mariée"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Формальная / вечерняя",
+    "name": "Свадебное платье"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "sports_bra",
+   "group": "Спортивная",
+   "labels": {
+    "en": "Sports bra",
+    "ru": "Спортивный бра",
+    "de": "Sport-BH",
+    "fr": "Brassière de sport"
+   },
+   "nsfw": false,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Спортивная",
+    "name": "Спортивный бра"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "gym_outfit",
+   "group": "Спортивная",
+   "labels": {
+    "en": "Gym outfit",
+    "ru": "Спортивная форма",
+    "de": "Sportoutfit",
+    "fr": "Tenue de sport"
+   },
+   "nsfw": false,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Спортивная",
+    "name": "Спортивная форма"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "yoga_outfit",
+   "group": "Спортивная",
+   "labels": {
+    "en": "Yoga outfit",
+    "ru": "Йога-комплект",
+    "de": "Yoga-Outfit",
+    "fr": "Tenue de yoga"
+   },
+   "nsfw": false,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Спортивная",
+    "name": "Йога-комплект"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "tennis_outfit",
+   "group": "Спортивная",
+   "labels": {
+    "en": "Tennis outfit",
+    "ru": "Теннисная форма",
+    "de": "Tennis-Outfit",
+    "fr": "Tenue de tennis"
+   },
+   "nsfw": false,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Спортивная",
+    "name": "Теннисная форма"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "leotard",
+   "group": "Спортивная",
+   "labels": {
+    "en": "Leotard",
+    "ru": "Гимнастический",
+    "de": "Turnanzug",
+    "fr": "Justaucorps"
+   },
+   "nsfw": false,
+   "order": 20,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Спортивная",
+    "name": "Гимнастический"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "bikini",
+   "group": "Купальники",
+   "labels": {
+    "en": "Bikini",
+    "ru": "Бикини",
+    "de": "Bikini",
+    "fr": "Bikini"
+   },
+   "nsfw": false,
+   "order": 21,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Купальники",
+    "name": "Бикини"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "micro_bikini",
+   "group": "Купальники",
+   "labels": {
+    "en": "Micro bikini",
+    "ru": "Микро-бикини",
+    "de": "Mikro-Bikini",
+    "fr": "Micro-bikini"
+   },
+   "nsfw": true,
+   "order": 22,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Купальники",
+    "name": "Микро-бикини"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "slingshot_bikini",
+   "group": "Купальники",
+   "labels": {
+    "en": "Slingshot bikini",
+    "ru": "Слингшот",
+    "de": "Slingshot-Bikini",
+    "fr": "Bikini slingshot"
+   },
+   "nsfw": true,
+   "order": 23,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Купальники",
+    "name": "Слингшот"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "one_piece_swimsuit",
+   "group": "Купальники",
+   "labels": {
+    "en": "One-piece swimsuit",
+    "ru": "Цельный купальник",
+    "de": "Badeanzug",
+    "fr": "Maillot une pièce"
+   },
+   "nsfw": false,
+   "order": 24,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Купальники",
+    "name": "Цельный купальник"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "sarong",
+   "group": "Купальники",
+   "labels": {
+    "en": "Sarong",
+    "ru": "Парео",
+    "de": "Sarong",
+    "fr": "Paréo"
+   },
+   "nsfw": false,
+   "order": 25,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Купальники",
+    "name": "Парео"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "lingerie_set",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Lingerie set",
+    "ru": "Комплект белья",
+    "de": "Dessous-Set",
+    "fr": "Ensemble de lingerie"
+   },
+   "nsfw": true,
+   "order": 26,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Комплект белья"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "lace_lingerie",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Lace lingerie",
+    "ru": "Кружевное бельё",
+    "de": "Spitzendessous",
+    "fr": "Lingerie en dentelle"
+   },
+   "nsfw": true,
+   "order": 27,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Кружевное бельё"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "babydoll",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Babydoll",
+    "ru": "Бэбидолл",
+    "de": "Babydoll",
+    "fr": "Nuisette babydoll"
+   },
+   "nsfw": true,
+   "order": 28,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Бэбидолл"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "corset",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Corset",
+    "ru": "Корсет",
+    "de": "Korsett",
+    "fr": "Corset"
+   },
+   "nsfw": true,
+   "order": 29,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Корсет"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "garter_stockings",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Garter belt & stockings",
+    "ru": "Пояс + чулки",
+    "de": "Strapsgürtel & Strümpfe",
+    "fr": "Porte-jarretelles et bas"
+   },
+   "nsfw": true,
+   "order": 30,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Пояс + чулки"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "thong",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Thong",
+    "ru": "Стринги",
+    "de": "String",
+    "fr": "String"
+   },
+   "nsfw": true,
+   "order": 31,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Стринги"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "teddy",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Teddy",
+    "ru": "Тедди",
+    "de": "Teddy",
+    "fr": "Body en dentelle"
+   },
+   "nsfw": true,
+   "order": 32,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Тедди"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "negligee",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Negligee",
+    "ru": "Пеньюар",
+    "de": "Negligé",
+    "fr": "Déshabillé"
+   },
+   "nsfw": true,
+   "order": 33,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Пеньюар"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "robe_open",
+   "group": "Нижнее бельё",
+   "labels": {
+    "en": "Open robe",
+    "ru": "Распахнутый халат",
+    "de": "Offener Morgenmantel",
+    "fr": "Peignoir ouvert"
+   },
+   "nsfw": true,
+   "order": 34,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Нижнее бельё",
+    "name": "Распахнутый халат"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "stockings",
+   "group": "Чулочно-носочные",
+   "labels": {
+    "en": "Stockings",
+    "ru": "Чулки",
+    "de": "Strümpfe",
+    "fr": "Bas"
+   },
+   "nsfw": false,
+   "order": 35,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Чулочно-носочные",
+    "name": "Чулки"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "knee_highs",
+   "group": "Чулочно-носочные",
+   "labels": {
+    "en": "Knee-high socks",
+    "ru": "Гольфы",
+    "de": "Kniestrümpfe",
+    "fr": "Chaussettes hautes"
+   },
+   "nsfw": false,
+   "order": 36,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Чулочно-носочные",
+    "name": "Гольфы"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "ankle_socks",
+   "group": "Чулочно-носочные",
+   "labels": {
+    "en": "Ankle socks",
+    "ru": "Короткие носки",
+    "de": "Söckchen",
+    "fr": "Socquettes"
+   },
+   "nsfw": false,
+   "order": 37,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Чулочно-носочные",
+    "name": "Короткие носки"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "pantyhose",
+   "group": "Чулочно-носочные",
+   "labels": {
+    "en": "Pantyhose",
+    "ru": "Колготки",
+    "de": "Strumpfhose",
+    "fr": "Collants"
+   },
+   "nsfw": false,
+   "order": 38,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Чулочно-носочные",
+    "name": "Колготки"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "fishnet_stockings",
+   "group": "Чулочно-носочные",
+   "labels": {
+    "en": "Fishnet stockings",
+    "ru": "Сетчатые чулки",
+    "de": "Netzstrümpfe",
+    "fr": "Bas résille"
+   },
+   "nsfw": false,
+   "order": 39,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Чулочно-носочные",
+    "name": "Сетчатые чулки"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "leather_jacket",
+   "group": "Верхняя одежда",
+   "labels": {
+    "en": "Leather jacket",
+    "ru": "Кожаная куртка",
+    "de": "Lederjacke",
+    "fr": "Veste en cuir"
+   },
+   "nsfw": false,
+   "order": 40,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Верхняя одежда",
+    "name": "Кожаная куртка"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "fur_coat",
+   "group": "Верхняя одежда",
+   "labels": {
+    "en": "Fur coat",
+    "ru": "Шуба",
+    "de": "Pelzmantel",
+    "fr": "Manteau de fourrure"
+   },
+   "nsfw": false,
+   "order": 41,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Верхняя одежда",
+    "name": "Шуба"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "maid_outfit",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Maid",
+    "ru": "Горничная",
+    "de": "Dienstmädchen",
+    "fr": "Soubrette"
+   },
+   "nsfw": false,
+   "order": 42,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Горничная"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "nurse_outfit",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Nurse",
+    "ru": "Медсестра",
+    "de": "Krankenschwester",
+    "fr": "Infirmière"
+   },
+   "nsfw": false,
+   "order": 43,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Медсестра"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "secretary_outfit",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Secretary",
+    "ru": "Секретарша",
+    "de": "Sekretärin",
+    "fr": "Secrétaire"
+   },
+   "nsfw": false,
+   "order": 44,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Секретарша"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "police_uniform",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Police officer",
+    "ru": "Полиция",
+    "de": "Polizistin",
+    "fr": "Policière"
+   },
+   "nsfw": false,
+   "order": 45,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Полиция"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "flight_attendant",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Flight attendant",
+    "ru": "Стюардесса",
+    "de": "Stewardess",
+    "fr": "Hôtesse de l'air"
+   },
+   "nsfw": false,
+   "order": 46,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Стюардесса"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "teacher_outfit",
+   "group": "Костюмы / профессии",
+   "labels": {
+    "en": "Teacher",
+    "ru": "Учительница",
+    "de": "Lehrerin",
+    "fr": "Professeure"
+   },
+   "nsfw": false,
+   "order": 47,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Костюмы / профессии",
+    "name": "Учительница"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "bunny_girl",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "Bunny costume",
+    "ru": "Зайчик",
+    "de": "Bunny-Kostüm",
+    "fr": "Costume de lapine"
+   },
+   "nsfw": false,
+   "order": 48,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Зайчик"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "catgirl_outfit",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "Catgirl",
+    "ru": "Кошечка",
+    "de": "Kätzchen",
+    "fr": "Catgirl"
+   },
+   "nsfw": false,
+   "order": 49,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Кошечка"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "witch_outfit",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "Witch",
+    "ru": "Ведьма",
+    "de": "Hexe",
+    "fr": "Sorcière"
+   },
+   "nsfw": false,
+   "order": 50,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Ведьма"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "devil_outfit",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "She-devil",
+    "ru": "Дьяволица",
+    "de": "Teufelin",
+    "fr": "Diablesse"
+   },
+   "nsfw": false,
+   "order": 51,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Дьяволица"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "santa_outfit",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "Santa",
+    "ru": "Санта",
+    "de": "Weihnachtsfrau",
+    "fr": "Mère Noël"
+   },
+   "nsfw": false,
+   "order": 52,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Санта"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "harem_girl",
+   "group": "Косплей / ролевая",
+   "labels": {
+    "en": "Harem girl",
+    "ru": "Наложница / гарем",
+    "de": "Haremsdame",
+    "fr": "Odalisque"
+   },
+   "nsfw": true,
+   "order": 53,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Косплей / ролевая",
+    "name": "Наложница / гарем"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "kimono",
+   "group": "Национальная / культурная",
+   "labels": {
+    "en": "Kimono",
+    "ru": "Кимоно",
+    "de": "Kimono",
+    "fr": "Kimono"
+   },
+   "nsfw": false,
+   "order": 54,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Национальная / культурная",
+    "name": "Кимоно"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "cheongsam",
+   "group": "Национальная / культурная",
+   "labels": {
+    "en": "Cheongsam",
+    "ru": "Чонсам",
+    "de": "Cheongsam",
+    "fr": "Qipao"
+   },
+   "nsfw": false,
+   "order": 55,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Национальная / культурная",
+    "name": "Чонсам"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "belly_dancer",
+   "group": "Национальная / культурная",
+   "labels": {
+    "en": "Belly dancer",
+    "ru": "Танцовщица живота",
+    "de": "Bauchtänzerin",
+    "fr": "Danseuse orientale"
+   },
+   "nsfw": false,
+   "order": 56,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Национальная / культурная",
+    "name": "Танцовщица живота"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "fantasy_armor",
+   "group": "Фэнтези / Sci-Fi",
+   "labels": {
+    "en": "Fantasy armor",
+    "ru": "Фэнтези-доспехи",
+    "de": "Fantasy-Rüstung",
+    "fr": "Armure fantasy"
+   },
+   "nsfw": false,
+   "order": 57,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Фэнтези / Sci-Fi",
+    "name": "Фэнтези-доспехи"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "cyberpunk_outfit",
+   "group": "Фэнтези / Sci-Fi",
+   "labels": {
+    "en": "Cyberpunk",
+    "ru": "Киберпанк",
+    "de": "Cyberpunk",
+    "fr": "Cyberpunk"
+   },
+   "nsfw": false,
+   "order": 58,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Фэнтези / Sci-Fi",
+    "name": "Киберпанк"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "goth",
+   "group": "Субкультура",
+   "labels": {
+    "en": "Goth",
+    "ru": "Готика",
+    "de": "Gothic",
+    "fr": "Gothique"
+   },
+   "nsfw": false,
+   "order": 59,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Субкультура",
+    "name": "Готика"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "grunge_90s",
+   "group": "Субкультура",
+   "labels": {
+    "en": "90s grunge",
+    "ru": "Гранж 90-х",
+    "de": "90er-Grunge",
+    "fr": "Grunge années 90"
+   },
+   "nsfw": false,
+   "order": 60,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "Субкультура",
+    "name": "Гранж 90-х"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "nude",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Nude",
+    "ru": "Обнажена",
+    "de": "Nackt",
+    "fr": "Nue"
+   },
+   "nsfw": true,
+   "order": 61,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Обнажена"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "see_through",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "See-through clothes",
+    "ru": "Прозрачная одежда",
+    "de": "Durchsichtige Kleidung",
+    "fr": "Vêtements transparents"
+   },
+   "nsfw": true,
+   "order": 62,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Прозрачная одежда"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "shibari_wear",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Shibari",
+    "ru": "Шибари",
+    "de": "Shibari",
+    "fr": "Shibari"
+   },
+   "nsfw": true,
+   "order": 63,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Шибари"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "towel_only",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Towel only",
+    "ru": "Только полотенце",
+    "de": "Nur ein Handtuch",
+    "fr": "Juste une serviette"
+   },
+   "nsfw": true,
+   "order": 64,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Только полотенце"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "latex_outfit",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Latex",
+    "ru": "Латекс",
+    "de": "Latex",
+    "fr": "Latex"
+   },
+   "nsfw": true,
+   "order": 65,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Латекс"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "dominatrix",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Dominatrix",
+    "ru": "Доминатрикс",
+    "de": "Domina",
+    "fr": "Dominatrice"
+   },
+   "nsfw": true,
+   "order": 66,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Доминатрикс"
+   }
+  },
+  {
+   "section": "outfit",
+   "code": "cum_covered",
+   "group": "NSFW-состояния",
+   "labels": {
+    "en": "Covered in cum",
+    "ru": "Покрыта спермой",
+    "de": "Mit Sperma bedeckt",
+    "fr": "Couverte de sperme"
+   },
+   "nsfw": true,
+   "order": 67,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFITS",
+    "category": "NSFW-состояния",
+    "name": "Покрыта спермой"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "barefoot",
+   "group": null,
+   "labels": {
+    "en": "Barefoot",
+    "ru": "Босиком",
+    "de": "Barfuß",
+    "fr": "Pieds nus"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Босиком"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "sneakers",
+   "group": null,
+   "labels": {
+    "en": "Sneakers",
+    "ru": "Кроссовки",
+    "de": "Sneaker",
+    "fr": "Baskets"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Кроссовки"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "high_heels",
+   "group": null,
+   "labels": {
+    "en": "High heels",
+    "ru": "Высокий каблук",
+    "de": "High Heels",
+    "fr": "Talons hauts"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Высокий каблук"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "stilettos",
+   "group": null,
+   "labels": {
+    "en": "Stilettos",
+    "ru": "Шпильки",
+    "de": "Stilettos",
+    "fr": "Talons aiguilles"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Шпильки"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "ankle_boots",
+   "group": null,
+   "labels": {
+    "en": "Ankle boots",
+    "ru": "Ботильоны",
+    "de": "Stiefeletten",
+    "fr": "Bottines"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Ботильоны"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "knee_boots",
+   "group": null,
+   "labels": {
+    "en": "Knee-high boots",
+    "ru": "Сапоги до колен",
+    "de": "Kniehohe Stiefel",
+    "fr": "Bottes hautes"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Сапоги до колен"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "thigh_high_boots",
+   "group": null,
+   "labels": {
+    "en": "Thigh-high boots",
+    "ru": "Ботфорты",
+    "de": "Overknee-Stiefel",
+    "fr": "Cuissardes"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Ботфорты"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "sandals",
+   "group": null,
+   "labels": {
+    "en": "Sandals",
+    "ru": "Сандалии",
+    "de": "Sandalen",
+    "fr": "Sandales"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Сандалии"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "slippers",
+   "group": null,
+   "labels": {
+    "en": "Slippers",
+    "ru": "Тапочки",
+    "de": "Hausschuhe",
+    "fr": "Chaussons"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Тапочки"
+   }
+  },
+  {
+   "section": "footwear",
+   "code": "stripper_heels",
+   "group": null,
+   "labels": {
+    "en": "Stripper heels",
+    "ru": "Стриптиз-туфли",
+    "de": "Stripper-Heels",
+    "fr": "Talons de strip-teaseuse"
+   },
+   "nsfw": true,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Обувь",
+    "name": "Стриптиз-туфли"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "choker",
+   "group": "Украшения",
+   "labels": {
+    "en": "Choker",
+    "ru": "Чокер",
+    "de": "Choker",
+    "fr": "Ras-de-cou"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Чокер"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "necklace",
+   "group": "Украшения",
+   "labels": {
+    "en": "Necklace",
+    "ru": "Ожерелье",
+    "de": "Halskette",
+    "fr": "Collier"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Ожерелье"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "pearl_necklace",
+   "group": "Украшения",
+   "labels": {
+    "en": "Pearl necklace",
+    "ru": "Жемчуг",
+    "de": "Perlenkette",
+    "fr": "Collier de perles"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Жемчуг"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "earrings_hoop",
+   "group": "Украшения",
+   "labels": {
+    "en": "Hoop earrings",
+    "ru": "Серьги-кольца",
+    "de": "Creolen",
+    "fr": "Créoles"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Серьги-кольца"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "bracelet",
+   "group": "Украшения",
+   "labels": {
+    "en": "Bracelet",
+    "ru": "Браслет",
+    "de": "Armband",
+    "fr": "Bracelet"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Браслет"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "body_chain",
+   "group": "Украшения",
+   "labels": {
+    "en": "Body chain",
+    "ru": "Цепочка на тело",
+    "de": "Körperkette",
+    "fr": "Chaîne de corps"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Цепочка на тело"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "nipple_chain",
+   "group": "Украшения",
+   "labels": {
+    "en": "Nipple chain",
+    "ru": "Цепочка на сосках",
+    "de": "Nippelkette",
+    "fr": "Chaîne de tétons"
+   },
+   "nsfw": true,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Украшения",
+    "name": "Цепочка на сосках"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "tiara",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Tiara",
+    "ru": "Тиара",
+    "de": "Tiara",
+    "fr": "Diadème"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Тиара"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "crown",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Crown",
+    "ru": "Корона",
+    "de": "Krone",
+    "fr": "Couronne"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Корона"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "flower_crown",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Flower crown",
+    "ru": "Венок из цветов",
+    "de": "Blumenkranz",
+    "fr": "Couronne de fleurs"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Венок из цветов"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "hat",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Hat",
+    "ru": "Шляпа",
+    "de": "Hut",
+    "fr": "Chapeau"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Шляпа"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "beanie",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Beanie",
+    "ru": "Шапка-бини",
+    "de": "Beanie",
+    "fr": "Bonnet"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Шапка-бини"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "baseball_cap",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Baseball cap",
+    "ru": "Бейсболка",
+    "de": "Baseballkappe",
+    "fr": "Casquette"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Бейсболка"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "veil",
+   "group": "Головные уборы",
+   "labels": {
+    "en": "Veil",
+    "ru": "Вуаль",
+    "de": "Schleier",
+    "fr": "Voile"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Головные уборы",
+    "name": "Вуаль"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "collar",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Collar",
+    "ru": "Ошейник",
+    "de": "Halsband",
+    "fr": "Collier en cuir"
+   },
+   "nsfw": true,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Ошейник"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "mask_venetian",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Masquerade mask",
+    "ru": "Маскарадная маска",
+    "de": "Maskenballmaske",
+    "fr": "Masque vénitien"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Маскарадная маска"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "blindfold_acc",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Blindfold",
+    "ru": "Повязка на глаза",
+    "de": "Augenbinde",
+    "fr": "Bandeau sur les yeux"
+   },
+   "nsfw": true,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Повязка на глаза"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "ball_gag",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Ball gag",
+    "ru": "Кляп-шарик",
+    "de": "Knebelball",
+    "fr": "Bâillon boule"
+   },
+   "nsfw": true,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Кляп-шарик"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "ring_gag",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Ring gag",
+    "ru": "Кольцевой кляп",
+    "de": "Ringknebel",
+    "fr": "Bâillon anneau"
+   },
+   "nsfw": true,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Кольцевой кляп"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "mouth_tape",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Tape gag",
+    "ru": "Скотч на рту",
+    "de": "Klebeband auf dem Mund",
+    "fr": "Scotch sur la bouche"
+   },
+   "nsfw": true,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Скотч на рту"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "collar_leash_set",
+   "group": "Шея / лицо",
+   "labels": {
+    "en": "Collar & leash",
+    "ru": "Ошейник + поводок",
+    "de": "Halsband & Leine",
+    "fr": "Collier et laisse"
+   },
+   "nsfw": true,
+   "order": 20,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Шея / лицо",
+    "name": "Ошейник + поводок"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "glasses",
+   "group": "Очки",
+   "labels": {
+    "en": "Glasses",
+    "ru": "Очки",
+    "de": "Brille",
+    "fr": "Lunettes"
+   },
+   "nsfw": false,
+   "order": 21,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Очки",
+    "name": "Очки"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "sunglasses",
+   "group": "Очки",
+   "labels": {
+    "en": "Sunglasses",
+    "ru": "Солнцезащитные",
+    "de": "Sonnenbrille",
+    "fr": "Lunettes de soleil"
+   },
+   "nsfw": false,
+   "order": 22,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Очки",
+    "name": "Солнцезащитные"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "cat_ears",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Cat ears",
+    "ru": "Кошачьи ушки",
+    "de": "Katzenohren",
+    "fr": "Oreilles de chat"
+   },
+   "nsfw": false,
+   "order": 23,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Кошачьи ушки"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "bunny_ears_acc",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Bunny ears",
+    "ru": "Кроличьи ушки",
+    "de": "Hasenohren",
+    "fr": "Oreilles de lapin"
+   },
+   "nsfw": false,
+   "order": 24,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Кроличьи ушки"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "horns",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Horns",
+    "ru": "Рога",
+    "de": "Hörner",
+    "fr": "Cornes"
+   },
+   "nsfw": false,
+   "order": 25,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Рога"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "wings",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Wings",
+    "ru": "Крылья",
+    "de": "Flügel",
+    "fr": "Ailes"
+   },
+   "nsfw": false,
+   "order": 26,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Крылья"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "elf_ears",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Elf ears",
+    "ru": "Эльфийские уши",
+    "de": "Elfenohren",
+    "fr": "Oreilles d'elfe"
+   },
+   "nsfw": false,
+   "order": 27,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Эльфийские уши"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "fox_tail_plug",
+   "group": "Фэнтези / косплей",
+   "labels": {
+    "en": "Fox tail plug",
+    "ru": "Хвост-плаг (лиса)",
+    "de": "Fuchsschwanz-Plug",
+    "fr": "Plug queue de renard"
+   },
+   "nsfw": true,
+   "order": 28,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Фэнтези / косплей",
+    "name": "Хвост-плаг (лиса)"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "handcuffs_acc",
+   "group": "Предметы в руках",
+   "labels": {
+    "en": "Handcuffs",
+    "ru": "Наручники",
+    "de": "Handschellen",
+    "fr": "Menottes"
+   },
+   "nsfw": true,
+   "order": 29,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Предметы в руках",
+    "name": "Наручники"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "whip",
+   "group": "Предметы в руках",
+   "labels": {
+    "en": "Whip",
+    "ru": "Хлыст",
+    "de": "Peitsche",
+    "fr": "Fouet"
+   },
+   "nsfw": true,
+   "order": 30,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Предметы в руках",
+    "name": "Хлыст"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "dildo_hand",
+   "group": "Предметы в руках",
+   "labels": {
+    "en": "Dildo in hand",
+    "ru": "Дилдо в руке",
+    "de": "Dildo in der Hand",
+    "fr": "Gode à la main"
+   },
+   "nsfw": true,
+   "order": 31,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Предметы в руках",
+    "name": "Дилдо в руке"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "wrist_cuffs",
+   "group": "BDSM / фетиш-аксессуары",
+   "labels": {
+    "en": "Leather wrist cuffs",
+    "ru": "Наручники на запястьях",
+    "de": "Lederfesseln",
+    "fr": "Bracelets en cuir"
+   },
+   "nsfw": true,
+   "order": 32,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "BDSM / фетиш-аксессуары",
+    "name": "Наручники на запястьях"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "nipple_clamps",
+   "group": "BDSM / фетиш-аксессуары",
+   "labels": {
+    "en": "Nipple clamps",
+    "ru": "Зажимы на сосках",
+    "de": "Nippelklemmen",
+    "fr": "Pinces à tétons"
+   },
+   "nsfw": true,
+   "order": 33,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "BDSM / фетиш-аксессуары",
+    "name": "Зажимы на сосках"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "anal_plug",
+   "group": "BDSM / фетиш-аксессуары",
+   "labels": {
+    "en": "Butt plug",
+    "ru": "Анальная пробка",
+    "de": "Analplug",
+    "fr": "Plug anal"
+   },
+   "nsfw": true,
+   "order": 34,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "BDSM / фетиш-аксессуары",
+    "name": "Анальная пробка"
+   }
+  },
+  {
+   "section": "accessories",
+   "code": "anal_beads",
+   "group": "BDSM / фетиш-аксессуары",
+   "labels": {
+    "en": "Anal beads",
+    "ru": "Анальные бусы",
+    "de": "Analkugeln",
+    "fr": "Chapelet anal"
+   },
+   "nsfw": true,
+   "order": 35,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "BDSM / фетиш-аксессуары",
+    "name": "Анальные бусы"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "freckles",
+   "group": "Кожа",
+   "labels": {
+    "en": "Freckles",
+    "ru": "Веснушки",
+    "de": "Sommersprossen",
+    "fr": "Taches de rousseur"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_freckles"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "tan_lines",
+   "group": "Кожа",
+   "labels": {
+    "en": "Tan lines",
+    "ru": "Следы загара",
+    "de": "Bräunungsstreifen",
+    "fr": "Marques de bronzage"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_tan_lines"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "oiled_skin",
+   "group": "Кожа",
+   "labels": {
+    "en": "Oiled skin",
+    "ru": "Масло на коже",
+    "de": "Geölte Haut",
+    "fr": "Peau huilée"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_oiled_skin"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "scar_face",
+   "group": "Шрамы",
+   "labels": {
+    "en": "Facial scar",
+    "ru": "Шрам на лице",
+    "de": "Narbe im Gesicht",
+    "fr": "Cicatrice au visage"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_scar_face"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "scar_body",
+   "group": "Шрамы",
+   "labels": {
+    "en": "Body scar",
+    "ru": "Шрам на теле",
+    "de": "Narbe am Körper",
+    "fr": "Cicatrice sur le corps"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_scar_body"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "tattoo_small",
+   "group": "Татуировки",
+   "labels": {
+    "en": "Small tattoo",
+    "ru": "Маленькая тату",
+    "de": "Kleines Tattoo",
+    "fr": "Petit tatouage"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_tattoo_small"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "tattoo_sleeve",
+   "group": "Татуировки",
+   "labels": {
+    "en": "Sleeve tattoo",
+    "ru": "Рукав",
+    "de": "Sleeve-Tattoo",
+    "fr": "Tatouage manchette"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_tattoo_sleeve"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "tattoo_back",
+   "group": "Татуировки",
+   "labels": {
+    "en": "Back tattoo",
+    "ru": "Тату на спине",
+    "de": "Rückentattoo",
+    "fr": "Tatouage dans le dos"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_tattoo_back"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "tattoo_lower_back",
+   "group": "Татуировки",
+   "labels": {
+    "en": "Lower back tattoo",
+    "ru": "Тату на пояснице",
+    "de": "Tattoo am unteren Rücken",
+    "fr": "Tatouage bas du dos"
+   },
+   "nsfw": true,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_tattoo_lower_back"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_ear",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Ear piercings",
+    "ru": "Уши",
+    "de": "Ohrpiercings",
+    "fr": "Piercings aux oreilles"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_ear"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_nose",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Nose piercing",
+    "ru": "Нос",
+    "de": "Nasenpiercing",
+    "fr": "Piercing au nez"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_nose"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_lip",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Lip piercing",
+    "ru": "Губа",
+    "de": "Lippenpiercing",
+    "fr": "Piercing à la lèvre"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_lip"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_eyebrow",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Eyebrow piercing",
+    "ru": "Бровь",
+    "de": "Augenbrauenpiercing",
+    "fr": "Piercing au sourcil"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_eyebrow"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_navel",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Navel piercing",
+    "ru": "Пупок",
+    "de": "Bauchnabelpiercing",
+    "fr": "Piercing au nombril"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_navel"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_tongue",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Tongue piercing",
+    "ru": "Язык",
+    "de": "Zungenpiercing",
+    "fr": "Piercing à la langue"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_tongue"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "piercing_nipple",
+   "group": "Пирсинг",
+   "labels": {
+    "en": "Nipple piercing",
+    "ru": "Сосок",
+    "de": "Nippelpiercing",
+    "fr": "Piercing au téton"
+   },
+   "nsfw": true,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_piercing_nipple"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "love_bites",
+   "group": "Следы на теле (NSFW)",
+   "labels": {
+    "en": "Hickeys",
+    "ru": "Засосы",
+    "de": "Knutschflecken",
+    "fr": "Suçons"
+   },
+   "nsfw": true,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_love_bites"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "handprint_mark",
+   "group": "Следы на теле (NSFW)",
+   "labels": {
+    "en": "Handprint",
+    "ru": "Отпечаток ладони",
+    "de": "Handabdruck",
+    "fr": "Trace de main"
+   },
+   "nsfw": true,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_handprint_mark"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "rope_marks",
+   "group": "Следы на теле (NSFW)",
+   "labels": {
+    "en": "Rope marks",
+    "ru": "Следы от верёвки",
+    "de": "Seilspuren",
+    "fr": "Marques de corde"
+   },
+   "nsfw": true,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_rope_marks"
+   }
+  },
+  {
+   "section": "distinctive_marks",
+   "code": "smeared_makeup",
+   "group": "Следы на теле (NSFW)",
+   "labels": {
+    "en": "Smeared makeup",
+    "ru": "Размазанный макияж",
+    "de": "Verschmiertes Make-up",
+    "fr": "Maquillage coulé"
+   },
+   "nsfw": true,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "appearance_options",
+    "keyCol": "tab",
+    "keyVal": "OUTFIT_DETAILS",
+    "category": "Отличительные черты",
+    "name": "marks_smeared_makeup"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "neutral",
+   "group": "Нейтральные",
+   "labels": {
+    "en": "Neutral",
+    "ru": "Нейтральное",
+    "de": "Neutral",
+    "fr": "Neutre"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Нейтральные",
+    "name": "Нейтральное"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "smile",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Smile",
+    "ru": "Улыбка",
+    "de": "Lächeln",
+    "fr": "Sourire"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Улыбка"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "wide_smile",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Big smile",
+    "ru": "Широкая улыбка",
+    "de": "Breites Lächeln",
+    "fr": "Grand sourire"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Широкая улыбка"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "smirk",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Smirk",
+    "ru": "Ухмылка",
+    "de": "Grinsen",
+    "fr": "Sourire en coin"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Ухмылка"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "laughing",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Laughing",
+    "ru": "Смех",
+    "de": "Lachen",
+    "fr": "Rire"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Смех"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "playful",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Playful",
+    "ru": "Игривость",
+    "de": "Verspielt",
+    "fr": "Espiègle"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Игривость"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "wink",
+   "group": "Позитивные",
+   "labels": {
+    "en": "Wink",
+    "ru": "Подмигивание",
+    "de": "Zwinkern",
+    "fr": "Clin d'œil"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Позитивные",
+    "name": "Подмигивание"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "seductive",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Seductive",
+    "ru": "Соблазнительное",
+    "de": "Verführerisch",
+    "fr": "Séductrice"
+   },
+   "nsfw": true,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Соблазнительное"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "bedroom_eyes",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Bedroom eyes",
+    "ru": "Томный взгляд",
+    "de": "Schlafzimmerblick",
+    "fr": "Regard langoureux"
+   },
+   "nsfw": true,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Томный взгляд"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "lip_bite_e",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Lip bite",
+    "ru": "Прикусить губу",
+    "de": "Lippenbeißen",
+    "fr": "Lèvre mordillée"
+   },
+   "nsfw": true,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Прикусить губу"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "tongue_out",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Tongue out",
+    "ru": "Высунутый язык",
+    "de": "Zunge raus",
+    "fr": "Langue tirée"
+   },
+   "nsfw": true,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Высунутый язык"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "ahegao_e",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Ahegao",
+    "ru": "Ахегао",
+    "de": "Ahegao",
+    "fr": "Ahegao"
+   },
+   "nsfw": true,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Ахегао"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "moaning",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Moaning",
+    "ru": "Стон",
+    "de": "Stöhnen",
+    "fr": "Gémissement"
+   },
+   "nsfw": true,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Стон"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "blushing",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Blushing",
+    "ru": "Румянец",
+    "de": "Erröten",
+    "fr": "Rougissante"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Румянец"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "shy",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Shy",
+    "ru": "Стеснение",
+    "de": "Schüchtern",
+    "fr": "Timide"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Стеснение"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "submissive_e",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Submissive",
+    "ru": "Покорность",
+    "de": "Unterwürfig",
+    "fr": "Soumise"
+   },
+   "nsfw": true,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Покорность"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "dominant_e",
+   "group": "Соблазнительные",
+   "labels": {
+    "en": "Dominant",
+    "ru": "Доминирование",
+    "de": "Dominant",
+    "fr": "Dominante"
+   },
+   "nsfw": true,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Соблазнительные",
+    "name": "Доминирование"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "crying",
+   "group": "Негативные",
+   "labels": {
+    "en": "Crying",
+    "ru": "Плач",
+    "de": "Weinen",
+    "fr": "En larmes"
+   },
+   "nsfw": false,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Негативные",
+    "name": "Плач"
+   }
+  },
+  {
+   "section": "expression",
+   "code": "angry",
+   "group": "Негативные",
+   "labels": {
+    "en": "Angry",
+    "ru": "Злость",
+    "de": "Wütend",
+    "fr": "En colère"
+   },
+   "nsfw": false,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "FACIAL_EXPRESSION",
+    "category": "Негативные",
+    "name": "Злость"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "hand_on_hip",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Hand on hip",
+    "ru": "Рука на бедре",
+    "de": "Hand an der Hüfte",
+    "fr": "Main sur la hanche"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_hand_on_hip"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "hands_behind_head",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Hands behind head",
+    "ru": "Руки за головой",
+    "de": "Hände hinter dem Kopf",
+    "fr": "Mains derrière la tête"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_hands_behind_head"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "over_shoulder_look",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Over-the-shoulder look",
+    "ru": "Взгляд через плечо",
+    "de": "Blick über die Schulter",
+    "fr": "Regard par-dessus l'épaule"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_over_shoulder_look"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "leaning_wall",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Leaning on a wall",
+    "ru": "Опирается на стену",
+    "de": "An die Wand gelehnt",
+    "fr": "Appuyée au mur"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_leaning_wall"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "contrapposto",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Contrapposto",
+    "ru": "Контрапосто",
+    "de": "Kontrapost",
+    "fr": "Contrapposto"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_contrapposto"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "anime_girl_pose_p",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Anime pose",
+    "ru": "Аниме-поза",
+    "de": "Anime-Pose",
+    "fr": "Pose anime"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_anime_girl_pose_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "standing_split",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Standing split",
+    "ru": "Вертикальный шпагат",
+    "de": "Stehender Spagat",
+    "fr": "Grand écart debout"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_standing_split"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "hands_on_knees",
+   "group": "Стоячие",
+   "labels": {
+    "en": "Hands on knees",
+    "ru": "Руки на коленях",
+    "de": "Hände auf den Knien",
+    "fr": "Mains sur les genoux"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_hands_on_knees"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "running",
+   "group": "Движение",
+   "labels": {
+    "en": "Running",
+    "ru": "Бежит",
+    "de": "Laufen",
+    "fr": "Course"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_running"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "dancing",
+   "group": "Движение",
+   "labels": {
+    "en": "Dancing",
+    "ru": "Танцует",
+    "de": "Tanzen",
+    "fr": "Danse"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_dancing"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "twirling",
+   "group": "Движение",
+   "labels": {
+    "en": "Twirling",
+    "ru": "Кружится",
+    "de": "Drehung",
+    "fr": "Pirouette"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_twirling"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "jump_for_joy",
+   "group": "Движение",
+   "labels": {
+    "en": "Jump for joy",
+    "ru": "Прыжок от радости",
+    "de": "Freudensprung",
+    "fr": "Saut de joie"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_jump_for_joy"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "pole_dance_p",
+   "group": "Движение",
+   "labels": {
+    "en": "Pole dance",
+    "ru": "Танец у шеста",
+    "de": "Poledance",
+    "fr": "Pole dance"
+   },
+   "nsfw": true,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_pole_dance_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "sitting_chair",
+   "group": "Сидячие",
+   "labels": {
+    "en": "Sitting on a chair",
+    "ru": "Сидит на стуле",
+    "de": "Sitzt auf einem Stuhl",
+    "fr": "Assise sur une chaise"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_sitting_chair"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "sitting_floor",
+   "group": "Сидячие",
+   "labels": {
+    "en": "Sitting on the floor",
+    "ru": "Сидит на полу",
+    "de": "Sitzt auf dem Boden",
+    "fr": "Assise par terre"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_sitting_floor"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "sitting_legs_crossed",
+   "group": "Сидячие",
+   "labels": {
+    "en": "Legs crossed",
+    "ru": "Нога на ногу",
+    "de": "Beine übereinander",
+    "fr": "Jambes croisées"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_sitting_legs_crossed"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "sitting_legs_spread",
+   "group": "Сидячие",
+   "labels": {
+    "en": "Legs spread (sitting)",
+    "ru": "Ноги разведены (сидя)",
+    "de": "Beine gespreizt (sitzend)",
+    "fr": "Jambes écartées (assise)"
+   },
+   "nsfw": true,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_sitting_legs_spread"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "squatting",
+   "group": "Сидячие",
+   "labels": {
+    "en": "Squatting",
+    "ru": "На корточках",
+    "de": "In der Hocke",
+    "fr": "Accroupie"
+   },
+   "nsfw": false,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_squatting"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lying_on_back",
+   "group": "Лежачие",
+   "labels": {
+    "en": "On her back",
+    "ru": "На спине",
+    "de": "Auf dem Rücken",
+    "fr": "Sur le dos"
+   },
+   "nsfw": false,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lying_on_back"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lying_propped_elbow",
+   "group": "Лежачие",
+   "labels": {
+    "en": "On her side, on one elbow",
+    "ru": "На боку, на локте",
+    "de": "Seitlich, auf den Ellbogen gestützt",
+    "fr": "Sur le côté, appuyée sur le coude"
+   },
+   "nsfw": false,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lying_propped_elbow"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lying_arched_back",
+   "group": "Лежачие",
+   "labels": {
+    "en": "Arched back (lying)",
+    "ru": "Прогиб в спине (лёжа)",
+    "de": "Hohlkreuz (liegend)",
+    "fr": "Dos cambré (allongée)"
+   },
+   "nsfw": true,
+   "order": 20,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lying_arched_back"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "reclining",
+   "group": "Лежачие",
+   "labels": {
+    "en": "Reclining",
+    "ru": "Полулежит",
+    "de": "Halb liegend",
+    "fr": "À demi allongée"
+   },
+   "nsfw": false,
+   "order": 21,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_reclining"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lying_on_bed",
+   "group": "Лежачие",
+   "labels": {
+    "en": "Lying on the bed",
+    "ru": "Лежит на кровати",
+    "de": "Liegt auf dem Bett",
+    "fr": "Allongée sur le lit"
+   },
+   "nsfw": false,
+   "order": 22,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lying_on_bed"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "kneeling_looking_up",
+   "group": "На коленях",
+   "labels": {
+    "en": "Kneeling, looking up",
+    "ru": "Взгляд вверх",
+    "de": "Kniend, Blick nach oben",
+    "fr": "À genoux, regard levé"
+   },
+   "nsfw": false,
+   "order": 23,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_kneeling_looking_up"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "bending_over",
+   "group": "Наклоны и прогибы",
+   "labels": {
+    "en": "Bending over",
+    "ru": "Наклон вперёд",
+    "de": "Vorgebeugt",
+    "fr": "Penchée en avant"
+   },
+   "nsfw": false,
+   "order": 24,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_bending_over"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "all_fours",
+   "group": "На четвереньках",
+   "labels": {
+    "en": "On all fours",
+    "ru": "На четвереньках",
+    "de": "Auf allen vieren",
+    "fr": "À quatre pattes"
+   },
+   "nsfw": true,
+   "order": 25,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_all_fours"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "crawling",
+   "group": "На четвереньках",
+   "labels": {
+    "en": "Crawling",
+    "ru": "Ползёт",
+    "de": "Kriecht",
+    "fr": "Avance à quatre pattes"
+   },
+   "nsfw": true,
+   "order": 26,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_crawling"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "face_down_ass_up",
+   "group": "На четвереньках",
+   "labels": {
+    "en": "Face down, ass up",
+    "ru": "Лицо вниз, ягодицы вверх",
+    "de": "Gesicht nach unten, Po hoch",
+    "fr": "Tête en bas, fesses en l'air"
+   },
+   "nsfw": true,
+   "order": 27,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_face_down_ass_up"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cooking",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Cooking",
+    "ru": "Готовит",
+    "de": "Kocht",
+    "fr": "Cuisine"
+   },
+   "nsfw": false,
+   "order": 28,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cooking"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "sleeping",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Sleeping",
+    "ru": "Спит",
+    "de": "Schläft",
+    "fr": "Dort"
+   },
+   "nsfw": false,
+   "order": 29,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_sleeping"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "showering_p",
+   "group": "Повседневные",
+   "labels": {
+    "en": "In the shower",
+    "ru": "В душе",
+    "de": "Unter der Dusche",
+    "fr": "Sous la douche"
+   },
+   "nsfw": false,
+   "order": 30,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_showering_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "bathing_p",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Taking a bath",
+    "ru": "Принимает ванну",
+    "de": "Nimmt ein Bad",
+    "fr": "Prend un bain"
+   },
+   "nsfw": false,
+   "order": 31,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_bathing_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "reading",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Reading",
+    "ru": "Читает",
+    "de": "Liest",
+    "fr": "Lit"
+   },
+   "nsfw": false,
+   "order": 32,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_reading"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "selfie",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Selfie",
+    "ru": "Селфи",
+    "de": "Selfie",
+    "fr": "Selfie"
+   },
+   "nsfw": false,
+   "order": 33,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_selfie"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "pov_selfie",
+   "group": "Повседневные",
+   "labels": {
+    "en": "POV selfie",
+    "ru": "POV-селфи",
+    "de": "POV-Selfie",
+    "fr": "Selfie POV"
+   },
+   "nsfw": false,
+   "order": 34,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_pov_selfie"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "working_out",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Working out",
+    "ru": "Тренируется",
+    "de": "Trainiert",
+    "fr": "S'entraîne"
+   },
+   "nsfw": false,
+   "order": 35,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_working_out"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "yoga",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Yoga",
+    "ru": "Йога",
+    "de": "Yoga",
+    "fr": "Yoga"
+   },
+   "nsfw": false,
+   "order": 36,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_yoga"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "tanning",
+   "group": "Повседневные",
+   "labels": {
+    "en": "Sunbathing",
+    "ru": "Загорает",
+    "de": "Sonnt sich",
+    "fr": "Bronzage"
+   },
+   "nsfw": false,
+   "order": 37,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_tanning"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "blown_kiss",
+   "group": "Жесты",
+   "labels": {
+    "en": "Blowing a kiss",
+    "ru": "Воздушный поцелуй",
+    "de": "Luftkuss",
+    "fr": "Baiser soufflé"
+   },
+   "nsfw": false,
+   "order": 38,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_blown_kiss"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "head_pats",
+   "group": "Жесты",
+   "labels": {
+    "en": "Head pats",
+    "ru": "Гладит по голове",
+    "de": "Kopftätscheln",
+    "fr": "Caresse sur la tête"
+   },
+   "nsfw": false,
+   "order": 39,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_head_pats"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "flashing",
+   "group": "Суггестивные",
+   "labels": {
+    "en": "Flashing",
+    "ru": "Показывает",
+    "de": "Entblößt sich",
+    "fr": "Se dévoile"
+   },
+   "nsfw": true,
+   "order": 40,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_flashing"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "hand_bra_p",
+   "group": "Суггестивные",
+   "labels": {
+    "en": "Covering breasts with hands",
+    "ru": "Прикрывает грудь руками",
+    "de": "Bedeckt die Brüste mit den Händen",
+    "fr": "Cache ses seins avec les mains"
+   },
+   "nsfw": true,
+   "order": 41,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_hand_bra_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "removing_panties",
+   "group": "Суггестивные",
+   "labels": {
+    "en": "Taking off panties",
+    "ru": "Снимает трусики",
+    "de": "Zieht das Höschen aus",
+    "fr": "Enlève sa culotte"
+   },
+   "nsfw": true,
+   "order": 42,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_removing_panties"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "masturbation_p",
+   "group": "Мастурбация / соло",
+   "labels": {
+    "en": "Masturbation",
+    "ru": "Мастурбация",
+    "de": "Masturbation",
+    "fr": "Masturbation"
+   },
+   "nsfw": true,
+   "order": 43,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_masturbation_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "dildo_riding",
+   "group": "Мастурбация / соло",
+   "labels": {
+    "en": "Riding a dildo",
+    "ru": "Дилдо (верхом)",
+    "de": "Reitet einen Dildo",
+    "fr": "Chevauche un gode"
+   },
+   "nsfw": true,
+   "order": 44,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_dildo_riding"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "squirting_solo",
+   "group": "Мастурбация / соло",
+   "labels": {
+    "en": "Squirting",
+    "ru": "Сквирт",
+    "de": "Squirting",
+    "fr": "Squirt"
+   },
+   "nsfw": true,
+   "order": 45,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_squirting_solo"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "blowjob_pov",
+   "group": "Оральный секс",
+   "labels": {
+    "en": "Blowjob (POV)",
+    "ru": "Минет (POV)",
+    "de": "Blowjob (POV)",
+    "fr": "Fellation (POV)"
+   },
+   "nsfw": true,
+   "order": 46,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_blowjob_pov"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "deepthroat",
+   "group": "Оральный секс",
+   "labels": {
+    "en": "Deepthroat",
+    "ru": "Глубокий минет",
+    "de": "Deepthroat",
+    "fr": "Gorge profonde"
+   },
+   "nsfw": true,
+   "order": 47,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_deepthroat"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cunnilingus",
+   "group": "Оральный секс",
+   "labels": {
+    "en": "Cunnilingus",
+    "ru": "Куннилингус",
+    "de": "Cunnilingus",
+    "fr": "Cunnilingus"
+   },
+   "nsfw": true,
+   "order": 48,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cunnilingus"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "face_sitting",
+   "group": "Оральный секс",
+   "labels": {
+    "en": "Facesitting",
+    "ru": "Фейсситтинг",
+    "de": "Facesitting",
+    "fr": "Facesitting"
+   },
+   "nsfw": true,
+   "order": 49,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_face_sitting"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "handjob_pov",
+   "group": "Ручная стимуляция",
+   "labels": {
+    "en": "Handjob (POV)",
+    "ru": "Дрочка (POV)",
+    "de": "Handjob (POV)",
+    "fr": "Branlette (POV)"
+   },
+   "nsfw": true,
+   "order": 50,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_handjob_pov"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "footjob",
+   "group": "Ручная стимуляция",
+   "labels": {
+    "en": "Footjob",
+    "ru": "Футджоб",
+    "de": "Footjob",
+    "fr": "Footjob"
+   },
+   "nsfw": true,
+   "order": 51,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_footjob"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cowgirl_pov",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Cowgirl (POV)",
+    "ru": "Наездница (POV)",
+    "de": "Reiterstellung (POV)",
+    "fr": "Andromaque (POV)"
+   },
+   "nsfw": true,
+   "order": 52,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cowgirl_pov"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "reverse_cowgirl_pov",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Reverse cowgirl (POV)",
+    "ru": "Обратная наездница (POV)",
+    "de": "Umgekehrte Reiterstellung (POV)",
+    "fr": "Andromaque inversée (POV)"
+   },
+   "nsfw": true,
+   "order": 53,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_reverse_cowgirl_pov"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "doggystyle_p",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Doggystyle",
+    "ru": "Догги-стайл",
+    "de": "Doggystyle",
+    "fr": "Levrette"
+   },
+   "nsfw": true,
+   "order": 54,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_doggystyle_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "prone_bone_p",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Prone bone",
+    "ru": "Прон-бон",
+    "de": "Prone Bone",
+    "fr": "Levrette à plat ventre"
+   },
+   "nsfw": true,
+   "order": 55,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_prone_bone_p"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "spooning_sex",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Spooning",
+    "ru": "Ложечки (секс)",
+    "de": "Löffelchen",
+    "fr": "Petite cuillère"
+   },
+   "nsfw": true,
+   "order": 56,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_spooning_sex"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "mating_press",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Mating press",
+    "ru": "Прижимная поза",
+    "de": "Mating Press",
+    "fr": "Mating press"
+   },
+   "nsfw": true,
+   "order": 57,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_mating_press"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "standing_sex",
+   "group": "Вагинальный секс",
+   "labels": {
+    "en": "Standing sex",
+    "ru": "Секс стоя",
+    "de": "Sex im Stehen",
+    "fr": "Sexe debout"
+   },
+   "nsfw": true,
+   "order": 58,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_standing_sex"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "anal_doggystyle",
+   "group": "Анальный секс",
+   "labels": {
+    "en": "Anal (doggystyle)",
+    "ru": "Анал (догги)",
+    "de": "Anal (Doggystyle)",
+    "fr": "Anal (levrette)"
+   },
+   "nsfw": true,
+   "order": 59,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_anal_doggystyle"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "spread_ass",
+   "group": "Анальный секс",
+   "labels": {
+    "en": "Spreading her cheeks",
+    "ru": "Раздвигает ягодицы",
+    "de": "Spreizt die Pobacken",
+    "fr": "Écarte ses fesses"
+   },
+   "nsfw": true,
+   "order": 60,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_spread_ass"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "facial_cumshot",
+   "group": "Камшоты / финиши",
+   "labels": {
+    "en": "Facial",
+    "ru": "Камшот на лицо",
+    "de": "Gesichtsbesamung",
+    "fr": "Éjaculation faciale"
+   },
+   "nsfw": true,
+   "order": 61,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_facial_cumshot"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cum_on_breasts",
+   "group": "Камшоты / финиши",
+   "labels": {
+    "en": "Cum on breasts",
+    "ru": "Сперма на груди",
+    "de": "Sperma auf den Brüsten",
+    "fr": "Sperme sur les seins"
+   },
+   "nsfw": true,
+   "order": 62,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cum_on_breasts"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "creampie",
+   "group": "Камшоты / финиши",
+   "labels": {
+    "en": "Creampie",
+    "ru": "Кримпай",
+    "de": "Creampie",
+    "fr": "Creampie"
+   },
+   "nsfw": true,
+   "order": 63,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_creampie"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cum_in_mouth",
+   "group": "Камшоты / финиши",
+   "labels": {
+    "en": "Cum in mouth",
+    "ru": "Сперма во рту",
+    "de": "Sperma im Mund",
+    "fr": "Sperme dans la bouche"
+   },
+   "nsfw": true,
+   "order": 64,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cum_in_mouth"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "double_penetration",
+   "group": "Групповой секс",
+   "labels": {
+    "en": "Double penetration",
+    "ru": "Двойное проникновение",
+    "de": "Doppelpenetration",
+    "fr": "Double pénétration"
+   },
+   "nsfw": true,
+   "order": 65,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_double_penetration"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "eiffel_tower",
+   "group": "Групповой секс",
+   "labels": {
+    "en": "Eiffel Tower (side view)",
+    "ru": "Эйфелева башня (сбоку)",
+    "de": "Eiffelturm (seitlich)",
+    "fr": "Tour Eiffel (de côté)"
+   },
+   "nsfw": true,
+   "order": 66,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_eiffel_tower"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lesbian_kissing",
+   "group": "Лесбийские",
+   "labels": {
+    "en": "Lesbian kiss",
+    "ru": "Лесбийский поцелуй",
+    "de": "Lesbischer Kuss",
+    "fr": "Baiser lesbien"
+   },
+   "nsfw": true,
+   "order": 67,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lesbian_kissing"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "lesbian_oral",
+   "group": "Лесбийские",
+   "labels": {
+    "en": "Lesbian oral",
+    "ru": "Лесбийский оральный",
+    "de": "Lesbischer Oralsex",
+    "fr": "Oral lesbien"
+   },
+   "nsfw": true,
+   "order": 68,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_lesbian_oral"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "bondage_shibari",
+   "group": "BDSM / бондаж",
+   "labels": {
+    "en": "Shibari",
+    "ru": "Шибари",
+    "de": "Shibari",
+    "fr": "Shibari"
+   },
+   "nsfw": true,
+   "order": 69,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_bondage_shibari"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "emotional_kiss",
+   "group": "Романтические / парные",
+   "labels": {
+    "en": "Passionate kiss",
+    "ru": "Страстный поцелуй",
+    "de": "Leidenschaftlicher Kuss",
+    "fr": "Baiser passionné"
+   },
+   "nsfw": false,
+   "order": 70,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_emotional_kiss"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "cuddling",
+   "group": "Романтические / парные",
+   "labels": {
+    "en": "Cuddling",
+    "ru": "Обнимашки",
+    "de": "Kuscheln",
+    "fr": "Câlin"
+   },
+   "nsfw": false,
+   "order": 71,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_cuddling"
+   }
+  },
+  {
+   "section": "pose_img",
+   "code": "unbuttoning_shirt",
+   "group": "Действия с одеждой",
+   "labels": {
+    "en": "Unbuttoning her shirt",
+    "ru": "Расстёгивает рубашку",
+    "de": "Knöpft das Hemd auf",
+    "fr": "Déboutonne sa chemise"
+   },
+   "nsfw": true,
+   "order": 72,
+   "prompt": "unbuttoning own shirt, fingers on button, shirt partially open revealing skin beneath, 1girl, solo",
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Позы",
+    "name": "img_unbuttoning_shirt"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_hip_sway",
+   "group": "Танцы",
+   "labels": {
+    "en": "Hip sway",
+    "ru": "Покачивание бёдрами",
+    "de": "Hüftschwung",
+    "fr": "Balancement des hanches"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_hip_sway"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_twerk",
+   "group": "Танцы",
+   "labels": {
+    "en": "Twerk",
+    "ru": "Тверк",
+    "de": "Twerk",
+    "fr": "Twerk"
+   },
+   "nsfw": true,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_twerk"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_pole_dance",
+   "group": "Танцы",
+   "labels": {
+    "en": "Pole dance",
+    "ru": "Танец на пилоне",
+    "de": "Poledance",
+    "fr": "Pole dance"
+   },
+   "nsfw": true,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_pole_dance"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_strip_tease",
+   "group": "Танцы",
+   "labels": {
+    "en": "Striptease",
+    "ru": "Стриптиз",
+    "de": "Striptease",
+    "fr": "Strip-tease"
+   },
+   "nsfw": true,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_strip_tease"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_flirting",
+   "group": "Суггестивные / Флирт",
+   "labels": {
+    "en": "Flirting",
+    "ru": "Флирт",
+    "de": "Flirten",
+    "fr": "Flirt"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_flirting"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_blowing_kiss",
+   "group": "Суггестивные / Флирт",
+   "labels": {
+    "en": "Blowing a kiss",
+    "ru": "Воздушный поцелуй",
+    "de": "Luftkuss",
+    "fr": "Baiser soufflé"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_blowing_kiss"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_walking_towards",
+   "group": "Суггестивные / Флирт",
+   "labels": {
+    "en": "Walking towards the camera",
+    "ru": "Идёт к камере",
+    "de": "Geht auf die Kamera zu",
+    "fr": "Marche vers la caméra"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_walking_towards"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_removing_panties",
+   "group": "Тизы",
+   "labels": {
+    "en": "Taking off panties",
+    "ru": "Снимает трусики",
+    "de": "Zieht das Höschen aus",
+    "fr": "Enlève sa culotte"
+   },
+   "nsfw": true,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_removing_panties"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_bouncing_boobs",
+   "group": "Тизы",
+   "labels": {
+    "en": "Bouncing boobs",
+    "ru": "Подпрыгивающая грудь",
+    "de": "Wippende Brüste",
+    "fr": "Seins qui rebondissent"
+   },
+   "nsfw": true,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_bouncing_boobs"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_titty_drop",
+   "group": "Тизы",
+   "labels": {
+    "en": "Titty drop",
+    "ru": "Титти-дроп",
+    "de": "Titty Drop",
+    "fr": "Titty drop"
+   },
+   "nsfw": true,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_titty_drop"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_masturbation",
+   "group": "Соло",
+   "labels": {
+    "en": "Masturbation",
+    "ru": "Мастурбация",
+    "de": "Masturbation",
+    "fr": "Masturbation"
+   },
+   "nsfw": true,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_masturbation"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_dildo_ride",
+   "group": "Соло",
+   "labels": {
+    "en": "Dildo ride",
+    "ru": "Верхом на дилдо",
+    "de": "Dildo-Ritt",
+    "fr": "Chevauche un gode"
+   },
+   "nsfw": true,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_dildo_ride"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_showering",
+   "group": "Соло",
+   "labels": {
+    "en": "Showering",
+    "ru": "Под душем",
+    "de": "Duschen",
+    "fr": "Sous la douche"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_showering"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_blowjob_pov",
+   "group": "Оральный",
+   "labels": {
+    "en": "Blowjob (POV)",
+    "ru": "Минет (POV)",
+    "de": "Blowjob (POV)",
+    "fr": "Fellation (POV)"
+   },
+   "nsfw": true,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_blowjob_pov"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_deepthroat",
+   "group": "Оральный",
+   "labels": {
+    "en": "Deepthroat",
+    "ru": "Глубокий минет",
+    "de": "Deepthroat",
+    "fr": "Gorge profonde"
+   },
+   "nsfw": true,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_deepthroat"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_cunnilingus",
+   "group": "Оральный",
+   "labels": {
+    "en": "Cunnilingus",
+    "ru": "Куннилингус",
+    "de": "Cunnilingus",
+    "fr": "Cunnilingus"
+   },
+   "nsfw": true,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_cunnilingus"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_handjob",
+   "group": "Ручная стимуляция",
+   "labels": {
+    "en": "Handjob",
+    "ru": "Дрочка рукой",
+    "de": "Handjob",
+    "fr": "Branlette"
+   },
+   "nsfw": true,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_handjob"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_titfuck",
+   "group": "Ручная стимуляция",
+   "labels": {
+    "en": "Titfuck",
+    "ru": "Титфак",
+    "de": "Tittenfick",
+    "fr": "Branlette espagnole"
+   },
+   "nsfw": true,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_titfuck"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_missionary_pov",
+   "group": "Проникновение",
+   "labels": {
+    "en": "Missionary (POV)",
+    "ru": "Миссионерская (POV)",
+    "de": "Missionarsstellung (POV)",
+    "fr": "Missionnaire (POV)"
+   },
+   "nsfw": true,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_missionary_pov"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_cowgirl_pov",
+   "group": "Проникновение",
+   "labels": {
+    "en": "Cowgirl (POV)",
+    "ru": "Наездница (POV)",
+    "de": "Reiterstellung (POV)",
+    "fr": "Andromaque (POV)"
+   },
+   "nsfw": true,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_cowgirl_pov"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_reverse_cowgirl",
+   "group": "Проникновение",
+   "labels": {
+    "en": "Reverse cowgirl",
+    "ru": "Обратная наездница",
+    "de": "Umgekehrte Reiterstellung",
+    "fr": "Andromaque inversée"
+   },
+   "nsfw": true,
+   "order": 20,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_reverse_cowgirl"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_doggystyle",
+   "group": "Проникновение",
+   "labels": {
+    "en": "Doggystyle",
+    "ru": "Догги-стайл",
+    "de": "Doggystyle",
+    "fr": "Levrette"
+   },
+   "nsfw": true,
+   "order": 21,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_doggystyle"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_standing_sex",
+   "group": "Проникновение",
+   "labels": {
+    "en": "Standing sex",
+    "ru": "Секс стоя",
+    "de": "Sex im Stehen",
+    "fr": "Sexe debout"
+   },
+   "nsfw": true,
+   "order": 22,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_standing_sex"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_anal_doggy",
+   "group": "Анальный",
+   "labels": {
+    "en": "Anal (doggystyle)",
+    "ru": "Анал (догги)",
+    "de": "Anal (Doggystyle)",
+    "fr": "Anal (levrette)"
+   },
+   "nsfw": true,
+   "order": 23,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_anal_doggy"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_facial",
+   "group": "Камшоты",
+   "labels": {
+    "en": "Facial",
+    "ru": "Камшот на лицо",
+    "de": "Gesichtsbesamung",
+    "fr": "Éjaculation faciale"
+   },
+   "nsfw": true,
+   "order": 24,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_facial"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_creampie",
+   "group": "Камшоты",
+   "labels": {
+    "en": "Creampie",
+    "ru": "Кримпай",
+    "de": "Creampie",
+    "fr": "Creampie"
+   },
+   "nsfw": true,
+   "order": 25,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_creampie"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_lesbian_kiss",
+   "group": "Лесбийские",
+   "labels": {
+    "en": "Lesbian kiss",
+    "ru": "Лесбийский поцелуй",
+    "de": "Lesbischer Kuss",
+    "fr": "Baiser lesbien"
+   },
+   "nsfw": true,
+   "order": 26,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_lesbian_kiss"
+   }
+  },
+  {
+   "section": "subject_motion",
+   "code": "v_romantic_kiss",
+   "group": "Парные интимные",
+   "labels": {
+    "en": "Passionate kiss",
+    "ru": "Страстный поцелуй",
+    "de": "Leidenschaftlicher Kuss",
+    "fr": "Baiser passionné"
+   },
+   "nsfw": false,
+   "order": 27,
+   "prompt": null,
+   "target": {
+    "table": "pose_options",
+    "keyCol": "tab",
+    "keyVal": "POSE",
+    "category": "Действия",
+    "name": "motion_v_romantic_kiss"
+   }
+  },
+  {
+   "section": "background",
+   "code": "bedroom",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Bedroom",
+    "ru": "Спальня",
+    "de": "Schlafzimmer",
+    "fr": "Chambre"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Спальня"
+   }
+  },
+  {
+   "section": "background",
+   "code": "luxury_bedroom",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Luxury bedroom",
+    "ru": "Роскошная спальня",
+    "de": "Luxus-Schlafzimmer",
+    "fr": "Chambre de luxe"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Роскошная спальня"
+   }
+  },
+  {
+   "section": "background",
+   "code": "living_room",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Living room",
+    "ru": "Гостиная",
+    "de": "Wohnzimmer",
+    "fr": "Salon"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Гостиная"
+   }
+  },
+  {
+   "section": "background",
+   "code": "kitchen",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Kitchen",
+    "ru": "Кухня",
+    "de": "Küche",
+    "fr": "Cuisine"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Кухня"
+   }
+  },
+  {
+   "section": "background",
+   "code": "bathroom",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Bathroom",
+    "ru": "Ванная",
+    "de": "Badezimmer",
+    "fr": "Salle de bain"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Ванная"
+   }
+  },
+  {
+   "section": "background",
+   "code": "bathtub",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Bathtub",
+    "ru": "Ванна",
+    "de": "Badewanne",
+    "fr": "Baignoire"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Ванна"
+   }
+  },
+  {
+   "section": "background",
+   "code": "shower",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Shower",
+    "ru": "Душевая",
+    "de": "Dusche",
+    "fr": "Douche"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Душевая"
+   }
+  },
+  {
+   "section": "background",
+   "code": "balcony",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Balcony",
+    "ru": "Балкон",
+    "de": "Balkon",
+    "fr": "Balcon"
+   },
+   "nsfw": false,
+   "order": 7,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Балкон"
+   }
+  },
+  {
+   "section": "background",
+   "code": "asian_suite",
+   "group": "🏠 Жилые",
+   "labels": {
+    "en": "Asian-style apartment",
+    "ru": "Азиатские апартаменты",
+    "de": "Asiatisches Apartment",
+    "fr": "Appartement asiatique"
+   },
+   "nsfw": false,
+   "order": 8,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏠 Жилые",
+    "name": "Азиатские апартаменты"
+   }
+  },
+  {
+   "section": "background",
+   "code": "hotel_room",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Hotel room",
+    "ru": "Гостиничный номер",
+    "de": "Hotelzimmer",
+    "fr": "Chambre d'hôtel"
+   },
+   "nsfw": false,
+   "order": 9,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Гостиничный номер"
+   }
+  },
+  {
+   "section": "background",
+   "code": "penthouse",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Penthouse",
+    "ru": "Пентхаус",
+    "de": "Penthouse",
+    "fr": "Penthouse"
+   },
+   "nsfw": false,
+   "order": 10,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Пентхаус"
+   }
+  },
+  {
+   "section": "background",
+   "code": "office",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Office",
+    "ru": "Офис",
+    "de": "Büro",
+    "fr": "Bureau"
+   },
+   "nsfw": false,
+   "order": 11,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Офис"
+   }
+  },
+  {
+   "section": "background",
+   "code": "restaurant",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Restaurant",
+    "ru": "Ресторан",
+    "de": "Restaurant",
+    "fr": "Restaurant"
+   },
+   "nsfw": false,
+   "order": 12,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Ресторан"
+   }
+  },
+  {
+   "section": "background",
+   "code": "bar_restroom",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Bar restroom",
+    "ru": "Туалет бара",
+    "de": "Bar-Toilette",
+    "fr": "Toilettes d'un bar"
+   },
+   "nsfw": false,
+   "order": 13,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Туалет бара"
+   }
+  },
+  {
+   "section": "background",
+   "code": "nightclub",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Nightclub",
+    "ru": "Ночной клуб",
+    "de": "Nachtclub",
+    "fr": "Boîte de nuit"
+   },
+   "nsfw": false,
+   "order": 14,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Ночной клуб"
+   }
+  },
+  {
+   "section": "background",
+   "code": "strip_club",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Strip club",
+    "ru": "Стрип-клуб",
+    "de": "Stripclub",
+    "fr": "Club de strip-tease"
+   },
+   "nsfw": false,
+   "order": 15,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Стрип-клуб"
+   }
+  },
+  {
+   "section": "background",
+   "code": "library",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Library",
+    "ru": "Библиотека",
+    "de": "Bibliothek",
+    "fr": "Bibliothèque"
+   },
+   "nsfw": false,
+   "order": 16,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Библиотека"
+   }
+  },
+  {
+   "section": "background",
+   "code": "gym",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Gym",
+    "ru": "Спортзал",
+    "de": "Fitnessstudio",
+    "fr": "Salle de sport"
+   },
+   "nsfw": false,
+   "order": 17,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Спортзал"
+   }
+  },
+  {
+   "section": "background",
+   "code": "locker_room",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Locker room",
+    "ru": "Раздевалка",
+    "de": "Umkleideraum",
+    "fr": "Vestiaire"
+   },
+   "nsfw": false,
+   "order": 18,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Раздевалка"
+   }
+  },
+  {
+   "section": "background",
+   "code": "change_room",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Fitting room",
+    "ru": "Примерочная",
+    "de": "Umkleidekabine",
+    "fr": "Cabine d'essayage"
+   },
+   "nsfw": false,
+   "order": 19,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Примерочная"
+   }
+  },
+  {
+   "section": "background",
+   "code": "spa",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Spa",
+    "ru": "Спа-салон",
+    "de": "Spa",
+    "fr": "Spa"
+   },
+   "nsfw": false,
+   "order": 20,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Спа-салон"
+   }
+  },
+  {
+   "section": "background",
+   "code": "sauna",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Sauna",
+    "ru": "Сауна",
+    "de": "Sauna",
+    "fr": "Sauna"
+   },
+   "nsfw": false,
+   "order": 21,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Сауна"
+   }
+  },
+  {
+   "section": "background",
+   "code": "pool_indoor",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Indoor pool",
+    "ru": "Крытый бассейн",
+    "de": "Hallenbad",
+    "fr": "Piscine couverte"
+   },
+   "nsfw": false,
+   "order": 22,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Крытый бассейн"
+   }
+  },
+  {
+   "section": "background",
+   "code": "hospital",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Hospital",
+    "ru": "Больница",
+    "de": "Krankenhaus",
+    "fr": "Hôpital"
+   },
+   "nsfw": false,
+   "order": 23,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Больница"
+   }
+  },
+  {
+   "section": "background",
+   "code": "convenience_store",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Convenience store",
+    "ru": "Магазинчик",
+    "de": "Kleiner Laden",
+    "fr": "Supérette"
+   },
+   "nsfw": false,
+   "order": 24,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Магазинчик"
+   }
+  },
+  {
+   "section": "background",
+   "code": "prison",
+   "group": "🏨 Публичные",
+   "labels": {
+    "en": "Prison",
+    "ru": "Тюрьма",
+    "de": "Gefängnis",
+    "fr": "Prison"
+   },
+   "nsfw": false,
+   "order": 25,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏨 Публичные",
+    "name": "Тюрьма"
+   }
+  },
+  {
+   "section": "background",
+   "code": "stadium",
+   "group": "🎭 Развлечения",
+   "labels": {
+    "en": "Stadium",
+    "ru": "Стадион",
+    "de": "Stadion",
+    "fr": "Stade"
+   },
+   "nsfw": false,
+   "order": 26,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🎭 Развлечения",
+    "name": "Стадион"
+   }
+  },
+  {
+   "section": "background",
+   "code": "car_backseat",
+   "group": "🚗 Транспорт",
+   "labels": {
+    "en": "Car back seat",
+    "ru": "Заднее сиденье",
+    "de": "Rücksitz",
+    "fr": "Banquette arrière"
+   },
+   "nsfw": false,
+   "order": 27,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🚗 Транспорт",
+    "name": "Заднее сиденье"
+   }
+  },
+  {
+   "section": "background",
+   "code": "beach",
+   "group": "🏖️ Пляж и вода",
+   "labels": {
+    "en": "Beach",
+    "ru": "Пляж",
+    "de": "Strand",
+    "fr": "Plage"
+   },
+   "nsfw": false,
+   "order": 28,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏖️ Пляж и вода",
+    "name": "Пляж"
+   }
+  },
+  {
+   "section": "background",
+   "code": "tropical_beach",
+   "group": "🏖️ Пляж и вода",
+   "labels": {
+    "en": "Tropical beach",
+    "ru": "Тропический пляж",
+    "de": "Tropenstrand",
+    "fr": "Plage tropicale"
+   },
+   "nsfw": false,
+   "order": 29,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏖️ Пляж и вода",
+    "name": "Тропический пляж"
+   }
+  },
+  {
+   "section": "background",
+   "code": "pool_outdoor",
+   "group": "🏖️ Пляж и вода",
+   "labels": {
+    "en": "Pool",
+    "ru": "Бассейн",
+    "de": "Pool",
+    "fr": "Piscine"
+   },
+   "nsfw": false,
+   "order": 30,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏖️ Пляж и вода",
+    "name": "Бассейн"
+   }
+  },
+  {
+   "section": "background",
+   "code": "waterfall",
+   "group": "🏖️ Пляж и вода",
+   "labels": {
+    "en": "Waterfall",
+    "ru": "Водопад",
+    "de": "Wasserfall",
+    "fr": "Cascade"
+   },
+   "nsfw": false,
+   "order": 31,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏖️ Пляж и вода",
+    "name": "Водопад"
+   }
+  },
+  {
+   "section": "background",
+   "code": "forest",
+   "group": "🌲 Природа",
+   "labels": {
+    "en": "Forest",
+    "ru": "Лес",
+    "de": "Wald",
+    "fr": "Forêt"
+   },
+   "nsfw": false,
+   "order": 32,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🌲 Природа",
+    "name": "Лес"
+   }
+  },
+  {
+   "section": "background",
+   "code": "flower_garden",
+   "group": "🌲 Природа",
+   "labels": {
+    "en": "Flower garden",
+    "ru": "Цветочный сад",
+    "de": "Blumengarten",
+    "fr": "Jardin fleuri"
+   },
+   "nsfw": false,
+   "order": 33,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🌲 Природа",
+    "name": "Цветочный сад"
+   }
+  },
+  {
+   "section": "background",
+   "code": "mountain",
+   "group": "🌲 Природа",
+   "labels": {
+    "en": "Mountains",
+    "ru": "Горы",
+    "de": "Berge",
+    "fr": "Montagnes"
+   },
+   "nsfw": false,
+   "order": 34,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🌲 Природа",
+    "name": "Горы"
+   }
+  },
+  {
+   "section": "background",
+   "code": "sakura_bloom",
+   "group": "🌲 Природа",
+   "labels": {
+    "en": "Cherry blossoms",
+    "ru": "Цветение сакуры",
+    "de": "Kirschblüte",
+    "fr": "Cerisiers en fleurs"
+   },
+   "nsfw": false,
+   "order": 35,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🌲 Природа",
+    "name": "Цветение сакуры"
+   }
+  },
+  {
+   "section": "background",
+   "code": "city_street",
+   "group": "🏙️ Городская среда",
+   "labels": {
+    "en": "City street",
+    "ru": "Городская улица",
+    "de": "Stadtstraße",
+    "fr": "Rue en ville"
+   },
+   "nsfw": false,
+   "order": 36,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏙️ Городская среда",
+    "name": "Городская улица"
+   }
+  },
+  {
+   "section": "background",
+   "code": "rooftop",
+   "group": "🏙️ Городская среда",
+   "labels": {
+    "en": "Rooftop",
+    "ru": "Крыша",
+    "de": "Dach",
+    "fr": "Toit"
+   },
+   "nsfw": false,
+   "order": 37,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏙️ Городская среда",
+    "name": "Крыша"
+   }
+  },
+  {
+   "section": "background",
+   "code": "castle",
+   "group": "🏰 Историческое",
+   "labels": {
+    "en": "Castle",
+    "ru": "Замок",
+    "de": "Burg",
+    "fr": "Château"
+   },
+   "nsfw": false,
+   "order": 38,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏰 Историческое",
+    "name": "Замок"
+   }
+  },
+  {
+   "section": "background",
+   "code": "medieval_tavern",
+   "group": "🏰 Историческое",
+   "labels": {
+    "en": "Medieval tavern",
+    "ru": "Средневековая таверна",
+    "de": "Mittelalterliche Taverne",
+    "fr": "Taverne médiévale"
+   },
+   "nsfw": false,
+   "order": 39,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏰 Историческое",
+    "name": "Средневековая таверна"
+   }
+  },
+  {
+   "section": "background",
+   "code": "tent_camping",
+   "group": "🏕️ Специальные",
+   "labels": {
+    "en": "Tent",
+    "ru": "Палатка",
+    "de": "Zelt",
+    "fr": "Tente"
+   },
+   "nsfw": false,
+   "order": 40,
+   "prompt": null,
+   "target": {
+    "table": "scene_options",
+    "keyCol": "tab",
+    "keyVal": "LOCATION",
+    "category": "🏕️ Специальные",
+    "name": "Палатка"
+   }
+  },
+  {
+   "section": "framing",
+   "code": "close_up",
+   "group": null,
+   "labels": {
+    "en": "Close-up",
+    "ru": "Крупный план",
+    "de": "Nahaufnahme",
+    "fr": "Gros plan"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "FRAMING",
+    "category": null,
+    "name": "Крупный план"
+   }
+  },
+  {
+   "section": "framing",
+   "code": "bust_shot",
+   "group": null,
+   "labels": {
+    "en": "Bust shot",
+    "ru": "Погрудный план",
+    "de": "Brustbild",
+    "fr": "Plan poitrine"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "FRAMING",
+    "category": null,
+    "name": "Погрудный план"
+   }
+  },
+  {
+   "section": "framing",
+   "code": "medium_shot",
+   "group": null,
+   "labels": {
+    "en": "Medium shot",
+    "ru": "Средний план",
+    "de": "Halbnah",
+    "fr": "Plan moyen"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "FRAMING",
+    "category": null,
+    "name": "Средний план"
+   }
+  },
+  {
+   "section": "framing",
+   "code": "full_body",
+   "group": null,
+   "labels": {
+    "en": "Full body",
+    "ru": "В полный рост",
+    "de": "Ganzkörper",
+    "fr": "En pied"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "FRAMING",
+    "category": null,
+    "name": "В полный рост"
+   }
+  },
+  {
+   "section": "framing",
+   "code": "wide_shot",
+   "group": null,
+   "labels": {
+    "en": "Wide shot",
+    "ru": "Общий план",
+    "de": "Totale",
+    "fr": "Plan large"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "FRAMING",
+    "category": null,
+    "name": "Общий план"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "eye_level",
+   "group": null,
+   "labels": {
+    "en": "Eye level",
+    "ru": "На уровне глаз",
+    "de": "Augenhöhe",
+    "fr": "À hauteur des yeux"
+   },
+   "nsfw": false,
+   "order": 0,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_eye_level"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "low_angle",
+   "group": null,
+   "labels": {
+    "en": "Low angle",
+    "ru": "Снизу вверх",
+    "de": "Untersicht",
+    "fr": "Contre-plongée"
+   },
+   "nsfw": false,
+   "order": 1,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_low_angle"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "high_angle",
+   "group": null,
+   "labels": {
+    "en": "High angle",
+    "ru": "Сверху вниз",
+    "de": "Aufsicht",
+    "fr": "Plongée"
+   },
+   "nsfw": false,
+   "order": 2,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_high_angle"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "pov_first_person",
+   "group": null,
+   "labels": {
+    "en": "First-person POV",
+    "ru": "POV от 1-го лица",
+    "de": "Ich-Perspektive (POV)",
+    "fr": "Vue subjective (POV)"
+   },
+   "nsfw": false,
+   "order": 3,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_pov_first_person"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "from_behind",
+   "group": null,
+   "labels": {
+    "en": "From behind",
+    "ru": "Сзади",
+    "de": "Von hinten",
+    "fr": "De dos"
+   },
+   "nsfw": false,
+   "order": 4,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_from_behind"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "from_side",
+   "group": null,
+   "labels": {
+    "en": "Side / profile",
+    "ru": "Сбоку / профиль",
+    "de": "Seitlich / Profil",
+    "fr": "De côté / profil"
+   },
+   "nsfw": false,
+   "order": 5,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_from_side"
+   }
+  },
+  {
+   "section": "camera_angle",
+   "code": "selfie_angle",
+   "group": null,
+   "labels": {
+    "en": "Selfie",
+    "ru": "Селфи",
+    "de": "Selfie",
+    "fr": "Selfie"
+   },
+   "nsfw": false,
+   "order": 6,
+   "prompt": null,
+   "target": {
+    "table": "camera_options",
+    "keyCol": "section",
+    "keyVal": "CAMERA_ANGLE",
+    "category": null,
+    "name": "angle_selfie_angle"
+   }
+  }
+ ]
+}

@@ -510,6 +510,12 @@ export const users = {
 // ─── Character Options ───────────────────────────────────────
 
 export interface CharacterOption {
+  /** Код варианта из пака картинок (например, "large_br"). */
+  code?: string | null;
+  /** Подписи {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
+  /** false — вариант скрыт на сайте (виден только в админке). */
+  active?: boolean;
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   synonyms?: string[];
   id: string;
@@ -685,6 +691,12 @@ export interface GenTestItem {
 // ─── Appearance Options ──────────────────────────────────────
 
 export interface AppearanceOption {
+  /** Код варианта из пака картинок (например, "large_br"). */
+  code?: string | null;
+  /** Подписи {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
+  /** false — вариант скрыт на сайте (виден только в админке). */
+  active?: boolean;
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   synonyms?: string[];
   id: string;
@@ -702,6 +714,8 @@ export interface AppearanceOption {
 }
 
 export interface AppearanceCategory {
+  /** Подписи группы {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
   id: string;
   tab: string;
   name: string;
@@ -722,6 +736,12 @@ export async function getAppearanceOptions(): Promise<AppearanceOptionsResponse>
 // ─── Pose Options ────────────────────────────────────────────
 
 export interface PoseOption {
+  /** Код варианта из пака картинок (например, "large_br"). */
+  code?: string | null;
+  /** Подписи {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
+  /** false — вариант скрыт на сайте (виден только в админке). */
+  active?: boolean;
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   synonyms?: string[];
   id: string;
@@ -739,6 +759,8 @@ export interface PoseOption {
 }
 
 export interface PoseCategory {
+  /** Подписи группы {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
   id: string;
   tab: string;
   name: string;
@@ -759,6 +781,12 @@ export async function getPoseOptions(): Promise<PoseOptionsResponse> {
 // ─── Scene Options ────────────────────────────────────────────
 
 export interface SceneOption {
+  /** Код варианта из пака картинок (например, "large_br"). */
+  code?: string | null;
+  /** Подписи {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
+  /** false — вариант скрыт на сайте (виден только в админке). */
+  active?: boolean;
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   synonyms?: string[];
   id: string;
@@ -776,6 +804,8 @@ export interface SceneOption {
 }
 
 export interface SceneCategory {
+  /** Подписи группы {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
   id: string;
   tab: string;
   name: string;
@@ -795,6 +825,12 @@ export async function getSceneOptions(): Promise<SceneOptionsResponse> {
 // ─── Camera Options ───────────────────────────────────────────
 
 export interface CameraOption {
+  /** Код варианта из пака картинок (например, "large_br"). */
+  code?: string | null;
+  /** Подписи {en,ru,de,fr} из пака картинок. */
+  labels?: Partial<Record<"en" | "ru" | "de" | "fr", string>> | null;
+  /** false — вариант скрыт на сайте (виден только в админке). */
+  active?: boolean;
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   synonyms?: string[];
   id: string;
@@ -1671,7 +1707,7 @@ export const admin = {
     });
   },
 
-  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean; synonyms?: string[] }): Promise<CharacterOption> {
+  async updateCharacterOption(id: string, data: { category?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; generationStyle?: string; nsfw?: boolean; active?: boolean; synonyms?: string[] }): Promise<CharacterOption> {
     return apiFetch<CharacterOption>(`/admin/character-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1717,7 +1753,7 @@ export const admin = {
     });
   },
 
-  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<AppearanceOption> {
+  async updateAppearanceOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; active?: boolean; synonyms?: string[] }): Promise<AppearanceOption> {
     return apiFetch<AppearanceOption>(`/admin/appearance-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1763,7 +1799,7 @@ export const admin = {
     });
   },
 
-  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<PoseOption> {
+  async updatePoseOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; active?: boolean; synonyms?: string[] }): Promise<PoseOption> {
     return apiFetch<PoseOption>(`/admin/pose-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1809,7 +1845,7 @@ export const admin = {
     });
   },
 
-  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<SceneOption> {
+  async updateSceneOption(id: string, data: { categoryId?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; active?: boolean; synonyms?: string[] }): Promise<SceneOption> {
     return apiFetch<SceneOption>(`/admin/scene-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1832,7 +1868,7 @@ export const admin = {
     });
   },
 
-  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; synonyms?: string[] }): Promise<CameraOption> {
+  async updateCameraOption(id: string, data: { section?: string; name?: string; prompt?: string; imageUrl?: string; imageThumbKey?: string; imageFullKey?: string; order?: number; nsfw?: boolean; active?: boolean; synonyms?: string[] }): Promise<CameraOption> {
     return apiFetch<CameraOption>(`/admin/camera-options/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),

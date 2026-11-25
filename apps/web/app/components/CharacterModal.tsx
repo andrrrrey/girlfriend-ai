@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { getEnabledGenders, resizedMediaUrl, type CharacterOption, type Character } from "../../lib/api";
 import { useT } from "../../context/language";
-import { localizeOption } from "../../lib/optionLabel";
+import { localizeOption, optionLabel } from "../../lib/optionLabel";
 
 export interface CharacterSelections {
   style?: string;
@@ -84,8 +84,8 @@ export const HAIR_COLORS = [
 ];
 export const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
 export const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
-export const BREAST_SIZES = ["Flat", "Small", "Medium", "Large", "Huge"];
-export const BUTT_SIZES = ["Flat", "Small", "Medium", "Large", "Huge"];
+export const BREAST_SIZES = ["Flat", "Small", "Medium", "Large"];
+export const BUTT_SIZES = ["Flat", "Small", "Medium", "Large"];
 
 function SelectedOverlay() {
   return (
@@ -218,7 +218,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, style: opt.name })}>
                       {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                       {selected && <SelectedOverlay />}
-                      <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                      <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                     </button>
                   );
                 })}
@@ -277,7 +277,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, humanRace: draft.humanRace === opt.name ? undefined : opt.name })}>
                       {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                       {selected && <SelectedOverlay />}
-                      <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                      <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                     </button>
                   );
                 })}
@@ -295,7 +295,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, fantasyRace: draft.fantasyRace === opt.name ? undefined : opt.name })}>
                       {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                       {selected && <SelectedOverlay />}
-                      <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                      <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                     </button>
                   );
                 })}
@@ -313,7 +313,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     {EYE_COLORS.map((ec) => (
                       <button key={ec.name} style={{ ...s.colorPill, ...(draft.eyeColor === ec.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, eyeColor: draft.eyeColor === ec.name ? undefined : ec.name })}>
                         <span style={{ ...s.colorDot, background: ec.color }} />
-                        {localizeOption(ec.name, lang)}
+                        {optionLabel(ec, lang)}
                       </button>
                     ))}
                   </div>
@@ -353,7 +353,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, hairStyle: draft.hairStyle === opt.name ? undefined : opt.name })}>
                       {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                       {selected && <SelectedOverlay />}
-                      <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                      <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                     </button>
                   );
                 })}
@@ -382,7 +382,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     {HAIR_COLORS.map((hc) => (
                       <button key={hc.name} style={{ ...s.colorPill, ...(draft.hairColor === hc.name ? s.colorPillActive : {}) }} onClick={() => setDraft({ ...draft, hairColor: draft.hairColor === hc.name ? undefined : hc.name })}>
                         <span style={{ ...s.colorDot, background: hc.color }} />
-                        {localizeOption(hc.name, lang)}
+                        {optionLabel(hc, lang)}
                       </button>
                     ))}
                   </div>
@@ -400,7 +400,7 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                     <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, bodyType: draft.bodyType === opt.name ? undefined : opt.name })}>
                       {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
                       {selected && <SelectedOverlay />}
-                      <span style={s.imgCardLabel}>{localizeOption(opt.name, lang)}</span>
+                      <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
                     </button>
                   );
                 })}
@@ -411,25 +411,57 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
             {/* ── Breast Size ── */}
             <div data-section-id="breast-size" style={s.section}>
               <div style={s.sectionTitle}>{t("gen.breastSize")}</div>
-              <div style={s.pillRow}>
-                {BREAST_SIZES.map((sz) => (
-                  <button key={sz} style={{ ...s.pill, ...(draft.breastSize === sz ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === sz ? undefined : sz })}>
-                    {localizeOption(sz, lang)}
-                  </button>
-                ))}
-              </div>
+              {/* Варианты из БД (пак картинок); если их нет — прежние текстовые кнопки */}
+              {byCategory("BREAST_SIZE").length > 0 ? (
+                <div style={s.imageGrid}>
+                  {byCategory("BREAST_SIZE").map((opt) => {
+                    const selected = draft.breastSize === opt.name;
+                    return (
+                      <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, breastSize: selected ? undefined : opt.name })}>
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
+                        {selected && <SelectedOverlay />}
+                        <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={s.pillRow}>
+                  {BREAST_SIZES.map((sz) => (
+                    <button key={sz} style={{ ...s.pill, ...(draft.breastSize === sz ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, breastSize: draft.breastSize === sz ? undefined : sz })}>
+                      {localizeOption(sz, lang)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ── Butt Size ── */}
             <div data-section-id="butt-size" style={s.section}>
               <div style={s.sectionTitle}>{t("gen.buttSize")}</div>
-              <div style={s.pillRow}>
-                {BUTT_SIZES.map((sz) => (
-                  <button key={sz} style={{ ...s.pill, ...(draft.buttSize === sz ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === sz ? undefined : sz })}>
-                    {localizeOption(sz, lang)}
-                  </button>
-                ))}
-              </div>
+              {/* Варианты из БД (пак картинок); если их нет — прежние текстовые кнопки */}
+              {byCategory("BUTT_SIZE").length > 0 ? (
+                <div style={s.imageGrid}>
+                  {byCategory("BUTT_SIZE").map((opt) => {
+                    const selected = draft.buttSize === opt.name;
+                    return (
+                      <button key={opt.id} style={{ ...s.imgCard, ...(selected ? s.imgCardSelected : s.imgCardUnselected) }} onClick={() => setDraft({ ...draft, buttSize: selected ? undefined : opt.name })}>
+                        {(opt.imageThumbUrl || opt.imageUrl) && <img src={opt.imageThumbUrl || opt.imageUrl || ""} alt={opt.name} style={s.imgCardImg} loading="lazy" decoding="async" />}
+                        {selected && <SelectedOverlay />}
+                        <span style={s.imgCardLabel}>{optionLabel(opt, lang)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={s.pillRow}>
+                  {BUTT_SIZES.map((sz) => (
+                    <button key={sz} style={{ ...s.pill, ...(draft.buttSize === sz ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, buttSize: draft.buttSize === sz ? undefined : sz })}>
+                      {localizeOption(sz, lang)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -36,6 +36,11 @@ export class UpdateSceneOptionDto {
   @IsBoolean()
   nsfw?: boolean;
 
+  /** Показывать ли вариант на сайте (скрытые варианты видны только в админке). */
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
   /** Синонимы (ru/en) — как пользователь может назвать опцию в сообщении. */
   @IsOptional()
   @IsArray()

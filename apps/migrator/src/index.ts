@@ -34,6 +34,7 @@ import * as bcrypt from "bcrypt";
 import sharp from "sharp";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { importArticles } from "./import-articles";
+import { seedOptionPack } from "./seed-option-pack";
 
 const env = loadEnv();
 const logger = createLogger({ service: "migrator", env: env.ENV, level: env.LOG_LEVEL });
@@ -273,7 +274,8 @@ async function insertFlatOption(
   order: number,
 ): Promise<void> {
   const { rowCount } = await client.query(
-    `UPDATE "${table}" SET prompt = $3, image_url = $4, "order" = $5
+    `UPDATE "${table}" SET prompt = $3, image_url = $4,
+       "order" = CASE WHEN code IS NULL THEN $5 ELSE "order" END
      WHERE "${keyCol}" = $1 AND name = $2`,
     [keyVal, name, prompt, imageUrl, order],
   );
@@ -296,7 +298,8 @@ async function insertCategoryOption(
   order: number,
 ): Promise<void> {
   const { rowCount } = await client.query(
-    `UPDATE "${table}" SET prompt = $3, image_url = $4, "order" = $5
+    `UPDATE "${table}" SET prompt = $3, image_url = $4,
+       "order" = CASE WHEN code IS NULL THEN $5 ELSE "order" END
      WHERE category_id = $1 AND name = $2`,
     [categoryId, name, prompt, imageUrl, order],
   );
@@ -584,6 +587,25 @@ async function main() {
     logger.info({}, "seed_generation_elements_start");
     await seedGenerationElements(client, workspaceRoot);
     logger.info({}, "seed_generation_elements_done");
+
+    // Пак картинок вариантов (после манифеста: пак задаёт порядок, подписи и видимость).
+    // Порядок в seedGenerationElements не перетирается у строк с code — см. insert*Option.
+    logger.info({}, "seed_option_pack_start");
+    await seedOptionPack(client, {
+      dir: path.join(__dirname, "..", "data", "option-pack"),
+      logger,
+      s3:
+        env.S3_ENDPOINT && env.S3_ACCESS_KEY && env.S3_SECRET_KEY
+          ? {
+              endpoint: env.S3_ENDPOINT,
+              region: env.S3_REGION ?? "auto",
+              accessKeyId: env.S3_ACCESS_KEY,
+              secretKey: env.S3_SECRET_KEY,
+              bucket: env.S3_BUCKET ?? "media",
+            }
+          : undefined,
+    });
+    logger.info({}, "seed_option_pack_done");
 
     logger.info({}, "migrate_option_images_start");
     await migrateBase64OptionImagesToS3(client);

@@ -355,3 +355,16 @@ export function localizeOption(name: string, lang: Lang): string {
   if (!ru) return en;
   return ru.charAt(0).toUpperCase() + ru.slice(1);
 }
+
+/** Подписи варианта из пака картинок: {en,ru,de,fr} (character_options.labels и т.п.). */
+export type OptionLabels = Partial<Record<"en" | "ru" | "de" | "fr", string>> | null | undefined;
+
+/**
+ * Подпись опции/группы из БД: сначала готовый перевод из `labels` (пак картинок),
+ * иначе — эвристика localizeOption по `name`.
+ */
+export function optionLabel(opt: { name: string; labels?: OptionLabels | unknown }, lang: Lang): string {
+  const labels = opt.labels as OptionLabels;
+  const fromPack = labels && typeof labels === "object" ? labels[lang] : undefined;
+  return fromPack || localizeOption(opt.name, lang);
+}

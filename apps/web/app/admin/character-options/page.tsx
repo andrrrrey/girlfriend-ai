@@ -7,6 +7,7 @@ import { clearOptionCache } from "../../../lib/options-cache";
 import { adminStyles } from "../admin-styles";
 import { AdminTabs } from "../AdminTabs";
 import { GenerationSettingsTabs } from "../GenerationSettingsTabs";
+import { OptionActiveToggle } from "../OptionActiveToggle";
 
 const CATEGORIES = [
   { key: "STYLE", label: "Style (Graphic Style)" },
@@ -367,6 +368,7 @@ export default function AdminCharacterOptionsPage() {
                 </span>
               )}
               <span style={s.optionOrder}>order: {opt.order}</span>
+              <OptionActiveToggle active={opt.active} code={opt.code} onToggle={(v) => admin.updateCharacterOption(opt.id, { active: v })} />
               <button style={s.smallBtn} onClick={() => openEdit(opt)}>Edit</button>
               <button style={s.deleteBtn} onClick={() => handleDelete(opt.id)}>Delete</button>
             </div>
