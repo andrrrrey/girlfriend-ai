@@ -4,7 +4,7 @@ import { styleFilterOptions } from "../../lib/styles";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
-import { characters, getGenerationHistory, likes, deleteGenerationJob, resizedMediaUrl } from "../../lib/api";
+import { characters, getGenerationHistory, likes, deleteGenerationJob, resizedMediaUrl, downloadJob } from "../../lib/api";
 import type { Character } from "../../lib/api";
 import FilterDropdown from "../components/FilterDropdown";
 import ScrollableTagsRow from "../components/ScrollableTagsRow";
@@ -380,6 +380,11 @@ const PAGE_CSS = `
   }
 `;
 
+const LB_SECONDARY_BTN: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+  color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-main)",
+};
+
 interface GridItem {
   id?: string;
   jobId?: string;
@@ -394,6 +399,8 @@ interface GridItem {
   createdAt: string;
   gender?: string;
   style?: string;
+  /** Персонаж, с которым сгенерировано медиа (кнопки «Написать»/«Сгенерировать»). */
+  character?: { id: string; name: string } | null;
 }
 
 function MyAICard({
@@ -555,7 +562,8 @@ export default function MyAIPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
-  const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; type: string; jobId?: string; character?: { id: string; name: string } | null } | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const [shareItem, setShareItem] = useState<GridItem | null>(null);
 
   const loadCreated = useCallback(() => {
@@ -595,6 +603,7 @@ export default function MyAIPage() {
           createdAt: h.createdAt,
           gender: "",
           style: "",
+          character: h.character ? { id: h.character.id, name: h.character.name } : null,
         })),
       ];
       setItems(allItems);
@@ -843,7 +852,7 @@ export default function MyAIPage() {
                   selected={selectedIds.has(itemId)}
                   onToggleSelect={() => toggleSelect(itemId)}
                   likeStatus={likeStatuses[itemId]}
-                  onOpen={(it) => { if (it.url) setLightbox({ url: it.url, type: it.type }); }}
+                  onOpen={(it) => { if (it.url) setLightbox({ url: it.url, type: it.type, jobId: it.jobId, character: it.character }); }}
                   onShare={setShareItem}
                 />
               );
@@ -912,23 +921,39 @@ export default function MyAIPage() {
           ) : (
             <img data-lb-media src={lightbox.url} alt="" decoding="async" style={{ maxWidth: "90vw", maxHeight: "78vh", borderRadius: 8, objectFit: "contain" }} />
           )}
+          <div data-lb-media style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
           <button
-            data-lb-media
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = lightbox.url;
-              a.download = `${lightbox.type === "Video" ? "video" : "image"}-${Date.now()}.${lightbox.type === "Video" ? "mp4" : "png"}`;
-              a.target = "_blank";
-              a.rel = "noopener";
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
+            disabled={downloading}
+            onClick={async () => {
+              // Через API: без Premium на изображение накладывается водяной знак.
+              if (!lightbox.jobId) { window.open(lightbox.url, "_blank"); return; }
+              setDownloading(true);
+              try { await downloadJob(lightbox.jobId); } catch { window.open(lightbox.url, "_blank"); } finally { setDownloading(false); }
             }}
-            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-main)" }}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-main)", opacity: downloading ? 0.6 : 1 }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
             {t("myai.download")}
           </button>
+          {lightbox.type !== "Video" && lightbox.jobId && (
+            <button
+              onClick={() => router.push(`/generation?tab=video&mode=img2vid&fromJob=${lightbox.jobId}`)}
+              style={LB_SECONDARY_BTN}
+            >
+              {t("gallery.makeVideo")}
+            </button>
+          )}
+          {lightbox.character && (
+            <>
+              <button onClick={() => router.push(`/chat?characterId=${lightbox.character!.id}`)} style={LB_SECONDARY_BTN}>
+                {t("gallery.chat")}
+              </button>
+              <button onClick={() => router.push(`/generation?characterId=${lightbox.character!.id}&tab=image`)} style={LB_SECONDARY_BTN}>
+                {t("gallery.generateWithCharacter")}
+              </button>
+            </>
+          )}
+          </div>
         </div>
       )}
 

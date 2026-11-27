@@ -23,13 +23,22 @@ interface Props {
   options: PoseOptionsResponse;
   /** Показывать только секцию Pose (Действия), без Facial Expression. Заголовок становится «Action». */
   posesOnly?: boolean;
+  /** Фото — только позы (без действий из видео); видео — только «Действия». */
+  mode?: "photo" | "video";
 }
 
 const toggle = (arr: string[], val: string): string[] =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
-/** В режиме «Action» из секции Pose показываем только категорию «Действия». */
-const ACTION_CATEGORY_NAME = "Действия";
+/** Категория видео-действий в секции Pose: в фото не показывается, в видео — только она. */
+export const ACTION_CATEGORY_NAME = "Действия";
+
+/** Категории секции Pose для режима генерации: фото — позы, видео — действия. */
+export function poseCategoriesFor(categories: PoseCategory[], mode: "photo" | "video"): PoseCategory[] {
+  return mode === "video"
+    ? categories.filter((cat) => cat.name === ACTION_CATEGORY_NAME)
+    : categories.filter((cat) => cat.name !== ACTION_CATEGORY_NAME);
+}
 
 function SelectedOverlay() {
   return (
@@ -41,7 +50,8 @@ function SelectedOverlay() {
   );
 }
 
-export default function PoseModal({ open, onClose, selections, onSave, options, posesOnly = false }: Props) {
+export default function PoseModal({ open, onClose, selections, onSave, options, posesOnly = false, mode = "photo" }: Props) {
+  const isAction = posesOnly || mode === "video";
   const { t, lang } = useT();
   const [draft, setDraft] = useState<PoseSelections>({
     facialExpressions: [...selections.facialExpressions],
@@ -76,9 +86,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
   if (!open) return null;
 
   // В режиме «Action» оставляем только категорию «Действия» из секции Pose.
-  const poseCategories = posesOnly
-    ? options.POSE.filter((cat) => cat.name === ACTION_CATEGORY_NAME)
-    : options.POSE;
+  const poseCategories = poseCategoriesFor(options.POSE, isAction ? "video" : "photo");
 
   const scrollTo = (id: string) => {
     setActiveId(id);
@@ -105,7 +113,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
     options.FACIAL_EXPRESSION.forEach((cat) => sidebarItems.push({ type: "item", id: `facial-${cat.id}`, label: optionLabel(cat, lang) }));
   }
   if (poseCategories.length > 0) {
-    sidebarItems.push({ type: "header", label: t("gen.poseHeader") });
+    sidebarItems.push({ type: "header", label: isAction ? t("gp.action") : t("gen.poseHeader") });
     poseCategories.forEach((cat) => sidebarItems.push({ type: "item", id: `pose-${cat.id}`, label: optionLabel(cat, lang) }));
   }
 
@@ -113,7 +121,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
     <div style={s.overlay} onClick={onClose}>
       <div className="pose-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <div style={s.header}>
-          <span style={s.title}>{posesOnly ? t("gen.titleAction") : t("gen.titlePose")}</span>
+          <span style={s.title}>{isAction ? t("gen.titleAction") : t("gen.titlePose")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -183,7 +191,7 @@ export default function PoseModal({ open, onClose, selections, onSave, options, 
               </div>
             ))}
             {poseCategories.length === 0 && (
-              <div style={s.section}><div style={s.sectionTitle}>{t("gen.poseHeader")}</div><div style={s.emptyHint}>{t("gen.noPosesAdded")}</div></div>
+              <div style={s.section}><div style={s.sectionTitle}>{isAction ? t("gp.action") : t("gen.poseHeader")}</div><div style={s.emptyHint}>{t("gen.noPosesAdded")}</div></div>
             )}
           </div>
         </div>

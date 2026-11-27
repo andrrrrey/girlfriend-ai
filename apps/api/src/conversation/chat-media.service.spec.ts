@@ -11,7 +11,7 @@ describe("ChatMediaService.regenerate", () => {
 
   beforeEach(() => {
     prisma = { message: { findFirst: jest.fn() } };
-    service = new ChatMediaService(prisma, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    service = new ChatMediaService(prisma, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, { assertAllowed: jest.fn() } as any);
     start = jest.spyOn(service, "start").mockResolvedValue({ kind: "image", jobId: "job-2" });
   });
 
@@ -81,7 +81,7 @@ describe("ChatMediaService + общий кэш", () => {
     const demo = { checkImageGeneration: jest.fn(), checkVideoGeneration: jest.fn() };
     const specs = { toImageJob: jest.fn().mockResolvedValue({ prompt: "p" }) };
     const generation = { toClientMediaUrl: jest.fn(async (u: string) => `/proxy/${u}`) };
-    service = new ChatMediaService(prisma, chats, demo as any, generation as any, specs as any, {} as any, {} as any, mediaCache, {} as any);
+    service = new ChatMediaService(prisma, chats, demo as any, generation as any, specs as any, {} as any, {} as any, mediaCache, {} as any, { assertAllowed: jest.fn().mockResolvedValue(undefined) } as any);
   });
 
   it("вариант из кэша сразу появляется сообщением в диалоге (с assetId)", async () => {

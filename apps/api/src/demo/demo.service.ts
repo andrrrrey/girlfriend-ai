@@ -19,6 +19,21 @@ export class DemoService {
     return subscription === "free";
   }
 
+  isPaid(subscription: string | null | undefined): boolean {
+    return !!subscription && !this.isFree(subscription);
+  }
+
+  /** Бесплатно для видео — только вертикальная ориентация (9:16), остальные — по подписке. */
+  checkVideoOrientation(subscription: string, aspectRatio: string | null | undefined): void {
+    if (!this.isFree(subscription)) return;
+    if (!aspectRatio || aspectRatio === "9:16") return;
+    throw new ForbiddenException({
+      error: "DEMO_FEATURE_BLOCKED",
+      feature: "video_orientation",
+      message: "Бесплатно доступна только вертикальная ориентация видео",
+    });
+  }
+
   checkVoiceAllowed(subscription: string): void {
     if (this.isFree(subscription)) {
       throw new ForbiddenException({

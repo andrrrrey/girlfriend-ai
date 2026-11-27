@@ -9,11 +9,14 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import type { Response } from "express";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { DemoService } from "../demo/demo.service";
 import { GenerationService } from "./generation.service";
 import { AnalyticsService } from "../analytics/analytics.service";
@@ -90,7 +93,7 @@ export class GenerationController {
       );
     }
     const data: VideoJobInput = dto.spec
-      ? await this.specService.toVideoJob(this.parseSpec(req, dto.spec, "video"))
+      ? await this.specService.toVideoJob(this.parseSpec(req, dto.spec, "video"), req.user.id, { requireOwnInitImage: true })
       : {
           prompt: dto.prompt,
           negativePrompt: dto.negativePrompt,
@@ -105,8 +108,29 @@ export class GenerationController {
           // Несовершеннолетним принудительно SFW, иначе — выбор пользователя.
           contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode,
         };
+    if (!dto.spec && data.mode === "img2vid" && data.initImageKey) {
+      await this.specService.assertInitImageAllowed(data.initImageKey, req.user.id);
+    }
+    // Ориентация важна только для видео с нуля: фото→видео наследует кадр исходника.
+    if (data.mode !== "img2vid") this.demoService.checkVideoOrientation(req.user.subscription, data.aspectRatio);
     await this.demoService.checkVideoGeneration(req.user.id, req.user.subscription, data.count ?? 1);
     return this.generationService.createVideoJob(req.user.id, data);
+  }
+
+  /** Скачивание: без Premium на изображении — водяной знак в правом нижнем углу. */
+  @Get("jobs/:jobId/download")
+  @UseGuards(OptionalJwtAuthGuard)
+  async download(@Req() req: any, @Param("jobId") jobId: string, @Res() res: Response) {
+    const user = req.user as { id: string; subscription?: string } | null;
+    const file = await this.generationService.getDownload(jobId, {
+      userId: user?.id,
+      watermark: !this.demoService.isPaid(user?.subscription),
+    });
+    if (!file) throw new HttpException("Not found", HttpStatus.NOT_FOUND);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(file.data);
   }
 
   @SkipThrottle()

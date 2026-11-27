@@ -148,6 +148,16 @@ const SETTING_GROUPS = [
       { key: "SFW_NEGATIVE_PROMPT", label: "SFW негативный промпт — исключает откровенный контент (в режиме SFW вместо обычного негатива).", type: "textarea" },
     ],
   },
+  {
+    title: "Проверка на запрещённое",
+    subtitle: "Каждый запрос генерации (страница генерации, фото/видео в чате, Telegram) проверяется до запуска: встроенный словарь (дети и всё похожее, инцест, реальные люди, без согласия, зоофилия, некрофилия, жестокость) + LLM-классификация. Здесь — расширение словаря. Если LLM недоступна, NSFW-запросы блокируются.",
+    keys: [
+      { key: "MODERATION_BLOCKLIST", label: "Дополнительные запрещённые слова/фразы (по одной на строку; совпадение по подстроке, без учёта регистра)", type: "textarea" },
+      { key: "MODERATION_REAL_PERSONS", label: "Дополнительные имена реальных людей (по одному на строку)", type: "textarea" },
+      { key: "MODERATION_LLM_ENABLED", label: "LLM-проверка (второй рубеж)", type: "select", options: ["true", "false"] },
+      { key: "MODERATION_MODEL", label: "Модель OpenRouter для LLM-проверки (пусто — модель чата)", type: "text" },
+    ],
+  },
 ];
 
 const ALL_IMAGE_MODELS = [

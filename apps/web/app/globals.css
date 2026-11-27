@@ -200,6 +200,28 @@ img.media-broken {
   border: 0.8px solid rgba(228,0,120,0.2);
   border-radius: 4px;
   color: #f95bad;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Блик по кнопке «Стать Premium» (видна только без подписки). */
+.nav-link.premium::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(249,91,173,0.28) 45%, rgba(255,255,255,0.22) 50%, rgba(249,91,173,0.28) 55%, transparent 70%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: premium-shine 3s ease-in-out infinite;
+}
+@keyframes premium-shine {
+  0% { background-position: 150% 0; }
+  60%, 100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-link.premium::after { animation: none; }
 }
 
 .nav-link.logout { color: #e36466; }

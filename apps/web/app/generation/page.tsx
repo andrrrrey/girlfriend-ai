@@ -20,6 +20,7 @@ import {
   deleteGenerationJob,
   uploadMedia,
   resizedMediaUrl,
+  downloadJob,
   characters as charactersApi,
 } from "../../lib/api";
 import {
@@ -32,7 +33,7 @@ import {
 import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse, Character } from "../../lib/api";
 import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, HEIGHTS, BREAST_SIZES, BUTT_SIZES } from "../components/CharacterModal";
 import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
-import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
+import { DEFAULT_POSE_SELECTIONS, type PoseSelections, poseCategoriesFor } from "../components/PoseModal";
 import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
 import { DEFAULT_CAMERA_SELECTIONS, type CameraSelections } from "../components/CameraModal";
 import { DEFAULT_PROMPT_DETAILS_SELECTIONS, type PromptDetailsSelections } from "../components/PromptDetailsModal";
@@ -855,6 +856,38 @@ const CSS = `
   .item-action-btn:hover { background: rgba(249,91,173,0.6); }
   .item-action-btn svg { width: 14px; height: 14px; }
 
+  /* ── Lightbox actions / выбор своего фото ── */
+  .gen-lightbox-actions {
+    position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; cursor: default;
+  }
+  .gen-lightbox-btn {
+    height: 40px; padding: 0 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1); color: #fff; font-family: var(--font-main); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .gen-lightbox-btn:hover { background: rgba(249,91,173,0.3); }
+  .gen-lightbox-btn.primary { background: linear-gradient(90deg, #f95bad, #ff0084); border: none; }
+  .img-picker {
+    width: min(760px, calc(100vw - 32px)); max-height: 80vh; background: #141414; border: 1px solid #313131;
+    border-radius: 12px; display: flex; flex-direction: column; cursor: default; overflow: hidden;
+  }
+  .img-picker-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+    border-bottom: 1px solid #262626; color: #fff; font-weight: 700; font-size: 15px;
+  }
+  .img-picker-close { background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; }
+  .img-picker-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; padding: 16px; overflow-y: auto;
+  }
+  .img-picker-item {
+    aspect-ratio: 4 / 5; border-radius: 8px; overflow: hidden; padding: 0; cursor: pointer;
+    border: 2px solid transparent; background: #1e1e1e;
+  }
+  .img-picker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .img-picker-item:hover { border-color: rgba(249,91,173,0.6); }
+  .img-picker-item.selected { border-color: #c1f0aa; }
+  .img-picker-empty { padding: 32px 16px; color: #969696; font-size: 13px; text-align: center; }
+
   /* ── Lightbox ── */
   .gen-lightbox {
     position: fixed;
@@ -937,7 +970,7 @@ interface GenModel {
   provider?: string;
 }
 
-/** Соотношения сторон для генерации. Бесплатно доступен только Portrait (4:5). */
+/** Соотношения сторон для фото. Бесплатно доступен только Portrait (4:5). */
 const ASPECT_OPTIONS = [
   { value: "4:5", label: "Portraite (4:5)", rect: "r-4-5", cls: "orient", free: true },
   { value: "5:4", label: "Landscape (5:4)", rect: "r-5-4", cls: "orient", free: false },
@@ -945,6 +978,14 @@ const ASPECT_OPTIONS = [
   { value: "16:9", label: "16:9", rect: "r-16-9", cls: "orient-sm", free: false },
   { value: "1:1", label: "1:1", rect: "r-1-1", cls: "orient-sm", free: false },
 ] as const;
+
+/** Ориентация видео: бесплатно — только вертикальная (как экран телефона), остальные — по подписке. */
+const VIDEO_ASPECT_OPTIONS = [
+  { value: "9:16", label: "9:16", rect: "r-9-16", cls: "orient", free: true },
+  { value: "16:9", label: "16:9", rect: "r-16-9", cls: "orient", free: false },
+  { value: "1:1", label: "1:1", rect: "r-1-1", cls: "orient-sm", free: false },
+] as const;
+const DEFAULT_ASPECT = { image: "4:5", video: "9:16" } as const;
 
 /** Количество элементов за генерацию. Бесплатно доступно только 1. */
 const COUNT_OPTIONS = [
@@ -961,6 +1002,13 @@ interface HistoryItem {
   input: { prompt?: string; originalPrompt?: string; model?: string } | null;
   createdAt: string;
 }
+
+/** Сообщение об ошибке запуска генерации по коду ответа API (запреты, исходное фото). */
+const GEN_ERROR_KEYS: Record<string, string> = {
+  PROMPT_FORBIDDEN: "gp.errForbidden",
+  MODERATION_UNAVAILABLE: "gp.errModerationUnavailable",
+  INIT_IMAGE_NOT_ALLOWED: "gp.errInitImageNotAllowed",
+};
 
 type VideoSubTab = "scratch" | "img2vid" | "continue";
 type GalleryFilter = "all" | "image" | "video";
@@ -1031,7 +1079,8 @@ function GenerationPageInner() {
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
   const [gallerySearch, setGallerySearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [lightbox, setLightbox] = useState<{ url: string; type: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; type: string; jobId?: string } | null>(null);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [aspectRatio, setAspectRatio] = useState("4:5");
   const [count, setCount] = useState(1);
   const [initMediaKey, setInitMediaKey] = useState<string | null>(null);
@@ -1065,6 +1114,26 @@ function GenerationPageInner() {
     if (!q) return null;
     return new URLSearchParams(q).get("key");
   }, []);
+
+  /** Свои фото с сайта — источник для «Фото → видео». */
+  const myImages = useMemo(
+    () => history.filter((h) => h.type === "image" && !!h.output?.url && !!extractMediaKey(h.output?.url)),
+    [history, extractMediaKey],
+  );
+
+  /** «Сделать видео» из своего фото: вкладка Видео → Фото в видео с выбранным исходником. */
+  const useAsVideoSource = useCallback((jobId: string, url: string) => {
+    if (!isPremium) { showPremiumGate(); return; }
+    const key = extractMediaKey(url);
+    if (!key) return;
+    setActiveTab("video");
+    setVideoSubTab("img2vid");
+    setInitMediaKey(key);
+    setInitMediaUrl(url);
+    setLightbox(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    void jobId;
+  }, [isPremium, showPremiumGate, extractMediaKey]);
 
   /** Загружает файл с устройства в S3 и выбирает его как исходное медиа. */
   const handleMediaFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1146,6 +1215,41 @@ function GenerationPageInner() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, allCharacters]);
+
+  // ?tab=image|video, ?mode=img2vid, ?fromJob=<jobId> — переходы из галереи/рилсов («Фото», «Видео», «Сделать видео»).
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "video" || tab === "image") setActiveTab(tab);
+    if (tab === "video" && searchParams.get("mode") === "img2vid") {
+      if (!user) return;
+      if (user.subscription === "free") { showPremiumGate(); return; }
+      setVideoSubTab("img2vid");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user?.subscription]);
+
+  // Исходное фото из ?fromJob= — когда история загрузилась (только свои фото с сайта).
+  useEffect(() => {
+    const fromJob = searchParams.get("fromJob");
+    if (!fromJob || videoSubTab !== "img2vid" || initMediaKey) return;
+    const job = history.find((h) => h.jobId === fromJob && h.type === "image" && h.output?.url);
+    const key = extractMediaKey(job?.output?.url);
+    if (job && key) { setInitMediaKey(key); setInitMediaUrl(job.output?.url ?? null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, history, videoSubTab]);
+
+  // У фото и видео разные наборы ориентаций и поз: при смене вкладки — дефолт и
+  // очистка поз, которых нет в новой вкладке (в видео — «Действия», в фото — позы).
+  useEffect(() => {
+    const allowed = (activeTab === "video" ? VIDEO_ASPECT_OPTIONS : ASPECT_OPTIONS).map((o) => o.value as string);
+    if (!allowed.includes(aspectRatio)) setAspectRatio(DEFAULT_ASPECT[activeTab]);
+    const names = new Set(poseCategoriesFor(poseOptions.POSE, activeTab === "video" ? "video" : "photo").flatMap((c) => c.options.map((o) => o.name)));
+    setPoseSelections((prev) => {
+      const poses = prev.poses.filter((n) => names.has(n));
+      return poses.length === prev.poses.length ? prev : { ...prev, poses };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, poseOptions]);
 
   const hasAnySelection = useMemo(() => {
     if (selectedCharacter) return true;
@@ -1243,7 +1347,7 @@ function GenerationPageInner() {
     });
 
     const allExpressions = poseOptions.FACIAL_EXPRESSION.flatMap((c) => c.options);
-    const allPoses = poseOptions.POSE.flatMap((c) => c.options);
+    const allPoses = poseCategoriesFor(poseOptions.POSE, activeTab === "video" ? "video" : "photo").flatMap((c) => c.options);
     setPoseSelections({
       facialExpressions: allExpressions.length ? pickN(allExpressions, 1, 2).map((o) => o.name) : [],
       poses: allPoses.length ? pickN(allPoses, 1, 2).map((o) => o.name) : [],
@@ -1272,7 +1376,7 @@ function GenerationPageInner() {
       lens: [],
       lighting: [],
     });
-  }, [characterOptions, poseOptions, appearanceOptions, sceneOptions, cameraOptions]);
+  }, [characterOptions, poseOptions, appearanceOptions, sceneOptions, cameraOptions, activeTab]);
 
   const handleGenerate = useCallback(async () => {
     if ((!prompt.trim() && !hasAnySelection) || !canGenerate || submitting) return;
@@ -1307,6 +1411,8 @@ function GenerationPageInner() {
           initImageKey: mode === "img2vid" ? initMediaKey ?? undefined : undefined,
           initVideoKey: mode === "continue" ? initMediaKey ?? undefined : undefined,
         };
+        // Готовый персонаж в видео с нуля: сервер добавит его внешность в промпт.
+        if (mode === "scratch" && selectedCharacter) spec.characterId = selectedCharacter.id;
         jobIds = (await createVideoJobFromSpec(spec)).jobIds;
       } else {
         // Готовый персонаж: сервер добавит его внешность (avatarPrompt), чекпоинт и стиль.
@@ -1319,15 +1425,20 @@ function GenerationPageInner() {
       }
       setPrompt("");
     } catch (err: any) {
+      const code = err instanceof ApiError ? (err.body as { error?: string } | undefined)?.error : undefined;
       if (err instanceof ApiError && premiumPopupFromError(err.body)) {
         setPremiumPopup(premiumPopupFromError(err.body)!);
+      } else if (code === "DEMO_FEATURE_BLOCKED") {
+        showPremiumGate();
+      } else if (code && GEN_ERROR_KEYS[code]) {
+        setError(tr(GEN_ERROR_KEYS[code] as Parameters<typeof tr>[0]));
       } else {
         setError(err.message || tr("gp.errStartGen"));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildSpec, hasAnySelection, startGeneration, selectedCharacter, activeContentMode]);
+  }, [prompt, selectedModel, selectedVideoModel, canGenerate, submitting, activeTab, videoSubTab, aspectRatio, count, initMediaKey, promptDetailsSelections, buildSpec, hasAnySelection, startGeneration, selectedCharacter, activeContentMode, showPremiumGate]);
 
   const toggleSelect = useCallback((jobId: string) => {
     setSelectedItems((prev) => {
@@ -1353,21 +1464,11 @@ function GenerationPageInner() {
   const handleDownloadSelected = useCallback(async () => {
     const items = history.filter((h) => selectedItems.has(h.jobId) && h.output?.url);
     for (const item of items) {
-      const url = item.output!.url!;
-      const filename = `${item.type}-${item.jobId.slice(0, 8)}.${item.type === "video" ? "mp4" : "png"}`;
+      // Через API: без Premium на изображение накладывается водяной знак.
       try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
+        await downloadJob(item.jobId);
       } catch {
-        window.open(url, "_blank");
+        window.open(item.output!.url!, "_blank");
       }
     }
   }, [selectedItems, history]);
@@ -1651,18 +1752,11 @@ function GenerationPageInner() {
           {/* Editor cards — img2vid: Image File + Action + Custom Prompt; otherwise full 3×2 grid */}
           {isImg2Vid ? (
             <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleMediaFileChange}
-              />
               <div className="editor-section" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                {/* Image File */}
+                {/* Исходное фото — только из своих фото на сайте (загрузка с ПК убрана). */}
                 <div
                   className={`editor-card${initMediaUrl ? " active" : ""}`}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setImagePickerOpen(true)}
                 >
                   {initMediaUrl && (
                     <>
@@ -1682,11 +1776,11 @@ function GenerationPageInner() {
                   )}
                   <div className="card-content">
                     <div className="editor-icon">
-                      <svg viewBox="0 0 20 20" fill="none"><path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 13v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2" stroke="#fff" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                      <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#fff" strokeWidth="1.3"/><circle cx="7.5" cy="7.5" r="1.3" stroke="#fff" strokeWidth="1.1"/><path d="M3 14l4-4 3 3 2.5-2.5L17 15" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
                     <div className="editor-text">
-                      <div className="name">{tr("gp.imageFile")}</div>
-                      <div className="sub required">{uploadingMedia ? "uploading…" : "required"}</div>
+                      <div className="name">{tr("gp.chooseMyPhoto")}</div>
+                      <div className="sub required">{tr("gp.required")}</div>
                     </div>
                   </div>
                 </div>
@@ -1789,7 +1883,7 @@ function GenerationPageInner() {
                   <svg viewBox="0 0 20 20" fill="none"><path d="M10 3a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM10 5c-2.5 0-4 1.5-4 3.5V12l1.5 5h5L14 12V8.5C14 6.5 12.5 5 10 5z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/><path d="M6 10l-2 1M14 10l2 1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>
                 <div className="editor-text">
-                  <div className="name">{tr("gen.poseHeader")}</div>
+                  <div className="name">{activeTab === "video" ? tr("gp.action") : tr("gen.poseHeader")}</div>
                   <div className="sub required">{tr("gp.required")}</div>
                 </div>
                 {hasPoseSelections && (
@@ -1869,11 +1963,11 @@ function GenerationPageInner() {
           <div className="sep" />
 
           {/* Orientation — с персонажем не показываем: кадр берётся по пропорции аватара. */}
-          {!(activeTab === "image" && selectedCharacter) && (<>
+          {!(activeTab === "image" && selectedCharacter) && !isImg2Vid && (<>
           <div className="chips-section">
             <div className="section-title">{tr("gp.orientation")}</div>
             <div className="chips-row">
-              {ASPECT_OPTIONS.map((opt) => (
+              {(activeTab === "video" ? VIDEO_ASPECT_OPTIONS : ASPECT_OPTIONS).map((opt) => (
                 <div
                   key={opt.value}
                   className={`chip ${opt.cls}${aspectRatio === opt.value ? " active" : ""}`}
@@ -1883,7 +1977,15 @@ function GenerationPageInner() {
                   }}
                 >
                   <span className="orient-icon"><span className={`orient-rect ${opt.rect}`} /></span>
-                  {opt.value === "4:5" ? tr("gp.aspectPortrait") : opt.value === "5:4" ? tr("gp.aspectLandscape") : opt.label}
+                  {opt.value === "4:5"
+                    ? tr("gp.aspectPortrait")
+                    : opt.value === "5:4"
+                      ? tr("gp.aspectLandscape")
+                      : activeTab === "video" && opt.value === "9:16"
+                        ? tr("gp.aspectVertical")
+                        : activeTab === "video" && opt.value === "16:9"
+                          ? tr("gp.aspectHorizontal")
+                          : opt.label}
                   {!opt.free && <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />}
                 </div>
               ))}
@@ -2037,7 +2139,7 @@ function GenerationPageInner() {
                     <div
                       key={item.jobId}
                       className={`gallery-item ${isSelected ? "selected" : ""}`}
-                      onClick={() => { if (url) setLightbox({ url, type: isVideo ? "video" : "image" }); }}
+                      onClick={() => { if (url) setLightbox({ url, type: isVideo ? "video" : "image", jobId: item.jobId }); }}
                     >
                       {/* Type badge */}
                       <div className="item-badge">
@@ -2103,6 +2205,52 @@ function GenerationPageInner() {
               onClick={(e) => e.stopPropagation()}
             />
           )}
+          <div className="gen-lightbox-actions" onClick={(e) => e.stopPropagation()}>
+            {lightbox.jobId && (
+              <button type="button" className="gen-lightbox-btn" onClick={() => { downloadJob(lightbox.jobId!).catch(() => window.open(lightbox.url, "_blank")); }}>
+                {tr("myai.download")}
+              </button>
+            )}
+            {lightbox.type === "image" && lightbox.jobId && (
+              <button type="button" className="gen-lightbox-btn primary" onClick={() => useAsVideoSource(lightbox.jobId!, lightbox.url)}>
+                {tr("gallery.makeVideo")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Выбор исходного фото для «Фото → видео»: только свои фото, сгенерированные на сайте. */}
+      {imagePickerOpen && (
+        <div className="gen-lightbox" onClick={() => setImagePickerOpen(false)}>
+          <div className="img-picker" onClick={(e) => e.stopPropagation()}>
+            <div className="img-picker-head">
+              <span>{tr("gp.chooseMyPhoto")}</span>
+              <button type="button" className="img-picker-close" onClick={() => setImagePickerOpen(false)} aria-label={tr("common.close")}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+            {myImages.length === 0 ? (
+              <div className="img-picker-empty">{tr("gp.noMyPhotos")}</div>
+            ) : (
+              <div className="img-picker-grid">
+                {myImages.map((h) => {
+                  const key = extractMediaKey(h.output?.url);
+                  const selected = !!key && key === initMediaKey;
+                  return (
+                    <button
+                      type="button"
+                      key={h.jobId}
+                      className={`img-picker-item${selected ? " selected" : ""}`}
+                      onClick={() => { if (key) { setInitMediaKey(key); setInitMediaUrl(h.output?.url ?? null); setImagePickerOpen(false); } }}
+                    >
+                      <img src={resizedMediaUrl(h.output?.url, { w: 300 }) ?? h.output?.url} alt="" loading="lazy" decoding="async" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -2136,6 +2284,7 @@ function GenerationPageInner() {
         onSave={(s) => setPoseSelections(s)}
         options={poseOptions}
         posesOnly={isImg2Vid}
+        mode={activeTab === "video" ? "video" : "photo"}
       />
 
       <SceneModal

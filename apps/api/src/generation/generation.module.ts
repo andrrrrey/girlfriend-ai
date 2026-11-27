@@ -8,14 +8,15 @@ import { OptionCatalogService } from "./prompt/option-catalog.service";
 import { GenerationSpecService } from "./prompt/generation-spec.service";
 import { CharacterIdentityService } from "./prompt/character-identity.service";
 import { MediaCacheService } from "./media-cache.service";
+import { ModerationService } from "../moderation/moderation.service";
 
 @Module({
   imports: [S3Module, DemoModule],
   controllers: [GenerationController],
-  providers: [GenerationService, PrismaService, OptionCatalogService, GenerationSpecService, CharacterIdentityService, MediaCacheService],
+  providers: [GenerationService, PrismaService, OptionCatalogService, GenerationSpecService, CharacterIdentityService, MediaCacheService, ModerationService],
   // GenerationService — для AutogenModule (фоновая автогенерация персонажей);
   // спецификация и каталог опций — для ядра чата (роутер намерений, фото в чате);
   // MediaCacheService — общий кэш фото/видео чата (и его админка).
-  exports: [GenerationService, GenerationSpecService, OptionCatalogService, CharacterIdentityService, MediaCacheService],
+  exports: [GenerationService, GenerationSpecService, OptionCatalogService, CharacterIdentityService, MediaCacheService, ModerationService],
 })
 export class GenerationModule {}

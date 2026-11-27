@@ -10,6 +10,7 @@ import ShareModal from "../components/ShareModal";
 import ReportModal from "../components/ReportModal";
 import ShortsCommentsModal from "../components/ShortsCommentsModal";
 import { useT } from "../../context/language";
+import { useRouter } from "next/navigation";
 import { useContentMode } from "../../context/contentMode";
 
 const PAGE_CSS = `
@@ -58,6 +59,23 @@ const PAGE_CSS = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
+  .shorts-name a { color: inherit; text-decoration: none; }
+  .shorts-name a:hover { text-decoration: underline; }
+  .shorts-char-age { font-weight: 500; font-size: 14px; color: rgba(255,255,255,0.7); margin-left: 6px; }
+  .shorts-char-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .shorts-char-tag {
+    font-size: 10px; font-weight: 600; color: #fff; padding: 2px 8px; border-radius: 10px;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+  }
+  .shorts-char-btns { display: flex; gap: 6px; margin-top: 2px; }
+  .shorts-char-btn {
+    flex: 1 1 0; min-width: 0; height: 34px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(48,39,43,0.55); backdrop-filter: blur(4px); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: var(--font-main); font-size: 12px; font-weight: 700; white-space: nowrap; padding: 0 8px;
+  }
+  .shorts-char-btn:hover { background: rgba(249,91,173,0.35); border-color: rgba(249,91,173,0.5); }
+  .shorts-char-btn.primary { background: linear-gradient(90deg, #f95bad, #ff0084); border: none; }
   .shorts-actions {
     position: absolute; right: 12px; bottom: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -159,8 +177,10 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
   const [showMenu, setShowMenu] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
 
+  const router = useRouter();
   const url = item.output?.url;
   const prompt = item.input?.prompt || "";
+  const character = item.character ?? null;
   const creatorName = item.user?.nickname || t("shorts.aiGenerated");
   const creatorAvatar = item.user?.avatarUrl;
 
@@ -221,16 +241,57 @@ function ShortCard({ item, likeStatus }: { item: GalleryItem; likeStatus?: { lik
         <div className="shorts-gradient" />
 
         <div className="shorts-bottom">
-          <div className="shorts-profile">
-            <div className="shorts-avatar">
-              {creatorAvatar
-                ? <img src={resizedMediaUrl(creatorAvatar, { w: 96 }) ?? creatorAvatar} alt="" loading="lazy" decoding="async" />
-                : creatorName.slice(0, 2).toUpperCase()
-              }
-            </div>
-            <div className="shorts-name">@{creatorName}</div>
-          </div>
-          {prompt && <div className="shorts-prompt">{prompt}</div>}
+          {character ? (
+            // Видео по персонажу: информация о персонаже и три кнопки.
+            <>
+              <div className="shorts-profile">
+                <div className="shorts-avatar">
+                  {character.avatarUrl
+                    ? <img src={resizedMediaUrl(character.avatarUrl, { w: 96 }) ?? character.avatarUrl} alt="" loading="lazy" decoding="async" />
+                    : character.name.slice(0, 2).toUpperCase()
+                  }
+                </div>
+                <div className="shorts-name">
+                  <a href={`/characters/${character.id}`}>{character.name}</a>
+                  {character.age && <span className="shorts-char-age">{character.age}</span>}
+                </div>
+              </div>
+              {character.description && <div className="shorts-prompt">{character.description}</div>}
+              {character.tags.length > 0 && (
+                <div className="shorts-char-tags">
+                  {character.tags.map((tag) => <span key={tag} className="shorts-char-tag">{tag}</span>)}
+                </div>
+              )}
+              <div className="shorts-char-btns">
+                <button className="shorts-char-btn primary" onClick={() => router.push(`/chat?characterId=${character.id}`)}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2v-7z"/></svg>
+                  {t("gallery.chat")}
+                </button>
+                <button className="shorts-char-btn" onClick={() => router.push(`/generation?characterId=${character.id}&tab=image`)}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3"><rect x="2" y="2" width="12" height="12" rx="2"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor"/><path d="M2 11l3.5-3.5 2.5 2.5 2-2L14 11" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {t("shorts.photo")}
+                </button>
+                <button className="shorts-char-btn" onClick={() => router.push(`/generation?characterId=${character.id}&tab=video`)}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"><path d="M2 5a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/><path d="M12 6.5l3-2v7l-3-2V6.5z"/></svg>
+                  {t("media.video")}
+                </button>
+              </div>
+            </>
+          ) : (
+            // Видео без персонажа: автор и промпт.
+            <>
+              <div className="shorts-profile">
+                <div className="shorts-avatar">
+                  {creatorAvatar
+                    ? <img src={resizedMediaUrl(creatorAvatar, { w: 96 }) ?? creatorAvatar} alt="" loading="lazy" decoding="async" />
+                    : creatorName.slice(0, 2).toUpperCase()
+                  }
+                </div>
+                <div className="shorts-name">@{creatorName}</div>
+              </div>
+              {prompt && <div className="shorts-prompt">{prompt}</div>}
+            </>
+          )}
         </div>
 
         <div className="shorts-actions">

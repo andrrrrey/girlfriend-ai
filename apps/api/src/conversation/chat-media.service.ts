@@ -22,6 +22,7 @@ import { ChatsService } from "../chats/chats.service";
 import { DemoService } from "../demo/demo.service";
 import { GenerationService, type ChatMediaTarget } from "../generation/generation.service";
 import { MediaCacheService } from "../generation/media-cache.service";
+import { ModerationService } from "../moderation/moderation.service";
 import { GenerationSpecService, CHAT_VIDEO_MODEL } from "../generation/prompt/generation-spec.service";
 import { parseGenerationSpec, type GenerationSpec } from "../generation/prompt/generation-spec";
 import { PricingService } from "../billing/pricing.service";
@@ -66,6 +67,7 @@ export class ChatMediaService {
     private readonly billingConfig: BillingConfigService,
     private readonly mediaCache: MediaCacheService,
     @Inject(REDIS) private readonly redis: Redis,
+    private readonly moderation: ModerationService,
   ) {}
 
   /** Стоимость медиа по спецификации в кредитах. */
@@ -104,6 +106,12 @@ export class ChatMediaService {
     if (kind === "video") await this.demo.checkVideoGeneration(actor.id, actor.subscription, 1);
     else await this.demo.checkImageGeneration(actor.id, actor.subscription, 1);
     const job = kind === "video" ? await this.specs.toVideoJob(spec, actor.id) : await this.specs.toImageJob(spec, actor.id);
+    // Список запретов проверяется и для фото/видео в чате (в т.ч. перед выдачей из кэша).
+    await this.moderation.assertAllowed([job.prompt, spec.userText], {
+      contentMode: job.contentMode,
+      userId: actor.id,
+      kind: `chat-${kind}`,
+    });
 
     const res = await this.mediaCache.request({
       kind,

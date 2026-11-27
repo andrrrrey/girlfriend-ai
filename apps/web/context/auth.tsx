@@ -40,6 +40,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { auth as authApi, users, type UserProfile } from "../lib/api";
 
@@ -134,6 +135,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       writeCachedProfile(null);
     }
   }, []);
+
+  /**
+   * Тихое обновление профиля при возврате на вкладку (не чаще раза в минуту):
+   * подписка, активированная вебхуком оплаты позже, подхватится без перезагрузки
+   * (например, кнопка «Стать Premium» исчезнет). Ошибки не разлогинивают.
+   */
+  const lastSilentRefresh = useRef(0);
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastSilentRefresh.current < 60_000) return;
+      lastSilentRefresh.current = Date.now();
+      users
+        .getProfile()
+        .then((profile) => {
+          setUser(profile);
+          writeCachedProfile(profile);
+        })
+        .catch(() => undefined);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [user]);
 
   /**
    * Часовой пояс браузера → профиль (тихие часы инициативных сообщений).

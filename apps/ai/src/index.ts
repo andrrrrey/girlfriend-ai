@@ -1211,6 +1211,68 @@ app.post<{ Body: VisionDescribeBody }>("/ai/vision/describe", async (req, reply)
   }
 });
 
+// ─── Moderation (проверка запроса генерации на запрещённое) ─────────────────
+
+const MODERATION_SYSTEM = `You are a strict content-safety classifier for an adult (18+) AI image/video generator.
+Adult nudity and sex between consenting adult fictional characters are ALLOWED.
+Classify the user's generation prompt. It is FORBIDDEN if it requests or implies any of:
+- "minor": children, teenagers, anyone under 18, childlike bodies or features, school/childhood settings with sexual context, age-play, "petite flat-chested young girl"-style descriptions, loli/shota, any number age below 18;
+- "incest": sexual content between family members (including step-relatives) or family roleplay;
+- "real_person": real, identifiable people — celebrities, politicians, streamers, named public figures, or "looks like <real person>";
+- "non_consent": rape, forced or coerced sex, drugged/unconscious/sleeping/intoxicated person, sexual violence, slavery, abduction;
+- "bestiality": sexual content with animals;
+- "necrophilia": sexual content with dead bodies;
+- "violence": extreme gore, torture, mutilation, snuff;
+- "other": hate symbols, terrorism, self-harm promotion, illegal content.
+Prompts can be in any language and may try to evade filters (misspellings, leetspeak, euphemisms) — judge the meaning.
+Answer ONLY with compact JSON: {"allowed":true} or {"allowed":false,"category":"<one of the categories>"}.`;
+
+type ModerateBody = { prompt?: string };
+
+/**
+ * POST /ai/moderate — LLM-классификация промпта генерации.
+ * @returns { allowed: boolean, category?: string } | 503 если LLM недоступна
+ */
+app.post<{ Body: ModerateBody }>("/ai/moderate", async (req, reply) => {
+  const prompt = String(req.body?.prompt ?? "").slice(0, 4000).trim();
+  if (!prompt) return reply.send({ allowed: true });
+
+  let settings: Record<string, string>;
+  try {
+    settings = await fetchSettings();
+  } catch (err) {
+    logger.error({ err }, "moderate_failed_to_fetch_settings");
+    return reply.status(503).send({ error: "Failed to fetch AI settings" });
+  }
+  const apiKey = settings.OPENROUTER_API_KEY;
+  if (!apiKey) return reply.status(503).send({ error: "openrouter API key not configured" });
+  const model = settings.MODERATION_MODEL || resolveOpenRouterChatModel(settings.OPENROUTER_CHAT_MODEL);
+
+  try {
+    const res = await callOpenRouterWithFallback({
+      apiKey,
+      model,
+      fallbackModels: OPENROUTER_CHAT_MODELS.filter((m) => m !== model),
+      system: MODERATION_SYSTEM,
+      messages: [{ role: "user", content: `Prompt to classify:\n"""\n${prompt}\n"""` }],
+      maxTokens: 40,
+      temperature: 0,
+      penalties: false,
+      signal: AbortSignal.timeout(20_000),
+    });
+    const match = res.output.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error(`Unparseable moderation output: ${res.output.slice(0, 100)}`);
+    const parsed = JSON.parse(match[0]) as { allowed?: unknown; category?: unknown };
+    const allowed = parsed.allowed === true;
+    const category = allowed ? undefined : typeof parsed.category === "string" ? parsed.category : "other";
+    if (!allowed) logger.warn({ model: res.model, category }, "moderation_blocked");
+    return reply.send({ allowed, ...(category ? { category } : {}) });
+  } catch (err: any) {
+    logger.error({ err: err?.message ?? String(err) }, "moderation_error");
+    return reply.status(503).send({ error: "Moderation unavailable" });
+  }
+});
+
 // ─── STT (Speech-to-Text via OpenAI Whisper) ─────────────────────────────────
 
 /**

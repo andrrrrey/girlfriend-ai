@@ -520,6 +520,13 @@ export class ConversationEngine {
       if (err instanceof HttpException) {
         // Нет кредитов / лимит — сообщаем каналу и всё равно отвечаем персонажем.
         const body = err.getResponse();
+        if (typeof body === "object" && body && (body as Record<string, unknown>).error === "PROMPT_FORBIDDEN") {
+          // Запрос нарушает правила: персонаж вежливо отказывает, медиа не отправляется.
+          replyOpts.context = {
+            lastUserNote:
+              "[System note: the requested photo/video will NOT be sent because the request violates the service rules (minors, family members, real people, non-consent or other forbidden content). Decline briefly and naturally in character in one short line and offer something else. Do not describe the forbidden content.]",
+          };
+        }
         yield {
           type: "media",
           status: "rejected",

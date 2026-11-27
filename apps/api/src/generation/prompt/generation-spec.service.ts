@@ -106,7 +106,11 @@ export class GenerationSpecService {
    *
    * @param userId — нужен для preset "chat" (проверка доступа к персонажу)
    */
-  async toVideoJob(spec: GenerationSpec, userId?: string): Promise<VideoJobInput> {
+  async toVideoJob(
+    spec: GenerationSpec,
+    userId?: string,
+    opts: { requireOwnInitImage?: boolean } = {},
+  ): Promise<VideoJobInput> {
     const catalog = await this.catalog.get(spec.contentMode);
     if (spec.preset === "chat") {
       if (!spec.characterId || !userId) throw new BadRequestException("characterId is required for chat videos");
@@ -125,9 +129,25 @@ export class GenerationSpecService {
     const mode = spec.video?.mode ?? "scratch";
     if (mode === "img2vid" && !spec.video?.initImageKey) throw new BadRequestException("video.initImageKey is required");
     if (mode === "continue" && !spec.video?.initVideoKey) throw new BadRequestException("video.initVideoKey is required");
+    // Фото→видео — только из фото, сгенерированных на сайте (свои или из публичной галереи).
+    if (mode === "img2vid" && opts.requireOwnInitImage) {
+      await this.assertInitImageAllowed(spec.video!.initImageKey!, userId);
+    }
+
+    let prompt = composeStudioPrompt(spec, catalog);
+    let characterId: string | undefined;
+    // Готовый персонаж: внешность в начало промпта (как у фото), задание привязано к персонажу.
+    if (spec.characterId && userId) {
+      const character = await this.loadCharacter(spec.characterId, userId);
+      const personality = await this.identity.ensureIdentity(character);
+      const identity = buildCharacterImagePrompt(personality);
+      if (identity) prompt = prompt ? `${identity}, ${prompt}` : identity;
+      characterId = character.id;
+    }
 
     return {
-      prompt: composeStudioPrompt(spec, catalog),
+      prompt,
+      characterId,
       negativePrompt: spec.negativeTerms?.length ? spec.negativeTerms.join(", ") : undefined,
       // В режимах из медиа модель определяется на бэкенде по режиму.
       model: mode === "scratch" ? spec.model : undefined,
@@ -138,6 +158,22 @@ export class GenerationSpecService {
       count: spec.count,
       contentMode: spec.contentMode,
     };
+  }
+
+  /** Ключ исходного фото должен принадлежать завершённому заданию-изображению пользователя или публичной галерее. */
+  async assertInitImageAllowed(key: string, userId?: string) {
+    const clean = key.replace(/^\/+/, "");
+    if (!clean || clean.includes("..")) throw new BadRequestException({ error: "INIT_IMAGE_NOT_ALLOWED" });
+    const job = await this.prisma.aiJob.findFirst({
+      where: {
+        type: "image",
+        status: "completed",
+        output: { path: ["url"], string_ends_with: clean },
+        OR: [...(userId ? [{ userId }] : []), { endUserId: null, cachedFrom: null }],
+      },
+      select: { id: true },
+    });
+    if (!job) throw new BadRequestException({ error: "INIT_IMAGE_NOT_ALLOWED", message: "Можно выбрать только фото с сайта" });
   }
 
   /** Персонаж, доступный пользователю: публичный, платформенный или свой. */

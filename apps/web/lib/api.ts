@@ -3554,6 +3554,7 @@ export async function getGenerationHistory(type?: string) {
       output: { url?: string } | null;
       input: { prompt?: string; originalPrompt?: string; model?: string } | null;
       createdAt: string;
+      character?: GalleryCharacter | null;
     }[]
   >(`/generation/history${query}`);
 }
@@ -3564,6 +3565,16 @@ export async function deleteGenerationJob(jobId: string) {
   });
 }
 
+/** Персонаж, с которым сгенерировано медиа (кнопки «Написать»/«Сгенерировать»). */
+export interface GalleryCharacter {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  age: string | null;
+  description: string;
+  tags: string[];
+}
+
 export interface GalleryItem {
   jobId: string;
   type: string;
@@ -3571,6 +3582,30 @@ export interface GalleryItem {
   input: { prompt?: string; model?: string; aspectRatio?: string } | null;
   createdAt: string;
   user: { id: string; nickname: string | null; avatarUrl: string | null } | null;
+  character?: GalleryCharacter | null;
+}
+
+/**
+ * Скачивает медиа задания через API: без Premium на изображение накладывается
+ * водяной знак (правый нижний угол), с Premium — оригинал.
+ */
+export async function downloadJob(jobId: string): Promise<void> {
+  const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const res = await fetch(`${API_BASE}/generation/jobs/${encodeURIComponent(jobId)}/download`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
+  if (!res.ok) throw new ApiError(res.status, res.statusText, {});
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") || "";
+  const name = /filename="?([^";]+)"?/i.exec(disposition)?.[1] || `virtflirt-${jobId.slice(0, 8)}`;
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 10_000);
 }
 
 export async function getPublicGallery(params?: {

@@ -211,7 +211,7 @@ const PAYMENTS_CSS = `
 
 export default function SubscriptionBlock() {
   const { t, lang } = useT();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const [catalog, setCatalog] = useState<{ products: BillingProduct[]; providers: PaymentProviderId[] } | null>(null);
   const [own, setOwn] = useState<OwnSubscription | null>(null);
@@ -293,6 +293,11 @@ export default function SubscriptionBlock() {
     !subscription.autoRenew &&
     new Date(subscription.expiresAt).getTime() - Date.now() < EXPIRY_WARNING_DAYS * 24 * 60 * 60_000;
   const premiumManual = !subscription && user?.subscription === "paid";
+  // Подписка уже активна, а профиль ещё «free» (вебхук пришёл позже) — обновляем
+  // профиль, чтобы кнопка «Стать Premium» и лимиты переключились сразу.
+  useEffect(() => {
+    if (subscription && user?.subscription === "free") void refreshProfile();
+  }, [subscription, user?.subscription, refreshProfile]);
   const blocked = own?.paymentsBlocked ?? false;
   const buyDisabled = !purchasable || blocked;
   const buyLabel = user ? t("pay.buy") : t("pay.loginRequired");

@@ -5,6 +5,8 @@ import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
+import { applyWatermark } from "./watermark";
+import { ModerationService } from "../moderation/moderation.service";
 import type { Prisma } from "@prisma/client";
 import { IMAGE_MODELS, VIDEO_MODELS, VIDEO_MODE_DEFAULT_MODEL } from "./models";
 import { randomUUID } from "crypto";
@@ -87,6 +89,7 @@ export class GenerationService {
     @Inject(AI_QUEUE) private readonly queue: Queue,
     private readonly s3: S3Service,
     private readonly wallet: WalletService,
+    private readonly moderation: ModerationService,
   ) {}
 
   /**
@@ -163,6 +166,26 @@ export class GenerationService {
     return url;
   }
 
+  /** Краткая карточка персонажа для галереи/рилсов (кнопки «Написать»/«Сгенерировать»). */
+  private async characterCard(
+    c: { id: string; name: string; avatarUrl: string | null; tags: string[]; personality: unknown; deletedAt: Date | null; isPublic: boolean; createdBy: string | null } | null | undefined,
+    viewerId?: string,
+  ) {
+    if (!c || c.deletedAt) return null;
+    // Приватного персонажа показываем только его создателю.
+    if (!c.isPublic && (!viewerId || c.createdBy !== viewerId)) return null;
+    const p = (c.personality && typeof c.personality === "object" ? c.personality : {}) as Record<string, unknown>;
+    const desc = (typeof p["description"] === "string" ? p["description"] : typeof p["bio"] === "string" ? p["bio"] : "") as string;
+    return {
+      id: c.id,
+      name: c.name,
+      avatarUrl: await this.toSignedUrl(c.avatarUrl),
+      age: p["age"] != null ? String(p["age"]) : null,
+      description: desc.length > 160 ? `${desc.slice(0, 157)}…` : desc,
+      tags: c.tags.slice(0, 4),
+    };
+  }
+
   /** Заменяет url в объекте output на presigned, возвращает новый output. */
   private async signOutput(output: unknown): Promise<unknown> {
     if (!output || typeof output !== "object") return output;
@@ -236,6 +259,12 @@ export class GenerationService {
       this.logger.log("Cyrillic detected in prompt, translating to English");
       prompt = await this.translateToEnglish(prompt);
     }
+    // Обязательная проверка на запрещённое — до резерва кредитов и постановки задания.
+    await this.moderation.assertAllowed([originalPrompt, prompt !== originalPrompt ? prompt : null], {
+      contentMode,
+      userId,
+      kind: "image",
+    });
 
     const resolvedProvider = data.provider || IMAGE_MODELS.find((m) => m.id === data.model)?.provider;
     const count = ALLOWED_GEN_COUNTS.includes(data.count as number) ? (data.count as number) : 1;
@@ -383,6 +412,7 @@ export class GenerationService {
       where: { id: jobId, status: "completed", type: { in: ["image", "video"] } },
       include: {
         user: { select: { id: true, nickname: true, avatarUrl: true } },
+        character: { select: { id: true, name: true, avatarUrl: true, tags: true, personality: true, deletedAt: true, isPublic: true, createdBy: true } },
       },
     });
 
@@ -396,7 +426,53 @@ export class GenerationService {
       input: input ? { prompt: input["prompt"], model: input["model"] } : {},
       createdAt: job.createdAt,
       user: job.user,
+      character: await this.characterCard(job.character),
     };
+  }
+
+  /**
+   * Файл для скачивания: оригинал задания (публичного или своего). Изображение
+   * без Premium получает водяной знак с логотипом; видео отдаётся как есть.
+   */
+  async getDownload(jobId: string, opts: { userId?: string; watermark: boolean }) {
+    const job = await this.prisma.aiJob.findFirst({
+      where: { id: jobId, status: "completed", type: { in: ["image", "video"] } },
+      select: { id: true, type: true, output: true, userId: true, endUserId: true },
+    });
+    if (!job) return null;
+    // Медиа клиентов бота (RESELLER) скачивает только владелец задания.
+    if (job.endUserId && job.userId !== opts.userId) return null;
+    const url = (job.output as Record<string, unknown> | null)?.["url"];
+    if (typeof url !== "string" || !url) return null;
+
+    let data: Buffer;
+    let contentType: string | undefined;
+    const publicBase = env.S3_PUBLIC_URL || env.S3_ENDPOINT;
+    const key = publicBase ? S3Service.extractKeyFromUrl(url, publicBase, env.S3_BUCKET ?? "media") : null;
+    if (key) {
+      const obj = await this.s3.getObject(key);
+      const chunks: Buffer[] = [];
+      for await (const chunk of obj.body) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      data = Buffer.concat(chunks);
+      contentType = obj.contentType;
+    } else if (url.startsWith("http://") || url.startsWith("https://")) {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      data = Buffer.from(await res.arrayBuffer());
+      contentType = res.headers.get("content-type") ?? undefined;
+    } else {
+      return null;
+    }
+
+    if (job.type === "video") {
+      return { data, contentType: contentType || "video/mp4", filename: `virtflirt-${job.id.slice(0, 8)}.mp4` };
+    }
+    if (!opts.watermark) {
+      const ext = contentType?.includes("jpeg") ? "jpg" : contentType?.includes("webp") ? "webp" : "png";
+      return { data, contentType: contentType || "image/png", filename: `virtflirt-${job.id.slice(0, 8)}.${ext}` };
+    }
+    const marked = await applyWatermark(data);
+    return { data: marked.data, contentType: marked.contentType, filename: `virtflirt-${job.id.slice(0, 8)}.${marked.ext}` };
   }
 
   async getImageStyles() {
@@ -554,6 +630,12 @@ export class GenerationService {
     const mode = data.mode || "scratch";
     // Режим контента (nsfw|sfw) — независим от режима видео (scratch|img2vid).
     const contentMode: "nsfw" | "sfw" = data.contentMode === "sfw" ? "sfw" : "nsfw";
+    // Обязательная проверка на запрещённое — до резерва кредитов и постановки задания.
+    await this.moderation.assertAllowed([originalPrompt, prompt !== originalPrompt ? prompt : null], {
+      contentMode,
+      userId,
+      kind: "video",
+    });
     // Для режимов img2vid/continue модель определяется режимом, если не задана явно.
     const model = data.model || VIDEO_MODE_DEFAULT_MODEL[mode];
     // Auto-detect provider from model if not explicitly set
@@ -654,6 +736,9 @@ export class GenerationService {
       where,
       orderBy: { createdAt: "desc" },
       take: 50,
+      include: {
+        character: { select: { id: true, name: true, avatarUrl: true, tags: true, personality: true, deletedAt: true, isPublic: true, createdBy: true } },
+      },
     });
 
     return Promise.all(jobs.map(async (job) => ({
@@ -662,6 +747,7 @@ export class GenerationService {
       output: await this.signOutput(job.output),
       input: job.input,
       createdAt: job.createdAt,
+      character: await this.characterCard(job.character, userId),
     })));
   }
 
@@ -721,6 +807,7 @@ export class GenerationService {
         skip,
         include: {
           user: { select: { id: true, nickname: true, avatarUrl: true } },
+          character: { select: { id: true, name: true, avatarUrl: true, tags: true, personality: true, deletedAt: true, isPublic: true, createdBy: true } },
         },
       }),
       this.prisma.aiJob.count({ where }),
@@ -737,6 +824,7 @@ export class GenerationService {
       })(),
       createdAt: job.createdAt,
       user: job.user,
+      character: await this.characterCard(job.character),
     })));
 
     return { items, total };

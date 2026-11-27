@@ -148,10 +148,13 @@ export default function Sidebar({
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polygon points="6 3 18 3 22 9 12 22 2 9"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
           <span className="label">{t("topnav.subscription")}</span>
         </Link>
-        <Link href="/subscription" className="nav-link premium">
+{/* «Стать Premium» — только без подписки; исчезает сразу после покупки (refreshProfile). */}
+        {(!user || user.subscription === "free") && (
+                <Link href="/subscription" className="nav-link premium">
           <svg className="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polygon points="6 3 18 3 22 9 12 22 2 9"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="22" x2="8" y2="9"/><line x1="12" y1="22" x2="16" y2="9"/><line x1="6" y1="3" x2="8" y2="9"/><line x1="18" y1="3" x2="16" y2="9"/><line x1="12" y1="3" x2="12" y2="9"/></svg>
           <span className="label">{t("nav.becomePremium")}</span>
         </Link>
+        )}
       </nav>
 
       <div className="sidebar-separator"></div>
