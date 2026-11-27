@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -58,7 +59,7 @@ function VerifyEmailContent() {
 
         {status === "success" && (
           <>
-            <div style={styles.iconSuccess}>✓</div>
+            <div style={styles.iconSuccess}><Icon name="check" size={26} strokeWidth={2.4} /></div>
             <h2 style={styles.title}>{t("auth.verifySuccess")}</h2>
             <p style={styles.text}>{t("auth.verifyRedirecting")}</p>
           </>
@@ -66,7 +67,7 @@ function VerifyEmailContent() {
 
         {status === "error" && (
           <>
-            <div style={styles.iconError}>✕</div>
+            <div style={styles.iconError}><Icon name="x" size={26} strokeWidth={2.4} /></div>
             <h2 style={styles.title}>{t("auth.verifyError")}</h2>
             <p style={{ ...styles.text, color: "#ff7675" }}>{message}</p>
             <Link href="/register" style={styles.link}>

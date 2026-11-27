@@ -10,9 +10,9 @@ import { IsIn, IsOptional, IsString } from "class-validator";
  * `lang` определяет язык приветствия (скрытый kickoff для LLM). По умолчанию "en".
  */
 export class GreetingDto {
-  /** Язык приветствия: "en" | "ru". */
+  /** Язык приветствия: "en" | "ru" | "de" | "fr". */
   @IsOptional()
   @IsString()
-  @IsIn(["en", "ru"])
-  lang?: "en" | "ru";
+  @IsIn(["en", "ru", "de", "fr"])
+  lang?: "en" | "ru" | "de" | "fr";
 }

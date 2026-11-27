@@ -30,10 +30,13 @@ export default function FilterDropdown({ label, value, options, onChange }: Prop
   }, []);
 
   const selected = options.find((o) => o.value === value);
+  // Фильтр «включён», когда выбрано не первое (дефолтное) значение — подсвечиваем
+  // триггер так же, как активные теги и пилюли (розовая рамка).
+  const isActive = options.length > 0 && value !== options[0].value;
 
   return (
     <div ref={ref} style={s.wrapper}>
-      <button style={s.btn} onClick={() => setOpen(!open)}>
+      <button style={isActive || open ? { ...s.btn, ...s.btnActive } : s.btn} onClick={() => setOpen(!open)}>
         <span style={s.label}>{label}:</span>
         <span style={s.value}>{selected?.label || t("common.all")}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#969696" strokeWidth="2">
@@ -76,7 +79,12 @@ const s: Record<string, React.CSSProperties> = {
     background: "#1a1a1a",
     cursor: "pointer",
     whiteSpace: "nowrap",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "inherit",
+    transition: "border-color 0.15s ease, background 0.15s ease",
+  },
+  btnActive: {
+    border: "1px solid #f95bad",
+    background: "rgba(249,91,173,0.12)",
   },
   label: {
     color: "#969696",
@@ -107,7 +115,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: "8px 12px",
     color: "#bbb",
     fontSize: 13,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     fontWeight: 500,
     background: "none",
     border: "none",
@@ -117,7 +125,7 @@ const s: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
   },
   optionActive: {
-    color: "#fff",
-    background: "rgba(249,91,173,0.15)",
+    color: "#f95bad",
+    background: "rgba(249,91,173,0.12)",
   },
 };

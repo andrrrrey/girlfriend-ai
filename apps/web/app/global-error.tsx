@@ -9,7 +9,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="ru">
-      <body style={{ margin: 0, background: "#090909", color: "#fff", fontFamily: "'Syne', sans-serif" }}>
+      <body style={{ margin: 0, background: "#090909", color: "#fff", fontFamily: "var(--font-main)" }}>
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           minHeight: "100vh", gap: 16, padding: 24, textAlign: "center",
@@ -27,7 +27,7 @@ export default function GlobalError({
             style={{
               marginTop: 8, padding: "10px 24px", background: "linear-gradient(90deg, #f95bad, #ff0084)",
               border: "none", borderRadius: 6, color: "#fff", fontSize: 14, fontWeight: 600,
-              cursor: "pointer", fontFamily: "'Syne', sans-serif",
+              cursor: "pointer", fontFamily: "var(--font-main)",
             }}
           >
             Try again

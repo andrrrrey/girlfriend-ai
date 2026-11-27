@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
@@ -301,8 +302,8 @@ export default function AdminAutogenPage() {
             </div>
 
             <div style={s.counts}>
-              <span>✅ Создано: {t.succeeded}</span>
-              <span>⚠️ Пропущено: {t.failed}</span>
+              <span><Icon name="check" size={12} strokeWidth={2.4} /> Создано: {t.succeeded}</span>
+              <span><Icon name="warning" size={12} /> Пропущено: {t.failed}</span>
             </div>
 
             {t.lastError && (
@@ -341,14 +342,14 @@ export default function AdminAutogenPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={c.avatarUrl} alt={c.name} style={s.chipImg} loading="lazy" decoding="async" />
                         ) : (
-                          <div style={s.chipImgPh}>👤</div>
+                          <div style={s.chipImgPh}><Icon name="user" size={16} /></div>
                         )}
                         <span style={s.chipName}>{c.name}</span>
                       </Link>
                     ))
                   : t.characterIds.map((id, i) => (
                       <Link key={id} href={`/characters/${id}`} target="_blank" style={s.chip}>
-                        <div style={s.chipImgPh}>👤</div>
+                        <div style={s.chipImgPh}><Icon name="user" size={16} /></div>
                         <span style={s.chipName}>Персонаж #{i + 1}</span>
                       </Link>
                     ))}

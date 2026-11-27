@@ -6,6 +6,7 @@
  * Делает тестовый запрос к модели через AI-сервис — ровно тем путём, что и чат.
  */
 
+import { Icon } from "../components/icons";
 import React, { useState } from "react";
 import { admin, type ChatDiagnostics, type ChatDiagnosticsProbe } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
@@ -29,7 +30,7 @@ function Probe({ title, p }: { title: string; p: ChatDiagnosticsProbe }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ color: p.ok ? "#4ade80" : "#f87171", fontSize: 12, fontWeight: 600 }}>
-        {p.ok ? "✓" : "✗"} {title}: {p.status ?? "нет ответа"} · {p.ms} мс
+        {p.ok ? <Icon name="check" size={12} strokeWidth={2.4} /> : <Icon name="x" size={12} strokeWidth={2.4} />} {title}: {p.status ?? "нет ответа"} · {p.ms} мс
       </div>
       <pre style={mono}>{p.body || "(пустое тело)"}</pre>
     </div>

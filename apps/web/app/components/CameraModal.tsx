@@ -1,5 +1,6 @@
 "use client";
 
+import { pill, pillActive } from "./pillStyles";
 import React, { useState, useRef, useEffect } from "react";
 import type { CameraOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
@@ -285,8 +286,8 @@ const s: Record<string, React.CSSProperties> = {
   imgCardImg: { width: "100%", height: "100%", objectFit: "cover" as const },
   imgCardLabel: { position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center" as const, color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)" },
   pillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
-  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
-  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  pill,
+  pillActive,
   emptyHint: { color: "#555", fontSize: 13 },
   footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },
   cancelBtn: { flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },

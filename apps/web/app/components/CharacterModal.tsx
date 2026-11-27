@@ -1,7 +1,8 @@
 "use client";
 
+import { pill, pillActive } from "./pillStyles";
 import React, { useState, useRef, useEffect } from "react";
-import { getEnabledGenders, resizedMediaUrl, type CharacterOption, type Character } from "../../lib/api";
+import { resizedMediaUrl, type CharacterOption, type Character } from "../../lib/api";
 import { useT } from "../../context/language";
 import { localizeOption, optionLabel } from "../../lib/optionLabel";
 
@@ -25,6 +26,7 @@ export interface CharacterSelections {
 
 export const DEFAULT_CHARACTER_SELECTIONS: CharacterSelections = {
   age: 25,
+  gender: "Female",
   eyeFeatures: [],
   faceFeatures: [],
 };
@@ -82,7 +84,7 @@ export const HAIR_COLORS = [
   { name: "Ombre", color: "linear-gradient(135deg, #1a1a1a 40%, #F5DEB3 100%)" },
   { name: "Multicolor", color: "conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" },
 ];
-export const GENDERS = ["Female", "Male", "Femboy", "Non-binary"];
+export const GENDERS = ["Female"];
 export const HEIGHTS = ["Short", "Below Average", "Average", "Tall", "Very Tall"];
 export const BREAST_SIZES = ["Flat", "Small", "Medium", "Large"];
 export const BUTT_SIZES = ["Flat", "Small", "Medium", "Large"];
@@ -104,26 +106,12 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
   const { t, lang } = useT();
   const [draft, setDraft] = useState<CharacterSelections>({ ...selections });
   const [activeId, setActiveId] = useState<string>("style");
-  const [allowedGenders, setAllowedGenders] = useState<string[]>(GENDERS);
   const [tab, setTab] = useState<"choose" | "custom">(selectedCharacterId ? "choose" : "custom");
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft({ ...selections });
   }, [selections]);
-
-  // Гендеры, разрешённые админом (ENABLED_GENDERS). Female присутствует всегда.
-  useEffect(() => {
-    if (!open) return;
-    getEnabledGenders()
-      .then((allowed) => {
-        if (Array.isArray(allowed) && allowed.length > 0) {
-          const filtered = GENDERS.filter((g) => allowed.includes(g));
-          setAllowedGenders(filtered.length > 0 ? filtered : ["Female"]);
-        }
-      })
-      .catch(() => {});
-  }, [open]);
 
   useEffect(() => {
     const container = contentRef.current;
@@ -243,16 +231,6 @@ export default function CharacterModal({ open, onClose, selections, onSave, opti
                   </div>
                 </div>
 
-                <div>
-                  <div style={s.sectionLabel}>{t("gen.gender")}</div>
-                  <div style={s.pillRow}>
-                    {allowedGenders.map((g) => (
-                      <button key={g} style={{ ...s.pill, ...(draft.gender === g ? s.pillActive : {}) }} onClick={() => setDraft({ ...draft, gender: draft.gender === g ? undefined : g })}>
-                        {localizeOption(g, lang)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <div>
                   <div style={s.sectionLabel}>{t("gen.height")}</div>
@@ -559,8 +537,8 @@ const s: Record<string, React.CSSProperties> = {
   imgCardImg: { width: "100%", height: "100%", objectFit: "cover" as const },
   imgCardLabel: { position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center" as const, color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)", zIndex: 2 },
   pillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
-  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
-  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  pill,
+  pillActive,
   colorPillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
   colorPill: { display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, border: "1px solid #3a3a3a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
   colorPillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },

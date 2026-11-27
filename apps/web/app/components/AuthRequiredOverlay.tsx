@@ -69,13 +69,13 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 22,
     fontWeight: 700,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     margin: "0 0 8px",
   },
   subtitle: {
     color: "#969696",
     fontSize: 14,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     margin: "0 0 24px",
     lineHeight: 1.5,
   },
@@ -93,7 +93,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 15,
     fontWeight: 700,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     cursor: "pointer",
   },
   secondaryBtn: {
@@ -105,7 +105,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 15,
     fontWeight: 600,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     cursor: "pointer",
   },
 };

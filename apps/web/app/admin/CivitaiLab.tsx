@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useEffect, useRef, useState } from "react";
 import { admin } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
@@ -417,8 +418,8 @@ export function CivitaiLab() {
         <button style={btn} onClick={() => setPayload(TEMPLATE_COMFY_IPADAPTER)}>Проба F: comfy + IP-Adapter</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_NODEPACK_SNAPSHOT)}>Проба G1: snapshot node-паков</button>
         <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER)}>Проба G2: customComfy + IP-Adapter (auto)</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT)}>Проба G3: split-loader (clip_vision из resources) ✓</button>
-        <button style={btn} onClick={() => setPayload(TEMPLATE_KONTEXT)}>Проба K: Flux Kontext (identity) ✓</button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_CUSTOMCOMFY_IPADAPTER_SPLIT)}>Проба G3: split-loader (clip_vision из resources) <Icon name="check" size={12} strokeWidth={2.4} /></button>
+        <button style={btn} onClick={() => setPayload(TEMPLATE_KONTEXT)}>Проба K: Flux Kontext (identity) <Icon name="check" size={12} strokeWidth={2.4} /></button>
       </div>
 
       {/* Бесплатная проверка AIR (не тратит buzz) — подбор моделей (напр. clip_vision). */}
@@ -439,7 +440,7 @@ export function CivitaiLab() {
             {airChecks.map((r) => (
               <div key={r.air} style={{ padding: "3px 0", borderTop: "1px solid #1b1b1b", wordBreak: "break-all" }}>
                 <span style={{ color: r.ok && r.canGenerate ? "#4ade80" : r.ok ? "#e0a83b" : "#e36466" }}>
-                  {r.ok && r.canGenerate ? "✓ canGenerate" : r.ok ? "△ ok, canGenerate:false" : "✗ HTTP " + r.httpStatus}
+                  {r.ok && r.canGenerate ? <><Icon name="check" size={12} strokeWidth={2.4} /> canGenerate</> : r.ok ? <><Icon name="warning" size={12} /> ok, canGenerate:false</> : <><Icon name="x" size={12} strokeWidth={2.4} /> HTTP {r.httpStatus}</>}
                 </span>
                 {r.note ? <span style={{ color: "#6f7496" }}> · {r.note}</span> : null}
                 <br /><span style={{ color: "#9aa0b5" }}>{r.air}</span>
@@ -544,7 +545,7 @@ export function CivitaiLab() {
               const results = (step0?.output?.results || []) as Array<{ nodepack?: string; layerAir?: string }>;
               return (
                 <div style={{ marginBottom: 8, padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
-                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>snapshot принят ✓ {results.length ? "· готово" : "· дождитесь succeeded и «Обновить статус»"}</div>
+                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>snapshot принят <Icon name="check" size={12} strokeWidth={2.4} /> {results.length ? "· готово" : "· дождитесь succeeded и «Обновить статус»"}</div>
                   {results.map((r) => (
                     <div key={r.nodepack} style={{ fontSize: 11, color: "#cfcfcf", marginTop: 4, wordBreak: "break-all" }}>
                       <span style={{ color: "#6f7496" }}>{r.nodepack}</span><br />→ layerAir: <b style={{ color: "#4ade80" }}>{r.layerAir}</b>
@@ -561,7 +562,7 @@ export function CivitaiLab() {
               const resources = Array.isArray(echo.resources) ? (echo.resources as string[]) : [];
               return (
                 <div style={{ marginBottom: 8, padding: 10, background: "#101010", border: "1px solid #262626", borderRadius: 8 }}>
-                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{step0?.$type}-граф принят Civitai ✓</div>
+                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{step0?.$type}-граф принят Civitai <Icon name="check" size={12} strokeWidth={2.4} /></div>
                   {nodes.length > 0 && <div style={{ color: "#cfcfcf", fontSize: 11 }}>ноды: {nodes.join(", ")}</div>}
                   {resources.length > 0 && <div style={{ color: "#cfcfcf", fontSize: 11, marginTop: 2 }}>resources: {resources.join(", ")}</div>}
                   <div style={{ color: "#6f7496", fontSize: 11, marginTop: 4 }}>Дождитесь workflow: succeeded — картинка в output.images/blobs. При failed смотрите trace-логи (какая нода/модель не нашлась).</div>
@@ -581,11 +582,11 @@ export function CivitaiLab() {
                 <div style={{ color: "#cfcfcf", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Принятые поля (эхо input):</div>
                 {rows.map((r) => (
                   <div key={r.label} style={{ fontSize: 12, color: r.ok ? "#4ade80" : "#e36466" }}>
-                    {r.ok ? "✓" : "✗"} {r.label}
+                    {r.ok ? <Icon name="check" size={12} strokeWidth={2.4} /> : <Icon name="x" size={12} strokeWidth={2.4} />} {r.label}
                   </div>
                 ))}
                 <div style={{ color: "#6f7496", fontSize: 11, marginTop: 6 }}>
-                  ✗ = поле выброшено движком (не поддерживается на этом engine).
+                  <Icon name="x" size={12} strokeWidth={2.4} /> = поле выброшено движком (не поддерживается на этом engine).
                 </div>
               </div>
             );

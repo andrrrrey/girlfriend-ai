@@ -93,7 +93,7 @@ export interface UserVoiceInput extends EngineBaseInput {
 
 /** Первое приветствие персонажа в пустом чате. */
 export interface GreetingInput extends EngineBaseInput {
-  lang?: "en" | "ru";
+  lang?: "en" | "ru" | "de" | "fr";
 }
 
 /** Правка сообщения пользователя с перегенерацией ответа. */

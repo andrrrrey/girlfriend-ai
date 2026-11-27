@@ -12,7 +12,7 @@ import { firstClause, promptDescribesExpression, promptDescribesSetting, stylePr
 
 // ─── Пулы (зеркало create/data.ts) ───────────────────────────────────────────
 
-const GENDERS = ["Female", "Male", "Non-binary", "Trans Female", "Trans Male"];
+const GENDERS = ["Female"];
 const ORIENTATIONS = ["Heterosexual", "Bisexual", "Homosexual", "Pansexual", "Asexual"];
 const NATIONALITIES = ["American", "British", "German", "French", "Italian", "Spanish", "Japanese", "Korean", "Chinese", "Brazilian", "Russian", "Australian", "Canadian", "Mexican", "Indian", "Swedish", "Norwegian", "Dutch", "Polish", "Ukrainian", "Thai", "Colombian", "Argentine", "Turkish", "Egyptian", "Irish"];
 const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Japanese", "Korean", "Chinese", "Russian", "Arabic", "Hindi", "Turkish", "Polish", "Dutch", "Swedish", "Thai", "Vietnamese"];

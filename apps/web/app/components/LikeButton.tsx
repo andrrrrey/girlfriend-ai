@@ -109,7 +109,7 @@ const s: Record<string, React.CSSProperties> = {
   count: {
     color: "#fff",
     fontSize: 11,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     fontWeight: 600,
   },
 };

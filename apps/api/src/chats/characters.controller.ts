@@ -7,7 +7,7 @@ import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { ensureCharacterSeo } from "./character-seo";
 import { S3Service } from "../s3/s3.service";
 import { loadEnv } from "@repo/config";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 const env = loadEnv();
 
@@ -40,6 +40,9 @@ function aiJobOutputUrl(output: unknown): string | null {
   }
   return null;
 }
+
+/** Сколько картинок листается на карточке персонажа (аватар + последние генерации). */
+const PREVIEW_IMAGES = 3;
 
 @Controller("characters")
 export class CharactersController {
@@ -81,7 +84,13 @@ export class CharactersController {
       jsonFilters.push({ personality: { path: ["gender"], equals: gender } });
     }
     if (style) {
-      jsonFilters.push({ personality: { path: ["style"], equals: style } });
+      // JSON equals регистрозависим, а стиль хранится как выбран в визарде
+      // («Realistic», «Semi-real», «2d»/«2D») — сверяем с типичными вариантами.
+      const lower = style.toLowerCase();
+      const variants = Array.from(
+        new Set([style, lower, lower.toUpperCase(), lower.charAt(0).toUpperCase() + lower.slice(1)]),
+      );
+      jsonFilters.push({ OR: variants.map((v) => ({ personality: { path: ["style"], equals: v } })) });
     }
     if (jsonFilters.length > 0) {
       where.AND = jsonFilters;
@@ -142,15 +151,71 @@ export class CharactersController {
       for (const c of creators) creatorsMap.set(c.id, c);
     }
 
+    const recentImages = await this.recentImagesByCharacter(rawItems.map((c) => c.id));
+
     const items = rawItems.map((c) => ({
       ...c,
       isPublic: true,
       systemPrompt: "",
       voiceId: null,
       creator: c.createdBy ? (creatorsMap.get(c.createdBy) ?? null) : null,
+      // Картинки для листания на карточке: аватар + последние изображения
+      // персонажа (те же источники, что у GET /characters/:id/images).
+      previewImages: [...new Set([c.avatarUrl, ...(recentImages.get(c.id) ?? [])].filter((u): u is string => !!u))]
+        .slice(0, PREVIEW_IMAGES),
     }));
 
     return { items, total };
+  }
+
+  /**
+   * Последние изображения для набора персонажей одним заходом в БД (по
+   * PREVIEW_IMAGES - 1 на персонажа): из галереи чатов (Message) и раздела
+   * «Генерация» (AiJob), новые первыми. Ошибка не ломает список — пусто.
+   */
+  private async recentImagesByCharacter(ids: string[]): Promise<Map<string, string[]>> {
+    const out = new Map<string, string[]>();
+    if (ids.length === 0) return out;
+    const perChar = PREVIEW_IMAGES - 1;
+    try {
+      const [msgRows, jobRows] = await Promise.all([
+        this.prisma.$queryRaw<{ character_id: string; url: string; created_at: Date }[]>(Prisma.sql`
+          SELECT c.id AS character_id, x.url, x.created_at
+          FROM unnest(${ids}::uuid[]) AS c(id)
+          CROSS JOIN LATERAL (
+            SELECT m.media_url AS url, m.created_at
+            FROM messages m
+            JOIN chat_sessions s ON s.id = m.chat_session_id
+            WHERE s.character_id = c.id AND s.deleted_at IS NULL AND s.hidden_from_owner = false
+              AND m.type = 'image' AND m.media_url IS NOT NULL AND m.in_gallery = true AND m.deleted_at IS NULL
+            ORDER BY m.created_at DESC
+            LIMIT ${perChar}
+          ) x`),
+        this.prisma.$queryRaw<{ character_id: string; output: unknown; created_at: Date }[]>(Prisma.sql`
+          SELECT c.id AS character_id, x.output, x.created_at
+          FROM unnest(${ids}::uuid[]) AS c(id)
+          CROSS JOIN LATERAL (
+            SELECT j.output, j.created_at
+            FROM ai_jobs j
+            WHERE j.character_id = c.id AND j.type = 'image' AND j.status = 'completed' AND j.end_user_id IS NULL
+            ORDER BY j.created_at DESC
+            LIMIT ${perChar}
+          ) x`),
+      ]);
+      const rows = [
+        ...msgRows.map((r) => ({ id: r.character_id, url: r.url, at: new Date(r.created_at).getTime() })),
+        ...jobRows.map((r) => ({ id: r.character_id, url: aiJobUrlToClient(aiJobOutputUrl(r.output)), at: new Date(r.created_at).getTime() })),
+      ].sort((a, b) => b.at - a.at);
+      for (const r of rows) {
+        if (!r.url) continue;
+        const list = out.get(r.id) ?? [];
+        if (list.length < perChar && !list.includes(r.url)) list.push(r.url);
+        out.set(r.id, list);
+      }
+    } catch {
+      // превью необязательны — карточка покажет один аватар
+    }
+    return out;
   }
 
   @Get("tags")

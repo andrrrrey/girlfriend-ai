@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
-  characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, getEnabledGenders, ApiError,
+  characters, chats, createImageJob, getJobStatus, getCharacterOptions, getImageStyles, ApiError,
   getVoices, type Voice,
   type CharacterOption,
   getAppearanceOptions, getPoseOptions, getSceneOptions, getCameraOptions,
@@ -18,10 +18,10 @@ import { localizeOption, optionLabel, toEnglishTag } from "../../lib/optionLabel
 import { firstClause, isUnsafeForSoloAvatar, promptDescribesExpression, promptDescribesSetting } from "../../lib/peopleCount";
 import { stylePromptPrefix } from "../../lib/prompt";
 import { usePrefetchAllOptions } from "../../lib/use-prefetch-all-options";
-import type { TKey } from "../../lib/i18n";
+import type { Lang, TKey } from "../../lib/i18n";
 import { PAGE_CSS } from "./styles";
 import {
-  GENDERS, ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
+  ORIENTATIONS, NATIONALITIES, LANGUAGES, ETHNICITIES, VOICES,
   EYE_COLORS, HAIR_STYLES, HAIR_COLORS, BODY_TYPES, BREAST_SIZES, BUTT_SIZES,
   RELATIONSHIP_TYPES, FAMILY_STATUSES, LIFESTYLES, WORKS, HOBBIES,
   KINKS_1, KINKS_2, KINKS_3, STYLES, PERSONALITIES, STAGE_ICONS, AGE_MIN, AGE_MAX,
@@ -71,9 +71,6 @@ let cachedCameraOptions: CameraOptionsResponse | null = null;
 type ImageModel = { id: string; name: string; description: string; provider?: string };
 let enabledImageModels: ImageModel[] = [];
 
-// Гендеры, разрешённые админом (ENABLED_GENDERS). До загрузки — полный список.
-// Female присутствует всегда. Кэшируется на уровне модуля, переживает перестройку.
-let allowedGenders: string[] = [...GENDERS];
 
 /* ── HTML Builders ────────────────────────────── */
 
@@ -83,7 +80,7 @@ let tr: (key: TKey, vars?: Record<string, string | number>) => string = (k) => k
 // Текущий язык — для отображаемых подписей значений шага «Характер». Сами
 // значения (data-value / data-selected) остаются английскими: они уходят в
 // промпты/профиль, поэтому переводим только то, что видит пользователь.
-let currentLang: "en" | "ru" = "en";
+let currentLang: Lang = "en";
 
 const REL_RU: Record<string, string> = {
   "Girlfriend": "Девушка", "Boyfriend": "Парень", "Friend": "Друг", "Companion": "Спутник",
@@ -327,7 +324,7 @@ function navButtons(prev: number | null, next: number | "submit") {
 function stage01() {
   return `<div class="stage-content active" id="stage-01-content">
     ${stageHeader(1, "create.stageBasic")}
-    <div class="dropdown-row">${dropdown("gender", tr("create.gender"), allowedGenders, "Female")}${dropdown("orientation", tr("create.orientation"), ORIENTATIONS, "Heterosexual")}</div>
+    <div class="dropdown-row">${dropdown("orientation", tr("create.orientation"), ORIENTATIONS, "Heterosexual")}</div>
     <div class="field"><div class="field-label">${tr("create.name")}</div><input type="text" class="input-text" id="input-name" placeholder="${tr("create.namePlaceholder")}" value=""></div>
     <div class="field"><div class="field-label">${tr("create.surname")}</div><input type="text" class="input-text" id="input-surname" placeholder="${tr("create.surnamePlaceholder")}"></div>
     <div class="field-age"><div class="field-label">${tr("create.age")}</div>
@@ -551,7 +548,7 @@ function collectFormData() {
     name: (document.getElementById("input-name") as HTMLInputElement)?.value || "Character",
     surname: (document.getElementById("input-surname") as HTMLInputElement)?.value || undefined,
     age: parseInt(document.querySelector<HTMLElement>(".slider-track")?.dataset?.value || "25"),
-    gender: sel("gender") || "Female",
+    gender: "Female",
     orientation: sel("orientation") || "Heterosexual",
     style: style() || "Realistic",
     generationStyle: genStyle() || "",
@@ -659,7 +656,6 @@ function restoreFormState(): boolean {
       if (valEl) valEl.textContent = cvLabel(field, value);
     };
     // Не восстанавливаем гендер, отключённый админом — остаётся дефолтный Female.
-    restoreDropdown("gender", d.gender && allowedGenders.includes(d.gender) ? d.gender : undefined);
     restoreDropdown("orientation", d.orientation);
     restoreDropdown("nationality", d.nationality);
     restoreDropdown("language", d.language);
@@ -913,7 +909,6 @@ function randomizeStage(n: number) {
       if (nameInput) nameInput.value = pick(RANDOM_NAMES);
       nameInput?.classList.remove("field-error-ring");
       setSliderValue(AGE_MIN + Math.floor(Math.random() * (AGE_SPAN + 1)));
-      setDropdown("gender", pick(allowedGenders));
       setDropdown("orientation", pick(ORIENTATIONS));
       const styleRow = document.getElementById("style-row-container");
       if (styleRow) {
@@ -1089,18 +1084,6 @@ async function loadImageModels() {
   try {
     enabledImageModels = await getImageStyles();
   } catch { /* ignore — упадём на дефолтный провайдер */ }
-}
-
-// Загружает разрешённые админом гендеры. Вызывается ДО сборки разметки, чтобы
-// dropdown, восстановление черновика и рандом сразу использовали корректный список.
-async function loadAllowedGenders() {
-  try {
-    const allowed = await getEnabledGenders();
-    if (Array.isArray(allowed) && allowed.length > 0) {
-      const filtered = GENDERS.filter((g) => allowed.includes(g));
-      allowedGenders = filtered.length > 0 ? filtered : ["Female"];
-    }
-  } catch { /* ignore — оставляем полный список */ }
 }
 
 function pickRandomPrompts(): string[] {
@@ -1832,9 +1815,7 @@ export default function CreateCharacterPage() {
     premiumPopupFn = (p) => premiumPopupRef.current(p);
     // Глобальные слушатели регистрируем один раз — переживают перестройку разметки
     registerGlobalListeners();
-    // Сначала узнаём разрешённые гендеры, затем строим разметку — чтобы dropdown,
-    // восстановление черновика и рандом использовали уже отфильтрованный список.
-    loadAllowedGenders().finally(() => buildAndInitPageRef.current());
+    buildAndInitPageRef.current();
 
     // Cleanup on unmount
     return () => {

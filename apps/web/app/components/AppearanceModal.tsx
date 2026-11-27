@@ -1,5 +1,6 @@
 "use client";
 
+import { pill, pillActive } from "./pillStyles";
 import React, { useState, useRef, useEffect } from "react";
 import type { AppearanceCategory, AppearanceOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
@@ -259,8 +260,8 @@ const s: Record<string, React.CSSProperties> = {
   conditionNote: { color: "#f95bad", fontSize: 13, fontStyle: "italic", margin: "0 0 16px" },
   sectionLabel: { color: "#aaa", fontSize: 13, fontWeight: 600, marginBottom: 10 },
   conditionPillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
-  conditionPill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
-  conditionPillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  conditionPill: pill,
+  conditionPillActive: pillActive,
   emptyHint: { color: "#555", fontSize: 13, fontStyle: "italic", padding: "8px 0" },
   footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },
   cancelBtn: { flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },

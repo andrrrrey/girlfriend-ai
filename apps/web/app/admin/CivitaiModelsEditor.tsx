@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { admin, type CharacterOption } from "../../lib/api";
 import { adminStyles } from "./admin-styles";
@@ -381,7 +382,7 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
                         color: neg.ok ? "#4caf7d" : "#e36466",
                       }}
                     >
-                      {neg.ok ? "✓ да" : "✕ нет"}
+                      {neg.ok ? <><Icon name="check" size={12} strokeWidth={2.4} /> да</> : <><Icon name="x" size={12} strokeWidth={2.4} /> нет</>}
                     </span>
                   );
                 })()}
@@ -397,7 +398,7 @@ export function CivitaiModelsEditor({ settings, setSettings }: Props) {
                   onClick={() => removeItem(style, idx)}
                   style={{ background: "transparent", border: "1px solid #4a2222", color: "#e36466", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}
                 >
-                  ✕
+                  <Icon name="x" size={12} strokeWidth={2.4} />
                 </button>
               </div>
             );

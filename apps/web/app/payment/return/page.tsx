@@ -15,7 +15,7 @@ const FAILED_STATUSES: PaymentStatus[] = ["failed", "expired", "canceled"];
 const PROCESSING_STATUSES: PaymentStatus[] = ["created", "pending"];
 
 const CSS = `
-.pay-return { max-width: 480px; margin: 48px auto; padding: 24px; box-sizing: border-box; font-family: 'Syne', sans-serif;
+.pay-return { max-width: 480px; margin: 48px auto; padding: 24px; box-sizing: border-box; font-family: var(--font-main);
   color: #fff; background: #1a1a1a; border: 1px solid #313131; border-radius: 8px; text-align: center; }
 .pay-return-title { font-size: 22px; font-weight: 700; margin: 0 0 12px; }
 .pay-return-text { font-size: 14px; line-height: 1.5; color: #d0d0d0; margin: 0 0 20px; }

@@ -13,7 +13,8 @@
  * локализуем только то, что видит пользователь.
  */
 
-export type Lang = "en" | "ru";
+export type { Lang } from "./i18n";
+import type { Lang } from "./i18n";
 
 const PREFIXES = ["img_", "motion_v_", "motion_", "marks_", "type_", "angle_"];
 
@@ -366,5 +367,14 @@ export type OptionLabels = Partial<Record<"en" | "ru" | "de" | "fr", string>> | 
 export function optionLabel(opt: { name: string; labels?: OptionLabels | unknown }, lang: Lang): string {
   const labels = opt.labels as OptionLabels;
   const fromPack = labels && typeof labels === "object" ? labels[lang] : undefined;
-  return fromPack || localizeOption(opt.name, lang);
+  return stripEmoji(fromPack || localizeOption(opt.name, lang));
+}
+
+/**
+ * Убирает эмодзи-префиксы («🏠 Жилые» → «Жилые»): в UI вместо эмодзи —
+ * SVG-иконки (см. app/components/icons.tsx). Имена категорий в БД остаются с
+ * эмодзи, т.к. по ним связаны опции.
+ */
+export function stripEmoji(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}/g, " ").trim();
 }

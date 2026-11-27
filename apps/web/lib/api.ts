@@ -294,6 +294,19 @@ export class ApiError extends Error {
  * Методы авторизации.
  * Все методы, возвращающие токены, автоматически сохраняют их в localStorage.
  */
+/** Текущий язык интерфейса (как его выбирает LanguageProvider) — для писем при регистрации. */
+function currentUiLang(): string | undefined {
+  const ok = (v: unknown): v is string => v === "en" || v === "ru" || v === "de" || v === "fr";
+  try {
+    const stored = localStorage.getItem("lang");
+    if (ok(stored)) return stored;
+    const browser = navigator.language?.slice(0, 2).toLowerCase();
+    return ok(browser) ? browser : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const auth = {
   /**
    * Регистрирует нового пользователя и сохраняет токены.
@@ -304,7 +317,7 @@ export const auth = {
   async register(email: string, password: string, turnstileToken?: string, isAdult?: boolean): Promise<{ message: string }> {
     return apiFetch<{ message: string }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, turnstileToken, isAdult }),
+      body: JSON.stringify({ email, password, turnstileToken, isAdult, lang: currentUiLang() }),
     });
   },
 
@@ -396,7 +409,7 @@ export interface UserProfile {
   aboutMe: string | null;
   role: string;           // "user" | "admin"
   subscription: string;  // "free" | "premium" | ...
-  lang: string;          // "en" | "ru"
+  lang: string;          // "en" | "ru" | "de" | "fr"
   contentMode: string;   // "nsfw" | "sfw"
   isAdult: boolean;      // подтверждение 18+ при регистрации
   /** Часовой пояс IANA (тихие часы инициативных сообщений). */
@@ -1091,6 +1104,8 @@ export interface Character {
   systemPrompt: string;                    // Системный промпт для LLM
   personality: Record<string, unknown>;    // JSON: age, traits, hobbies
   avatarUrl: string | null;
+  /** До 3 картинок для листания на карточке (аватар + последние генерации); только в списке. */
+  previewImages?: string[];
   voiceId: string | null;                  // ElevenLabs voice ID
   tags: string[];
   isPublic: boolean;                       // Виден ли в публичном каталоге
@@ -2956,12 +2971,12 @@ export function streamMessage(
  * ответ ассистента (на бэке). `lang` задаёт язык приветствия.
  *
  * @param {string} chatId - ID чата
- * @param {"en" | "ru"} lang - язык приветствия
+ * @param {"en" | "ru" | "de" | "fr"} lang - язык приветствия
  * @returns {AbortController} Контроллер для отмены
  */
 export function streamGreeting(
   chatId: string,
-  lang: "en" | "ru",
+  lang: "en" | "ru" | "de" | "fr",
   onDelta: (text: string) => void,
   onDone: () => void,
   onError: (err: string, code?: number, body?: any) => void,
@@ -3566,7 +3581,7 @@ export async function getPublicGallery(params?: {
   userId?: string;
   gender?: string;
   style?: string;
-  /** Ключи тегов галереи (см. galleryTag.* в i18n), OR-фильтр на сервере. */
+  /** Ключи тегов галереи (см. galleryTag.* в i18n): ИЛИ внутри группы, И между группами (на сервере). */
   tags?: string[];
 }): Promise<{ items: GalleryItem[]; total: number }> {
   const query = new URLSearchParams();

@@ -30,7 +30,7 @@ import {
   getCachedCameraOptions,
 } from "../../lib/options-cache";
 import type { CharacterOption, AppearanceOptionsResponse, PoseOptionsResponse, SceneOptionsResponse, CameraOptionsResponse, Character } from "../../lib/api";
-import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, GENDERS, HEIGHTS, BREAST_SIZES, BUTT_SIZES } from "../components/CharacterModal";
+import { DEFAULT_CHARACTER_SELECTIONS, type CharacterSelections, EYE_COLORS, EYE_FEATURES, FACE_FEATURES, HAIR_LENGTHS, HAIR_COLORS, HEIGHTS, BREAST_SIZES, BUTT_SIZES } from "../components/CharacterModal";
 import { DEFAULT_APPEARANCE_SELECTIONS, type AppearanceSelections } from "../components/AppearanceModal";
 import { DEFAULT_POSE_SELECTIONS, type PoseSelections } from "../components/PoseModal";
 import { DEFAULT_SCENE_SELECTIONS, type SceneSelections } from "../components/SceneModal";
@@ -110,7 +110,7 @@ const CSS = `
     cursor: pointer;
     background: transparent;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .seg-tab.active {
     background: #313131;
@@ -143,7 +143,7 @@ const CSS = `
     cursor: pointer;
     overflow: hidden;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .sort-btn .sort-text {
     display: flex;
@@ -178,7 +178,7 @@ const CSS = `
     gap: 2px;
     font-size: 12px;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     transition: background 0.1s;
   }
   .model-dropdown-item:hover { background: #2a2a2a; }
@@ -202,7 +202,7 @@ const CSS = `
     gap: 8px;
     padding: 8px 14px;
     cursor: pointer;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 500;
     color: #fff;
@@ -357,7 +357,7 @@ const CSS = `
     color: white;
     padding: 12px;
     font-size: 14px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     resize: vertical;
     margin-bottom: 12px;
   }
@@ -383,7 +383,7 @@ const CSS = `
     color: white;
     padding: 8px 12px;
     font-size: 13px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     cursor: pointer;
     min-width: 200px;
   }
@@ -426,7 +426,7 @@ const CSS = `
     cursor: pointer;
     white-space: nowrap;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .chip:hover { background: #2a2a2a; }
   .chip.active { background: #313131; }
@@ -468,7 +468,7 @@ const CSS = `
     border: 1px solid #313131;
     border-radius: 4px;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -484,7 +484,7 @@ const CSS = `
     border: none;
     border-radius: 4px;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -593,7 +593,7 @@ const CSS = `
     cursor: pointer;
     background: transparent;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     position: relative;
     transition: color 0.2s;
   }
@@ -663,7 +663,7 @@ const CSS = `
     cursor: pointer;
     background: transparent;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .gallery-filter-tab.active {
     background: #313131;
@@ -687,7 +687,7 @@ const CSS = `
     padding: 0 10px 0 32px;
     color: #fff;
     font-size: 11px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     position: relative;
   }
   .gallery-search:focus { outline: none; border-color: #f95bad; }
@@ -726,7 +726,7 @@ const CSS = `
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     white-space: nowrap;
   }
   .btn-download-selected:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -744,7 +744,7 @@ const CSS = `
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     white-space: nowrap;
   }
   .btn-delete-selected:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -917,6 +917,17 @@ const DEFAULT_VIDEO_MODELS: GenModel[] = [
   { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
 ];
 
+/**
+ * Модели режимов «картинка → видео» и «продолжить видео» сервер выбирает сам
+ * (VIDEO_MODE_DEFAULT_MODEL в apps/api/src/generation/models.ts) — в селекторе
+ * показываем именно их, а не T2V-модель, выбранную для «с нуля».
+ */
+const VIDEO_MODE_MODELS: Record<string, GenModel> = {
+  img2vid: { id: "atlascloud/van-2.6/image-to-video", name: "Van 2.6 (NSFW, I2V)", description: "Image-to-video, uncensored", provider: "atlascloud" },
+  continue: { id: "alibaba/wan-2.7/image-to-video", name: "Wan 2.7 (Continue)", description: "Continue / extend existing video", provider: "atlascloud" },
+};
+const VIDEO_MODE_MODEL_IDS = new Set(Object.values(VIDEO_MODE_MODELS).map((m) => m.id));
+
 const PREMIUM_GEM = `<svg viewBox="0 0 15.86 13.51" fill="none"><path d="M12.09.5l.01-.5c.27.01.54.08.77.21.24.13.44.31.59.53l2.08 2.88c.22.31.33.68.31 1.06-.02.38-.16.74-.41 1.03L9.21 12.9c-.15.19-.34.34-.56.45-.22.11-.47.17-.72.17s-.5-.06-.72-.17c-.22-.11-.41-.26-.56-.45L.41 5.71c-.25-.29-.39-.65-.41-1.03-.02-.38.09-.75.31-1.06l2.08-2.88c.15-.22.36-.4.59-.53.24-.13.5-.2.77-.21h8.33V.5zM5.3 5.31l2.64 6.37 2.65-6.37H5.3zM1.39 5.31l5.4 6.22-2.58-6.22H1.39zm10.28 0l-2.59 6.21 5.39-6.21h-2.8zM3.7 1.01a.68.68 0 0 0-.48.3l-2.08 2.88c-.03.04-.05.07-.06.12h3.21l2.14-3.31H3.79zm1.77 3.3h4.95L8.3 1H7.6zm6.14 0h3.19c-.02-.04-.04-.08-.06-.12l-2.08-2.87a.72.72 0 0 0-.49-.3L12.08 1H9.48l2.13 3.31z" fill="url(#pg)"/><defs><linearGradient id="pg" x1="0" y1="6.76" x2="15.86" y2="6.76" gradientUnits="userSpaceOnUse"><stop stop-color="#F95BAD"/><stop offset="1" stop-color="#FF0084"/></linearGradient></defs></svg>`;
 
 interface GenModel {
@@ -1083,8 +1094,9 @@ function GenerationPageInner() {
     }).catch(() => {});
     getVideoStyles().then((models) => {
       setVideoModels(models);
-      if (models.length > 0 && !models.some((m) => m.id === selectedVideoModel)) {
-        setSelectedVideoModel(models[0].id);
+      const scratchModels = models.filter((m) => !VIDEO_MODE_MODEL_IDS.has(m.id));
+      if (scratchModels.length > 0 && !scratchModels.some((m) => m.id === selectedVideoModel)) {
+        setSelectedVideoModel(scratchModels[0].id);
       }
     }).catch(() => {});
     getGenerationHistory().then(setHistory).catch(() => {});
@@ -1216,7 +1228,7 @@ function GenerationPageInner() {
     setCharacterSelections({
       style: nameOf(styles),
       age: 18 + Math.floor(Math.random() * 33),
-      gender: pick(GENDERS),
+      gender: "Female",
       humanRace: nameOf(races),
       eyeColor: pick(EYE_COLORS).name,
       eyeFeatures: pickN(EYE_FEATURES, 0, 2),
@@ -1533,7 +1545,7 @@ function GenerationPageInner() {
                   style={{
                     width: 72, height: 72, borderRadius: 8, border: "1px dashed #4a4a4a",
                     background: "#1e1e1e", color: "#c1f0aa", fontSize: 10, cursor: "pointer",
-                    fontFamily: "'Syne', sans-serif", padding: 4,
+                    fontFamily: "var(--font-main)", padding: 4,
                   }}
                 >
                   {uploadingMedia ? tr("gp.uploading") : tr("gp.upload")}
@@ -1563,7 +1575,7 @@ function GenerationPageInner() {
                   <button
                     type="button"
                     onClick={resetInitMedia}
-                    style={{ background: "transparent", border: "1px solid #4a4a4a", borderRadius: 6, color: "#969696", fontSize: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "'Syne', sans-serif" }}
+                    style={{ background: "transparent", border: "1px solid #4a4a4a", borderRadius: 6, color: "#969696", fontSize: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "var(--font-main)" }}
                   >
                     {tr("profile.remove")}
                   </button>
@@ -1593,7 +1605,8 @@ function GenerationPageInner() {
                   <span className="label">{tr("gp.aiModel")}</span>
                   <span className="value">
                     {activeTab === "video"
-                      ? (videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
+                      ? (VIDEO_MODE_MODELS[videoSubTab]?.name
+                        || videoModels.find((m) => m.id === selectedVideoModel)?.name || "Wan 2.1")
                       : (imageModels.find((m) => m.id === selectedModel)?.name || "Realistic Vision")
                     }
                   </span>
@@ -1603,16 +1616,20 @@ function GenerationPageInner() {
               {modelDropdownOpen && (
                 <div className="model-dropdown">
                   {(activeTab === "video"
-                    ? videoModels.filter((m) => !m.description?.includes("SFW only"))
+                    ? (VIDEO_MODE_MODELS[videoSubTab]
+                      ? [VIDEO_MODE_MODELS[videoSubTab]]
+                      : videoModels.filter((m) => !m.description?.includes("SFW only") && !VIDEO_MODE_MODEL_IDS.has(m.id)))
                     : imageModels
                   ).map((m) => {
-                    const isActive = activeTab === "video" ? selectedVideoModel === m.id : selectedModel === m.id;
+                    const isActive = activeTab === "video"
+                      ? (VIDEO_MODE_MODELS[videoSubTab] ? true : selectedVideoModel === m.id)
+                      : selectedModel === m.id;
                     return (
                       <div
                         key={m.id}
                         className={`model-dropdown-item${isActive ? " active" : ""}`}
                         onClick={() => {
-                          if (activeTab === "video") setSelectedVideoModel(m.id);
+                          if (activeTab === "video") { if (!VIDEO_MODE_MODELS[videoSubTab]) setSelectedVideoModel(m.id); }
                           else setSelectedModel(m.id);
                           setModelDropdownOpen(false);
                         }}
@@ -1866,7 +1883,7 @@ function GenerationPageInner() {
                   }}
                 >
                   <span className="orient-icon"><span className={`orient-rect ${opt.rect}`} /></span>
-                  {tr(opt.value === "4:5" ? "gp.aspectPortrait" : "gp.aspectLandscape")}
+                  {opt.value === "4:5" ? tr("gp.aspectPortrait") : opt.value === "5:4" ? tr("gp.aspectLandscape") : opt.label}
                   {!opt.free && <span className="premium-gem" dangerouslySetInnerHTML={{ __html: PREMIUM_GEM }} />}
                 </div>
               ))}

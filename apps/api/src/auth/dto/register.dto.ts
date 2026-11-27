@@ -6,7 +6,7 @@
  * Неизвестные поля в теле запроса вызовут HTTP 400.
  */
 
-import { IsBoolean, IsEmail, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
 /**
  * Тело запроса POST /auth/register
@@ -37,4 +37,9 @@ export class RegisterDto {
   @IsBoolean()
   @IsOptional()
   isAdult?: boolean;
+
+  /** Язык интерфейса при регистрации — для письма и профиля. */
+  @IsOptional()
+  @IsIn(["en", "ru", "de", "fr"])
+  lang?: string;
 }

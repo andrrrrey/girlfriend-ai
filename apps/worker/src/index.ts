@@ -29,7 +29,7 @@
 
 import { internalAuthHeaders, loadEnv } from "@repo/config";
 import { createLogger } from "@repo/logger";
-import { Queue, Worker, Job } from "bullmq";
+import { Queue, Worker, Job, UnrecoverableError } from "bullmq";
 import IORedis from "ioredis";
 
 const env = loadEnv();
@@ -370,7 +370,11 @@ async function handleVideoJob(job: Job): Promise<void> {
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Video generation service returned ${response.status}: ${errText}`);
+    const message = `Video generation service returned ${response.status}: ${errText}`;
+    // 4xx от провайдера (неизвестная модель, неверные поля) — тот же запрос
+    // повторно упадёт так же: не тратим ретраи, сразу помечаем задачу проваленной.
+    if (/\(HTTP 4\d\d\)/.test(errText)) throw new UnrecoverableError(message);
+    throw new Error(message);
   }
 
   const result = await response.json() as { url: string; status?: string };
@@ -460,7 +464,8 @@ worker.on("failed", async (job, err) => {
   // попытка может завершиться успешно.
   if (!job) return;
   const maxAttempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < maxAttempts) {
+  const unrecoverable = err instanceof UnrecoverableError || err?.name === "UnrecoverableError";
+  if (job.attemptsMade < maxAttempts && !unrecoverable) {
     logger.warn(
       { job_id: job.id, name: job.name, attempt: job.attemptsMade, maxAttempts, err: err.message },
       "job_attempt_failed",

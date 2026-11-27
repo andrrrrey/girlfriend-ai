@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -23,7 +24,7 @@ function ResetPasswordContent() {
       <div style={styles.page}>
         <div style={styles.card}>
           <div style={styles.logoRow}><Logo /></div>
-          <div style={styles.iconError}>✕</div>
+          <div style={styles.iconError}><Icon name="x" size={26} strokeWidth={2.4} /></div>
           <h2 style={styles.titleCenter}>{t("auth.error")}</h2>
           <p style={{ ...styles.text, color: "#ff7675" }}>{t("auth.verifyNoToken")}</p>
           <Link href="/forgot-password" style={styles.linkBlock}>{t("auth.requestNewLink")}</Link>
@@ -37,7 +38,7 @@ function ResetPasswordContent() {
       <div style={styles.page}>
         <div style={styles.card}>
           <div style={styles.logoRow}><Logo /></div>
-          <div style={styles.iconSuccess}>✓</div>
+          <div style={styles.iconSuccess}><Icon name="check" size={26} strokeWidth={2.4} /></div>
           <h2 style={styles.titleCenter}>{t("auth.passwordChanged")}</h2>
           <p style={styles.text}>{t("auth.redirectingLogin")}</p>
         </div>

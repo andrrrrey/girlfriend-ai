@@ -15,12 +15,12 @@ export const IMAGE_MODELS = [
 
 export const VIDEO_MODELS = [
   { id: "atlascloud/van-2.6/text-to-video", name: "Van 2.6 (NSFW)", description: "Text-to-video, uncensored", provider: "atlascloud" },
-  { id: "atlascloud/wan-2.6-spicy/image-to-video", name: "Wan 2.6 Spicy (I2V)", description: "Image-to-video, uncensored", provider: "atlascloud" },
+  { id: "atlascloud/van-2.6/image-to-video", name: "Van 2.6 (NSFW, I2V)", description: "Image-to-video, uncensored", provider: "atlascloud" },
   { id: "alibaba/wan-2.7/image-to-video", name: "Wan 2.7 (Continue)", description: "Continue / extend existing video", provider: "atlascloud" },
 ];
 
 /** Дефолтные модели видео по режиму генерации. */
 export const VIDEO_MODE_DEFAULT_MODEL: Record<string, string> = {
-  img2vid: "atlascloud/wan-2.6-spicy/image-to-video",
+  img2vid: "atlascloud/van-2.6/image-to-video",
   continue: "alibaba/wan-2.7/image-to-video",
 };

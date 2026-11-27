@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ const CSS = `
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
 }
 
@@ -53,11 +54,11 @@ const CSS = `
 }
 .pp-hero-info { display: flex; flex-direction: column; gap: 2px; }
 .pp-hero-name {
-  font-size: 28px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 700; font-family: var(--font-main);
   line-height: 1.1; color: #fff;
 }
 .pp-hero-handle {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   color: #d0d0d0;
 }
 .pp-hero-logout {
@@ -65,7 +66,7 @@ const CSS = `
   display: flex; align-items: center; gap: 8px;
   height: 38px; padding: 0 16px;
   background: transparent; border: 1px solid #313131; border-radius: 8px;
-  color: #E36466; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #E36466; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   cursor: pointer; transition: border-color 0.2s;
 }
 .pp-hero-logout:hover { border-color: #E36466; }
@@ -78,7 +79,7 @@ const CSS = `
   cursor: pointer;
 }
 .pp-tab-label {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   text-align: center; width: 100%; color: #969696;
   line-height: 1; user-select: none;
 }
@@ -95,7 +96,7 @@ const CSS = `
   display: inline-flex; align-items: center; gap: 8px;
   height: 30px; background: #1e1e1e; border: 1px solid rgba(228,0,120,0.3);
   border-radius: 4px; color: #f95bad; font-size: 12px; font-weight: 500;
-  font-family: 'Syne', sans-serif; padding: 0 14px;
+  font-family: var(--font-main); padding: 0 14px;
   text-decoration: none; margin-bottom: 16px; transition: border-color 0.2s;
 }
 .pp-admin-link:hover { border-color: #f95bad; }
@@ -117,22 +118,22 @@ const CSS = `
   border-radius: 8px; display: flex; align-items: center; justify-content: center;
 }
 .pp-sub-title {
-  font-size: 32px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 700; font-family: var(--font-main);
   line-height: 1; color: #fff;
 }
 .pp-sub-price { display: flex; gap: 6px; align-items: flex-end; justify-content: center; }
 .pp-sub-amount {
-  font-size: 32px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 700; font-family: var(--font-main);
   line-height: 1; color: #fff;
 }
 .pp-sub-period {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   color: #d0d0d0; margin-bottom: 4px;
 }
 .pp-sub-charge {
   background: rgba(0,0,0,0.35); height: 28px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center; padding: 0 12px;
-  font-size: 11px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 11px; font-weight: 500; font-family: var(--font-main);
   color: #d0d0d0; white-space: nowrap; width: 100%;
 }
 .pp-sub-spacer { flex: 1; }
@@ -142,14 +143,14 @@ const CSS = `
   height: 38px; border-radius: 4px;
   background: linear-gradient(90deg, #f95bad, #ff0084);
   border: none; width: 100%; cursor: pointer;
-  font-size: 14px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 14px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-btn-grad:disabled { opacity: 0.6; cursor: not-allowed; }
 .pp-btn-dark {
   display: flex; align-items: center; justify-content: center;
   height: 38px; border-radius: 4px;
   background: #121212; border: 1px solid #313131; width: 100%; cursor: pointer;
-  font-size: 14px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 14px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 
 /* Feature cards + comparison — single grid so rows always align */
@@ -162,7 +163,7 @@ const CSS = `
 .pp-feat-card {
   background: #252525; border: 1px solid #313131; border-radius: 4px;
   padding: 10px 12px; display: flex; gap: 10px; align-items: center;
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-feat-ico {
   width: 26px; height: 26px; flex-shrink: 0;
@@ -174,13 +175,13 @@ const CSS = `
   display: flex; align-items: center; justify-content: center;
 }
 .pp-cmp-val {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #d0d0d0;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #d0d0d0;
 }
 
 /* ── Shared form primitives ── */
 .pp-field { display: flex; flex-direction: column; gap: 8px; }
 .pp-lbl {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   color: #fff; display: flex; align-items: center; justify-content: space-between;
 }
 .pp-lbl-left { display: flex; align-items: center; gap: 6px; }
@@ -191,7 +192,7 @@ const CSS = `
 }
 .pp-input {
   height: 38px; background: #121212; border: 1px solid #313131; border-radius: 4px;
-  color: #fff; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #fff; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
   transition: border-color 0.2s;
 }
@@ -200,13 +201,13 @@ const CSS = `
 .pp-input::placeholder { color: #969696; }
 .pp-textarea {
   min-height: 180px; background: #121212; border: 1px solid #313131; border-radius: 4px;
-  color: #fff; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #fff; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   padding: 10px 12px; outline: none; width: 100%; box-sizing: border-box;
   resize: vertical; line-height: 1.5; transition: border-color 0.2s;
 }
 .pp-textarea:focus { border-color: #f95bad; }
 .pp-textarea::placeholder { color: #969696; }
-.pp-feedback { font-size: 11px; font-family: 'Syne', sans-serif; }
+.pp-feedback { font-size: 11px; font-family: var(--font-main); }
 .pp-feedback.ok { color: #C1F0AA; }
 .pp-feedback.err { color: #E36466; }
 .pp-save-btn {
@@ -214,18 +215,18 @@ const CSS = `
   height: 38px; border-radius: 4px; padding: 0 24px;
   background: linear-gradient(90deg, #f95bad, #ff0084);
   border: none; cursor: pointer;
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .pp-cancel-btn {
   display: inline-flex; align-items: center; justify-content: center;
   height: 38px; border-radius: 4px; padding: 0 24px;
   background: #121212; border: 1px solid #313131; cursor: pointer;
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-btn-sm {
   height: 30px; background: #121212; border: 1px solid #313131; border-radius: 4px;
-  color: #fff; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #fff; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   padding: 0 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;
   justify-content: center; white-space: nowrap; transition: border-color 0.2s;
 }
@@ -252,7 +253,7 @@ const CSS = `
 .pp-avatar-right { display: flex; flex-direction: column; gap: 8px; }
 .pp-avatar-btns { display: flex; flex-direction: column; gap: 8px; }
 .pp-helper {
-  font-size: 10px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 10px; font-weight: 500; font-family: var(--font-main);
   color: #848484; line-height: 1.3; display: flex; flex-direction: column;
 }
 
@@ -271,14 +272,14 @@ const CSS = `
 .pp-add-more {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   height: 38px; background: #121212; border: 1px solid #313131; border-radius: 4px;
-  color: #848484; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #848484; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   cursor: pointer; transition: border-color 0.2s, color 0.2s; width: 100%;
 }
 .pp-add-more:hover { border-color: #f95bad; color: #fff; }
 .pp-delete-acc {
   display: flex; align-items: center; gap: 8px;
   background: transparent; border: none;
-  color: #E36466; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #E36466; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   cursor: pointer; padding: 0;
 }
 
@@ -288,7 +289,7 @@ const CSS = `
 }
 .pp-pwd-link {
   font-size: 11px; color: #f95bad; cursor: pointer; background: none; border: none;
-  font-family: 'Syne', sans-serif; font-weight: 500; padding: 0;
+  font-family: var(--font-main); font-weight: 500; padding: 0;
 }
 .pp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 600px) { .pp-grid-2 { grid-template-columns: 1fr; } }
@@ -304,7 +305,7 @@ const CSS = `
 .pp-pref { display: flex; flex-direction: column; gap: 24px; }
 .pp-section { display: flex; flex-direction: column; gap: 12px; }
 .pp-section-lbl {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-style-grid { display: flex; gap: 10px; }
 .pp-style-card {
@@ -319,7 +320,7 @@ const CSS = `
 .pp-style-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
 .pp-style-name {
   position: relative; z-index: 1;
-  font-size: 16px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700; font-family: var(--font-main);
   color: #fff; text-align: center; width: 100%;
   text-shadow: 0 1px 6px rgba(0,0,0,0.8);
 }
@@ -330,8 +331,8 @@ const CSS = `
   padding: 0 10px; position: relative; cursor: pointer;
 }
 .pp-drop-left { display: flex; align-items: center; gap: 4px; }
-.pp-drop-lbl { font-size: 10px; font-weight: 500; font-family: 'Syne', sans-serif; color: #969696; }
-.pp-drop-val { font-size: 10px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; }
+.pp-drop-lbl { font-size: 10px; font-weight: 500; font-family: var(--font-main); color: #969696; }
+.pp-drop-val { font-size: 10px; font-weight: 500; font-family: var(--font-main); color: #fff; }
 .pp-drop-sel { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
 /* Tags */
@@ -339,7 +340,7 @@ const CSS = `
 .pp-tag {
   padding: 6px 14px; border-radius: 20px;
   background: rgba(255,255,255,0.04); border: 0.8px solid #313131;
-  color: #848484; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #848484; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   cursor: pointer; transition: all 0.15s; user-select: none; white-space: nowrap;
 }
 .pp-tag:hover { border-color: rgba(249,91,173,0.4); color: #d0d0d0; }
@@ -360,8 +361,8 @@ const CSS = `
 }
 .pp-chat-ava img { width: 100%; height: 100%; object-fit: cover; }
 .pp-chat-info { flex: 1 0 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-self: center; }
-.pp-chat-name { font-size: 12px; font-weight: 600; font-family: 'Syne', sans-serif; color: #fff; }
-.pp-chat-bio { font-size: 10px; font-weight: 500; font-family: 'Syne', sans-serif; color: #848484; line-height: 1.3; }
+.pp-chat-name { font-size: 12px; font-weight: 600; font-family: var(--font-main); color: #fff; }
+.pp-chat-bio { font-size: 10px; font-weight: 500; font-family: var(--font-main); color: #848484; line-height: 1.3; }
 .pp-chat-btn {
   width: 24px; height: 24px; flex-shrink: 0; align-self: center;
   border-radius: 8px; background: transparent; border: none;
@@ -372,7 +373,7 @@ const CSS = `
   display: flex; align-items: center; justify-content: center; gap: 8px;
   height: 30px; background: #121212; border: 1px solid #313131;
   border-radius: 4px; color: #fff; padding: 0 14px; cursor: pointer;
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   transition: border-color 0.2s;
 }
 .pp-chat-create:hover { border-color: #f95bad; }
@@ -385,7 +386,7 @@ const CSS = `
 .pp-chat-menu button {
   background: transparent; border: none; text-align: left;
   padding: 8px 10px; border-radius: 6px; cursor: pointer;
-  color: #fff; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  color: #fff; font-size: 12px; font-weight: 500; font-family: var(--font-main);
 }
 .pp-chat-menu button:hover { background: #313131; }
 .pp-chat-menu .pp-chat-menu-del { color: #E36466; }
@@ -399,19 +400,19 @@ const CSS = `
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: calc(100vh - 200px); gap: 20px; text-align: center;
 }
-.pp-unauth-title { font-size: 22px; font-weight: 700; font-family: 'Syne', sans-serif; margin-bottom: 8px; }
-.pp-unauth-sub { font-size: 13px; color: #848484; max-width: 320px; line-height: 1.6; font-family: 'Syne', sans-serif; }
+.pp-unauth-title { font-size: 22px; font-weight: 700; font-family: var(--font-main); margin-bottom: 8px; }
+.pp-unauth-sub { font-size: 13px; color: #848484; max-width: 320px; line-height: 1.6; font-family: var(--font-main); }
 .pp-unauth-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 .pp-unauth-p {
   padding: 10px 24px; background: linear-gradient(90deg, #f95bad, #ff0084);
   border: none; border-radius: 4px; color: #fff;
-  font-size: 13px; font-weight: 600; font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600; font-family: var(--font-main);
   cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
 }
 .pp-unauth-s {
   padding: 10px 24px; background: transparent; border: 1px solid #313131;
   border-radius: 4px; color: #fff;
-  font-size: 13px; font-weight: 600; font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600; font-family: var(--font-main);
   cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
 }
 @media (max-width: 768px) {
@@ -714,10 +715,10 @@ function AccountTab() {
               <span>{t("profile.nickname")}</span>
               {checkingNickname && <span style={{ fontSize: 10, color: "#848484" }}>{t("profile.checking")}</span>}
               {!checkingNickname && nicknameAvailable === true && nickname !== user?.nickname && (
-                <span style={{ fontSize: 10, color: "#c1f0aa" }}>{t("profile.available")}</span>
+                <span style={{ fontSize: 10, color: "#c1f0aa", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name="check" size={10} strokeWidth={2.4} />{t("profile.available")}</span>
               )}
               {!checkingNickname && nicknameAvailable === false && (
-                <span style={{ fontSize: 10, color: "#f95bad" }}>{t("profile.taken")}</span>
+                <span style={{ fontSize: 10, color: "#f95bad", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name="x" size={10} strokeWidth={2.4} />{t("profile.taken")}</span>
               )}
             </span>
             <input
@@ -754,7 +755,6 @@ function AccountTab() {
 function PreferencesTab() {
   const { t } = useT();
   const [style,   setStyle]   = useState("Realistic");
-  const [gender,  setGender]  = useState("Female");
   const [age,     setAge]     = useState("18–25");
   const [content, setContent] = useState("All");
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set(["Romantic", "Athletic", "Gaming"]));
@@ -768,7 +768,6 @@ function PreferencesTab() {
   }
 
   const drops = [
-    { label: t("profile.preferredGender"), val: gender,  set: setGender,  opts: ["Female", "Male", "All"] },
     { label: t("profile.ageRange"),        val: age,     set: setAge,     opts: ["18–25", "25–35", "35+", "Any"] },
     { label: t("profile.contentType"),     val: content, set: setContent, opts: ["All", "SFW only", "NSFW only"] },
   ];

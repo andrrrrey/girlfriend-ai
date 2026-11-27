@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type CharacterOption, parseSynonymsInput } from "../../../lib/api";
@@ -335,7 +336,7 @@ export default function AdminCharacterOptionsPage() {
                 <img src={form.previewUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
               )}
               {form.previewUrl && (
-                <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}>✕</button>
+                <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}><Icon name="x" size={12} strokeWidth={2.4} /></button>
               )}
             </div>
             {error && <p style={{ color: "#e36466", fontSize: 12, margin: 0 }}>{error}</p>}

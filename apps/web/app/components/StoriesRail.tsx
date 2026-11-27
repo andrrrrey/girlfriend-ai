@@ -162,7 +162,7 @@ const STORIES_CSS = `
   }
   .story-name {
     font-size: 11px; font-weight: 500; color: #c9c9c9; max-width: 76px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Syne', sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-main);
   }
   .stories-arrow {
     position: absolute; top: 36px; transform: translateY(-50%); z-index: 2;

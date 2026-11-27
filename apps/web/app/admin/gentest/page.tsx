@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import {
@@ -356,13 +357,13 @@ export default function AdminGenTestPage() {
         </div>
         {mode === "img2img" && engine === "sdxl" && (
           <p style={{ ...st.hint, margin: "6px 0 0", color: "#8a6d3b" }}>
-            ⚠ Аксессуары на голове (шляпа/ободок) в img2img часто не появляются при низком denoise — поднимите к 0.85–0.9
+            <Icon name="warning" size={12} /> Аксессуары на голове (шляпа/ободок) в img2img часто не появляются при низком denoise — поднимите к 0.85–0.9
             или используйте txt2img. Можно также усилить токен кнопкой «×1.3» рядом с промптом опции.
           </p>
         )}
         {mode === "img2img" && engine === "kontext" && (
           <p style={{ ...st.hint, margin: "6px 0 0", color: "#8a6d3b" }}>
-            ⚠ Flux Kontext держит лицо с аватара независимо от «силы изменения» (слайдер скрыт), но «лук» будет
+            <Icon name="warning" size={12} /> Flux Kontext держит лицо с аватара независимо от «силы изменения» (слайдер скрыт), но «лук» будет
             флуксовый, а НЕ модель/AIR персонажа. Каждая комбинация ≈ 35 buzz (модель dev). Требует KONTEXT-настроек в админке.
           </p>
         )}
@@ -518,7 +519,7 @@ function OptionAxisTable({
                       onClick={() => { const v = `(${o.prompt.trim()}:1.3)`; onEditPrompt(o.id, v); onSavePrompt(o.id, v); }}
                     >×1.3</button>
                     <span style={{ fontSize: 11, width: 16, color: status === "error" ? "#e36466" : "#2f855a" }}>
-                      {status === "saving" ? "…" : status === "saved" ? "✓" : status === "error" ? "✕" : ""}
+                      {status === "saving" ? "…" : status === "saved" ? <Icon name="check" size={12} strokeWidth={2.4} /> : status === "error" ? <Icon name="x" size={12} strokeWidth={2.4} /> : ""}
                     </span>
                   </div>
                 </div>

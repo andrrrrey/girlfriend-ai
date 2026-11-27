@@ -2,7 +2,7 @@ import { IsString, MinLength, IsOptional, IsIn, IsInt, ValidateIf, IsObject } fr
 
 const ALLOWED_VIDEO_MODELS = [
   "atlascloud/van-2.6/text-to-video",
-  "atlascloud/wan-2.6-spicy/image-to-video",
+  "atlascloud/van-2.6/image-to-video",
   "alibaba/wan-2.7/image-to-video",
 ] as const;
 

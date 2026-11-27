@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon, sceneCategoryIcon } from "./icons";
+import { pill, pillActive } from "./pillStyles";
 import React, { useState, useRef, useEffect } from "react";
 import type { SceneCategory, SceneOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
@@ -171,7 +173,10 @@ export default function SceneModal({ open, onClose, selections, onSave, options 
             {/* Location categories */}
             {options.LOCATION.map((cat) => (
               <div key={cat.id} data-section-id={`location-${cat.id}`} style={s.section}>
-                <div style={s.sectionTitle}>{optionLabel(cat, lang)}</div>
+                <div style={{ ...s.sectionTitle, display: "flex", alignItems: "center", gap: 8 }}>
+                  {sceneCategoryIcon(cat.name) && <Icon name={sceneCategoryIcon(cat.name)!} size={16} color="#f95bad" />}
+                  {optionLabel(cat, lang)}
+                </div>
                 <div style={s.imageGrid}>
                   {cat.options.map((opt) => {
                     const selected = draft.locations.includes(opt.name);
@@ -261,8 +266,8 @@ const s: Record<string, React.CSSProperties> = {
   imgCardLabel: { position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center" as const, color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)", zIndex: 2 },
   sectionLabel: { color: "#aaa", fontSize: 13, fontWeight: 600, marginBottom: 10 },
   pillRow: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
-  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
-  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  pill,
+  pillActive,
   propsTextarea: { width: "100%", padding: "12px", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" as const, boxSizing: "border-box" as const, minHeight: 100 },
   emptyHint: { color: "#555", fontSize: 13, padding: "20px 0" },
   footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },

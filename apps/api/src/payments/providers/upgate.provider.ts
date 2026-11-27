@@ -43,7 +43,7 @@ const RENEWAL_MAX_PAGES = 20;
 const RENEWAL_LOOKBACK_MS = 3 * 24 * 60 * 60_000;
 /** Транзакции ищем только у подписок, которым пора продлеваться. */
 const RENEWAL_DUE_MS = 2 * 24 * 60 * 60_000;
-const LANGUAGES: Record<string, string> = { en: "en-us", ru: "ru-ru" };
+const LANGUAGES: Record<string, string> = { en: "en-us", ru: "ru-ru", de: "de-de", fr: "fr-fr" };
 
 interface UpGatePayment {
   payment_id?: string;

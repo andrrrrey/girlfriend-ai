@@ -107,7 +107,7 @@ const catalogCss = `
   .seo-catalog-sub { color: #969696; font-size: 15px; margin: 0; }
   .seo-catalog-empty { color: #969696; font-size: 15px; }
   /* Плотная сетка как на главной: много небольших карточек. */
-  .seo-cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+  .seo-cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(180px, calc((100% - 5 * 16px) / 6)), 1fr)); gap: 16px; }
   .seo-card-wrap { position: relative; width: 100%; aspect-ratio: 22 / 30; display: block; text-decoration: none; }
   .seo-card {
     border: 1px solid #313131; border-radius: 8px; width: 100%; height: 100%;

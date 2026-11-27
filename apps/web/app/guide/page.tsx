@@ -12,7 +12,7 @@ const CSS = `
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
 }
 .gd-head {

@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../components/icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
@@ -403,7 +404,7 @@ function StarsPanel({ botId }: { botId: string }) {
           <div className="tg-tile-value">{data.activeSubscribers}</div>
         </div>
         <div className="tg-tile">
-          <div className="tg-tile-label">{t("tg.starsRevenue")}</div>
+          <div className="tg-tile-label">{t("tg.starsRevenue")} <Icon name="star" size={11} /></div>
           <div className="tg-tile-value">{data.revenueStars}</div>
         </div>
       </div>
@@ -413,7 +414,7 @@ function StarsPanel({ botId }: { botId: string }) {
       {data.plans.map((p) => (
         <div key={p.id} className="tg-row">
           <span style={{ flex: 1 }}>
-            {p.title} — {p.priceStars} ⭐ / {p.periodDays} {t("tg.days")}
+            {p.title} — {p.priceStars} <Icon name="star" size={12} /> / {p.periodDays} {t("tg.days")}
           </span>
           <button className="tg-chip" disabled={busy} onClick={() => act(() => telegram.archivePlan(botId, p.id)).then(load)}>
             {t("tg.planRemove")}
@@ -426,7 +427,7 @@ function StarsPanel({ botId }: { botId: string }) {
           <input className="tg-input" maxLength={32} value={plan.title} onChange={(e) => setPlan({ ...plan, title: e.target.value })} />
         </div>
         <div>
-          <label className="tg-label">{t("tg.planPrice")}</label>
+          <label className="tg-label">{t("tg.planPrice")} <Icon name="star" size={11} /></label>
           <input className="tg-input" type="number" min={1} value={plan.priceStars} onChange={(e) => setPlan({ ...plan, priceStars: e.target.value })} />
         </div>
         <div>
@@ -495,7 +496,7 @@ function StarsPanel({ botId }: { botId: string }) {
               <tr>
                 <th>{t("tg.statsDate")}</th>
                 <th>{t("tg.paymentUser")}</th>
-                <th>{t("tg.paymentAmount")}</th>
+                <th>{t("tg.paymentAmount")} <Icon name="star" size={11} /></th>
                 <th />
               </tr>
             </thead>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon, type IconName } from "./icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
@@ -50,15 +51,16 @@ export function formatMoney(minor: number, currency: string, lang: string): stri
   return new Intl.NumberFormat(lang, { style: "currency", currency }).format(minor / 100);
 }
 
-const FEATURES: { icon: string; labelKey: TKey; free: string; pro: string }[] = [
-  { icon: "💬", labelKey: "profile.featMessages",      free: "10",  pro: "∞" },
-  { icon: "🖼️", labelKey: "profile.featImages",        free: "10",  pro: "∞" },
-  { icon: "🎬", labelKey: "profile.featVideo",         free: "✗",   pro: "✓" },
-  { icon: "❤️", labelKey: "profile.featRelationships", free: "1",   pro: "∞" },
-  { icon: "⭐", labelKey: "profile.featPremiumChars",  free: "✗",   pro: "✓" },
-  { icon: "🎭", labelKey: "profile.featPersonas",      free: "✗",   pro: "✓" },
-  { icon: "📷", labelKey: "profile.featNsfw",          free: "✗",   pro: "✓" },
-  { icon: "⚡", labelKey: "profile.featPriority",      free: "✗",   pro: "✓" },
+/** pro/free: число, «∞» или true/false (есть/нет функции). */
+const FEATURES: { icon: IconName; labelKey: TKey; free: string | boolean; pro: string | boolean }[] = [
+  { icon: "chat",   labelKey: "profile.featMessages",      free: "10",  pro: "∞" },
+  { icon: "image",  labelKey: "profile.featImages",        free: "10",  pro: "∞" },
+  { icon: "video",  labelKey: "profile.featVideo",         free: false, pro: true },
+  { icon: "heart",  labelKey: "profile.featRelationships", free: "1",   pro: "∞" },
+  { icon: "star",   labelKey: "profile.featPremiumChars",  free: false, pro: true },
+  { icon: "masks",  labelKey: "profile.featPersonas",      free: false, pro: true },
+  { icon: "camera", labelKey: "profile.featNsfw",          free: false, pro: true },
+  { icon: "zap",    labelKey: "profile.featPriority",      free: false, pro: true },
 ];
 
 function IcoDiamond() {
@@ -111,22 +113,22 @@ export const SUBSCRIPTION_CSS = `
   border-radius: 8px; display: flex; align-items: center; justify-content: center;
 }
 .pp-sub-title {
-  font-size: 32px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 700; font-family: var(--font-main);
   line-height: 1; color: #fff;
 }
 .pp-sub-price { display: flex; gap: 6px; align-items: flex-end; justify-content: center; }
 .pp-sub-amount {
-  font-size: 32px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 700; font-family: var(--font-main);
   line-height: 1; color: #fff;
 }
 .pp-sub-period {
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main);
   color: #d0d0d0; margin-bottom: 4px;
 }
 .pp-sub-charge {
   background: rgba(0,0,0,0.35); height: 28px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center; padding: 0 12px;
-  font-size: 11px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 11px; font-weight: 500; font-family: var(--font-main);
   color: #d0d0d0; white-space: nowrap; width: 100%;
 }
 .pp-sub-spacer { flex: 1; }
@@ -136,21 +138,21 @@ export const SUBSCRIPTION_CSS = `
   height: 38px; border-radius: 4px;
   background: linear-gradient(90deg, #f95bad, #ff0084);
   border: none; width: 100%; cursor: pointer;
-  font-size: 14px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 14px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-btn-grad:disabled { opacity: 0.6; cursor: not-allowed; }
 .pp-btn-dark {
   display: flex; align-items: center; justify-content: center;
   height: 38px; border-radius: 4px;
   background: #121212; border: 1px solid #313131; width: 100%; cursor: pointer;
-  font-size: 14px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 14px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-sub-right { flex: 1; min-width: 0; }
 .pp-feat-table { display: grid; grid-template-columns: 1fr 76px; gap: 6px; }
 .pp-feat-card {
   background: #252525; border: 1px solid #313131; border-radius: 4px;
   padding: 10px 12px; display: flex; gap: 10px; align-items: center;
-  font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff;
+  font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff;
 }
 .pp-feat-ico {
   width: 26px; height: 26px; flex-shrink: 0;
@@ -161,7 +163,7 @@ export const SUBSCRIPTION_CSS = `
   background: #1e1e1e; border: 1px solid #313131; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
 }
-.pp-cmp-val { font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #d0d0d0; }
+.pp-cmp-val { font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #d0d0d0; }
 @media (max-width: 768px) {
   .pp-sub { flex-direction: column; }
   .pp-sub-card { flex: none; width: 100%; }
@@ -175,7 +177,7 @@ export function SubscriptionBlockStyles() {
 
 /** Стили оплаты. Профиль не подключает SUBSCRIPTION_CSS, поэтому они отдельно. */
 const PAYMENTS_CSS = `
-.pay-root { display: flex; flex-direction: column; gap: 24px; font-family: 'Syne', sans-serif; color: #fff; }
+.pay-root { display: flex; flex-direction: column; gap: 24px; font-family: var(--font-main); color: #fff; }
 .pay-banner { border: 1px solid #313131; border-radius: 4px; background: #1e1e1e; padding: 12px 16px;
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 13px; }
 .pay-banner-title { font-weight: 700; margin-bottom: 4px; }
@@ -190,7 +192,7 @@ const PAYMENTS_CSS = `
 .pay-pack-price { font-size: 20px; font-weight: 700; }
 .pay-plan { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .pay-btn { display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 12px; border-radius: 4px;
-  border: none; cursor: pointer; font: 500 14px 'Syne', sans-serif; color: #fff;
+  border: none; cursor: pointer; font: 500 14px var(--font-main); color: #fff;
   background: linear-gradient(90deg, #f95bad, #ff0084); }
 .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .pay-btn-dark { background: #121212; border: 1px solid #313131; }
@@ -351,11 +353,11 @@ export default function SubscriptionBlock() {
             {FEATURES.map((f) => (
               <React.Fragment key={f.labelKey}>
                 <div className="pp-feat-card" key={`${f.labelKey}-card`}>
-                  <div className="pp-feat-ico">{f.icon}</div>
+                  <div className="pp-feat-ico"><Icon name={f.icon} size={16} /></div>
                   {t(f.labelKey)}
                 </div>
                 <div className="pp-cmp-cell" key={`${f.labelKey}-cmp`}>
-                  {f.pro === "✓" ? <IcoCheckCircle /> : f.pro === "✗" ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
+                  {f.pro === true ? <IcoCheckCircle /> : f.pro === false ? <IcoXCircle /> : <span className="pp-cmp-val">{f.pro}</span>}
                 </div>
               </React.Fragment>
             ))}

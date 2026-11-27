@@ -1,5 +1,6 @@
 "use client";
 
+import { styleFilterOptions } from "../lib/styles";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { characters, auth, likes, resizedMediaUrl, resizedMediaSrcSet } from "../lib/api";
 import type { Character } from "../lib/api";
@@ -32,7 +33,8 @@ const PAGE_CSS = `
     .chars-header { display: flex; flex-direction: column; gap: 5px; max-width: 570px; }
     .chars-title { font-size: 32px; font-weight: 700; line-height: 1.1; }
     .chars-title .pink { color: #ff99ce; }
-    .cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; width: 100%; }
+    /* Не больше 6 колонок: на широких мониторах карточки растут, а не мельчают. */
+    .cards-row { --cards-gap: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5 * 18px) / 6)), 1fr)); gap: 18px; width: 100%; }
     .card {
       border: 1px solid #313131; border-radius: 8px; width: 100%; height: 100%;
       overflow: hidden; position: relative; display: flex;
@@ -45,7 +47,7 @@ const PAGE_CSS = `
       background: linear-gradient(to bottom, rgba(9,9,9,0) 56.167%, rgba(9,9,9,0.8) 100%);
     }
     .card-name { font-size: 20px; font-weight: 700; color: #fff; position: relative; z-index: 1; white-space: nowrap; line-height: 1.2; }
-    .card-featured-wrap { position: relative; width: 100%; aspect-ratio: 22 / 30; }
+    .card-featured-wrap { position: relative; z-index: 1; width: 100%; aspect-ratio: 22 / 30; }
     .card-featured-wrap:hover { z-index: 5; }
     .hover-panel {
       position: absolute; left: 0; top: 0; width: 100%; height: 100%;
@@ -58,8 +60,33 @@ const PAGE_CSS = `
     }
     .card-featured-wrap:hover .hover-panel { opacity: 1; pointer-events: auto; }
     .card-featured-wrap:hover .card.featured { border-color: #5b5b5b; }
-    .card-featured-wrap .card-progress { opacity: 0; transition: opacity 0.2s ease; }
+    /* Полоски-индикатор листаемых картинок (сверху карточки, видны при наведении). */
+    .card-featured-wrap .card-progress {
+      position: absolute; top: 8px; left: 8px; right: 44px; z-index: 3;
+      opacity: 0; transition: opacity 0.2s ease; pointer-events: none;
+    }
     .card-featured-wrap:hover .card-progress { opacity: 1; }
+    .card-bg img.card-slide { opacity: 0; transition: opacity 0.18s ease; }
+    .card-bg img.card-slide.active { opacity: 1; }
+    /* Инфо о персонаже показывается на соседней карточке (правой, у края ряда —
+       левой): сама наведённая карточка не темнеет, на ней листаются картинки.
+       Классы info-right/info-left ставит JS (см. attachCardHover). */
+    .card-featured-wrap.info-right .hover-panel { left: calc(100% + var(--cards-gap)); }
+    .card-featured-wrap.info-left .hover-panel { left: calc(-100% - var(--cards-gap)); }
+    /* Панель на соседе только информирует: мышь проходит сквозь неё, поэтому при
+       движении по ряду наведение переходит на следующую карточку. Кнопки
+       View/Chat в этом режиме — на самой наведённой карточке. */
+    .card-featured-wrap.info-right .hover-panel,
+    .card-featured-wrap.info-left .hover-panel { pointer-events: none; }
+    .card-featured-wrap.info-right .hover-panel .hover-actions,
+    .card-featured-wrap.info-left .hover-panel .hover-actions { display: none; }
+    .card-hover-actions {
+      position: absolute; left: 8px; right: 8px; bottom: 38px; z-index: 3;
+      display: none; gap: 6px; opacity: 0; transition: opacity 0.2s ease;
+    }
+    .card-featured-wrap.info-right .card-hover-actions,
+    .card-featured-wrap.info-left .card-hover-actions { display: flex; }
+    .card-featured-wrap:hover .card-hover-actions { opacity: 1; }
     .card-featured-wrap .card-actions {
       position: absolute; top: 8px; right: 8px; z-index: 10;
       flex-direction: column; align-items: flex-end; gap: 4px;
@@ -98,17 +125,82 @@ const PAGE_CSS = `
       border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;
     }
     .card-more-item:hover { background: rgba(255,255,255,0.08); }
-    .card-progress { display: flex; gap: 2px; width: 100%; position: relative; z-index: 2; }
+    .card-progress { display: flex; gap: 3px; }
     .card-progress .progress-bar { flex: 1; height: 2px; }
     @media (max-width: 768px) {
       .content { padding-bottom: 24px; }
       .characters-section { margin: 24px 16px 0; }
       .chars-header { width: 100%; }
       .chars-title { font-size: 20px; }
-      .cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .cards-row { --cards-gap: 10px; grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .card-name { font-size: 15px; }
     }
 `;
+
+/** Показывает i-ю картинку карточки и подсвечивает соответствующую полоску. */
+function showSlide(wrap: HTMLElement, idx: number) {
+  if (wrap.dataset.slide === String(idx)) return;
+  wrap.dataset.slide = String(idx);
+  wrap.querySelectorAll<HTMLElement>(".card-slide").forEach((img, i) => img.classList.toggle("active", i === idx));
+  wrap.querySelectorAll<HTMLElement>(".card-progress .progress-bar").forEach((bar, i) => {
+    bar.classList.toggle("active", i === idx);
+    bar.classList.toggle("inactive", i !== idx);
+  });
+}
+
+/**
+ * Наведение на карточку (только устройства с мышью):
+ *  - движение мыши по карточке листает её картинки (ширина делится на N зон);
+ *  - инфо-панель наведённой карточки уезжает на соседнюю карточку того же ряда
+ *    (правую, а у правого края ряда — левую) и затемняет её; мышь проходит
+ *    сквозь панель (pointer-events: none), кнопки View/Chat — на самой карточке.
+ * Возвращает функцию отписки.
+ */
+function attachCardHover(container: HTMLElement): () => void {
+  if (typeof window === "undefined" || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    return () => {};
+  }
+  const sameRow = (a: Element | null, b: HTMLElement) =>
+    a instanceof HTMLElement && a.classList.contains("card-featured-wrap") && a.offsetTop === b.offsetTop;
+
+  const onEnter = (e: Event) => {
+    const wrap = e.currentTarget as HTMLElement;
+    wrap.classList.remove("info-right", "info-left");
+    if (sameRow(wrap.nextElementSibling, wrap)) wrap.classList.add("info-right");
+    else if (sameRow(wrap.previousElementSibling, wrap)) wrap.classList.add("info-left");
+    // Нет соседей в ряду — панель остаётся на самой карточке (старое поведение).
+  };
+  const onMove = (e: Event) => {
+    const wrap = e.currentTarget as HTMLElement;
+    const card = wrap.querySelector<HTMLElement>(".card.featured");
+    const me = e as MouseEvent;
+    if (!card || !card.contains(me.target as Node)) return; // курсор над панелью у соседа
+    const n = wrap.querySelectorAll(".card-slide").length;
+    if (n < 2) return;
+    const rect = card.getBoundingClientRect();
+    const idx = Math.min(n - 1, Math.max(0, Math.floor(((me.clientX - rect.left) / rect.width) * n)));
+    showSlide(wrap, idx);
+  };
+  const onLeave = (e: Event) => {
+    const wrap = e.currentTarget as HTMLElement;
+    showSlide(wrap, 0);
+    wrap.classList.remove("info-right", "info-left");
+  };
+
+  const wraps = Array.from(container.querySelectorAll<HTMLElement>(".card-featured-wrap"));
+  for (const w of wraps) {
+    w.addEventListener("mouseenter", onEnter);
+    w.addEventListener("mousemove", onMove);
+    w.addEventListener("mouseleave", onLeave);
+  }
+  return () => {
+    for (const w of wraps) {
+      w.removeEventListener("mouseenter", onEnter);
+      w.removeEventListener("mousemove", onMove);
+      w.removeEventListener("mouseleave", onLeave);
+    }
+  };
+}
 
 function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { liked: boolean; count: number }>, t: TFn): string {
   if (!chars || chars.length === 0) return "";
@@ -123,10 +215,17 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       const descHtml = description
         ? `<p class="hover-description">${description.slice(0, 140)}${description.length > 140 ? "…" : ""}</p>`
         : `<p class="hover-description" style="color:#969696;">${t("home.noDescYet")}</p>`;
-      const cardSrcSet = resizedMediaSrcSet(char.avatarUrl, [400, 768]);
-      const bgContent = char.avatarUrl
-        ? `<img src="${resizedMediaUrl(char.avatarUrl, { w: 400 }) ?? char.avatarUrl}"${cardSrcSet ? ` srcset="${cardSrcSet}" sizes="(max-width: 768px) 50vw, 280px"` : ""} loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:8px;" alt="${char.name}" />`
+      // До 3 картинок: аватар + последние генерации; листаются движением мыши.
+      const slides = (char.previewImages?.length ? char.previewImages : [char.avatarUrl]).filter((u): u is string => !!u).slice(0, 3);
+      const bgContent = slides.length
+        ? slides.map((url, i) => {
+            const srcSet = resizedMediaSrcSet(url, [400, 768]);
+            return `<img class="card-slide${i === 0 ? " active" : ""}" src="${resizedMediaUrl(url, { w: 400 }) ?? url}"${srcSet ? ` srcset="${srcSet}" sizes="(max-width: 768px) 50vw, 400px"` : ""} loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:8px;" alt="${i === 0 ? char.name : ""}" />`;
+          }).join("")
         : `<div style="position:absolute;inset:0;width:100%;height:100%;background:linear-gradient(135deg,#2d1b3d 0%,#1a0a2e 50%,#0d0d1a 100%);border-radius:8px;"></div>`;
+      const progressHtml = slides.length > 1
+        ? `<div class="card-progress">${slides.map((_, i) => `<div class="progress-bar ${i === 0 ? "active" : "inactive"}"><div class="progress-bar-inner"></div></div>`).join("")}</div>`
+        : "";
       const isLiked = likeStatuses[char.id]?.liked || false;
       const likeCount = likeStatuses[char.id]?.count || 0;
       const heartFill = isLiked ? "#f95bad" : "none";
@@ -162,6 +261,11 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
       </div>
     </div>
   </div>
+  ${progressHtml}
+  <div class="card-hover-actions">
+    <div class="hover-btn primary" data-action="view">${t("home.view")}</div>
+    <div class="hover-btn secondary" data-action="chat">${t("home.chat")}</div>
+  </div>
   <div class="card featured">
     <div class="card-bg">${bgContent}<div class="card-overlay"></div></div>
     <div class="card-name">${label}</div>
@@ -174,17 +278,7 @@ function buildDynamicCards(chars: Character[], likeStatuses: Record<string, { li
 export default function HomePage() {
   const { t } = useT();
   const { mode: contentMode } = useContentMode();
-  const GENDER_OPTIONS = [
-    { value: "", label: t("home.filterAll") },
-    { value: "Female", label: t("home.genderFemale") },
-    { value: "Male", label: t("home.genderMale") },
-    { value: "Trans", label: t("home.genderTrans") },
-  ];
-  const STYLE_OPTIONS = [
-    { value: "", label: t("home.filterAll") },
-    { value: "Realistic", label: t("home.styleRealistic") },
-    { value: "Anime", label: t("home.styleAnime") },
-  ];
+  const STYLE_OPTIONS = styleFilterOptions(t, t("home.filterAll"));
   const SORT_OPTIONS = [
     { value: "newest", label: t("home.sortNewest") },
     { value: "oldest", label: t("home.sortOldest") },
@@ -195,7 +289,6 @@ export default function HomePage() {
   const [shareCharId, setShareCharId] = useState<string | null>(null);
   const [reportCharId, setReportCharId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
@@ -206,13 +299,12 @@ export default function HomePage() {
   charsRef.current = chars;
 
   const fetchChars = useCallback(async (params?: {
-    search?: string; gender?: string; style?: string;
+    search?: string; style?: string;
     sortBy?: string; tags?: string[];
   }) => {
     try {
       const result = await characters.listPublic({
         search: params?.search || undefined,
-        gender: params?.gender || undefined,
         style: params?.style || undefined,
         sortBy: params?.sortBy || "newest",
         tags: params?.tags?.length ? params.tags : undefined,
@@ -242,16 +334,16 @@ export default function HomePage() {
   }, [chars]);
 
   useEffect(() => {
-    fetchChars({ search: searchQuery, gender, style, sortBy, tags: selectedTags });
+    fetchChars({ search: searchQuery, style, sortBy, tags: selectedTags });
     // contentMode в зависимостях: при переключении NSFW/SFW список перезагружается.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender, style, sortBy, selectedTags, fetchChars, contentMode]);
+  }, [style, sortBy, selectedTags, fetchChars, contentMode]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      fetchChars({ search: val, gender, style, sortBy, tags: selectedTags });
+      fetchChars({ search: val, style, sortBy, tags: selectedTags });
     }, 300);
   };
 
@@ -349,7 +441,11 @@ export default function HomePage() {
     if (!container || !dynamicCardsHtml) return;
     container.innerHTML = dynamicCardsHtml;
     container.addEventListener("click", handleCardClick as EventListener);
-    return () => container.removeEventListener("click", handleCardClick as EventListener);
+    const detachHover = attachCardHover(container);
+    return () => {
+      container.removeEventListener("click", handleCardClick as EventListener);
+      detachHover();
+    };
   }, [dynamicCardsHtml, handleCardClick]);
 
   // Close any open card menu when clicking outside of it.
@@ -387,10 +483,7 @@ export default function HomePage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", flexWrap: "wrap" }}>
               {/* Search input */}
-              <div style={{
-                flex: 1, minWidth: 150, height: 30, display: "flex", alignItems: "center", gap: 10,
-                padding: "7px 12px", background: "#121212", border: "1px solid #313131", borderRadius: 4,
-              }}>
+              <div className="filter-search">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
                   <circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2"/>
                   <path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round"/>
@@ -400,10 +493,6 @@ export default function HomePage() {
                   placeholder={t("common.search")}
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  style={{
-                    flex: 1, background: "transparent", border: "none", outline: "none",
-                    color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Syne', sans-serif",
-                  }}
                 />
               </div>
 
@@ -411,7 +500,6 @@ export default function HomePage() {
 
               {/* Filter dropdowns */}
               <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
-                <FilterDropdown label={t("home.filterGender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
                 <FilterDropdown label={t("home.filterStyle")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
                 <FilterDropdown label={t("home.filterSortBy")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
               </div>

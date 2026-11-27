@@ -113,7 +113,7 @@ const s: Record<string, React.CSSProperties> = {
     background: "transparent",
     color: "#bbb",
     fontSize: 13,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     fontWeight: 500,
     cursor: "pointer",
     display: "flex",

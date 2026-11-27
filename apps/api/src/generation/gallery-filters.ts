@@ -13,56 +13,66 @@ export interface GalleryFilterDef {
   keywords: string[];
   /** Значения input.generationStyle (только для стилей). */
   generationStyles?: string[];
+  /**
+   * Группа тега. Внутри группы выбранные теги объединяются через ИЛИ
+   * (blonde + brunette = любая из них), между группами — через И
+   * (blonde + bikini = обе сразу). Теги без группы — каждый сам по себе группа.
+   */
+  group?: string;
 }
 
+/**
+ * Ключевые слова не пересекаются между стилями: «realistic» не берём, т.к. это
+ * подстрока «semi-realistic»; «illustration» — подстрока промптов аниме/2D.
+ * Стили — те же, что при создании персонажа (apps/web/lib/styles.ts):
+ * Realistic, Semi-real, Anime, 2D. generationStyle — модель генерации стиля
+ * (соответствие как в apps/web/lib/prompt.ts и admin/character-options).
+ */
 export const GALLERY_STYLES: GalleryFilterDef[] = [
-  { key: "realistic", generationStyles: ["realism"], keywords: ["realistic", "photorealistic", "photograph", "raw photo"] },
+  { key: "realistic", generationStyles: ["realism"], keywords: ["photorealistic", "photograph", "raw photo"] },
+  { key: "semi-real", generationStyles: ["wai-ill"], keywords: ["semi-realistic", "digital painting"] },
   { key: "anime", generationStyles: ["mistoon"], keywords: ["anime", "manga"] },
-  { key: "illustration", generationStyles: ["wai-ill"], keywords: ["illustration", "hentai"] },
-  { key: "cartoon", generationStyles: ["3d", "2d"], keywords: ["cartoon", "3d render", "pixar", "disney"] },
-  { key: "fantasy", keywords: ["fantasy", "elf", "demon", "succubus", "angel", "vampire", "fairy"] },
-  { key: "furry", generationStyles: ["furry"], keywords: ["furry", "anthro"] },
-  { key: "cyberpunk", keywords: ["cyberpunk", "neon", "sci-fi", "android", "cyborg"] },
+  { key: "2d", generationStyles: ["2d", "3d"], keywords: ["2d illustration", "flat colors", "cartoon", "3d render"] },
 ];
 
 export const GALLERY_TAGS: GalleryFilterDef[] = [
   // Внешность
-  { key: "blonde", keywords: ["blonde", "platinum hair"] },
-  { key: "brunette", keywords: ["brunette", "brown hair"] },
-  { key: "redhead", keywords: ["redhead", "red hair", "ginger", "auburn", "copper hair"] },
-  { key: "black_hair", keywords: ["black hair"] },
-  { key: "asian", keywords: ["asian", "japanese", "korean", "chinese"] },
-  { key: "latina", keywords: ["latina", "hispanic", "latino", "brazilian"] },
-  { key: "ebony", keywords: ["ebony", "black woman", "african", "dark skin"] },
-  { key: "petite", keywords: ["petite", "slim", "skinny"] },
-  { key: "curvy", keywords: ["curvy", "thick", "voluptuous", "hourglass"] },
-  { key: "athletic", keywords: ["athletic", "fit body", "muscular", "fitness"] },
-  { key: "milf", keywords: ["milf", "mature woman", "mature"] },
+  { key: "blonde", group: "hair", keywords: ["blonde", "platinum hair"] },
+  { key: "brunette", group: "hair", keywords: ["brunette", "brown hair"] },
+  { key: "redhead", group: "hair", keywords: ["redhead", "red hair", "ginger", "auburn", "copper hair"] },
+  { key: "black_hair", group: "hair", keywords: ["black hair"] },
+  { key: "asian", group: "ethnicity", keywords: ["asian", "japanese", "korean", "chinese"] },
+  { key: "latina", group: "ethnicity", keywords: ["latina", "hispanic", "latino", "brazilian"] },
+  { key: "ebony", group: "ethnicity", keywords: ["ebony", "black woman", "african", "dark skin"] },
+  { key: "petite", group: "body", keywords: ["petite", "slim", "skinny"] },
+  { key: "curvy", group: "body", keywords: ["curvy", "thick", "voluptuous", "hourglass"] },
+  { key: "athletic", group: "body", keywords: ["athletic", "fit body", "muscular", "fitness"] },
+  { key: "milf", group: "body", keywords: ["milf", "mature woman", "mature"] },
   { key: "tattoo", keywords: ["tattoo"] },
   { key: "glasses", keywords: ["glasses"] },
   // Одежда
-  { key: "lingerie", keywords: ["lingerie", "panties", "corset"] },
-  { key: "bikini", keywords: ["bikini", "swimsuit"] },
-  { key: "dress", keywords: ["dress", "gown"] },
-  { key: "stockings", keywords: ["stockings", "fishnet", "pantyhose"] },
-  { key: "latex", keywords: ["latex", "leather"] },
-  { key: "cosplay", keywords: ["cosplay", "costume"] },
-  { key: "uniform", keywords: ["uniform", "nurse", "maid", "schoolgirl", "police"] },
-  { key: "nude", keywords: ["nude", "naked", "topless"] },
+  { key: "lingerie", group: "clothing", keywords: ["lingerie", "panties", "corset"] },
+  { key: "bikini", group: "clothing", keywords: ["bikini", "swimsuit"] },
+  { key: "dress", group: "clothing", keywords: ["dress", "gown"] },
+  { key: "stockings", group: "clothing", keywords: ["stockings", "fishnet", "pantyhose"] },
+  { key: "latex", group: "clothing", keywords: ["latex", "leather"] },
+  { key: "cosplay", group: "clothing", keywords: ["cosplay", "costume"] },
+  { key: "uniform", group: "clothing", keywords: ["uniform", "nurse", "maid", "schoolgirl", "police"] },
+  { key: "nude", group: "clothing", keywords: ["nude", "naked", "topless"] },
   // Место
-  { key: "bedroom", keywords: ["bedroom", "on bed", "in bed"] },
-  { key: "beach", keywords: ["beach", "ocean", "seaside"] },
-  { key: "pool", keywords: ["pool", "swimming"] },
-  { key: "shower", keywords: ["shower", "bath", "bathroom"] },
-  { key: "office", keywords: ["office", "desk", "secretary"] },
-  { key: "gym", keywords: ["gym", "workout", "yoga"] },
-  { key: "outdoor", keywords: ["outdoor", "forest", "park", "garden", "street", "city"] },
-  { key: "night", keywords: ["night", "neon", "moonlight", "club"] },
+  { key: "bedroom", group: "place", keywords: ["bedroom", "on bed", "in bed"] },
+  { key: "beach", group: "place", keywords: ["beach", "ocean", "seaside"] },
+  { key: "pool", group: "place", keywords: ["pool", "swimming"] },
+  { key: "shower", group: "place", keywords: ["shower", "bath", "bathroom"] },
+  { key: "office", group: "place", keywords: ["office", "desk", "secretary"] },
+  { key: "gym", group: "place", keywords: ["gym", "workout", "yoga"] },
+  { key: "outdoor", group: "place", keywords: ["outdoor", "forest", "park", "garden", "street", "city"] },
+  { key: "night", group: "place", keywords: ["night", "neon", "moonlight", "club"] },
   // Кадр
-  { key: "selfie", keywords: ["selfie", "mirror"] },
-  { key: "portrait", keywords: ["portrait", "close-up", "closeup", "headshot"] },
-  { key: "full_body", keywords: ["full body", "full-body"] },
-  { key: "smile", keywords: ["smile", "smiling", "laughing"] },
+  { key: "selfie", group: "shot", keywords: ["selfie", "mirror"] },
+  { key: "portrait", group: "shot", keywords: ["portrait", "close-up", "closeup", "headshot"] },
+  { key: "full_body", group: "shot", keywords: ["full body", "full-body"] },
+  { key: "smile", group: "shot", keywords: ["smile", "smiling", "laughing"] },
 ];
 
 const STYLE_MAP = new Map(GALLERY_STYLES.map((s) => [s.key, s]));
@@ -95,11 +105,21 @@ export function styleCondition(style: string): Record<string, unknown> | null {
   return { OR: or };
 }
 
-/** Prisma-условие для набора тегов: подходит работа с любым из тегов. */
+/**
+ * Prisma-условие для набора тегов: ИЛИ внутри группы, И между группами.
+ * Например, blonde + brunette + bikini → (blonde ИЛИ brunette) И bikini.
+ */
 export function tagsCondition(tags: string[]): Record<string, unknown> | null {
-  const keywords = tags.flatMap((t) => TAG_MAP.get(t)?.keywords ?? []);
-  if (keywords.length === 0) return null;
-  return { OR: promptContainsAny(keywords) };
+  const byGroup = new Map<string, string[]>();
+  for (const t of tags) {
+    const def = TAG_MAP.get(t);
+    if (!def) continue;
+    const group = def.group ?? `tag:${def.key}`;
+    byGroup.set(group, [...(byGroup.get(group) ?? []), ...def.keywords]);
+  }
+  if (byGroup.size === 0) return null;
+  const clauses = Array.from(byGroup.values()).map((keywords) => ({ OR: promptContainsAny(keywords) }));
+  return clauses.length === 1 ? clauses[0] : { AND: clauses };
 }
 
 /** Есть ли в промпте хоть одно ключевое слово тега (для подсчёта на бэке). */

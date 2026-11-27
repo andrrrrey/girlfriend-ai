@@ -11,7 +11,7 @@ const CSS = `
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
 }
 .sub-page-head {
@@ -20,11 +20,11 @@ const CSS = `
   margin-bottom: 24px;
 }
 .sub-page-title {
-  font-size: 28px; font-weight: 700; font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 700; font-family: var(--font-main);
   line-height: 1.1; color: #fff; margin: 0;
 }
 .sub-page-sub {
-  font-size: 13px; font-weight: 500; font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 500; font-family: var(--font-main);
   color: #969696; margin-top: 8px; line-height: 1.5;
 }
 @media (max-width: 768px) { .sub-page { padding: 16px; } }

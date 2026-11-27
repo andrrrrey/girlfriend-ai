@@ -25,7 +25,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
     color: "#969696",
     fontSize: 12,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     fontWeight: 500,
   },
   filterBtnActive: {
@@ -42,7 +42,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     outline: "none",
     width: 260,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   table: {
     width: "100%",
@@ -95,7 +95,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     fontSize: 13,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   pageInfo: { color: "#888", fontSize: 13 },
   overlay: {

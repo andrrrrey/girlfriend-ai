@@ -130,7 +130,7 @@ export const DEFAULT_MODEL_PRICES: Record<string, DefaultModelPrice> = {
   "alibaba/wan-2.6/text-to-image": { type: "image", price: 0.021 },
   civitai: { type: "image", price: 0.005 },
   "atlascloud/van-2.6/text-to-video": { type: "video", price: 0.34 },
-  "atlascloud/wan-2.6-spicy/image-to-video": { type: "video", price: 0.35 },
+  "atlascloud/van-2.6/image-to-video": { type: "video", price: 0.34 },
   "alibaba/wan-2.7/image-to-video": { type: "video", price: 0.5 },
   eleven_multilingual_v2: { type: "tts", price: 0.08 },
   "whisper-1": { type: "stt", price: 0.006 },

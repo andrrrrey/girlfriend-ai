@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
@@ -318,7 +319,7 @@ export default function AdminAutochatPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.avatarUrl} alt={c.name} style={s.avatar} loading="lazy" decoding="async" />
                 ) : (
-                  <div style={s.avatarPh}>👤</div>
+                  <div style={s.avatarPh}><Icon name="user" size={16} /></div>
                 )}
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.name}
@@ -381,8 +382,8 @@ export default function AdminAutochatPage() {
             </div>
 
             <div style={s.counts}>
-              <span>✅ Реплик: {t.succeeded}</span>
-              <span>⚠️ Ошибок: {t.failed}</span>
+              <span><Icon name="check" size={12} strokeWidth={2.4} /> Реплик: {t.succeeded}</span>
+              <span><Icon name="warning" size={12} /> Ошибок: {t.failed}</span>
             </div>
 
             {t.lastError && (
@@ -424,7 +425,7 @@ export default function AdminAutochatPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={c.avatarUrl} alt={c.name} style={s.avatar} loading="lazy" decoding="async" />
                     ) : (
-                      <div style={s.avatarPh}>👤</div>
+                      <div style={s.avatarPh}><Icon name="user" size={16} /></div>
                     )}
                     <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{c.name}</span>
                     {c.sessionId && (

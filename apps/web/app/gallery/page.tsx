@@ -1,5 +1,6 @@
 "use client";
 
+import { styleFilterOptions } from "../../lib/styles";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../../context/auth";
 import { getPublicGallery, getGalleryTags, likes, resizedMediaUrl } from "../../lib/api";
@@ -59,7 +60,7 @@ const PAGE_CSS = `
     white-space: nowrap;
     background: none;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .gallery-tab.active {
     background: #1e1e1e;
@@ -75,7 +76,8 @@ const PAGE_CSS = `
 
   .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* Не больше 6 колонок: на широких мониторах карточки растут, а не мельчают. */
+    grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5 * 18px) / 6)), 1fr));
     gap: 18px;
     width: 100%;
   }
@@ -192,7 +194,7 @@ const PAGE_CSS = `
     cursor: pointer;
     white-space: nowrap;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .g-hover-btn.primary {
     background: linear-gradient(90deg, #f95bad, #ff0084);
@@ -302,7 +304,7 @@ const PAGE_CSS = `
     gap: 8px;
     cursor: pointer;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-size: 13px;
     font-weight: 600;
   }
@@ -426,22 +428,7 @@ export default function GalleryPage() {
   const { user, loading } = useAuth();
   const { t } = useT();
   const { mode: contentMode } = useContentMode();
-  const GENDER_OPTIONS = [
-    { value: "", label: t("common.all") },
-    { value: "Female", label: t("filter.female") },
-    { value: "Male", label: t("filter.male") },
-    { value: "Non-binary", label: t("filter.nonbinary") },
-  ];
-  const STYLE_OPTIONS = [
-    { value: "", label: t("common.all") },
-    { value: "realistic", label: t("filter.realistic") },
-    { value: "anime", label: t("filter.anime") },
-    { value: "illustration", label: t("filter.illustration") },
-    { value: "cartoon", label: t("filter.cartoon") },
-    { value: "fantasy", label: t("filter.fantasy") },
-    { value: "furry", label: t("filter.furry") },
-    { value: "cyberpunk", label: t("filter.cyberpunk") },
-  ];
+  const STYLE_OPTIONS = styleFilterOptions(t, t("common.all"));
   const SORT_OPTIONS = [
     { value: "newest", label: t("filter.newest") },
     { value: "popular", label: t("filter.popular") },
@@ -452,7 +439,6 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("all");
-  const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<string[]>([]);
@@ -469,7 +455,6 @@ export default function GalleryPage() {
     if (append) setLoadingMore(true); else setFetching(true);
     const params: Record<string, any> = { sortBy, page: pageNum, limit: PAGE_SIZE };
     if (activeTab !== "all") params.type = activeTab;
-    if (gender) params.gender = gender;
     if (style) params.style = style;
     if (selectedTags.length) params.tags = selectedTags;
 
@@ -485,7 +470,7 @@ export default function GalleryPage() {
       })
       .catch(() => { if (!append) setItems([]); })
       .finally(() => { setFetching(false); setLoadingMore(false); });
-  }, [activeTab, gender, style, sortBy, selectedTags]);
+  }, [activeTab, style, sortBy, selectedTags]);
 
   useEffect(() => {
     if (loading) return;
@@ -493,7 +478,7 @@ export default function GalleryPage() {
     setHasMore(true);
     fetchItems(1, false);
     // contentMode: перезагрузка галереи при переключении NSFW/SFW.
-  }, [loading, activeTab, gender, style, sortBy, selectedTags, contentMode]);
+  }, [loading, activeTab, style, sortBy, selectedTags, contentMode]);
 
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || fetching || loadingMore) return;
@@ -621,7 +606,6 @@ export default function GalleryPage() {
         </div>
 
         <div className="gallery-filter-row">
-          <FilterDropdown label={t("filter.gender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
           <FilterDropdown label={t("filter.style")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
           <FilterDropdown label={t("filter.sortBy")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
         </div>

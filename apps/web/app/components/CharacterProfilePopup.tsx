@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "./icons";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
@@ -478,10 +479,10 @@ function CreatorSection({ creator }: {
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
           {creator.likeCount !== undefined && (
-            <span style={{ fontSize: 12, color: "#c1f0aa" }}>{formatCount(creator.likeCount)} ♥</span>
+            <span style={{ fontSize: 12, color: "#c1f0aa", display: "inline-flex", alignItems: "center", gap: 4 }}>{formatCount(creator.likeCount)} <Icon name="heart" size={12} /></span>
           )}
           {creator.followerCount !== undefined && (
-            <span style={{ fontSize: 12, color: "#848484" }}>{formatCount(creator.followerCount)} 👥</span>
+            <span style={{ fontSize: 12, color: "#848484", display: "inline-flex", alignItems: "center", gap: 4 }}>{formatCount(creator.followerCount)} <Icon name="users" size={12} /></span>
           )}
         </div>
       </div>
@@ -495,7 +496,10 @@ function CreatorSection({ creator }: {
           onClick={handleFollow}
           disabled={followLoading}
         >
-          {following ? tr("char.following") : tr("char.follow")}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {following ? tr("char.following") : tr("char.follow")}
+            <Icon name={following ? "check" : "dot"} size={following ? 12 : 8} color="#4ade80" strokeWidth={2.4} />
+          </span>
         </button>
       )}
     </div>
@@ -733,7 +737,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 22,
     fontWeight: 800,
     color: "#fff",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     lineHeight: 1,
   },
   statLbl: {
@@ -769,7 +773,7 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 8,
     padding: "0 16px",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     flexShrink: 0,
     whiteSpace: "nowrap" as const,
   },
@@ -783,7 +787,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 700,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     whiteSpace: "nowrap" as const,
   },
   right: {
@@ -818,7 +822,7 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     color: "#fff",
     margin: "0 0 14px",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     paddingRight: 48,
     lineHeight: 1.2,
   },
@@ -854,7 +858,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     textAlign: "center" as const,
     whiteSpace: "nowrap" as const,
   },
@@ -896,7 +900,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "#ccc",
     fontSize: 13,
     padding: "0 14px",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   sendBtn: {
     width: 40,
@@ -987,7 +991,7 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     cursor: "pointer",
     whiteSpace: "nowrap" as const,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   galGrid: {
     display: "grid",
@@ -1048,7 +1052,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 700,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   commentRow: {
     display: "flex",
@@ -1082,7 +1086,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     marginTop: 12,
   },
 };

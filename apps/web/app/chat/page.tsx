@@ -2,6 +2,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Icon } from "../components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import {
@@ -172,7 +173,7 @@ function ChatPageInner() {
     setStreamContent("");
     abortRef.current = streamGreeting(
       chatId,
-      lang === "ru" ? "ru" : "en",
+      lang,
       (delta) => setStreamContent((prev) => prev + delta),
       () => {
         setStreaming(false);
@@ -949,7 +950,7 @@ function ChatPageInner() {
 .message-time { flex: 1; text-align: right; font-size: 10px; font-weight: 500; color: #848484; }
 .action-btn { width: 24px; height: 24px; border-radius: 8px; background: rgba(48,39,43,0.4); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; color: #fff; font-size: 10px; }
 .chat-input-bar { display: flex; align-items: center; gap: 8px; padding: 12px 0 24px 0; border-top: 1px solid #313131; }
-.chat-text-input { background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; height: 32px; flex: 1; padding: 6px 12px; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; outline: none; }
+.chat-text-input { background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; height: 32px; flex: 1; padding: 6px 12px; font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff; outline: none; }
 .chat-text-input::placeholder { color: #848484; }
 .input-icon-btn { width: 30px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #313131; background: #121212; color: #fff; font-size: 12px; }
 .new-chat-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; width: 30px; height: 30px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -957,32 +958,32 @@ function ChatPageInner() {
 .char-option { display: flex; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; align-items: center; }
 .char-option:hover { background: #1e1e1e; }
 .char-avatar { width: 32px; height: 32px; border-radius: 4px; background: linear-gradient(to right, #f95bad, #ff0084); flex-shrink: 0; }
-.cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 6px 14px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px; width: 100%; font-family: 'Syne', sans-serif; }
+.cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 6px 14px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px; width: 100%; font-family: var(--font-main); }
 .demo-badge { margin-left: auto; background: rgba(249,91,173,0.2); border: 1px solid #f95bad; color: #f95bad; border-radius: 54px; font-size: 8px; padding: 4px 10px; }
 .demo-banner { background: rgba(249,91,173,0.1); border: 1px solid rgba(228,0,120,0.2); border-radius: 8px; padding: 12px 16px; margin-top: 10px; font-size: 10px; }
-.demo-banner-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; text-decoration: none; display: inline-block; font-family: 'Syne', sans-serif; }
-.demo-banner-close { background: #121212; border: 1px solid #313131; color: #969696; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
+.demo-banner-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; text-decoration: none; display: inline-block; font-family: var(--font-main); }
+.demo-banner-close { background: #121212; border: 1px solid #313131; color: #969696; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: var(--font-main); }
 .empty-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; }
 .recording-bar { flex: 1; display: flex; align-items: center; gap: 12px; background: rgba(233,100,102,0.1); border: 1px solid #e36466; border-radius: 4px; padding: 6px 12px; }
 .recording-dot { width: 8px; height: 8px; border-radius: 50%; background: #e36466; }
 .recording-time { color: #e36466; font-size: 12px; font-weight: 600; flex: 1; }
-.record-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
-.record-stop-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif; }
-.abort-btn { background: #e36466; border: none; color: #fff; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
+.record-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: var(--font-main); }
+.record-stop-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
+.abort-btn { background: #e36466; border: none; color: #fff; padding: 6px 14px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: var(--font-main); }
 .voice-label { font-size: 8px; color: #f95bad; margin-bottom: 4px; font-style: italic; }
-.edit-textarea { background: #1e1e1e; border: 1px solid #f95bad; border-radius: 6px; color: #fff; font-size: 10px; padding: 8px 10px; resize: none; outline: none; width: 100%; line-height: 1.3; font-family: 'Syne', sans-serif; }
-.edit-save-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
-.edit-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: 'Syne', sans-serif; }
-.ask-btn { background: #1e1e1e; border-radius: 4px; height: 32px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; border: none; font-family: 'Syne', sans-serif; }
+.edit-textarea { background: #1e1e1e; border: 1px solid #f95bad; border-radius: 6px; color: #fff; font-size: 10px; padding: 8px 10px; resize: none; outline: none; width: 100%; line-height: 1.3; font-family: var(--font-main); }
+.edit-save-btn { background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: var(--font-main); }
+.edit-cancel-btn { background: #121212; border: 1px solid #313131; color: #969696; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-family: var(--font-main); }
+.ask-btn { background: #1e1e1e; border-radius: 4px; height: 32px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; border: none; font-family: var(--font-main); }
 .ask-btn-text { font-size: 10px; font-weight: 500; color: #969696; }
 .input-mode-dropdown-wrap { position: relative; flex-shrink: 0; }
-.input-mode-btn { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Syne', sans-serif; height: 32px; white-space: nowrap; }
+.input-mode-btn { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font-main); height: 32px; white-space: nowrap; }
 .input-mode-btn:hover { border-color: #f95bad; }
 .input-mode-dropdown { position: absolute; bottom: calc(100% + 6px); left: 0; background: #1a1a1a; border: 1px solid #313131; border-radius: 8px; padding: 4px; z-index: 10; min-width: 130px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-.input-mode-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; background: transparent; border: none; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: 6px; font-family: 'Syne', sans-serif; }
+.input-mode-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; background: transparent; border: none; color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: 6px; font-family: var(--font-main); }
 .input-mode-option:hover { background: #2a2a2a; }
 .input-mode-option.active { background: rgba(249,91,173,0.15); color: #f95bad; }
-.choose-pose-btn { flex: 1; height: 32px; background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif; }
+.choose-pose-btn { flex: 1; height: 32px; background: linear-gradient(to right, #f95bad, #ff0084); border: none; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
 .choose-pose-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .image-message { padding: 4px !important; }
 .chat-gen-image { max-width: 300px; width: 100%; border-radius: 8px; cursor: zoom-in; display: block; }
@@ -1017,8 +1018,8 @@ function ChatPageInner() {
 .slider-bar.inactive { opacity: 0.7; }
 .slider-bar.inactive .slider-bar-inner { background: #46383e; border-radius: 1px; position: absolute; inset: 0; }
 .profile-buttons { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.profile-btn-secondary { background: #121212; border: 1px solid #313131; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; cursor: pointer; }
-.profile-btn-primary { background: linear-gradient(to right, #f95bad, #ff0084); border: none; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: 'Syne', sans-serif; color: #fff; cursor: pointer; }
+.profile-btn-secondary { background: #121212; border: 1px solid #313131; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff; cursor: pointer; }
+.profile-btn-primary { background: linear-gradient(to right, #f95bad, #ff0084); border: none; border-radius: 4px; height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; font-family: var(--font-main); color: #fff; cursor: pointer; }
 .profile-text { display: flex; flex-direction: column; gap: 8px; }
 .profile-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
 .profile-bio { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
@@ -1072,7 +1073,7 @@ function ChatPageInner() {
             onChange={(e) => setChatSearch(e.target.value)}
             style={{
               flex: 1, background: "transparent", border: "none", outline: "none",
-              color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Syne', sans-serif",
+              color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "var(--font-main)",
             }}
           />
           {chatSearch && (
@@ -1134,7 +1135,15 @@ function ChatPageInner() {
                   {c.character?.name || t("chat.unknownCharacter")}
                 </div>
                 <div className="chat-item-preview">
-                  {c.lastMessage?.content?.slice(0, 40) || c.title || t("chat.newChat")}
+                  {/* Медиа-сообщения сервер подписывает эмодзи 🎬/📷 — показываем иконку и текст. */}
+                  {c.lastMessage?.content === "🎬" || c.lastMessage?.content === "📷" ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <Icon name={c.lastMessage.content === "🎬" ? "video" : "camera"} size={13} />
+                      {t(c.lastMessage.content === "🎬" ? "media.video" : "media.image")}
+                    </span>
+                  ) : (
+                    c.lastMessage?.content?.slice(0, 40) || c.title || t("chat.newChat")
+                  )}
                 </div>
               </div>
               {(() => {

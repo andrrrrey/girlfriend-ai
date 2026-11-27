@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../context/auth";
@@ -48,7 +49,7 @@ const PAGE_CSS = `
     font-size: 16px;
     font-weight: 700;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     margin: 0;
   }
   .up-handle {
@@ -107,7 +108,7 @@ const PAGE_CSS = `
     align-items: center;
     justify-content: center;
     gap: 6px;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     transition: all 0.15s;
   }
   .up-follow-btn:hover { border-color: #f95bad; color: #f95bad; }
@@ -138,7 +139,7 @@ const PAGE_CSS = `
     background: none;
     border: none;
     padding: 0;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-weight: 600;
   }
 
@@ -172,7 +173,7 @@ const PAGE_CSS = `
     padding: 0 12px 0 36px;
     outline: none;
     box-sizing: border-box;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .up-search-input::placeholder { color: #848484; }
   .up-search-icon {
@@ -254,7 +255,7 @@ const PAGE_CSS = `
     font-size: 13px;
     font-weight: 700;
     color: #fff;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     z-index: 3;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -296,7 +297,7 @@ const PAGE_CSS = `
     color: #fff;
     cursor: pointer;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     background: linear-gradient(90deg, #f95bad, #ff0084);
   }
 
@@ -630,7 +631,7 @@ export default function UserProfilePage() {
               <p className="up-handle">@{profile?.nickname || nickname}</p>
               <div className="up-stats" style={{ marginTop: 6 }}>
                 <span className="up-stat up-stat-likes">
-                  {formatCount(profile?.likeCount ?? 0)} ♥
+                  {formatCount(profile?.likeCount ?? 0)} <Icon name="heart" size={12} />
                 </span>
                 <span className="up-stat up-stat-followers">
                   {formatCount(profile?.followerCount ?? 0)}&nbsp;

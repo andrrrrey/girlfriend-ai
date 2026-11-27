@@ -21,7 +21,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(["en", "ru"])
+  @IsIn(["en", "ru", "de", "fr"])
   lang?: string;
 
   @IsOptional()

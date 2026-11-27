@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
@@ -292,7 +293,7 @@ export default function AdminEngagementPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={it.thumb} alt="" style={s.thumb} />
                     ) : (
-                      <div style={s.thumbPh}>{targetType === "character" ? "👤" : "🎬"}</div>
+                      <div style={s.thumbPh}><Icon name={targetType === "character" ? "user" : "video"} size={16} /></div>
                     )}
                     <span style={s.cellLabel}>{it.label}</span>
                   </div>
@@ -404,8 +405,8 @@ export default function AdminEngagementPage() {
                     <div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width .4s" }} />
                   </div>
                   <div style={s.taskCounts}>
-                    <span>✅ Создано: {t.succeeded}</span>
-                    <span>⚠️ Пропущено: {t.failed}</span>
+                    <span><Icon name="check" size={12} strokeWidth={2.4} /> Создано: {t.succeeded}</span>
+                    <span><Icon name="warning" size={12} /> Пропущено: {t.failed}</span>
                     {t.mediaJobIds.length > 0 && (
                       <Link href="/gallery" target="_blank" style={{ color: "#6cb2eb", textDecoration: "none" }}>
                         В галерее: {t.mediaJobIds.length}

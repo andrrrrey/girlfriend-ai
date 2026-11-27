@@ -281,7 +281,7 @@ const s: Record<string, React.CSSProperties> = {
     objectFit: "cover",
     border: "1.5px solid rgba(255,255,255,0.6)",
   },
-  headerName: { color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "'Syne', sans-serif" },
+  headerName: { color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "var(--font-main)" },
   headerTime: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 500 },
   closeBtn: {
     background: "transparent",
@@ -323,7 +323,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 13,
     fontWeight: 700,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     cursor: "pointer",
     whiteSpace: "nowrap",
   },

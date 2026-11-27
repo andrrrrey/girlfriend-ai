@@ -1,15 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap');
+/* Syne — основной шрифт (латиница, в т.ч. немецкие и французские буквы).
+   У Syne нет кириллицы: русские буквы берутся из Manrope (геометрический
+   гротеск близких пропорций); браузер грузит только нужные подмножества. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: #090909;
   color: #fff;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   min-height: 100vh;
   overflow-x: hidden;
   font-feature-settings: 'lnum', 'pnum';
 }
+
+/* ─── Дизайн-токены ─────────────────────────────── */
+:root {
+  --font-main: 'Syne', 'Manrope', sans-serif;
+  --accent: #f95bad;
+  --accent-soft: rgba(249,91,173,0.12);
+  --surface: #1a1a1a;
+  --surface-input: #121212;
+  --border: #313131;
+  --text-muted: #969696;
+  --control-h: 34px;
+  --control-radius: 8px;
+}
+
+/* ─── Фильтры: общий вид для главной, галереи, My AI, профилей ─── */
+.filter-search {
+  flex: 1;
+  min-width: 150px;
+  height: var(--control-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  transition: border-color 0.15s ease;
+}
+.filter-search:focus-within { border-color: var(--accent); }
+.filter-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+.filter-search input::placeholder { color: #848484; }
 
 /* Битые медиа-картинки (протухший/пропавший /media/*): вместо сломанной
    иконки браузера показываем нейтральный плейсхолдер. Класс проставляет
@@ -234,7 +278,7 @@ img.media-broken {
   color: #848484;
   font-size: 12px;
   font-weight: 500;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   cursor: text;
   flex-shrink: 0;
 }
@@ -266,7 +310,7 @@ img.media-broken {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 500;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
@@ -284,7 +328,7 @@ img.media-broken {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 500;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
   cursor: pointer;
   display: flex;
@@ -497,7 +541,7 @@ img.media-broken {
   gap: 10px;
   font-size: 12px;
   font-weight: 500;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   color: #fff;
   min-width: 260px;
   max-width: 340px;
@@ -568,7 +612,7 @@ img.media-broken {
   color: #fff;
   font-size: 9px;
   font-weight: 700;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-main);
   min-width: 16px;
   height: 16px;
   border-radius: 8px;

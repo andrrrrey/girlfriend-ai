@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "../../components/icons";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/auth";
 import { admin, streamUrlForKey, type SceneCategory, type SceneOption, parseSynonymsInput } from "../../../lib/api";
@@ -449,7 +450,7 @@ export default function AdminSceneOptionsPage() {
                             <img src={optForm.previewUrl} alt="preview" style={{ height: 60, borderRadius: 6, objectFit: "cover" }} />
                           )}
                           {optForm.previewUrl && (
-                            <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setOptForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}>✕</button>
+                            <button style={{ ...s.deleteBtn, padding: "4px 10px" }} onClick={() => setOptForm((f) => ({ ...f, imageThumbKey: "", imageFullKey: "", previewUrl: "" }))}><Icon name="x" size={12} strokeWidth={2.4} /></button>
                           )}
                         </div>
                         {optError && <p style={s.errorText}>{optError}</p>}

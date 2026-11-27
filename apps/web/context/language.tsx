@@ -5,7 +5,8 @@
  * @description Lightweight i18n context for the web app (English / Russian).
  *
  * Provides `{ lang, setLang, t }` via React Context:
- * - `lang` — current UI language ("en" | "ru"), defaults to "en" for guests.
+ * - `lang` — current UI language ("en" | "ru" | "de" | "fr"), defaults to the
+ *   browser language (if supported) or "en" for guests.
  * - `setLang` — change language: updates state, persists to localStorage,
  *   updates <html lang>, and (if logged in) syncs to the backend via
  *   PATCH /users/me { lang }.
@@ -26,7 +27,7 @@ import React, {
 } from "react";
 import { useAuth } from "./auth";
 import { users } from "../lib/api";
-import { dictionaries, type Lang, type TKey } from "../lib/i18n";
+import { dictionaries, isLang, type Lang, type TKey } from "../lib/i18n";
 
 interface LanguageContextValue {
   lang: Lang;
@@ -38,9 +39,6 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const LS_KEY = "lang";
 
-function isLang(v: unknown): v is Lang {
-  return v === "en" || v === "ru";
-}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -48,10 +46,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   // Defer localStorage read until after hydration.
   useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY);
-    if (isLang(stored)) {
-      setLangState(stored);
-      document.documentElement.lang = stored;
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(LS_KEY); } catch {}
+    // Первый визит: язык браузера, если он у нас есть (de-AT → de).
+    const browser = typeof navigator !== "undefined" ? navigator.language?.slice(0, 2).toLowerCase() : undefined;
+    const initial = isLang(stored) ? stored : isLang(browser) ? browser : null;
+    if (initial) {
+      setLangState(initial);
+      document.documentElement.lang = initial;
     }
   }, []);
 

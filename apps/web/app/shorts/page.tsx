@@ -49,11 +49,11 @@ const PAGE_CSS = `
   }
   .shorts-avatar img { width: 100%; height: 100%; object-fit: cover; }
   .shorts-name {
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px;
+    font-family: var(--font-main); font-weight: 700; font-size: 18px;
     line-height: 1.2; color: #fff;
   }
   .shorts-prompt {
-    font-family: 'Syne', sans-serif; font-weight: 500; font-size: 12px; line-height: 1.4;
+    font-family: var(--font-main); font-weight: 500; font-size: 12px; line-height: 1.4;
     background: linear-gradient(to right, #fff 0%, rgba(255,255,255,0.5) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -72,12 +72,12 @@ const PAGE_CSS = `
   .shorts-btn:hover { background: rgba(249,91,173,0.35); transform: scale(1.08); }
   .shorts-btn-label {
     font-size: 10px; color: rgba(255,255,255,0.7);
-    font-family: 'Syne', sans-serif; font-weight: 500; margin-top: 1px;
+    font-family: var(--font-main); font-weight: 500; margin-top: 1px;
   }
   .shorts-btn-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .shorts-empty {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 100%; gap: 16px; color: #969696; font-size: 14px; font-family: 'Syne', sans-serif;
+    height: 100%; gap: 16px; color: #969696; font-size: 14px; font-family: var(--font-main);
   }
   .shorts-skeleton {
     scroll-snap-align: start; scroll-snap-stop: always; width: 100%; height: 100dvh;

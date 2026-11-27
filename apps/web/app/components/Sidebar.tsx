@@ -1,5 +1,6 @@
 "use client";
 
+import { LANGUAGES } from "../../lib/i18n";
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/auth";
@@ -175,13 +176,14 @@ export default function Sidebar({
         <div className="lang-switch-wrap" style={{position:'relative'}}>
           <a className="nav-link" onClick={() => setLangOpen((o) => !o)} style={{cursor:'pointer'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            <span className="label">{lang === "ru" ? "Русский" : "English"}</span>
+            <span className="label">{LANGUAGES.find((l) => l.code === lang)?.name ?? "English"}</span>
             <svg className="chevron-down-icon" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </a>
           {langOpen && (
             <div className="lang-switch-menu" style={{display:'flex',flexDirection:'column',gap:2,padding:'4px 0 4px 40px'}}>
-              <button type="button" className="lang-option" onClick={() => { setLang("en"); setLangOpen(false); }} style={{background:'transparent',border:'none',color: lang === 'en' ? '#f95bad' : '#fff',textAlign:'left',cursor:'pointer',fontSize:13,fontWeight:500,padding:'4px 0',fontFamily:'inherit'}}>English</button>
-              <button type="button" className="lang-option" onClick={() => { setLang("ru"); setLangOpen(false); }} style={{background:'transparent',border:'none',color: lang === 'ru' ? '#f95bad' : '#fff',textAlign:'left',cursor:'pointer',fontSize:13,fontWeight:500,padding:'4px 0',fontFamily:'inherit'}}>Русский</button>
+              {LANGUAGES.map((l) => (
+                <button key={l.code} type="button" className="lang-option" onClick={() => { setLang(l.code); setLangOpen(false); }} style={{background:'transparent',border:'none',color: lang === l.code ? '#f95bad' : '#fff',textAlign:'left',cursor:'pointer',fontSize:13,fontWeight:500,padding:'4px 0',fontFamily:'inherit'}}>{l.name}</button>
+              ))}
             </div>
           )}
         </div>

@@ -24,7 +24,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 13,
     cursor: "pointer",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     display: "flex",
     alignItems: "center",
     gap: 6,
@@ -38,7 +38,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     cursor: "pointer",
     textDecoration: "none",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   tabActive: {
     background: "#f95bad",

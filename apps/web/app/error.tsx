@@ -31,7 +31,7 @@ export default function Error({
         style={{
           marginTop: 8, padding: "10px 24px", background: "linear-gradient(90deg, #f95bad, #ff0084)",
           border: "none", borderRadius: 6, color: "#fff", fontSize: 14, fontWeight: 600,
-          cursor: "pointer", fontFamily: "'Syne', sans-serif",
+          cursor: "pointer", fontFamily: "var(--font-main)",
         }}
       >
         Try again

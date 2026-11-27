@@ -8,6 +8,7 @@
  * Значение отдаётся наверх как HTML (onChange).
  */
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -20,7 +21,7 @@ import { admin, streamUrlForKey } from "../../../lib/api";
 
 const FONTS: { label: string; value: string }[] = [
   { label: "По умолчанию", value: "" },
-  { label: "Sans (Syne)", value: "'Syne', sans-serif" },
+  { label: "Sans (Syne)", value: "'Syne', 'Manrope', sans-serif" },
   { label: "Serif", value: "Georgia, 'Times New Roman', serif" },
   { label: "Mono", value: "'Courier New', monospace" },
 ];
@@ -53,7 +54,7 @@ function ToolbarButton({
         fontSize: 13,
         fontWeight: 600,
         cursor: "pointer",
-        fontFamily: "'Syne', sans-serif",
+        fontFamily: "var(--font-main)",
       }}
     >
       {children}
@@ -124,7 +125,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         &ldquo; &rdquo;
       </ToolbarButton>
       <ToolbarButton title="Ссылка" active={editor.isActive("link")} onClick={setLink}>
-        🔗
+        <Icon name="link" size={14} />
       </ToolbarButton>
 
       <select
@@ -141,7 +142,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           background: "#1e1e1e",
           color: "#c9c9c9",
           fontSize: 12,
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-main)",
           padding: "0 6px",
         }}
       >
@@ -153,7 +154,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       </select>
 
       <ToolbarButton title="Вставить изображение" onClick={() => fileRef.current?.click()}>
-        🖼 Изобр.
+        <Icon name="image" size={14} /> Изобр.
       </ToolbarButton>
       <input
         ref={fileRef}
@@ -215,7 +216,7 @@ const editorCss = `
     font-size: 15px;
     line-height: 1.7;
     outline: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .blog-editor-content .ProseMirror:focus { outline: none; }
   .blog-editor-content .ProseMirror h2 { font-size: 24px; font-weight: 700; color: #fff; margin: 18px 0 10px; }

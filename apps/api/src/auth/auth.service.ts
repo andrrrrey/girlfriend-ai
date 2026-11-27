@@ -57,6 +57,7 @@ export class AuthService {
     email: string,
     password: string,
     isAdult?: boolean,
+    lang?: string,
   ): Promise<{ message: string }> {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -81,6 +82,7 @@ export class AuthService {
         emailVerified: false,
         isAdult: adult,
         contentMode: adult ? "nsfw" : "sfw",
+        ...(lang ? { lang } : {}),
       },
     });
 
@@ -90,7 +92,7 @@ export class AuthService {
       content_mode: user.contentMode,
     });
 
-    await this.email.sendVerificationEmail(email, verificationToken);
+    await this.email.sendVerificationEmail(email, verificationToken, user.lang);
 
     return { message: "Verification email sent" };
   }
@@ -195,7 +197,7 @@ export class AuthService {
       data: { passwordResetToken, passwordResetTokenExpiresAt },
     });
 
-    await this.email.sendPasswordResetEmail(email, passwordResetToken);
+    await this.email.sendPasswordResetEmail(email, passwordResetToken, user.lang);
 
     return { message: "If this email exists, a reset link has been sent" };
   }
@@ -247,7 +249,7 @@ export class AuthService {
       data: { verificationToken, verificationTokenExpiresAt },
     });
 
-    await this.email.sendVerificationEmail(email, verificationToken);
+    await this.email.sendVerificationEmail(email, verificationToken, user.lang);
 
     return { message: "If this email needs verification, a new link has been sent" };
   }

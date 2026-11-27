@@ -3773,6 +3773,26 @@ async function runModelsLabVideo(
  * Отправляет запрос в Atlas Cloud generateVideo и поллит результат до готовности.
  * Используется для text-to-video, image-to-video и continue (video extension).
  */
+/** Короткое сообщение об ошибке из тела ответа Atlas Cloud (JSON message/msg или текст). */
+function atlasErrorMessage(body: string): string {
+  try {
+    const j = JSON.parse(body) as { message?: string; msg?: string; error?: string | { message?: string } };
+    const m = j.message || j.msg || (typeof j.error === "string" ? j.error : j.error?.message);
+    if (m) return String(m).slice(0, 300);
+  } catch { /* не JSON */ }
+  return body.slice(0, 300) || "empty response";
+}
+
+/**
+ * NSFW image-to-video модель Atlas Cloud — пара к atlascloud/van-2.6/text-to-video.
+ * Старый id `atlascloud/wan-2.6-spicy/image-to-video` в каталоге Atlas не существует
+ * (запрос падал 4xx) — он мог остаться в уже созданных задачах, поэтому маппим.
+ */
+const ATLAS_I2V_DEFAULT_MODEL = "atlascloud/van-2.6/image-to-video";
+const ATLAS_LEGACY_MODEL_IDS: Record<string, string> = {
+  "atlascloud/wan-2.6-spicy/image-to-video": ATLAS_I2V_DEFAULT_MODEL,
+};
+
 async function submitAndPollAtlasCloudVideo(
   apiKey: string,
   requestBody: Record<string, unknown>,
@@ -3797,7 +3817,9 @@ async function submitAndPollAtlasCloudVideo(
   if (!response.ok) {
     const errBody = await response.text();
     logger.error({ status: response.status, body: errBody }, "atlascloud_video_api_error");
-    throw new Error("Atlas Cloud Video API error");
+    // Причину от Atlas (неизвестная модель, неверное поле и т.п.) прокидываем в
+    // ошибку задачи — иначе в UI/админке видно только «Atlas Cloud Video API error».
+    throw new Error(`Atlas Cloud Video API error (HTTP ${response.status}): ${atlasErrorMessage(errBody)}`);
   }
 
   const rawResult = await response.json() as {
@@ -3876,7 +3898,8 @@ async function submitAndPollAtlasCloudVideo(
 
     if (pollResult.status === "failed" || pollResult.status === "error" || pollResult.status === "canceled") {
       logger.error({ pollResult }, "atlascloud_video_generation_failed");
-      throw new Error("Atlas Cloud video generation failed");
+      const reason = (pollResult as { error?: string }).error;
+      throw new Error(`Atlas Cloud video generation failed${reason ? `: ${String(reason).slice(0, 300)}` : ""}`);
     }
   }
 
@@ -3912,8 +3935,9 @@ async function generateVideoAtlasCloud(params: {
 }
 
 /**
- * Image-to-video через Atlas Cloud (модель wan-2.6-spicy/image-to-video).
+ * Image-to-video через Atlas Cloud (модель atlascloud/van-2.6/image-to-video, NSFW).
  * Исходное изображение задаёт первый кадр и соотношение сторон.
+ * Схема модели: resolution только "1080p", duration 5/10/15.
  */
 async function generateVideoAtlasCloudFromImage(params: {
   apiKey: string;
@@ -3932,7 +3956,7 @@ async function generateVideoAtlasCloudFromImage(params: {
     image: imageUrl,
     negative_prompt: negativePrompt || undefined,
     duration: duration || 5,
-    resolution: "720p",
+    resolution: "1080p",
     enable_prompt_expansion: false,
     shot_type: "single",
     generate_audio: false,
@@ -3961,9 +3985,10 @@ async function generateVideoAtlasCloudContinue(params: {
     video: videoUrl,
     negative_prompt: negativePrompt || undefined,
     duration: duration || 5,
-    resolution: "720p",
-    enable_prompt_expansion: false,
-    generate_audio: false,
+    // Схема alibaba/wan-2.7/image-to-video: resolution "720P" | "1080P" (заглавная P),
+    // переписывание промпта — prompt_extend (а не enable_prompt_expansion).
+    resolution: "720P",
+    prompt_extend: false,
     seed: seed ?? -1,
   });
 }
@@ -4069,7 +4094,7 @@ app.post<{ Body: VideoGenerateBody }>("/ai/video/generate", async (req, reply) =
         // Передаём изображение инлайн (base64) — AtlasCloud не сможет скачать его с внутреннего S3.
         videoResult = await generateVideoAtlasCloudFromImage({
           apiKey,
-          modelId: model || "atlascloud/wan-2.6-spicy/image-to-video",
+          modelId: (model && ATLAS_LEGACY_MODEL_IDS[model]) || model || ATLAS_I2V_DEFAULT_MODEL,
           prompt,
           negativePrompt,
           imageUrl: await keyToBase64DataUri(initImageKey!),

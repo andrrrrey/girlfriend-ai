@@ -1,5 +1,6 @@
 "use client";
 
+import { pill, pillActive } from "./pillStyles";
 import React, { useState, useRef, useEffect } from "react";
 import { useT } from "../../context/language";
 import type { TKey } from "../../lib/i18n";
@@ -307,8 +308,8 @@ const s: Record<string, React.CSSProperties> = {
   col: { display: "flex", flexDirection: "column", gap: 10 },
   colTitle: { color: "#fff", fontSize: 14, fontWeight: 600, marginBottom: 2 },
   pillGrid: { display: "flex", flexWrap: "wrap" as const, gap: 8 },
-  pill: { padding: "8px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, cursor: "pointer", fontFamily: "inherit" },
-  pillActive: { border: "1px solid #f95bad", background: "rgba(249,91,173,0.12)", color: "#f95bad" },
+  pill,
+  pillActive,
   footer: { display: "flex", gap: 12, padding: "16px 24px", borderTop: "1px solid #2a2a2a", flexShrink: 0 },
   cancelBtn: { flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #3a3a3a", background: "transparent", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
   saveBtn: { flex: 2, padding: "12px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #f95bad, #c940a0)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },

@@ -58,6 +58,8 @@ const CHAT_LOCK_TTL_MS = 60_000;
 const GREETING_KICKOFF = {
   ru: "*заходит в чат* Поздоровайся со мной первой — коротко и в образе своего персонажа.",
   en: "*enters the chat* Greet me first — keep it short and in character.",
+  de: "*betritt den Chat* Begrüße mich zuerst – kurz und ganz in deiner Rolle.",
+  fr: "*entre dans le chat* Salue-moi en premier – brièvement et dans ton rôle.",
 } as const;
 
 /** Параметры генерации ответа ассистента. */
@@ -226,7 +228,7 @@ export class ConversationEngine {
         return;
       }
 
-      const kickoff = GREETING_KICKOFF[input.lang === "ru" ? "ru" : "en"];
+      const kickoff = GREETING_KICKOFF[input.lang && input.lang in GREETING_KICKOFF ? input.lang : "en"];
       const reservation = await this.reserve(input, { kind: "chat_greeting" });
       try {
         yield* this.reply({

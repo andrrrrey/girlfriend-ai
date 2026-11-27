@@ -13,6 +13,7 @@
  * кредиты тарифа — в продукт, предлагаемая сетка — новыми неактивными продуктами.
  */
 
+import { Icon } from "../../components/icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/auth";
@@ -52,7 +53,7 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 12,
     outline: "none",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
     boxSizing: "border-box",
   },
   cellInput: {
@@ -65,7 +66,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     textAlign: "right",
     outline: "none",
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: "var(--font-main)",
   },
   stat: { color: "#ccc", fontSize: 12 },
   statValue: { color: "#fff", fontSize: 20, fontWeight: 700, marginTop: 4 },
@@ -349,7 +350,7 @@ export default function AdminFinancePage() {
           )}
           {result?.warnings.length ? (
             <div style={{ marginTop: 16 }}>
-              {result.warnings.map((w) => <p key={w} style={s.warning}>⚠ {w}</p>)}
+              {result.warnings.map((w) => <p key={w} style={s.warning}><Icon name="warning" size={12} /> {w}</p>)}
             </div>
           ) : null}
         </div>

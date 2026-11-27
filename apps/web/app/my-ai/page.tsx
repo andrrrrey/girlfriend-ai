@@ -1,5 +1,6 @@
 "use client";
 
+import { styleFilterOptions } from "../../lib/styles";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
@@ -50,7 +51,7 @@ const PAGE_CSS = `
     gap: 8px;
     padding: 6px 14px;
     cursor: pointer;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 500;
     color: #fff;
@@ -79,7 +80,7 @@ const PAGE_CSS = `
     white-space: nowrap;
     background: none;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .my-ai-tab.active {
     background: #1e1e1e;
@@ -92,34 +93,11 @@ const PAGE_CSS = `
     gap: 8px;
     width: 100%;
   }
-  .my-ai-search {
-    flex: 1;
-    height: 34px;
-    background: #121212;
-    border: 1px solid #313131;
-    border-radius: 8;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 12px;
-    border-radius: 8px;
-  }
-  .my-ai-search input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: 'Syne', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    color: #fff;
-    min-width: 0;
-  }
-  .my-ai-search input::placeholder { color: #848484; }
 
   .my-ai-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* Не больше 6 колонок: на широких мониторах карточки растут, а не мельчают. */
+    grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5 * 18px) / 6)), 1fr));
     gap: 18px;
     width: 100%;
   }
@@ -200,7 +178,7 @@ const PAGE_CSS = `
     cursor: pointer;
     white-space: nowrap;
     border: none;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
   }
   .ai-hover-btn.primary {
     background: linear-gradient(90deg, #f95bad, #ff0084);
@@ -356,7 +334,7 @@ const PAGE_CSS = `
     align-items: center;
     gap: 16px;
     z-index: 50;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-main);
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
 
@@ -555,18 +533,7 @@ export default function MyAIPage() {
     { value: "Image", label: t("media.image") },
     { value: "Video", label: t("media.video") },
   ];
-  const GENDER_OPTIONS = [
-    { value: "", label: t("common.all") },
-    { value: "Female", label: t("filter.female") },
-    { value: "Male", label: t("filter.male") },
-    { value: "Non-binary", label: t("filter.nonbinary") },
-  ];
-  const STYLE_OPTIONS = [
-    { value: "", label: t("common.all") },
-    { value: "Realistic", label: t("filter.realistic") },
-    { value: "Anime", label: t("filter.anime") },
-    { value: "Fantasy", label: t("filter.fantasy") },
-  ];
+  const STYLE_OPTIONS = styleFilterOptions(t, t("common.all"));
   const SORT_OPTIONS = [
     { value: "newest", label: t("filter.newest") },
     { value: "oldest", label: t("filter.oldest") },
@@ -580,7 +547,6 @@ export default function MyAIPage() {
   const [fetching, setFetching] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [gender, setGender] = useState("");
   const [style, setStyle] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<string[]>([]);
@@ -721,7 +687,6 @@ export default function MyAIPage() {
       if (!matchName && !matchDesc) return false;
     }
     if (typeFilter && item.type !== typeFilter) return false;
-    if (gender && item.gender?.toLowerCase() !== gender.toLowerCase()) return false;
     if (style && item.style?.toLowerCase() !== style.toLowerCase()) return false;
     if (selectedTags.length > 0) {
       const itemTags = (item.tags || []).map((t) => t.toLowerCase());
@@ -809,7 +774,7 @@ export default function MyAIPage() {
         </div>
 
         <div className="my-ai-filter-row">
-          <div className="my-ai-search">
+          <div className="filter-search">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <circle cx="7" cy="7" r="4.5" stroke="#848484" strokeWidth="1.2" />
               <path d="M10.5 10.5L13.5 13.5" stroke="#848484" strokeWidth="1.2" strokeLinecap="round" />
@@ -822,7 +787,6 @@ export default function MyAIPage() {
             />
           </div>
           <FilterDropdown label={t("filter.type")} value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
-          <FilterDropdown label={t("filter.gender")} value={gender} options={GENDER_OPTIONS} onChange={setGender} />
           <FilterDropdown label={t("filter.style")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
           <FilterDropdown label={t("myai.filterSort")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
         </div>
@@ -905,7 +869,7 @@ export default function MyAIPage() {
                 fontWeight: 600,
                 cursor: deleting ? "not-allowed" : "pointer",
                 opacity: deleting ? 0.6 : 1,
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-main)",
               }}
             >
               {deleting ? t("myai.deleting") : t("common.delete")}
@@ -921,7 +885,7 @@ export default function MyAIPage() {
                 fontSize: 12,
                 fontWeight: 500,
                 cursor: "pointer",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-main)",
               }}
             >
               {t("common.cancel")}
@@ -960,7 +924,7 @@ export default function MyAIPage() {
               a.click();
               document.body.removeChild(a);
             }}
-            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Syne', sans-serif" }}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(to right, #f95bad, #ff0084)", border: "none", color: "#fff", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-main)" }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12v2h12v-2" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
             {t("myai.download")}

@@ -42,7 +42,7 @@ export const PAGE_CSS = `
   .input-text {
     width: 100%; height: 30px; background: #1e1e1e;
     border: 1px solid #313131; border-radius: 6px;
-    padding: 6px 12px; font-family: 'Syne', sans-serif;
+    padding: 6px 12px; font-family: var(--font-main);
     font-weight: 500; font-size: 10px; color: #fff; outline: none;
   }
   .input-text:focus { border-color: #f95bad; }
@@ -213,14 +213,14 @@ export const PAGE_CSS = `
   .custom-input-icon { color: #969696; display: flex; }
   .custom-input {
     flex: 1; min-width: 0; background: transparent; border: none; outline: none;
-    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 500; color: #fff;
+    font-family: var(--font-main); font-size: 11px; font-weight: 500; color: #fff;
   }
   .custom-input::placeholder { color: #6b6b6b; }
   .custom-add-btn {
     display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
     border: none; border-radius: 4px; cursor: pointer; color: #fff;
     background: linear-gradient(to right, #f95bad, #ff0084);
-    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 600;
+    font-family: var(--font-main); font-size: 10px; font-weight: 600;
   }
   .tag-chip.custom { border-style: dashed; }
   .facial-scroll {
@@ -298,7 +298,7 @@ export const PAGE_CSS = `
   .memory-textarea {
     width: 100%; min-height: 80px; background: #1e1e1e;
     border: 1px solid #313131; border-radius: 6px; padding: 10px 12px;
-    font-family: 'Syne', sans-serif; font-weight: 400; font-size: 10px; color: #fff;
+    font-family: var(--font-main); font-weight: 400; font-size: 10px; color: #fff;
     line-height: 1.4; resize: vertical; outline: none;
   }
   .memory-textarea::placeholder { color: #848484; }
@@ -444,7 +444,7 @@ export const PAGE_CSS = `
   .s9-age { font-weight: 500; font-size: 14px; color: #969696; }
   .s9-edit-btn { background: none; border: none; cursor: pointer; color: #969696; display: flex; align-items: center; padding: 2px; }
   .s9-edit-btn:hover { color: #fff; }
-  .s9-manage-tags-btn { width: 100%; height: 30px; background: #121212; border: 1px solid #313131; border-radius: 4px; color: #fff; font-weight: 500; font-size: 12px; cursor: pointer; font-family: "Syne", sans-serif; }
+  .s9-manage-tags-btn { width: 100%; height: 30px; background: #121212; border: 1px solid #313131; border-radius: 4px; color: #fff; font-weight: 500; font-size: 12px; cursor: pointer; font-family: var(--font-main); }
   .s9-attrs-col { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
   .s9-tab-sep { width: 100%; border-top: 1px solid #313131; flex-shrink: 0; }
   .s9-attr-grid { display: grid; grid-template-columns: repeat(3, 1fr) repeat(1, 120px); gap: 8px; }
@@ -459,7 +459,7 @@ export const PAGE_CSS = `
   .s9-color-name { font-weight: 700; font-size: 13px; color: #fff; }
   .s9-custom-textareas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .s9-custom-label { font-size: 10px; font-weight: 500; color: #fff; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-  .s9-custom-textarea { width: 100%; height: 80px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; padding: 8px 10px; font-family: "Syne", sans-serif; font-size: 10px; color: #969696; resize: none; outline: none; }
+  .s9-custom-textarea { width: 100%; height: 80px; background: #1e1e1e; border: 1px solid #313131; border-radius: 6px; padding: 8px 10px; font-family: var(--font-main); font-size: 10px; color: #969696; resize: none; outline: none; }
   .s9-custom-textarea::placeholder { color: #5b5b5b; }
   .s9-pers-list { display: flex; flex-direction: column; gap: 8px; }
   .s9-pers-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e1e; }
