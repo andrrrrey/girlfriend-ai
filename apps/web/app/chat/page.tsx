@@ -97,7 +97,7 @@ function ChatPageInner() {
   const [editContent, setEditContent] = useState("");
 
   // Image generation state
-  const [inputMode, setInputMode] = useState<"ask" | "image">("ask");
+  const [inputMode, setInputMode] = useState<"ask" | "image" | "video">("ask");
   const [showInputModeDropdown, setShowInputModeDropdown] = useState(false);
   // Выбор чат-профиля (персоны) — селектор в поле ввода сообщения
   const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
@@ -803,7 +803,12 @@ function ChatPageInner() {
     try {
       // Промпт (внешность персонажа + поза), чекпоинт и стиль собирает сервер;
       // готовое фото он сам добавит в диалог (см. ChatMediaService).
-      const { jobId, kind } = await requestChatPhoto(activeChat, poseName, activeContentMode);
+      const { jobId, kind } = await requestChatPhoto(
+        activeChat,
+        poseName,
+        activeContentMode,
+        inputMode === "video" ? "video" : "image",
+      );
       startGeneration(jobId, kind, poseName, "", "chat", { chatId: activeChat, poseName });
     } catch (err: any) {
       const popup = premiumPopupFromError(err?.body);
@@ -1504,10 +1509,12 @@ function ChatPageInner() {
                     >
                       {inputMode === "ask" ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                      ) : inputMode === "video" ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5a1.5 1.5 0 011.5-1.5h6.5a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-7z" stroke="#fff" strokeWidth="1.2"/><path d="M11 6.5l3.5-2v7l-3.5-2" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       )}
-                      {inputMode === "ask" ? t("chat.modeAsk") : t("chat.modeImage")}
+                      {inputMode === "ask" ? t("chat.modeAsk") : inputMode === "video" ? t("chat.modeVideo") : t("chat.modeImage")}
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginLeft: 2 }}>
                         <path d="M2.5 4L5 6.5L7.5 4" stroke="#888" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -1527,6 +1534,13 @@ function ChatPageInner() {
                         >
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="#fff" strokeWidth="1.2"/><circle cx="5.5" cy="5.5" r="1.5" fill="#fff"/><path d="M1.5 11l3.5-3.5 2.5 2.5 2-2L14.5 13" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           {t("chat.modeImage")}
+                        </button>
+                        <button
+                          className={`input-mode-option ${inputMode === "video" ? "active" : ""}`}
+                          onClick={() => { setInputMode("video"); setShowInputModeDropdown(false); }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5a1.5 1.5 0 011.5-1.5h6.5a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-7z" stroke="#fff" strokeWidth="1.2"/><path d="M11 6.5l3.5-2v7l-3.5-2" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                          {t("chat.modeVideo")}
                         </button>
                       </div>
                     )}
@@ -1566,7 +1580,7 @@ function ChatPageInner() {
                       disabled={streaming || generatingInThisChat}
                       className="choose-pose-btn"
                     >
-                      {generatingInThisChat ? t("chat.generating") : t("chat.choosePose")}
+                      {generatingInThisChat ? t("chat.generating") : inputMode === "video" ? t("chat.chooseAction") : t("chat.choosePose")}
                     </button>
                   )}
                 </>
@@ -1739,6 +1753,7 @@ function ChatPageInner() {
           onClose={() => setShowPoseSelector(false)}
           onGenerate={handleGenerateImage}
           options={poseOptions}
+          mode={inputMode === "video" ? "video" : "image"}
         />
       )}
 

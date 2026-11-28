@@ -202,6 +202,8 @@ export const en = {
   "chat.modeImage": "Image",
   "chat.inputPlaceholder": "Leave a message...",
   "chat.generating": "Generating...",
+  "chat.modeVideo": "Video",
+  "chat.chooseAction": "Choose an action",
   "chat.choosePose": "Choose a pose",
   "chat.emptyTitle": "Select a chat or start a new one",
   "chat.emptyDesc": "Tap + to start a new chat with an AI character.",

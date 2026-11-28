@@ -3399,10 +3399,11 @@ export async function requestChatPhoto(
   chatId: string,
   pose: string,
   contentMode?: "nsfw" | "sfw",
+  kind: "image" | "video" = "image",
 ): Promise<{ jobId: string; kind: "image" | "video" }> {
   return apiFetch(`/chats/${chatId}/photo`, {
     method: "POST",
-    body: JSON.stringify({ pose, contentMode }),
+    body: JSON.stringify({ pose, contentMode, kind }),
   });
 }
 

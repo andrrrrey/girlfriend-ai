@@ -4,12 +4,15 @@ import React, { useState, useMemo } from "react";
 import type { PoseCategory, PoseOptionsResponse } from "../../lib/api";
 import { useT } from "../../context/language";
 import { optionLabel } from "../../lib/optionLabel";
+import { poseCategoriesFor } from "./PoseModal";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onGenerate: (poseName: string, posePrompt: string) => void;
   options: PoseOptionsResponse;
+  /** Фото — только позы; видео — только действия. */
+  mode?: "image" | "video";
 }
 
 const getActiveCategoryId = (categories: PoseCategory[], selected: string | null) => {
@@ -18,16 +21,20 @@ const getActiveCategoryId = (categories: PoseCategory[], selected: string | null
   return categories[0].id;
 };
 
-export default function ChatPoseModal({ open, onClose, onGenerate, options }: Props) {
+export default function ChatPoseModal({ open, onClose, onGenerate, options, mode = "image" }: Props) {
   const { t, lang } = useT();
+  const categories = useMemo(
+    () => poseCategoriesFor(options.POSE, mode === "video" ? "video" : "photo"),
+    [options.POSE, mode],
+  );
   const [selectedPose, setSelectedPose] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const catId = getActiveCategoryId(options.POSE, activeCategory);
+  const catId = getActiveCategoryId(categories, activeCategory);
 
   const items = useMemo(() => {
-    const cat = options.POSE.find((c) => c.id === catId);
+    const cat = categories.find((c) => c.id === catId);
     if (!cat) return [];
     const q = search.toLowerCase();
     return q
@@ -37,9 +44,9 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
             optionLabel(o, lang).toLowerCase().includes(q),
         )
       : cat.options;
-  }, [options.POSE, catId, search, lang]);
+  }, [categories, catId, search, lang]);
 
-  const allOptions = useMemo(() => options.POSE.flatMap((c) => c.options), [options.POSE]);
+  const allOptions = useMemo(() => categories.flatMap((c) => c.options), [categories]);
 
   if (!open) return null;
 
@@ -56,7 +63,7 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
 
         <div style={s.header}>
-          <span style={s.title}>{t("gen.choosePoseTitle")}</span>
+          <span style={s.title}>{mode === "video" ? t("chat.chooseAction") : t("gen.choosePoseTitle")}</span>
           <button style={s.closeBtn} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 3l10 10M13 3L3 13" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
@@ -79,12 +86,12 @@ export default function ChatPoseModal({ open, onClose, onGenerate, options }: Pr
               />
             </div>
 
-            {options.POSE.length === 0 ? (
+            {categories.length === 0 ? (
               <div style={s.emptyHint}>{t("gen.noPoses")}</div>
             ) : (
               <>
                 <div style={s.catPillRow} className="chat-pose-cat-pills">
-                  {options.POSE.map((cat) => (
+                  {categories.map((cat) => (
                     <button
                       key={cat.id}
                       style={{ ...s.catPill, ...(catId === cat.id ? s.catPillActive : {}) }}

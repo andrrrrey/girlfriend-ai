@@ -204,6 +204,8 @@ export const de: Record<keyof typeof en, string> = {
   "chat.modeImage": "Bild",
   "chat.inputPlaceholder": "Schreib eine Nachricht...",
   "chat.generating": "Wird generiert...",
+  "chat.modeVideo": "Video",
+  "chat.chooseAction": "Aktion wählen",
   "chat.choosePose": "Pose wählen",
   "chat.emptyTitle": "Wähle einen Chat oder starte einen neuen",
   "chat.emptyDesc": "Tippe auf +, um einen neuen Chat mit einem KI-Charakter zu starten.",

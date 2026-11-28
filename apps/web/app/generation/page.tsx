@@ -880,10 +880,11 @@ const CSS = `
     display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; padding: 16px; overflow-y: auto;
   }
   .img-picker-item {
-    aspect-ratio: 4 / 5; border-radius: 8px; overflow: hidden; padding: 0; cursor: pointer;
-    border: 2px solid transparent; background: #1e1e1e;
+    position: relative; display: block; width: 100%; height: 0; padding: 0 0 125% 0; margin: 0;
+    border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: #1e1e1e;
   }
-  .img-picker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* Фото целиком (без обрезки), пустые поля — фоном карточки. */
+  .img-picker-item img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .img-picker-item:hover { border-color: rgba(249,91,173,0.6); }
   .img-picker-item.selected { border-color: #c1f0aa; }
   .img-picker-empty { padding: 32px 16px; color: #969696; font-size: 13px; text-align: center; }
@@ -1763,7 +1764,7 @@ function GenerationPageInner() {
                       <img
                         src={initMediaUrl}
                         alt="source"
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }}
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: 0.45, background: "#0e0e0e" }}
                       />
                       <button
                         type="button"

@@ -928,7 +928,7 @@ export class ChatsController {
   }
 
   /**
-   * Фото персонажа в чате (пикер поз): спецификация собирается на сервере,
+   * Фото (поза) или видео (действие) персонажа в чате (пикер): спецификация собирается на сервере,
    * медиасообщение сервер добавит в диалог сам по завершении генерации.
    *
    * @returns { jobId, kind } — для отображения прогресса
@@ -940,13 +940,16 @@ export class ChatsController {
     const chat = await this.chatsService.getChat(chatId, req.user.id);
     const spec = parseGenerationSpec({
       ...(dto.spec ?? {}),
-      kind: "image",
+      kind: dto.kind === "video" ? "video" : "image",
       preset: "chat",
       characterId: chat.characterId,
       contentMode: req.user.isAdult === false ? "sfw" : dto.contentMode ?? req.user.contentMode,
       ...(dto.pose ? { pose: { ...((dto.spec?.pose as object) ?? {}), poses: [dto.pose] } } : {}),
     });
-    return this.chatMedia.start(chat.id, toActor(req.user), spec, { caption: dto.pose || "photo", source: "web" });
+    return this.chatMedia.start(chat.id, toActor(req.user), spec, {
+      caption: dto.pose || (dto.kind === "video" ? "video" : "photo"),
+      source: "web",
+    });
   }
 
   /**

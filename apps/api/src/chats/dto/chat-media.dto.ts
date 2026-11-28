@@ -13,6 +13,11 @@ export class ChatPhotoDto {
   @MaxLength(200)
   pose?: string;
 
+  /** Что генерировать: фото (позы) или видео (действия). По умолчанию — фото. */
+  @IsOptional()
+  @IsIn(["image", "video"])
+  kind?: "image" | "video";
+
   /** Режим контента из переключателя интерфейса (несовершеннолетним — всегда sfw). */
   @IsOptional()
   @IsIn(["nsfw", "sfw"])

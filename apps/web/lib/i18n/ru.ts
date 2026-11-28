@@ -204,6 +204,8 @@ export const ru: Record<keyof typeof en, string> = {
   "chat.modeImage": "Изображение",
   "chat.inputPlaceholder": "Напишите сообщение...",
   "chat.generating": "Генерация...",
+  "chat.modeVideo": "Видео",
+  "chat.chooseAction": "Выберите действие",
   "chat.choosePose": "Выбрать позу",
   "chat.emptyTitle": "Выберите чат или создайте новый",
   "chat.emptyDesc": "Нажмите + чтобы начать новый чат с AI-персонажем.",
