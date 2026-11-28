@@ -169,6 +169,22 @@ export class AdminController {
   }
 
   /**
+   * Фоновая генерация приветствий (2–3 на язык) для персонажей без них.
+   * `POST /admin/characters/backfill-greetings?limit=5` — limit для пробного прогона.
+   */
+  @Post("characters/backfill-greetings")
+  async backfillCharacterGreetings(@Query("limit") limit?: string) {
+    const n = limit ? parseInt(limit, 10) : undefined;
+    return this.adminService.backfillCharacterGreetings(n && n > 0 ? n : undefined);
+  }
+
+  /** Сгенерировать приветствия одного персонажа (для правки в админке, без сохранения). */
+  @Post("characters/:id/greetings/generate")
+  async generateCharacterGreetings(@Param("id") id: string) {
+    return this.adminService.generateCharacterGreetings(id);
+  }
+
+  /**
    * Возвращает одного AI-персонажа по идентификатору.
    *
    * `GET /admin/characters/:id`

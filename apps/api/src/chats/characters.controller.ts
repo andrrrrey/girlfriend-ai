@@ -5,6 +5,7 @@ import { DemoService } from "../demo/demo.service";
 import { CharactersService } from "./characters.service";
 import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { ensureCharacterSeo } from "./character-seo";
+import { parseAgeRange } from "./character-filters";
 import { S3Service } from "../s3/s3.service";
 import { loadEnv } from "@repo/config";
 import { Prisma } from "@prisma/client";
@@ -64,6 +65,7 @@ export class CharactersController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
     @Query("mode") mode?: string,
+    @Query("ageRange") ageRange?: string,
   ) {
     const where: Prisma.CharacterWhereInput = { deletedAt: null };
 
@@ -91,6 +93,17 @@ export class CharactersController {
         new Set([style, lower, lower.toUpperCase(), lower.charAt(0).toUpperCase() + lower.slice(1)]),
       );
       jsonFilters.push({ OR: variants.map((v) => ({ personality: { path: ["style"], equals: v } })) });
+    }
+    // Возраст из предпочтений профиля: personality.age хранится числом или
+    // строкой — сравниваем в SQL после приведения к int.
+    const ages = parseAgeRange(ageRange);
+    if (ages) {
+      const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT id FROM characters
+        WHERE deleted_at IS NULL
+          AND (personality->>'age') ~ '^[0-9]{1,3}$'
+          AND (personality->>'age')::int BETWEEN ${ages.min} AND ${ages.max}`);
+      jsonFilters.push({ id: { in: rows.map((r) => r.id) } });
     }
     if (jsonFilters.length > 0) {
       where.AND = jsonFilters;
@@ -219,9 +232,14 @@ export class CharactersController {
   }
 
   @Get("tags")
-  async getTags() {
+  async getTags(@Query("mode") mode?: string) {
+    // Тот же класс контента, что и в списке (listPublic), — иначе в SFW
+    // показывались теги, по которым не найдётся ни одного персонажа.
+    const where: Prisma.CharacterWhereInput = { deletedAt: null };
+    if (mode === "sfw") where.nsfw = false;
+    else if (mode === "nsfw") where.nsfw = true;
     const characters = await this.prisma.character.findMany({
-      where: { deletedAt: null },
+      where,
       select: { tags: true },
     });
 

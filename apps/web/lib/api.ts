@@ -414,6 +414,8 @@ export interface UserProfile {
   isAdult: boolean;      // подтверждение 18+ при регистрации
   /** Часовой пояс IANA (тихие часы инициативных сообщений). */
   timezone?: string | null;
+  /** Предпочтения (профиль → Preferences): фильтры по умолчанию на главной и в галерее. */
+  preferences?: import("./preferences").UserPreferences;
   createdAt: string;     // ISO 8601
   socialLinks: { provider: string; url: string }[];
 }
@@ -445,7 +447,7 @@ export const users = {
    * @param data - Поля для обновления: nickname, avatarUrl, lang, aboutMe
    */
   async updateProfile(
-    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe" | "contentMode">> & { timezone?: string },
+    data: Partial<Pick<UserProfile, "nickname" | "avatarUrl" | "lang" | "aboutMe" | "contentMode" | "preferences">> & { timezone?: string },
   ): Promise<UserProfile> {
     return apiFetch<UserProfile>("/users/me", {
       method: "PATCH",
@@ -1322,6 +1324,19 @@ export const admin = {
     return apiFetch<{ started: boolean; total: number }>("/admin/characters/backfill-seo", {
       method: "POST",
     });
+  },
+
+  /** Фоновая генерация приветствий персонажей без них (limit — пробный прогон). */
+  async backfillCharacterGreetings(limit?: number): Promise<{ started: boolean; total: number }> {
+    return apiFetch<{ started: boolean; total: number }>(
+      `/admin/characters/backfill-greetings${limit ? `?limit=${limit}` : ""}`,
+      { method: "POST" },
+    );
+  },
+
+  /** Сгенерировать приветствия персонажа (без сохранения) — для правки в форме. */
+  async generateCharacterGreetings(id: string): Promise<Partial<Record<"en" | "ru" | "de" | "fr", string[]>>> {
+    return apiFetch(`/admin/characters/${id}/greetings/generate`, { method: "POST" });
   },
 
   /** Один персонаж по ID (GET /admin/characters/:id). */
@@ -2423,10 +2438,13 @@ export const characters = {
     createdByUserId?: string;
     sortBy?: string;
     tags?: string[];
+    /** "18-25" | "26-35" | "36-45" | "46+" — по personality.age */
+    ageRange?: string;
     page?: number;
     limit?: number;
   }): Promise<{ items: Character[]; total: number }> {
     const query = new URLSearchParams();
+    if (params?.ageRange) query.set("ageRange", params.ageRange);
     if (params?.search) query.set("search", params.search);
     if (params?.gender) query.set("gender", params.gender);
     if (params?.style) query.set("style", params.style);
@@ -2442,7 +2460,7 @@ export const characters = {
   },
 
   async getTags(): Promise<{ tag: string; count: number }[]> {
-    return apiFetch<{ tag: string; count: number }[]>("/characters/tags");
+    return apiFetch<{ tag: string; count: number }[]>(`/characters/tags?mode=${getClientContentMode()}`);
   },
 
   async listMy(): Promise<Character[]> {
@@ -3619,11 +3637,14 @@ export async function getPublicGallery(params?: {
   style?: string;
   /** Ключи тегов галереи (см. galleryTag.* в i18n): ИЛИ внутри группы, И между группами (на сервере). */
   tags?: string[];
-}): Promise<{ items: GalleryItem[]; total: number }> {
+  /** nextCursor из предыдущего ответа — следующая страница без повторов. */
+  cursor?: string | null;
+}): Promise<{ items: GalleryItem[]; total: number; nextCursor?: string | null }> {
   const query = new URLSearchParams();
   if (params?.type) query.set("type", params.type);
   if (params?.sortBy) query.set("sortBy", params.sortBy);
-  if (params?.page) query.set("page", String(params.page));
+  if (params?.cursor) query.set("cursor", params.cursor);
+  else if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.userId) query.set("userId", params.userId);
   if (params?.gender) query.set("gender", params.gender);
@@ -3631,7 +3652,7 @@ export async function getPublicGallery(params?: {
   if (params?.tags?.length) query.set("tags", params.tags.join(","));
   query.set("mode", getClientContentMode());
   const qs = query.toString();
-  return apiFetch<{ items: GalleryItem[]; total: number }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
+  return apiFetch<{ items: GalleryItem[]; total: number; nextCursor?: string | null }>(`/generation/gallery${qs ? `?${qs}` : ""}`);
 }
 
 export async function getPublicShorts(params?: {

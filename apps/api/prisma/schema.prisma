@@ -26,6 +26,8 @@ model User {
   timezone                    String?
   // Подтверждение 18+ при регистрации. Если false — режим форсится в sfw.
   isAdult                     Boolean   @default(true) @map("is_adult")
+  // Предпочтения (профиль → Preferences): { style?, ageRange?, tags? } — фильтры по умолчанию
+  preferences                 Json      @default("{}")
   emailVerified               Boolean   @default(false) @map("email_verified")
   verificationToken           String?   @unique @map("verification_token")
   verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at")
@@ -360,6 +362,8 @@ model ChatSession {
   nextProactiveAt   DateTime? @map("next_proactive_at")
   // Непрочитанные сообщения персонажа (бейдж в списке чатов)
   unreadCount       Int       @default(0) @map("unread_count")
+  // Настройки персонажа только для этого чата (ChatSettings из @ai/types). {} = как в карточке
+  settings          Json      @default("{}")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   character   Character    @relation(fields: [characterId], references: [id])

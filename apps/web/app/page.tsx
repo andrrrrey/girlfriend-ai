@@ -12,6 +12,7 @@ import FilterDropdown from "./components/FilterDropdown";
 import StoriesRail from "./components/StoriesRail";
 import HeroSlider from "./components/HeroSlider";
 import { formatTag } from "../lib/tags";
+import { AGE_RANGES, styleFilterValue, useApplyPreferences } from "../lib/preferences";
 import { useT } from "../context/language";
 import { useContentMode } from "../context/contentMode";
 import type { TKey } from "../lib/i18n";
@@ -293,6 +294,15 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<{ tag: string; count: number }[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [ageRange, setAgeRange] = useState("");
+  const AGE_OPTIONS = [{ value: "", label: t("home.filterAll") }, ...AGE_RANGES.map((a) => ({ value: a, label: a }))];
+  // Предпочтения профиля — фильтры по умолчанию (один раз после загрузки профиля).
+  useApplyPreferences((prefs) => {
+    const st = styleFilterValue(prefs.style);
+    if (st) setStyle(st);
+    if (prefs.ageRange) setAgeRange(prefs.ageRange);
+    if (prefs.tags?.length) setSelectedTags(prefs.tags);
+  });
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
   const charsRef = useRef<Character[]>(chars);
@@ -300,12 +310,13 @@ export default function HomePage() {
 
   const fetchChars = useCallback(async (params?: {
     search?: string; style?: string;
-    sortBy?: string; tags?: string[];
+    sortBy?: string; tags?: string[]; ageRange?: string;
   }) => {
     try {
       const result = await characters.listPublic({
         search: params?.search || undefined,
         style: params?.style || undefined,
+        ageRange: params?.ageRange || undefined,
         sortBy: params?.sortBy || "newest",
         tags: params?.tags?.length ? params.tags : undefined,
       });
@@ -319,11 +330,11 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchChars();
+    // Теги зависят от режима контента (SFW/NSFW) — перезапрашиваем при переключении.
     characters.getTags()
       .then((t) => setTags(t))
       .catch(() => {});
-  }, [fetchChars]);
+  }, [contentMode]);
 
   useEffect(() => {
     if (chars.length === 0) return;
@@ -334,16 +345,16 @@ export default function HomePage() {
   }, [chars]);
 
   useEffect(() => {
-    fetchChars({ search: searchQuery, style, sortBy, tags: selectedTags });
+    fetchChars({ search: searchQuery, style, sortBy, tags: selectedTags, ageRange });
     // contentMode в зависимостях: при переключении NSFW/SFW список перезагружается.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, sortBy, selectedTags, fetchChars, contentMode]);
+  }, [style, sortBy, selectedTags, ageRange, fetchChars, contentMode]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      fetchChars({ search: val, style, sortBy, tags: selectedTags });
+      fetchChars({ search: val, style, sortBy, tags: selectedTags, ageRange });
     }, 300);
   };
 
@@ -501,6 +512,7 @@ export default function HomePage() {
               {/* Filter dropdowns */}
               <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
                 <FilterDropdown label={t("home.filterStyle")} value={style} options={STYLE_OPTIONS} onChange={setStyle} />
+                <FilterDropdown label={t("home.filterAge")} value={ageRange} options={AGE_OPTIONS} onChange={setAgeRange} />
                 <FilterDropdown label={t("home.filterSortBy")} value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
               </div>
             </div>
@@ -510,8 +522,8 @@ export default function HomePage() {
               tags={tags.map((t) => t.tag)}
               selectedTags={selectedTags}
               onTagToggle={handleTagToggle}
-              maxVisible={15}
               formatLabel={formatTag}
+              layout="rows"
             />
           </div>
 

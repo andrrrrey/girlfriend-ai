@@ -222,6 +222,7 @@ export class GenerationController {
     @Query("style") style?: string,
     @Query("mode") mode?: string,
     @Query("tags") tags?: string,
+    @Query("cursor") cursor?: string,
   ) {
     return this.generationService.getGallery(
       limit ? parseInt(limit, 10) : 50,
@@ -233,6 +234,7 @@ export class GenerationController {
       style,
       mode,
       tags ? tags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 10) : undefined,
+      cursor,
     );
   }
 

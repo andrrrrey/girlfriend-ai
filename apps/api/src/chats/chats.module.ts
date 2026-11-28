@@ -40,6 +40,7 @@ import { ChatEventsService } from "./chat-events.service";
 import { GenerationModule } from "../generation/generation.module";
 import { ChatMemoryService } from "../conversation/chat-memory.service";
 import { ProactiveService } from "../conversation/proactive.service";
+import { ChatSettingsService } from "./chat-settings.service";
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { ProactiveService } from "../conversation/proactive.service";
     ChatEventsService,
     ChatMemoryService,
     ProactiveService,
+    ChatSettingsService,
   ],
   // CharactersService — его переиспользует AutogenModule; ChatsService и
   // ConversationEngine — AutochatModule (автопереписка через общее ядро).

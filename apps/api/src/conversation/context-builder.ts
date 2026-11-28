@@ -8,6 +8,8 @@ import { Injectable } from "@nestjs/common";
 import { ChatsService } from "../chats/chats.service";
 import type { LlmChatRequest } from "./llm.adapter";
 import type { ChatWithContext, ConversationActor } from "./conversation.types";
+import { buildChatSettingsPrompt } from "./chat-settings-prompt";
+import { normalizeChatSettings } from "../chats/chat-settings";
 
 /** Сколько последних сообщений по умолчанию идёт в контекст модели. */
 export const DEFAULT_HISTORY_LIMIT = 20;
@@ -61,8 +63,12 @@ export class ContextBuilder {
   constructor(private readonly chats: ChatsService) {}
 
   /** Режим контента: несовершеннолетний (isAdult=false) всегда получает SFW. */
-  static resolveContentMode(actor: ConversationActor): string | undefined {
-    return actor.isAdult === false ? "sfw" : actor.contentMode;
+  static resolveContentMode(actor: ConversationActor, chatSettings?: unknown): string | undefined {
+    if (actor.isAdult === false) return "sfw";
+    // Уровень «только флирт» из настроек чата — SFW; «18+» не повышает режим
+    // выше пользовательского (без включённого NSFW остаётся SFW).
+    if (chatSettings && normalizeChatSettings(chatSettings).level === "flirt") return "sfw";
+    return actor.contentMode;
   }
 
   /** Описание выбранного чат-профиля (персоны) для промпта, если он не удалён. */
@@ -99,11 +105,13 @@ export class ContextBuilder {
       messages.push({ role: "user", content: `${opts.trailingNote}${lang}` });
     }
 
+    const chatOverrides = buildChatSettingsPrompt(chat.settings);
     return {
       messages,
       characterId: chat.characterId,
       ...(chat.summary ? { memory: chat.summary } : {}),
-      contentMode: opts.contentMode ?? ContextBuilder.resolveContentMode(actor),
+      ...(chatOverrides ? { chatOverrides } : {}),
+      contentMode: opts.contentMode ?? ContextBuilder.resolveContentMode(actor, chat.settings),
       userProfile: opts.userProfile ?? ContextBuilder.resolveUserProfile(chat),
       ...(language ? { replyLanguage: language } : {}),
     };

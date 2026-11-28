@@ -76,6 +76,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -108,6 +109,12 @@ import { AiServiceError } from "../conversation/ai-client";
 import { TtsAdapter, TtsError, TtsResult } from "../conversation/tts.adapter";
 import type { ConversationActor, EngineEvent } from "../conversation/conversation.types";
 import { WalletService } from "../billing/wallet.service";
+import { ChatSettingsService, VOICE_SAMPLE_TEXT } from "./chat-settings.service";
+import { BackstoryAssistDto, ChatSettingsDto } from "./dto/chat-settings.dto";
+import { normalizeChatSettings } from "./chat-settings";
+
+/** Образцы голосов: `${voiceId}:${lang}` → ключ S3 (живёт до перезапуска). */
+const voiceSampleCache = new Map<string, string>();
 
 /** Пользователь из JWT → участник диалога для ядра. */
 function toActor(user: any): ConversationActor {
@@ -232,6 +239,7 @@ export class ChatsController {
     private readonly wallet: WalletService,
     private readonly chatMedia: ChatMediaService,
     private readonly chatEvents: ChatEventsService,
+    private readonly chatSettings: ChatSettingsService,
   ) {}
 
   /**
@@ -314,6 +322,77 @@ export class ChatsController {
       cursor,
       limit ? parseInt(limit, 10) : undefined,
     );
+  }
+
+  // ─── Настройки персонажа под чат ─────────────────────────────
+
+  /**
+   * Образец голоса для выбора в настройках чата: короткая фраза на языке
+   * пользователя. Кэшируется на процесс (ключ S3), кредиты не списываются.
+   */
+  @ApiOperation({ summary: "Voice sample for chat settings (audio)" })
+  @Get("voice-sample")
+  async voiceSample(@Res() res: Response, @Query("voiceId") voiceId?: string, @Query("lang") lang?: string) {
+    const language = lang && VOICE_SAMPLE_TEXT[lang] ? lang : "en";
+    if (!voiceId || !(await this.chatsService.isActiveVoice(voiceId))) {
+      res.status(404).json({ error: "Voice not found" });
+      return;
+    }
+    const cacheKey = `${voiceId}:${language}`;
+    try {
+      let key = voiceSampleCache.get(cacheKey);
+      if (!key) {
+        const result = await this.tts.synthesize(VOICE_SAMPLE_TEXT[language]!, voiceId);
+        if (result.kind === "binary") {
+          res.setHeader("Content-Type", "audio/mpeg");
+          res.setHeader("Cache-Control", "private, max-age=86400");
+          res.send(result.buffer);
+          return;
+        }
+        key = result.key;
+        voiceSampleCache.set(cacheKey, key);
+      }
+      const { body, contentType } = await this.s3Service.getObject(key);
+      res.setHeader("Content-Type", contentType || "audio/mpeg");
+      res.setHeader("Cache-Control", "private, max-age=86400");
+      body.pipe(res);
+    } catch (err: any) {
+      voiceSampleCache.delete(cacheKey);
+      if (!res.headersSent) res.status(502).json({ error: "Voice sample failed", details: err?.message });
+    }
+  }
+
+  /** Настройки персонажа в этом чате ({} — как в карточке персонажа). */
+  @ApiOperation({ summary: "Get per-chat character settings" })
+  @Get(":id/settings")
+  async getSettings(@Req() req: any, @Param("id") id: string) {
+    return this.chatSettings.get(id, req.user.id);
+  }
+
+  /**
+   * Сохраняет настройки персонажа только для этого чата. Свободный текст
+   * проходит ту же проверку на запрещённое, что и генерация (400 PROMPT_FORBIDDEN).
+   */
+  @ApiOperation({ summary: "Save per-chat character settings" })
+  @Put(":id/settings")
+  async saveSettings(@Req() req: any, @Param("id") id: string, @Body() dto: ChatSettingsDto) {
+    return this.chatSettings.save(id, toActor(req.user), dto);
+  }
+
+  /** «Вернуть как было» — сброс к исходному персонажу. */
+  @ApiOperation({ summary: "Reset per-chat character settings" })
+  @Delete(":id/settings")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetSettings(@Req() req: any, @Param("id") id: string) {
+    await this.chatSettings.reset(id, req.user.id);
+  }
+
+  /** «Придумать за меня»: разворачивает 1–2 фразы в предысторию (не сохраняет). */
+  @ApiOperation({ summary: "Expand an idea into a backstory" })
+  @Post(":id/settings/backstory-assist")
+  async assistBackstory(@Req() req: any, @Param("id") id: string, @Body() dto: BackstoryAssistDto) {
+    const backstory = await this.chatSettings.assistBackstory(id, toActor(req.user), dto.idea, dto.lang ?? "en");
+    return { backstory };
   }
 
   /**
@@ -650,7 +729,8 @@ export class ChatsController {
       const chat = await this.chatsService.getChat(chatId, req.user.id);
       const message = await this.chatsService.getMessage(msgId, chatId, req.user.id);
 
-      const voiceId = chat.character?.voiceId || undefined;
+      // Голос из настроек этого чата важнее голоса персонажа.
+      const voiceId = normalizeChatSettings(chat.settings).voiceId || chat.character?.voiceId || undefined;
 
       // Резерв кредитов под озвучку (по числу символов); списание — после успешного синтеза.
       const reservation = await this.wallet.reserveOperation(

@@ -38,6 +38,8 @@ import { useContentMode } from "../../context/contentMode";
 import { showBrowserNotification } from "../../lib/browserNotify";
 import { formatTags } from "../../lib/tags";
 import { localizeOption } from "../../lib/optionLabel";
+import ChatSettingsModal from "./ChatSettingsModal";
+import { chatSettingsApi, optionLabel as csLabel, type ChatSettings } from "../../lib/chatSettings";
 
 const DEMO_MESSAGE_LIMIT = 20;
 
@@ -45,6 +47,8 @@ function ChatPageInner() {
   const { user, loading } = useAuth();
   const { t, lang } = useT();
   const { mode: activeContentMode } = useContentMode();
+  const [chatSettings, setChatSettings] = useState<ChatSettings>({});
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const router = useRouter();
   const { startGeneration, notifications, activeJobs } = useGeneration();
   const isDemo = !user || user.subscription === "free";
@@ -52,6 +56,15 @@ function ChatPageInner() {
 
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  // Настройки персонажа текущего чата (для панели «About me» и окна настроек).
+  useEffect(() => {
+    setChatSettings({});
+    setShowChatSettings(false);
+    if (!activeChat) return;
+    let cancelled = false;
+    chatSettingsApi.get(activeChat).then((cs) => { if (!cancelled) setChatSettings(cs); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeChat]);
   const [messages, setMessages] = useState<Message[]>([]);
   // Полноэкранный просмотр картинки из чата (оригинал, без пережатия).
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -730,6 +743,11 @@ function ChatPageInner() {
   const activeChatData = chatList.find((c) => c.id === activeChat);
   const activeChar = charList.find((c) => c.id === activeChatData?.character?.id);
   const activeCharPersonality = (activeChar?.personality as Record<string, unknown> | null) || {};
+  // Настройки персонажа под этот чат: меняют «About me» только у этого пользователя.
+  const csOccupation = chatSettings.occupation ? csLabel(t, "occupation", chatSettings.occupation) : null;
+  const csRelationship = chatSettings.relationship ? csLabel(t, "relationship", chatSettings.relationship) : null;
+  const csArchetype = chatSettings.archetype ? csLabel(t, "archetype", chatSettings.archetype) : null;
+  const chatCustomized = Object.keys(chatSettings).length > 0;
   // Генерации фото/видео этого чата — по ним в ленте показываются карточки-заглушки.
   const chatGenerations = activeJobs.filter((j) => j.source === "chat" && j.metadata?.chatId === activeChat);
   const generatingInThisChat = chatGenerations.length > 0;
@@ -1029,6 +1047,11 @@ function ChatPageInner() {
 .profile-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
 .profile-bio { font-size: 10px; font-weight: 500; line-height: 1.3; color: #fff; }
 .profile-separator { width: 100%; height: 1px; background: rgba(255,255,255,0.08); }
+.chat-settings-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 14px;
+  border-radius: 10px; border: 1px solid #313131; background: #1a1a1a; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: border-color 0.2s; }
+.chat-settings-btn:hover { border-color: #f95bad; }
+.chat-settings-badge { font-size: 11px; font-weight: 500; color: #f95bad; background: rgba(249,91,173,0.12); border-radius: 10px; padding: 2px 8px; }
 .about-me { display: flex; flex-direction: column; gap: 12px; }
 .about-me-title { font-size: 12px; font-weight: 500; line-height: 1.2; }
 .info-card { display: flex; gap: 8px; align-items: center; height: 28px; }
@@ -1654,7 +1677,14 @@ function ChatPageInner() {
             </div>
           </div>
 
-          {/* Buttons temporarily hidden */}
+          {/* Настройки персонажа только для этого чата */}
+          {activeChat && (
+            <button type="button" className="chat-settings-btn" onClick={() => setShowChatSettings(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+              {t("cs.button")}
+              {chatCustomized && <span className="chat-settings-badge">{t("cs.customized")}</span>}
+            </button>
+          )}
 
           {/* Profile Text */}
           <div className="profile-text">
@@ -1685,7 +1715,7 @@ function ChatPageInner() {
                 </div>
               </div>
             </div>
-            {!!(activeCharPersonality["work"] || activeCharPersonality["occupation"]) && (
+            {!!(csOccupation || activeCharPersonality["work"] || activeCharPersonality["occupation"]) && (
               <div className="info-card">
                 <div className="info-card-icon">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round"/></svg>
@@ -1693,7 +1723,7 @@ function ChatPageInner() {
                 <div className="info-card-text">
                   <div className="info-card-label">{t("chat.occupation")}</div>
                   <div className="info-card-value">
-                    {(activeCharPersonality["work"] as string[] | string | undefined)
+                    {csOccupation ? csOccupation : (activeCharPersonality["work"] as string[] | string | undefined)
                       ? Array.isArray(activeCharPersonality["work"])
                         ? (activeCharPersonality["work"] as string[]).join(", ")
                         : String(activeCharPersonality["work"])
@@ -1715,7 +1745,7 @@ function ChatPageInner() {
                 </div>
               </div>
             )}
-            {!!activeCharPersonality["relationshipType"] && (
+            {!!(csRelationship || activeCharPersonality["relationshipType"]) && (
               <div className="info-card">
                 <div className="info-card-icon">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5S2 9.5 2 6a3 3 0 015.5-1.7h1A3 3 0 0114 6c0 3.5-6 7.5-6 7.5z" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1723,12 +1753,12 @@ function ChatPageInner() {
                 <div className="info-card-text">
                   <div className="info-card-label">{t("chat.relationship")}</div>
                   <div className="info-card-value">
-                    {localizeOption(String(activeCharPersonality["relationshipType"]), lang) || "—"}
+                    {csRelationship || localizeOption(String(activeCharPersonality["relationshipType"]), lang) || "—"}
                   </div>
                 </div>
               </div>
             )}
-            {!!activeCharPersonality["personality"] && (
+            {!!(csArchetype || activeCharPersonality["personality"]) && (
               <div className="info-card">
                 <div className="info-card-icon">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 14A6 6 0 108 2a6 6 0 000 12z" stroke="#fff" strokeWidth="1.2"/><path d="M6 6s0-2 2-2 2 2 2 2-1 1-2 1-2 1-2 2v1" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="11" r="0.6" fill="#fff"/></svg>
@@ -1736,7 +1766,7 @@ function ChatPageInner() {
                 <div className="info-card-text">
                   <div className="info-card-label">{t("chat.personality")}</div>
                   <div className="info-card-value">
-                    {(Array.isArray(activeCharPersonality["personality"])
+                    {csArchetype || (Array.isArray(activeCharPersonality["personality"])
                       ? (activeCharPersonality["personality"] as string[]).map((x) => localizeOption(String(x), lang)).join(", ")
                       : localizeOption(String(activeCharPersonality["personality"]), lang)) || "—"}
                   </div>
@@ -1745,6 +1775,18 @@ function ChatPageInner() {
             )}
           </div>
         </aside>
+      )}
+
+      {activeChat && (
+        <ChatSettingsModal
+          open={showChatSettings}
+          onClose={() => setShowChatSettings(false)}
+          chatId={activeChat}
+          characterName={activeChatData?.character?.name || ""}
+          settings={chatSettings}
+          nsfwAllowed={activeContentMode === "nsfw" && user?.isAdult !== false}
+          onSaved={setChatSettings}
+        />
       )}
 
       {poseOptions && (

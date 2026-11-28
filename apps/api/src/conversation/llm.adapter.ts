@@ -23,6 +23,8 @@ export interface LlmChatRequest {
   replyLanguage?: string;
   /** Краткое содержание ранней части диалога (долговременная память). */
   memory?: string;
+  /** Блок «CHAT CUSTOMIZATION» — настройки персонажа под этот чат (ChatSession.settings). */
+  chatOverrides?: string;
 }
 
 @Injectable()

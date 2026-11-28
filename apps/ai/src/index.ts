@@ -569,6 +569,8 @@ interface ChatCompletionBody {
   replyLanguage?: string;
   /** Краткое содержание ранней части диалога (долговременная память). */
   memory?: string;
+  /** Настройки персонажа под этот чат (блок CHAT CUSTOMIZATION) — важнее описания персонажа. */
+  chatOverrides?: string;
 }
 
 /**
@@ -682,10 +684,14 @@ app.post<{ Body: ChatCompletionBody }>("/ai/chat/completion", async (req, reply)
       "\nUse these facts naturally; do not retell the summary."
     : "";
 
+  // Настройки пользователя для этого чата — сразу после описания персонажа.
+  const chatOverrides = typeof req.body.chatOverrides === "string" ? req.body.chatOverrides.trim().slice(0, 6000) : "";
+  const overridesContext = chatOverrides ? "\n\n--- " + chatOverrides : "";
+
   if (finalSystemPrompt) {
-    finalSystemPrompt = uncensoredPreamble + finalSystemPrompt + userContext + memoryContext + behaviorPostamble;
+    finalSystemPrompt = uncensoredPreamble + finalSystemPrompt + overridesContext + userContext + memoryContext + behaviorPostamble;
   } else {
-    finalSystemPrompt = uncensoredPreamble + userContext + memoryContext + behaviorPostamble;
+    finalSystemPrompt = uncensoredPreamble + overridesContext + userContext + memoryContext + behaviorPostamble;
   }
 
   // Фильтруем системные сообщения из пользовательской истории

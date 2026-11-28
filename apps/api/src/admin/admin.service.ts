@@ -19,11 +19,19 @@
  * {@link NotFoundException} при отсутствии запрошенной записи.
  */
 
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { S3Service } from "../s3/s3.service";
 import { backfillAllCharacterSeo } from "../chats/character-seo";
+import {
+  backfillAllCharacterGreetings,
+  ensureCharacterGreetings,
+  generateGreetings,
+  moderateGreetings,
+  normalizeGreetings,
+} from "../chats/character-greetings";
+import { ModerationService } from "../moderation/moderation.service";
 import { slugify } from "../generation/prompt/slug";
 import { normalizeSynonyms } from "../generation/prompt/synonyms";
 import { loadEnv } from "@repo/config";
@@ -178,10 +186,15 @@ function withSynonyms<T extends { name?: string; synonyms?: string[] }>(dto: T, 
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   /**
    * @param prisma — сервис Prisma ORM для работы с базой данных.
    */
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly moderation: ModerationService,
+  ) {}
 
   /**
    * Запускает фоновую генерацию SEO-описаний и slug для всех персонажей,
@@ -191,6 +204,25 @@ export class AdminService {
   async backfillCharacterSeo(): Promise<{ started: true; total: number }> {
     const total = await backfillAllCharacterSeo(this.prisma);
     return { started: true, total };
+  }
+
+  /**
+   * Фоновое заполнение приветствий (2–3 на язык) у всех персонажей без них.
+   * Идемпотентно: у кого приветствия уже есть — пропускаются.
+   */
+  async backfillCharacterGreetings(limit?: number): Promise<{ started: true; total: number }> {
+    const total = await backfillAllCharacterGreetings(this.prisma, this.moderation, {
+      limit,
+      onError: (id, err) => this.logger.warn(`greetings for ${id} failed: ${(err as Error).message}`),
+    });
+    return { started: true, total };
+  }
+
+  /** Генерирует приветствия персонажа для правки в админке (без сохранения). */
+  async generateCharacterGreetings(id: string) {
+    const c = await this.getCharacter(id);
+    const generated = await generateGreetings({ name: c.name, systemPrompt: c.systemPrompt, personality: c.personality });
+    return moderateGreetings(this.moderation, normalizeGreetings(generated));
   }
 
   // ─── Settings ──────────────────────────────────────────────
@@ -330,7 +362,7 @@ export class AdminService {
     tags?: string[];
     isPublic?: boolean;
   }) {
-    return this.prisma.character.create({
+    const character = await this.prisma.character.create({
       data: {
         name: data.name,
         systemPrompt: data.systemPrompt,
@@ -341,6 +373,9 @@ export class AdminService {
         isPublic: data.isPublic ?? true,
       },
     });
+    // Приветствия не заданы вручную — генерируем в фоне.
+    void ensureCharacterGreetings(this.prisma, this.moderation, character.id).catch(() => undefined);
+    return character;
   }
 
   /**

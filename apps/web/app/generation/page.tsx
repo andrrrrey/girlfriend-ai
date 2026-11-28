@@ -2112,6 +2112,7 @@ function GenerationPageInner() {
               <ScrollableTagsRow
                 tags={galleryTags}
                 selectedTags={selectedTags}
+                layout="rows"
                 onTagToggle={(tag) => {
                   if (tag === "__ALL__") {
                     setSelectedTags([]);

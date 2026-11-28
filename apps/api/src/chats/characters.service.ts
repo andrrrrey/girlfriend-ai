@@ -18,11 +18,16 @@ import { CreateUserCharacterDto } from "./dto/create-user-character.dto";
 import { generateSystemPrompt } from "./generate-system-prompt";
 import { normalizeCharacterDto } from "./character-normalize";
 import { ensureCharacterSeo, uniqueSlug } from "./character-seo";
+import { ensureCharacterGreetings } from "./character-greetings";
+import { ModerationService } from "../moderation/moderation.service";
 import { resolveEnabledGenders } from "../common/genders";
 
 @Injectable()
 export class CharactersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly moderation: ModerationService,
+  ) {}
 
   /**
    * Создаёт персонажа из DTO. Нормализует значения (английские snake_case ключи),
@@ -115,6 +120,8 @@ export class CharactersService {
     void ensureCharacterSeo(this.prisma, character.id).catch(() => {
       // Не удалось — подтянется лениво при первом открытии SEO-страницы.
     });
+    // Свои приветствия (2–3 на язык) — тоже в фоне; пока их нет, приветствие генерирует модель.
+    void ensureCharacterGreetings(this.prisma, this.moderation, character.id).catch(() => undefined);
 
     return character;
   }

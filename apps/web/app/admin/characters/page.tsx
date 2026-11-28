@@ -31,6 +31,9 @@ const charStyles: Record<string, React.CSSProperties> = {
   charActions: { display: "flex", gap: 8, marginLeft: 16 },
 };
 
+const GREET_LANGS = ["en", "ru", "de", "fr"] as const;
+type GreetLang = (typeof GREET_LANGS)[number];
+
 export default function AdminCharactersPage() {
   const { user, loading } = useAuth();
   const [chars, setChars] = useState<Character[]>([]);
@@ -39,6 +42,8 @@ export default function AdminCharactersPage() {
   const [error, setError] = useState("");
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voiceManual, setVoiceManual] = useState(false);
+  const [greetingsBusy, setGreetingsBusy] = useState(false);
+  const [greetingsBackfilling, setGreetingsBackfilling] = useState(false);
 
   const loadChars = () => {
     admin.getCharacters().then(setChars).catch(() => {});
@@ -97,6 +102,45 @@ export default function AdminCharactersPage() {
       setError(err.message);
     } finally {
       setBackfilling(false);
+    }
+  };
+
+  // Приветствия: personality.greetings = { en: [...], ru: [...], ... } — по варианту на строку.
+  const greetingsOf = (c: Partial<Character> | null) =>
+    (((c?.personality as Record<string, unknown> | undefined)?.greetings ?? {}) as Record<GreetLang, string[] | undefined>);
+  const setGreetings = (lang: GreetLang, text: string) => {
+    if (!editing) return;
+    const personality = { ...((editing.personality as Record<string, unknown>) ?? {}) };
+    const greetings = { ...greetingsOf(editing), [lang]: text.split("\n").map((x) => x.trim()).filter(Boolean) };
+    setEditing({ ...editing, personality: { ...personality, greetings } });
+  };
+  const handleGenerateGreetings = async () => {
+    if (!editing?.id) return;
+    setGreetingsBusy(true);
+    setError("");
+    try {
+      const generated = await admin.generateCharacterGreetings(editing.id);
+      const personality = { ...((editing.personality as Record<string, unknown>) ?? {}) };
+      setEditing({ ...editing, personality: { ...personality, greetings: generated } });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGreetingsBusy(false);
+    }
+  };
+  const handleBackfillGreetings = async () => {
+    const input = prompt("Сгенерировать приветствия для персонажей без них (в фоне). Сколько персонажей? Пусто — все.", "5");
+    if (input === null) return;
+    const n = parseInt(input, 10);
+    setGreetingsBackfilling(true);
+    setError("");
+    try {
+      const res = await admin.backfillCharacterGreetings(n > 0 ? n : undefined);
+      alert(`Запущено в фоне для ${res.total} персонажей.`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGreetingsBackfilling(false);
     }
   };
 
@@ -214,6 +258,30 @@ export default function AdminCharactersPage() {
             </div>
 
             <div style={adminStyles.field}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <label style={adminStyles.label}>Приветствия (первое сообщение; по варианту на строку, показывается случайный)</label>
+                {editing.id && (
+                  <button type="button" onClick={handleGenerateGreetings} disabled={greetingsBusy} style={adminStyles.btnSecondary}>
+                    {greetingsBusy ? "Генерация..." : "Сгенерировать"}
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10, marginTop: 8 }}>
+                {GREET_LANGS.map((lang) => (
+                  <div key={lang}>
+                    <div style={{ color: "#848484", fontSize: 12, marginBottom: 4 }}>{lang.toUpperCase()}</div>
+                    <textarea
+                      value={(greetingsOf(editing)[lang] ?? []).join("\n")}
+                      onChange={(e) => setGreetings(lang, e.target.value)}
+                      style={{ ...adminStyles.input, height: 110, resize: "vertical" as const }}
+                      placeholder="Пусто — приветствие придумает модель"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={adminStyles.field}>
               <label style={adminStyles.label}>
                 <input
                   type="checkbox"
@@ -241,6 +309,9 @@ export default function AdminCharactersPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleBackfillSeo} disabled={backfilling} style={adminStyles.btnSecondary}>
                   {backfilling ? "Запуск..." : "Сгенерировать SEO"}
+                </button>
+                <button onClick={handleBackfillGreetings} disabled={greetingsBackfilling} style={adminStyles.btnSecondary}>
+                  {greetingsBackfilling ? "Запуск..." : "Сгенерировать приветствия"}
                 </button>
                 <button
                   onClick={() => { setVoiceManual(false); setEditing({ name: "", systemPrompt: "", tags: [], isPublic: true }); }}

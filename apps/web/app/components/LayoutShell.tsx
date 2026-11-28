@@ -8,7 +8,7 @@ import BottomBarMobile from "./BottomBarMobile";
 
 const NO_SHELL_ROUTES = ["/login", "/register", "/verify-email"];
 
-type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "telegram" | "admin" | "profile";
+type ActivePage = "home" | "shorts" | "chat" | "gallery" | "generate" | "create-character" | "my-ai" | "settings" | "admin" | "profile";
 
 function getActivePage(pathname: string): ActivePage | undefined {
   if (pathname === "/") return "home";
@@ -20,7 +20,7 @@ function getActivePage(pathname: string): ActivePage | undefined {
   if (pathname.startsWith("/gallery")) return "gallery";
   if (pathname.startsWith("/shorts")) return "shorts";
   if (pathname.startsWith("/my-ai")) return "my-ai";
-  if (pathname.startsWith("/telegram")) return "telegram";
+  if (pathname.startsWith("/settings") || pathname.startsWith("/telegram")) return "settings";
   return undefined;
 }
 

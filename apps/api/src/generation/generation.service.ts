@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { GALLERY_TAGS, promptMatchesTag, styleCondition, tagsCondition } from "./gallery-filters";
+import { GALLERY_TAGS, dedupeHistoryJobs, parseGalleryCursor, promptMatchesTag, styleCondition, tagsCondition } from "./gallery-filters";
 import { Queue } from "bullmq";
 import { AI_QUEUE } from "../queue/queue.module";
 import { JOB_NAMES } from "../queue/queue.types";
@@ -732,14 +732,15 @@ export class GenerationService {
       where.type = { in: ["image", "video"] };
     }
 
-    const jobs = await this.prisma.aiJob.findMany({
+    const fetched = await this.prisma.aiJob.findMany({
       where,
-      orderBy: { createdAt: "desc" },
-      take: 50,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 60,
       include: {
         character: { select: { id: true, name: true, avatarUrl: true, tags: true, personality: true, deletedAt: true, isPublic: true, createdBy: true } },
       },
     });
+    const jobs = dedupeHistoryJobs(fetched).slice(0, 50);
 
     return Promise.all(jobs.map(async (job) => ({
       jobId: job.id,
@@ -751,17 +752,19 @@ export class GenerationService {
     })));
   }
 
-  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string, mode?: string, tags?: string[]) {
+  async getGallery(limit = 50, type?: string, sortBy?: string, page = 1, userId?: string, gender?: string, style?: string, mode?: string, tags?: string[], cursor?: string) {
     const typeFilter = type === "image" || type === "video"
       ? type
       : { in: ["image", "video"] as string[] };
 
-    const skip = (page - 1) * limit;
+    // Курсор (createdAt+id последнего показанного элемента) не «съезжает», когда
+    // в начало ленты добавляются новые работы — в отличие от skip/offset,
+    // из-за которого на следующей странице повторялись уже показанные кадры.
+    const parsedCursor = parseGalleryCursor(cursor);
+    const skip = parsedCursor ? 0 : (page - 1) * limit;
 
-    let orderBy: { createdAt: "desc" | "asc" } = { createdAt: "desc" };
-    if (sortBy === "oldest") {
-      orderBy = { createdAt: "asc" };
-    }
+    const dir: "desc" | "asc" = sortBy === "oldest" ? "asc" : "desc";
+    const orderBy = [{ createdAt: dir }, { id: dir }];
 
     const where: Record<string, unknown> = {
       status: "completed" as const,
@@ -798,6 +801,19 @@ export class GenerationService {
     if (andConditions.length > 0) {
       where["AND"] = andConditions;
     }
+    const countWhere = { ...where };
+    if (parsedCursor) {
+      const cmp = dir === "desc" ? "lt" : "gt";
+      where["AND"] = [
+        ...andConditions,
+        {
+          OR: [
+            { createdAt: { [cmp]: parsedCursor.createdAt } },
+            { createdAt: parsedCursor.createdAt, id: { [cmp]: parsedCursor.id } },
+          ],
+        },
+      ];
+    }
 
     const [jobs, total] = await Promise.all([
       this.prisma.aiJob.findMany({
@@ -810,8 +826,11 @@ export class GenerationService {
           character: { select: { id: true, name: true, avatarUrl: true, tags: true, personality: true, deletedAt: true, isPublic: true, createdBy: true } },
         },
       }),
-      this.prisma.aiJob.count({ where }),
+      this.prisma.aiJob.count({ where: countWhere }),
     ]);
+
+    const last = jobs[jobs.length - 1];
+    const nextCursor = last && jobs.length >= limit ? `${last.createdAt.toISOString()}_${last.id}` : null;
 
     const items = await Promise.all(jobs.map(async (job) => ({
       jobId: job.id,
@@ -827,7 +846,7 @@ export class GenerationService {
       character: await this.characterCard(job.character),
     })));
 
-    return { items, total };
+    return { items, total, nextCursor };
   }
 
   async getGalleryTags() {

@@ -46,6 +46,7 @@ describe("ConversationEngine", () => {
   beforeEach(() => {
     prisma = {
       message: { findFirst: jest.fn().mockResolvedValue(null) },
+      character: { findUnique: jest.fn().mockResolvedValue({ personality: {} }) },
       $transaction: jest.fn(async (fn: (t: unknown) => unknown) => fn(tx)),
     };
     chats = {
@@ -255,6 +256,30 @@ describe("ConversationEngine", () => {
       });
       expect(chats.saveMessage).toHaveBeenCalledTimes(1);
       expect(chats.logUsage).toHaveBeenCalledWith("user-1", "chat_greeting", 42, tx);
+    });
+
+    it("берёт случайное приветствие персонажа без вызова модели", async () => {
+      prisma.character.findUnique.mockResolvedValue({
+        personality: { greetings: { ru: ["Привет, я Ханна!", "О, это ты!"] } },
+      });
+      const events = await drain(engine.greet({ chatId: "chat-1", actor: ACTOR, lang: "ru" }));
+      expect(llm.streamChat).not.toHaveBeenCalled();
+      const saved = chats.saveMessage.mock.calls[0];
+      expect(["Привет, я Ханна!", "О, это ты!"]).toContain(saved[2]);
+      expect(events).toEqual([
+        { type: "llm", data: { content: saved[2] } },
+        { type: "done", messageId: "a-1" },
+      ]);
+    });
+
+    it("с настройками чата приветствие генерирует модель с учётом сценария встречи", async () => {
+      prisma.character.findUnique.mockResolvedValue({ personality: { greetings: { ru: ["Привет!"] } } });
+      chats.getChat.mockResolvedValue({ ...CHAT, settings: { meetingScenario: "cafe" } });
+      await drain(engine.greet({ chatId: "chat-1", actor: ACTOR, lang: "ru" }));
+      expect(llm.streamChat).toHaveBeenCalled();
+      expect(context.build).toHaveBeenCalledWith(expect.anything(), ACTOR, {
+        messages: [{ role: "user", content: expect.stringContaining("cozy cafe") }],
+      });
     });
   });
 

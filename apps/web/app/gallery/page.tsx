@@ -3,6 +3,7 @@
 import { styleFilterOptions } from "../../lib/styles";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../../context/auth";
+import { styleFilterValue, useApplyPreferences } from "../../lib/preferences";
 import { getPublicGallery, getGalleryTags, likes, resizedMediaUrl, downloadJob } from "../../lib/api";
 import { useRouter } from "next/navigation";
 import type { GalleryItem } from "../../lib/api";
@@ -490,6 +491,20 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // Предпочтения профиля: стиль — фильтр по умолчанию (теги профиля — теги
+  // персонажей, у галереи свой словарь, поэтому берём только совпадающие).
+  useApplyPreferences((prefs) => {
+    const st = styleFilterValue(prefs.style);
+    if (st) setStyle(st);
+    if (prefs.tags?.length) setPendingPrefTags(prefs.tags.map((t) => t.toLowerCase()));
+  });
+  const [pendingPrefTags, setPendingPrefTags] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!pendingPrefTags || tags.length === 0) return;
+    const match = tags.filter((t) => pendingPrefTags.includes(t.toLowerCase()));
+    if (match.length) setSelectedTags(match);
+    setPendingPrefTags(null);
+  }, [pendingPrefTags, tags]);
   // Индекс открытой в лайтбоксе работы в items (листание стрелками/колесом).
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [shareItem, setShareItem] = useState<GalleryItem | null>(null);
@@ -511,9 +526,14 @@ export default function GalleryPage() {
   const [likeStatuses, setLikeStatuses] = useState<Record<string, { liked: boolean; count: number }>>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Курсор следующей страницы: offset-пагинация «съезжала», когда в ленту
+  // добавлялись новые работы, и уже показанные кадры повторялись.
+  const cursorRef = useRef<string | null>(null);
   const fetchItems = useCallback((pageNum: number, append: boolean) => {
     if (append) setLoadingMore(true); else setFetching(true);
+    if (!append) cursorRef.current = null;
     const params: Record<string, any> = { sortBy, page: pageNum, limit: PAGE_SIZE };
+    if (append && cursorRef.current) params.cursor = cursorRef.current;
     if (activeTab !== "all") params.type = activeTab;
     if (style) params.style = style;
     if (selectedTags.length) params.tags = selectedTags;
@@ -521,8 +541,12 @@ export default function GalleryPage() {
     getPublicGallery(params)
       .then((data) => {
         const newItems = data.items || [];
+        cursorRef.current = data.nextCursor ?? null;
         if (append) {
-          setItems((prev) => [...prev, ...newItems]);
+          setItems((prev) => {
+            const seen = new Set(prev.map((i) => i.jobId));
+            return [...prev, ...newItems.filter((i) => !seen.has(i.jobId))];
+          });
         } else {
           setItems(newItems);
         }
@@ -674,7 +698,7 @@ export default function GalleryPage() {
           <ScrollableTagsRow
             tags={tags}
             selectedTags={selectedTags}
-            maxVisible={tags.length}
+            layout="rows"
             formatLabel={(tag) => t(`galleryTag.${tag}` as TKey)}
             onTagToggle={(tag) => {
               if (tag === "__ALL__") {

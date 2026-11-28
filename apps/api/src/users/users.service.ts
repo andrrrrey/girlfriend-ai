@@ -53,6 +53,7 @@ export class UsersService {
         contentMode: true,
         isAdult: true,
         timezone: true,
+        preferences: true,
         createdAt: true,
         socialLinks: {
           select: { provider: true, url: true },
@@ -171,7 +172,10 @@ export class UsersService {
    */
   async updateProfile(
     userId: string,
-    data: { nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string; contentMode?: string; timezone?: string },
+    data: {
+      nickname?: string; avatarUrl?: string; lang?: string; aboutMe?: string; contentMode?: string; timezone?: string;
+      preferences?: { style?: string; ageRange?: string; tags?: string[] };
+    },
   ) {
     if (data.timezone && !isValidTimezone(data.timezone)) {
       throw new BadRequestException("Invalid timezone");
@@ -195,9 +199,14 @@ export class UsersService {
       }
     }
 
+    const { preferences, ...rest } = data;
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        ...rest,
+        // Объект целиком (без лишних полей — DTO с whitelist уже отфильтровал).
+        ...(preferences ? { preferences: normalizePreferences(preferences) } : {}),
+      },
       select: {
         id: true,
         email: true,
@@ -210,6 +219,7 @@ export class UsersService {
         contentMode: true,
         isAdult: true,
         timezone: true,
+        preferences: true,
       },
     });
   }
@@ -305,4 +315,14 @@ function isValidTimezone(tz: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** Чистит предпочтения: стиль в нижнем регистре, теги без пустых и повторов. */
+export function normalizePreferences(p: { style?: string; ageRange?: string; tags?: string[] }) {
+  const out: { style?: string; ageRange?: string; tags?: string[] } = {};
+  if (p.style) out.style = p.style.toLowerCase();
+  if (p.ageRange) out.ageRange = p.ageRange;
+  const tags = [...new Set((p.tags ?? []).map((t) => t.trim()).filter(Boolean))];
+  if (tags.length) out.tags = tags;
+  return out;
 }

@@ -18,6 +18,7 @@ import { AdminController } from "./admin.controller";
 import { AdminUploadController } from "./upload.controller";
 import { AdminService } from "./admin.service";
 import { PrismaService } from "../prisma.service";
+import { ModerationService } from "../moderation/moderation.service";
 import { S3Module } from "../s3/s3.module";
 import { CommentGenService } from "./comment-gen/comment-gen.service";
 import { ModelPricingService } from "./model-pricing/model-pricing.service";
@@ -37,7 +38,7 @@ import { ChatDiagnosticsService } from "./chat-diagnostics/chat-diagnostics.serv
 @Module({
   imports: [S3Module],
   controllers: [AdminController, AdminUploadController],
-  providers: [AdminService, CommentGenService, ModelPricingService, FinanceModelService, ChatDiagnosticsService, PrismaService],
+  providers: [AdminService, CommentGenService, ModelPricingService, FinanceModelService, ChatDiagnosticsService, PrismaService, ModerationService],
   exports: [AdminService],
 })
 export class AdminModule {}

@@ -189,6 +189,12 @@ export class ChatsService {
     return chat;
   }
 
+  /** Голос есть в каталоге и включён (выбор голоса в настройках чата). */
+  async isActiveVoice(voiceId: string): Promise<boolean> {
+    const v = await this.prisma.voice.findFirst({ where: { voiceId, isActive: true }, select: { id: true } });
+    return !!v;
+  }
+
   /** Отмечает диалог прочитанным (бейдж непрочитанных в списке чатов). */
   async markRead(chatId: string, userId: string): Promise<void> {
     await this.getChat(chatId, userId);

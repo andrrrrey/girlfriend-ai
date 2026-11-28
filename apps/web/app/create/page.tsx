@@ -1517,6 +1517,9 @@ function registerGlobalListeners() {
   document.addEventListener("mouseup", () => { sliderDragging = false; });
 }
 
+/** Стиль из предпочтений профиля (нижний регистр) — выбор по умолчанию в шаге «Стиль». */
+let preferredStyle = "";
+
 /* ── Component ────────────────────────────────── */
 
 export default function CreateCharacterPage() {
@@ -1525,6 +1528,17 @@ export default function CreateCharacterPage() {
   const { mode: contentMode } = useContentMode();
   // Мост режима контента к module-scope функции генерации аватара.
   useEffect(() => { activeContentMode = contentMode; }, [contentMode]);
+  // Стиль из предпочтений профиля: выбирается в шаге «Стиль», если пользователь его ещё не менял.
+  useEffect(() => {
+    const pref = (user?.preferences?.style ?? "").toLowerCase();
+    preferredStyle = pref;
+    if (!pref) return;
+    const row = document.getElementById("style-row-container");
+    const cards = row ? Array.from(row.querySelectorAll<HTMLElement>(".style-card")) : [];
+    const first = cards[0];
+    const match = cards.find((c) => (c.dataset.value ?? "").toLowerCase() === pref);
+    if (match && first?.classList.contains("selected")) match.click();
+  }, [user]);
   tr = t; // keep the module-level translator in sync for the HTML builders
   currentLang = lang;
   const router = useRouter();
@@ -1568,12 +1582,15 @@ export default function CreateCharacterPage() {
       if (dbStyles.length > 0) {
         const styleContainer = document.getElementById("style-row-container");
         if (styleContainer) {
+          // Стиль из предпочтений профиля выбран по умолчанию (иначе первый).
+          const prefIdx = dbStyles.findIndex((o) => o.name.toLowerCase() === preferredStyle);
+          const selIdx = prefIdx >= 0 ? prefIdx : 0;
           styleContainer.innerHTML = dbStyles.map((s, i) => {
             const src = s.imageThumbUrl || s.imageUrl;
             const imgHtml = src
               ? `<img src="${src}" alt="${s.name}" class="style-card-img" loading="lazy" decoding="async" />`
               : "";
-            return `<div class="style-card ${i === 0 ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
+            return `<div class="style-card ${i === selIdx ? "selected" : "unselected"}" data-value="${s.name}" data-generation-style="${s.generationStyle || ""}">
               ${imgHtml}<span class="name">${optionLabel(s, currentLang)}</span></div>`;
           }).join("");
           styleContainer.querySelectorAll<HTMLElement>(".style-card").forEach((card) => {

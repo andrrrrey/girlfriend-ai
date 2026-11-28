@@ -37,6 +37,14 @@ import { SttAdapter } from "./stt.adapter";
 import { IntentRouter, selectionsToSpec } from "./intent-router";
 import { cleanAssistantReply } from "./reply-cleanup";
 import { ChatMediaService } from "./chat-media.service";
+import { pickGreeting } from "../chats/character-greetings";
+import {
+  GREETING_LANGS_SUPPORTED,
+  MEETING_BACKGROUND_FIRST_MEDIA,
+  buildGreetingKickoff,
+  hasChatCustomization,
+  meetingBackground,
+} from "./chat-settings-prompt";
 import type {
   ChatWithContext,
   ConversationActor,
@@ -54,13 +62,6 @@ import type {
 /** TTL лока диалога; продлевается, пока идёт генерация. */
 const CHAT_LOCK_TTL_MS = 60_000;
 
-/** Скрытый kickoff приветствия: не сохраняется, лишь провоцирует первую реплику. */
-const GREETING_KICKOFF = {
-  ru: "*заходит в чат* Поздоровайся со мной первой — коротко и в образе своего персонажа.",
-  en: "*enters the chat* Greet me first — keep it short and in character.",
-  de: "*betritt den Chat* Begrüße mich zuerst – kurz und ganz in deiner Rolle.",
-  fr: "*entre dans le chat* Salue-moi en premier – brièvement et dans ton rôle.",
-} as const;
 
 /** Параметры генерации ответа ассистента. */
 interface ReplyOptions {
@@ -228,7 +229,25 @@ export class ConversationEngine {
         return;
       }
 
-      const kickoff = GREETING_KICKOFF[input.lang && input.lang in GREETING_KICKOFF ? input.lang : "en"];
+      const lang = input.lang && GREETING_LANGS_SUPPORTED.includes(input.lang) ? input.lang : "en";
+
+      // У персонажа свои 2–3 приветствия на язык — показываем случайное, без
+      // вызова модели. Если пользователь настроил персонажа под себя (сценарий
+      // встречи, отношения…), заготовка может не подходить — тогда генерирует модель.
+      const stored = hasChatCustomization(chat.settings)
+        ? null
+        : pickGreeting(await this.characterPersonality(chat.characterId), lang);
+      if (stored) {
+        const saved = await this.chats.saveMessage(chat.id, "assistant", stored, {
+          source,
+          metadata: { greeting: "stored" },
+        });
+        yield { type: "llm", data: { content: stored } };
+        yield { type: "done", messageId: saved.id };
+        return;
+      }
+
+      const kickoff = buildGreetingKickoff(lang, chat.settings);
       const reservation = await this.reserve(input, { kind: "chat_greeting" });
       try {
         yield* this.reply({
@@ -459,7 +478,7 @@ export class ConversationEngine {
       reservationKey: args.reservationKey,
     };
 
-    const contentMode = ContextBuilder.resolveContentMode(input.actor) === "sfw" ? "sfw" : "nsfw";
+    const contentMode = ContextBuilder.resolveContentMode(input.actor, chat.settings) === "sfw" ? "sfw" : "nsfw";
     const intent = args.routeIntents ? await this.intents.route(text, contentMode) : ({ intent: "reply" } as const);
     if (args.routeIntents) {
       // Видно в логах api, почему на просьбу о фото пришёл только текст.
@@ -477,7 +496,16 @@ export class ConversationEngine {
     }
 
     const kind = intent.intent;
-    const spec = selectionsToSpec(kind, intent.selections, chat.characterId, contentMode, intent.extra);
+    // Сценарий встречи из настроек чата задаёт фон первых фото (если место не названо).
+    let extra = intent.extra;
+    const background = intent.selections.locations.length ? null : meetingBackground(chat.settings);
+    if (background) {
+      const mediaSoFar = await this.prisma.message.count({
+        where: { chatSessionId: chat.id, role: "assistant", type: { in: ["image", "video"] }, deletedAt: null },
+      });
+      if (mediaSoFar < MEETING_BACKGROUND_FIRST_MEDIA) extra = [extra, background].filter(Boolean).join(", ");
+    }
+    const spec = selectionsToSpec(kind, intent.selections, chat.characterId, contentMode, extra);
     const caption = kind === "video" ? "video" : "photo";
 
     try {
@@ -559,6 +587,11 @@ export class ConversationEngine {
     if (input.billable === false) return null;
     const handle = await this.wallet.reserveOperation(input.actor.id, op, `${op.kind}:${randomUUID()}`);
     return handle?.operationKey ?? null;
+  }
+
+  private async characterPersonality(characterId: string): Promise<unknown> {
+    const c = await this.prisma.character.findUnique({ where: { id: characterId }, select: { personality: true } });
+    return c?.personality ?? null;
   }
 
   /** Возвращает резервы, не дошедшие до списания (после списания — ничего не делает). */

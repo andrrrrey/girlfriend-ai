@@ -1,4 +1,4 @@
-import { GALLERY_STYLES, GALLERY_TAGS, styleCondition, tagsCondition } from "./gallery-filters";
+import { GALLERY_STYLES, GALLERY_TAGS, dedupeHistoryJobs, parseGalleryCursor, styleCondition, tagsCondition } from "./gallery-filters";
 
 /** Достаёт строки, которые ищутся в промпте, из условия Prisma. */
 function contains(cond: any): string[] {
@@ -53,5 +53,43 @@ describe("styleCondition", () => {
         for (const ka of a.keywords) for (const kb of b.keywords) expect(kb.includes(ka)).toBe(false);
       }
     }
+  });
+});
+
+describe("parseGalleryCursor", () => {
+  const id = "0b1f6f7e-8a3c-4f55-9d2e-0123456789ab";
+  it("parses createdAt and id", () => {
+    const c = parseGalleryCursor(`2026-11-27T10:00:00.000Z_${id}`);
+    expect(c?.id).toBe(id);
+    expect(c?.createdAt.toISOString()).toBe("2026-11-27T10:00:00.000Z");
+  });
+  it("rejects garbage", () => {
+    expect(parseGalleryCursor(undefined)).toBeNull();
+    expect(parseGalleryCursor("abc")).toBeNull();
+    expect(parseGalleryCursor(`notadate_${id}`)).toBeNull();
+    expect(parseGalleryCursor("2026-11-27T10:00:00.000Z_1; drop")).toBeNull();
+  });
+});
+
+describe("dedupeHistoryJobs", () => {
+  const d = (s: string) => new Date(s);
+  it("drops a cache copy of a photo that is already in history", () => {
+    const jobs = [
+      { id: "new-copy", createdAt: d("2026-11-28T10:00:00Z"), output: { url: "a.jpg" }, cachedFrom: "orig" },
+      { id: "other", createdAt: d("2026-11-28T09:00:00Z"), output: { url: "b.jpg" }, cachedFrom: null },
+      { id: "orig", createdAt: d("2026-11-27T10:00:00Z"), output: { url: "a.jpg" }, cachedFrom: null },
+    ];
+    expect(dedupeHistoryJobs(jobs).map((j) => j.id)).toEqual(["other", "orig"]);
+  });
+  it("keeps the earliest of two cache copies", () => {
+    const jobs = [
+      { id: "c2", createdAt: d("2026-11-28T10:00:00Z"), output: { url: "a.jpg" }, cachedFrom: "x" },
+      { id: "c1", createdAt: d("2026-11-27T10:00:00Z"), output: { url: "a.jpg" }, cachedFrom: "x" },
+    ];
+    expect(dedupeHistoryJobs(jobs).map((j) => j.id)).toEqual(["c1"]);
+  });
+  it("keeps jobs without url", () => {
+    const jobs = [{ id: "n", createdAt: d("2026-11-28T10:00:00Z"), output: null }];
+    expect(dedupeHistoryJobs(jobs)).toHaveLength(1);
   });
 });

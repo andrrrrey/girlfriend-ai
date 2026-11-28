@@ -7,7 +7,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth";
 import { useT } from "../../context/language";
 import type { TKey } from "../../lib/i18n";
-import { users, chatProfiles, resizedMediaUrl, type ChatProfile } from "../../lib/api";
+import { users, chatProfiles, characters, resizedMediaUrl, type ChatProfile } from "../../lib/api";
+import { useContentMode } from "../../context/contentMode";
+import { CHARACTER_STYLES } from "../../lib/styles";
+import { AGE_RANGES, type UserPreferences } from "../../lib/preferences";
+import { formatTag } from "../../lib/tags";
 import SubscriptionBlock from "../components/SubscriptionBlock";
 
 type Tab = "subscription" | "account" | "preferences" | "chat-profiles";
@@ -343,6 +347,8 @@ const CSS = `
   color: #848484; font-size: 12px; font-weight: 500; font-family: var(--font-main);
   cursor: pointer; transition: all 0.15s; user-select: none; white-space: nowrap;
 }
+.pp-pref-status { margin-left: 10px; font-size: 12px; font-weight: 400; color: #848484; }
+.pp-pref-hint { display: block; margin-top: 10px; font-size: 12px; color: #848484; }
 .pp-tag:hover { border-color: rgba(249,91,173,0.4); color: #d0d0d0; }
 .pp-tag.pp-tag-on {
   background: rgba(249,91,173,0.12); border-color: #f95bad; color: #f95bad;
@@ -429,23 +435,13 @@ const CSS = `
 /* ═══════════════════════════════════════
    Data
 ═══════════════════════════════════════ */
-const STYLES = [
-  { label: "Realistic", bg: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=240&fit=crop&crop=face" },
-  { label: "Semi-real", bg: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=240&fit=crop&crop=face" },
-  { label: "Anime",     bg: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&h=240&fit=crop" },
-  { label: "2D",        bg: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=240&fit=crop" },
-];
-
-const TAG_GROUPS = [
-  {
-    label: "Appearance",
-    tags: ["Romantic", "Athletic", "Caring", "Innocent", "College Student", "Anime", "Vintage", "Mysterious", "Playful"],
-  },
-  {
-    label: "Hobbies",
-    tags: ["Gaming", "Fitness", "Travel", "Music", "Cooking", "Art", "Reading", "Dancing"],
-  },
-];
+/** Фоны карточек стиля (ключ — стиль в нижнем регистре, как в CHARACTER_STYLES). */
+const STYLE_BG: Record<string, string> = {
+  "realistic": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=240&fit=crop&crop=face",
+  "semi-real": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=240&fit=crop&crop=face",
+  "anime":     "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&h=240&fit=crop",
+  "2d":        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=240&fit=crop",
+};
 
 const TABS: { id: Tab; labelKey: TKey }[] = [
   { id: "subscription",  labelKey: "profile.tabSubscription"  },
@@ -752,39 +748,97 @@ function AccountTab() {
   );
 }
 
+/**
+ * Предпочтения: сохраняются в профиль (PATCH /users/me { preferences }) и
+ * применяются как фильтры по умолчанию на главной и в галерее, стиль — ещё и
+ * в мастере создания персонажа. «Тип контента» — тот же переключатель
+ * SFW/NSFW, что в верхнем меню.
+ */
 function PreferencesTab() {
   const { t } = useT();
-  const [style,   setStyle]   = useState("Realistic");
-  const [age,     setAge]     = useState("18–25");
-  const [content, setContent] = useState("All");
-  const [activeTags, setActiveTags] = useState<Set<string>>(new Set(["Romantic", "Athletic", "Gaming"]));
+  const { user, refreshProfile } = useAuth();
+  const { mode, setMode, canToggle } = useContentMode();
+  const initial = (user?.preferences ?? {}) as UserPreferences;
+  const [style, setStyle] = useState<string>(initial.style ?? "");
+  const [age, setAge] = useState<string>(initial.ageRange ?? "");
+  const [activeTags, setActiveTags] = useState<string[]>(initial.tags ?? []);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [status, setStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const dirty = useRef(false);
+
+  useEffect(() => {
+    characters.getTags().then((list) => setAllTags(list.map((x) => x.tag))).catch(() => {});
+  }, [mode]);
+
+  // Автосохранение с задержкой после любого изменения.
+  useEffect(() => {
+    if (!dirty.current) return;
+    setStatus("saving");
+    const timer = setTimeout(() => {
+      users.updateProfile({
+        preferences: {
+          ...(style ? { style } : {}),
+          ...(age ? { ageRange: age as UserPreferences["ageRange"] } : {}),
+          tags: activeTags,
+        },
+      })
+        .then(() => refreshProfile())
+        .then(() => setStatus("saved"))
+        .catch(() => setStatus("error"));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [style, age, activeTags, refreshProfile]);
+
+  const change = <T,>(set: (v: T) => void) => (v: T) => { dirty.current = true; set(v); };
 
   function toggleTag(tag: string) {
-    setActiveTags(prev => {
-      const s = new Set(prev);
-      s.has(tag) ? s.delete(tag) : s.add(tag);
-      return s;
-    });
+    dirty.current = true;
+    setActiveTags((prev) => prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]);
   }
 
+  // Выбранные теги показываем всегда, даже если их нет в текущем списке (другой режим контента).
+  const tagList = [...activeTags.filter((x) => !allTags.includes(x)), ...allTags.slice(0, 40)];
+
   const drops = [
-    { label: t("profile.ageRange"),        val: age,     set: setAge,     opts: ["18–25", "25–35", "35+", "Any"] },
-    { label: t("profile.contentType"),     val: content, set: setContent, opts: ["All", "SFW only", "NSFW only"] },
+    {
+      label: t("profile.ageRange"), val: age, set: change(setAge),
+      opts: [{ v: "", l: t("profile.ageAny") }, ...AGE_RANGES.map((a) => ({ v: a, l: a }))],
+    },
+    {
+      label: t("profile.contentType"), val: mode, set: (v: string) => setMode(v === "sfw" ? "sfw" : "nsfw"),
+      opts: canToggle
+        ? [{ v: "nsfw", l: t("profile.contentNsfw") }, { v: "sfw", l: t("profile.contentSfw") }]
+        : [{ v: "sfw", l: t("profile.contentSfw") }],
+    },
   ];
 
   return (
     <div className="pp-pref">
       <div className="pp-section">
-        <span className="pp-section-lbl">{t("profile.graphicStyle")}</span>
+        <span className="pp-section-lbl">
+          {t("profile.graphicStyle")}
+          <span className="pp-pref-status">
+            {status === "saving" ? t("profile.prefSaving") : status === "saved" ? t("profile.prefSaved") : status === "error" ? t("profile.prefError") : ""}
+          </span>
+        </span>
         <div className="pp-style-grid">
-          {STYLES.map((s) => (
-            <div key={s.label} className={`pp-style-card${style === s.label ? " pp-active" : ""}`} onClick={() => setStyle(s.label)}>
-              <div className="pp-style-bg" style={{ backgroundImage: `url(${s.bg})` }} />
-              {style !== s.label && <div className="pp-style-overlay" />}
-              <span className="pp-style-name">{s.label}</span>
-            </div>
-          ))}
+          {CHARACTER_STYLES.map((cs) => {
+            const value = cs.value.toLowerCase();
+            const active = style === value;
+            return (
+              <div
+                key={value}
+                className={`pp-style-card${active ? " pp-active" : ""}`}
+                onClick={() => change(setStyle)(active ? "" : value)}
+              >
+                <div className="pp-style-bg" style={{ backgroundImage: `url(${STYLE_BG[value] ?? ""})` }} />
+                {!active && <div className="pp-style-overlay" />}
+                <span className="pp-style-name">{t(cs.labelKey)}</span>
+              </div>
+            );
+          })}
         </div>
+        <span className="pp-pref-hint">{t("profile.prefHint")}</span>
       </div>
 
       <div className="pp-section">
@@ -794,29 +848,29 @@ function PreferencesTab() {
             <div key={d.label} className="pp-drop-row">
               <div className="pp-drop-left">
                 <span className="pp-drop-lbl">{d.label}</span>
-                <span className="pp-drop-val">&nbsp;{d.val}</span>
+                <span className="pp-drop-val">&nbsp;{d.opts.find((o) => o.v === d.val)?.l ?? d.val}</span>
               </div>
               <IcoChevron />
-              <select className="pp-drop-sel" value={d.val} onChange={e => d.set(e.target.value)}>
-                {d.opts.map(o => <option key={o}>{o}</option>)}
+              <select className="pp-drop-sel" value={d.val} onChange={(e) => d.set(e.target.value)}>
+                {d.opts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
               </select>
             </div>
           ))}
         </div>
       </div>
 
-      {TAG_GROUPS.map((g) => (
-        <div className="pp-section" key={g.label}>
-          <span className="pp-section-lbl">{g.label === "Appearance" ? t("profile.tagAppearance") : g.label === "Hobbies" ? t("profile.tagHobbies") : g.label}</span>
+      {tagList.length > 0 && (
+        <div className="pp-section">
+          <span className="pp-section-lbl">{t("profile.prefTags")}</span>
           <div className="pp-tags">
-            {g.tags.map((tag) => (
-              <div key={tag} className={`pp-tag${activeTags.has(tag) ? " pp-tag-on" : ""}`} onClick={() => toggleTag(tag)}>
-                {tag}
+            {tagList.map((tag) => (
+              <div key={tag} className={`pp-tag${activeTags.includes(tag) ? " pp-tag-on" : ""}`} onClick={() => toggleTag(tag)}>
+                {formatTag(tag)}
               </div>
             ))}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

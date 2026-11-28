@@ -126,3 +126,52 @@ export function tagsCondition(tags: string[]): Record<string, unknown> | null {
 export function promptMatchesTag(promptLower: string, def: GalleryFilterDef): boolean {
   return def.keywords.some((kw) => new RegExp(`\\b${kw.replace(/[-]/g, "\\-")}\\b`).test(promptLower));
 }
+
+// ─── Пагинация и дедупликация ленты/истории ──────────────────
+
+/** Курсор ленты: `${createdAt ISO}_${id}` последнего показанного элемента. */
+export function parseGalleryCursor(cursor?: string | null): { createdAt: Date; id: string } | null {
+  if (!cursor) return null;
+  const i = cursor.lastIndexOf("_");
+  if (i <= 0) return null;
+  const createdAt = new Date(cursor.slice(0, i));
+  const id = cursor.slice(i + 1);
+  if (Number.isNaN(createdAt.getTime()) || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  return { createdAt, id };
+}
+
+interface HistoryJobLike {
+  id: string;
+  createdAt: Date;
+  output: unknown;
+  cachedFrom?: string | null;
+}
+
+function outputUrl(output: unknown): string | null {
+  if (!output || typeof output !== "object") return null;
+  const url = (output as Record<string, unknown>)["url"];
+  return typeof url === "string" && url ? url : null;
+}
+
+/**
+ * Убирает повторы одного и того же кадра из истории пользователя.
+ * Общий кэш медиа создаёт производное задание (cachedFrom) со свежей датой и
+ * тем же URL — без дедупа старое фото «всплывало» в истории ещё раз.
+ * Из группы с одинаковым URL оставляем собственное (не из кэша) задание,
+ * иначе самое раннее. Порядок входа (по убыванию даты) сохраняется.
+ */
+export function dedupeHistoryJobs<T extends HistoryJobLike>(jobs: T[]): T[] {
+  const keep = new Map<string, T>();
+  for (const job of jobs) {
+    const url = outputUrl(job.output);
+    if (!url) continue;
+    const prev = keep.get(url);
+    if (!prev) { keep.set(url, job); continue; }
+    const prevCached = !!prev.cachedFrom;
+    const curCached = !!job.cachedFrom;
+    if (prevCached && !curCached) keep.set(url, job);
+    else if (prevCached === curCached && job.createdAt < prev.createdAt) keep.set(url, job);
+  }
+  const ids = new Set([...keep.values()].map((j) => j.id));
+  return jobs.filter((j) => (outputUrl(j.output) ? ids.has(j.id) : true));
+}
